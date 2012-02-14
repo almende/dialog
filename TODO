@@ -1,0 +1,17 @@
+
+Current plans for creating the Dialog infrastructure:
+
+GUI widgets
+>> A Jquery plugin question widget (questions with 0-5 answers)
+>> A full page questionair for multiple questions with variable number of answers
+>> Phonegap based TTS/ASR question widget
+>> Facebook messages/Wall implementation
+
+Other media
+>> VoiceXML generator for questions
+>> Tropo (www.tropo.com) based question voice setup
+
+Dialog/Document server
+>> JS local document server  (node.js?)
+>> GAE dialog server
+

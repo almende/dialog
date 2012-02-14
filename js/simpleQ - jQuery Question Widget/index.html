@@ -1,0 +1,58 @@
+<html>
+	<head>
+		<title>simpleQ - jQuery question Widget - CHAP Dialog Tools</title>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+		<script src="js/simpleQ.js"></script>
+		<link rel='stylesheet' href="css/simpleQ.css"/>
+		<script>
+			var show_question = function() {
+				$(".question_container").simpleQ({
+					question_text : "Hi there!<br> How are you today?<br>",
+					answers : [{
+						answer_text : "Fine, thank you!",
+						callback : function() {
+							alert("Nice to hear!");
+						}
+					}, {
+						answer_text : "Not too good...",
+						callback : function() {
+							alert("I'm sorry.");
+						}
+					}],
+					removeOnAnswer : false
+				})
+			}
+			$(document).ready(function() {
+				show_question();
+			});
+
+		</script>
+	</head>
+	<body>
+		<h2>simpleQ - jQuery Question Widget</h2>
+		<h3>Description</h3>
+		<p>
+			This jQuery plugin widget is usable to provide simple notifications and ask simple questions. It is aimed at a maximum of about 5 short answers. Each answer and the close button will trigger a callback function for handling the click.
+		</p>
+		<h3>Usage</h3>
+<pre>
+$(someDiv).simpleQ({
+	question_text: "This is the unchecked, directly presented text, may contain HTML. (Watch out for code injection!)",
+	answers:[
+	{ answer_text:"Answer 1",callback:function(){console.log("Callback on answer 1"); }},
+	{ answer_text:"Answer 2",callback:function(){console.log("Callback on answer 2"); }}
+	],
+	close_callback:function(){console.log("Callback on close button")},
+	removeOnAnswer:true|false
+});
+</pre>
+The "removeOnAnswer" flag determines if the question is removed from the DOM after an answer is selected.<br>
+ 
+		<h3>Example</h3>
+		<div class="question_background">
+			<a href="javascript:show_question()">(Re)Open question</a>.
+			<br>
+			<div class="question_container"></div>
+		</div>
+	</body>
+</html>

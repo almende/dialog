@@ -1,0 +1,85 @@
+@CHARSET "UTF-8";
+.question_background{
+	background-color:lightgray;
+	border:1px solid black;
+	margin: 10px;
+	padding:15px;
+}
+.dialog_question{
+	position:relative;
+	width:90%;
+	margin-left: auto;
+	margin-right: auto;
+	margin-top:15px;
+	margin-bottom:0px;
+}
+.dialog_questionBox{
+	-moz-box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+	box-sizing: border-box;
+	-moz-border-radius: 5px;		 
+    -webkit-border-radius: 5px;
+    -khtml-border-radius: 5px;
+    border-radius: 5px;
+    border:none;
+	width:100%;
+	min-height:50px;
+	margin:0px;
+	padding:5px 30px 5px 5px;
+	background-color:white;
+    -moz-box-shadow: 2px 2px 2px #888;
+    -webkit-box-shadow: 2px 2px 2px #888;
+    box-shadow: 2px 2px 2px #888;
+}
+.dialog_closeButton{
+	background-image:url("../images/Close-button.png");
+	background-position:center;
+	position:absolute;
+	height:29px;
+	width:29px;
+	right:5px;
+	top:5px;
+    background-color:transparent;
+}
+.dialog_questionLip{
+	margin-left:auto;
+	margin-right:10px;
+	border-left:transparent 35px solid;
+	border-top:white 20px solid;
+	border-bottom:none;
+	border-right:transparent 15px solid;
+	width:0px;
+	height:0px;
+}
+.dialog_answersBox{
+	border:1px solid black;
+	width:100%;
+	min-height:2.5em;
+	margin:0px;
+	padding:0px;
+	background-image: -webkit-gradient(linear, left top, left bottom, from(#f0f0f0), to(#a0a0c0)); /* Saf4+, Chrome */
+	background-image: -webkit-linear-gradient(top, #f0f0f0, #a0a0c0); /* Chrome 10+, Saf5.1+ */
+	background-image:    -moz-linear-gradient(top, #f0f0f0, #a0a0c0); /* FF3.6 */
+	background-image:     -ms-linear-gradient(top, #f0f0f0, #a0a0c0); /* IE10 */
+	background-image:      -o-linear-gradient(top, #f0f0f0, #a0a0c0); /* Opera 11.10+ */
+	background-image:         linear-gradient(top, #f0f0f0, #a0a0c0);
+
+	display:-webkit-box;
+	-webkit-box-orient: horizontal;
+	-webkit-box-align:center;
+	
+	display:-moz-box;
+	-moz-box-orient: horizontal;
+	-moz-box-align:center;
+
+}
+.dialog_answerBox:first-child{
+	border-left:none !important;
+}
+
+.dialog_answerBox{
+	-webkit-box-flex: 1;
+	-moz-box-flex: 1;
+	text-align:center;
+	border-left: 1px solid black;
+}

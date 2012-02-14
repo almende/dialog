@@ -6,6 +6,7 @@ https://github.com/ludost/Chap---Links---Dialog/wiki
 
 DESCRIPTION
 
+
 The Dialog is a collection of tools and APIs, aimed at supporting human-agent interaction. Although it's meant to provide a full conversation-level dialog, the original implementation is mainly aimed at letting agents ask questions.
 
 The Dialog consists of:

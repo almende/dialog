@@ -1,14 +1,26 @@
-Dialog tools, part of CHAP:
+CHAP Links Dialog tools
 
+http://www.almende.com
 http://chap.almende.com/dialog
+https://github.com/ludost/Chap---Links---Dialog/wiki
 
-------------------------------------
+DESCRIPTION
 
-License
+The Dialog is a collection of tools and APIs, aimed at supporting human-agent interaction. Although it's meant to provide a full conversation-level dialog, the original implementation is mainly aimed at letting agents ask questions.
+
+The Dialog consists of:
+
+    >> Dialog standard JSON API
+    >> HTML5/JS implementation for integration into web applications
+    >> Google Appengine implementation for large scale dialog resource serving, especially aimed to interface with social media.
+    >> VoiceXML implementation
+
+
+LICENSE
 
 Almende uses the Apache License Version 2.0 as recommended license for its development projects. The Apache 2.0 licence is approved by the Open Source Initiative.
 
 The Apache license is a permissive license, meaning that software developed under this license may be used, copied, re-used and distributed freely by third parties, provided that they include the original copyrights, attributions and notices.
 
-The full license text can be found on http://www.apache.org/licenses/LICENSE-2.0. At the bottom of this document, you find instructions on how to incorporate the Apache license in your own work.
+The full license text can be found in the LICENSE file at the root of this repository. 
 

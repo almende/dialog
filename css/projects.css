@@ -1,0 +1,16 @@
+@CHARSET "UTF-8";
+
+body {
+	padding:10px;
+	background-image: -webkit-gradient(linear, left top, left bottom, from(#f0f0f0), to(#525252)); /* Saf4+, Chrome */
+	background-image: -webkit-linear-gradient(top, #f0f0f0, #525252); /* Chrome 10+, Saf5.1+ */
+	background-image:    -moz-linear-gradient(top, #f0f0f0, #525252); /* FF3.6 */
+	background-image:     -ms-linear-gradient(top, #f0f0f0, #525252); /* IE10 */
+	background-image:      -o-linear-gradient(top, #f0f0f0, #525252); /* Opera 11.10+ */
+	background-image:         linear-gradient(top, #f0f0f0, #525252);
+	background-attachment: fixed !important;
+}
+
+h2 {
+	border-bottom:1px black solid;
+}

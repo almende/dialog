@@ -1,0 +1,67 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>DialogServer - {{ page.title }} </title>
+  <link rel="shortcut icon" href="img/favicon.ico" >
+  <link type="text/css" rel="stylesheet" href="css/style.css"> 
+  
+  <meta name="title" content="DialogServer - {{ page.title }}">   
+  <meta name="keywords" content="dialog, agent, software agent, software agents, agent platform, scalable, multiplatform, multipurpose, web based, cloud, http, json, json-rpc, opensource, open source" >
+  <meta name="description" content="GAE setup for serving dialogs, supporting demonstrations and small scale dialog setups. For larger projects it's recommended to create you own dialog handling, especially with regard to document serving. This server allows for \"static\" dialogs, in that sense that it doesn't dynamically creates texts. (i.e. there is (currently) no \"variables\", \"markup\", etc.)" >
+  <meta name="author" content="Almende B.V." >
+
+</head>
+
+<body>
+
+<a href="https://github.com/almende/DialogServer" style="position: fixed; top: 0; right: 0; border: 0;" >
+  <img 
+    src="img/forkme_right_darkblue_121621.png" 
+    alt="Fork me on GitHub" >
+</a>
+  
+<div id="container">
+
+<div id="menu">
+<div id="menu-inner">
+
+<a href="http://almende.github.com/DialogServer">
+	<img src="img/logo/dialog_logo_400.png" alt="Logo" style="width:100px;height:100px">
+</a>
+<br>
+
+<div class="nav">
+<ul>
+  <li>
+    Dialog
+    <ul>
+      <li><a class="nav" href="index.html">Introduction</a></li>
+      <li><a class="nav" href="protocol.html">Protocol</a></li>
+    </ul>
+  </li>
+
+  <li>
+    Java
+    <ul>
+      <li><a class="nav" href="java_overview.html">Overview</a></li>
+      <li><a class="nav" href="java_gettingstarted.html">Getting Started</a></li>
+      <li><a class="nav" href="java_examples.html">Examples</a></li>
+    </ul>
+  </li>
+</ul>
+</div>
+
+</div>
+</div>
+
+<div id="contents">
+  {{ content }}
+  
+  <div class="lastupdate">
+  Last updated: {{ site.time | date_to_long_string }}
+  </div>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/flexjson-2.1.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-client-1.11.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-core-1.11.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/eve-core.jar"/>
+	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
+	<classpathentry kind="output" path="war/WEB-INF/classes"/>
+</classpath>

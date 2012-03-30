@@ -73,6 +73,7 @@ public class Question implements QuestionIntf {
 			}
 		} else if (answer_input != null){
 			//check all answers of question to see if they match, possibly retrieving the answer_text for each
+			answer_input = answer_input.trim();
 			ArrayList<Answer> answers = question.getAnswers();
 			for (Answer ans : answers){
 				if (ans.getAnswer_text().equals(answer_input)) {

@@ -53,9 +53,9 @@ public class XMPPReceiverServlet extends HttpServlet {
         		if (question.getType().equals("closed")){
         			reply+="\n[";
         			for (Answer ans: question.getAnswers()){
-        				reply+=" "+ans.getAnswer_expandedtext()+"|";
+        				reply+=" "+ans.getAnswer_expandedtext()+" |";
         			}
-        			reply=reply.substring(0, reply.length()-1)+"]";
+        			reply=reply.substring(0, reply.length()-1)+" ]";
         		}
             	if (question.getType().equals("referral")){
             		question = Question.fromURL(question.getUrl());

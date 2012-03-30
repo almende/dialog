@@ -13,6 +13,7 @@ public interface QuestionIntf extends Serializable {
 	public String getQuestion_id();
 	public String getQuestion_text();
 	public String getType();
+	public String getUrl();
 	public ArrayList<Answer> getAnswers();
 	public ArrayList<EventCallback> getEvent_callbacks();
 	
@@ -22,6 +23,7 @@ public interface QuestionIntf extends Serializable {
 	public void setQuestion_id(String question_id);
 	public void setQuestion_text(String question_text);
 	public void setType(String type);
+	public void setUrl(String url);
 	public void setAnswers(ArrayList<Answer> answers);
 	public void setEvent_callbacks(ArrayList<EventCallback> event_callbacks);
 }

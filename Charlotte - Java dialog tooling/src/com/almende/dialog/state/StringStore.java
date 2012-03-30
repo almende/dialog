@@ -14,7 +14,8 @@ import com.google.appengine.api.memcache.MemcacheServiceFactory;
 public class StringStore {
 	static DatastoreService datastore = DatastoreServiceFactory
 			.getDatastoreService();
-	static MemcacheService syncCache = MemcacheServiceFactory.getMemcacheService();
+	static MemcacheService syncCache = MemcacheServiceFactory
+			.getMemcacheService();
 	static HashMap<String,Entity> local = new HashMap<String,Entity>(50);
 	
 	public static void dropString(String id){

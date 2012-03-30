@@ -82,7 +82,7 @@ public class Question implements QuestionIntf {
 			}
 			if (answer == null){
 				for (Answer ans: answers){
-					if (ans.getAnswer_expandedtext().equals(answer_input)){
+					if (ans.getAnswer_expandedtext().equalsIgnoreCase(answer_input)){
 						answer = ans;
 						break;
 					}
@@ -121,6 +121,7 @@ public class Question implements QuestionIntf {
 	public String getQuestion_id() { return question.getQuestion_id(); }
 	public String getQuestion_text() { return question.getQuestion_text(); }
 	public String getType() { return question.getType(); }
+	public String getUrl() { return question.getUrl(); }
 	public ArrayList<Answer> getAnswers() { return question.getAnswers(); }
 	public ArrayList<EventCallback> getEvent_callbacks() { return question.getEvent_callbacks(); }
 	
@@ -130,6 +131,7 @@ public class Question implements QuestionIntf {
 	public void setQuestion_id(String question_id) { question.setQuestion_id(question_id); }
 	public void setQuestion_text(String question_text) { question.setQuestion_text(question_text); }
 	public void setType(String type) { question.setType(type); }
+	public void setUrl(String url) { question.setUrl(url); }
 	public void setAnswers(ArrayList<Answer> answers) { question.setAnswers(answers); }
 	public void setEvent_callbacks(ArrayList<EventCallback> event_callbacks) { question.setEvent_callbacks(event_callbacks); }
 }

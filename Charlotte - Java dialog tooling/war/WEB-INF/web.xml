@@ -5,23 +5,12 @@ xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
 http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	<servlet>
-		<servlet-name>DialogHandler</servlet-name>
-		<servlet-class>com.almende.dialog.DialogHandlerServlet</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>DialogHandler</servlet-name>
-		<url-pattern>/dialoghandler</url-pattern>
-	</servlet-mapping>
-	
-		<servlet>
 		<servlet-name>SingleAgentServlet</servlet-name>
 		<servlet-class>com.almende.eve.servlet.SingleAgentServlet</servlet-class>
 		<init-param>
 			<description>The agent classes served by the servlet</description>
 			<param-name>agent</param-name>
-			<param-value>
-				com.almende.dialog.DialogAgent
-			</param-value>
+			<param-value>com.almende.dialog.DialogAgent</param-value>
 		</init-param>
 	</servlet>
 	<servlet-mapping>

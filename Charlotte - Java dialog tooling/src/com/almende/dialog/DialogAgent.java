@@ -4,6 +4,7 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.json.annotation.ParameterName;
+import com.almende.eve.json.annotation.ParameterRequired;
 
 import com.almende.eve.agent.annotation.*;
 
@@ -19,7 +20,9 @@ public class DialogAgent extends Agent {
 		return question;
 	}
 	
-	public String startDialog(@ParameterName("question_url") String url, @ParameterName("myid") String id, @ParameterName("question_json") String json){
+	public String startDialog(@ParameterName("question_url") @ParameterRequired(false) String url,
+							  @ParameterName("myid") @ParameterRequired(false) String id, 
+							  @ParameterName("question_json") @ParameterRequired(false) String json){
 		String reply = "";
 		Question question = getQuestion(url,id,json);
 		if (question != null) reply = question.toJSON();
@@ -32,7 +35,11 @@ public class DialogAgent extends Agent {
 		}
 		return reply;
 	}
-	public String answer(@ParameterName("question_url") String url, @ParameterName("myid") String id, @ParameterName("question_json") String json,@ParameterName("answer_input") String answer_input, @ParameterName("answer_id") String answer_id){
+	public String answer(@ParameterName("question_url") @ParameterRequired(false) String url,
+						 @ParameterName("myid") @ParameterRequired(false) String id,
+						 @ParameterName("question_json") @ParameterRequired(false) String json,
+						 @ParameterName("answer_input") @ParameterRequired(false) String answer_input,
+						 @ParameterName("answer_id") @ParameterRequired(false) String answer_id){
 		String reply = "";
 		Question question = getQuestion(url,id,json);
 		if (question != null) question = question.answer(answer_id, answer_input);

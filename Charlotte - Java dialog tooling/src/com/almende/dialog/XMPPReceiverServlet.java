@@ -7,6 +7,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
 import com.google.appengine.api.xmpp.JID;
@@ -46,9 +47,20 @@ public class XMPPReceiverServlet extends HttpServlet {
         }
         String reply="I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
         if (question != null){
-        	question = question.answer( null, body);
+       		question = question.answer( null, body);
         	if (question != null){
         		reply = question.getQuestion_expandedtext();
+        		if (question.getType().equals("closed")){
+        			reply+="\n[";
+        			for (Answer ans: question.getAnswers()){
+        				reply+=" "+ans.getAnswer_expandedtext()+"|";
+        			}
+        			reply=reply.substring(0, reply.length()-1)+"]";
+        		}
+            	if (question.getType().equals("referral")){
+            		question = Question.fromURL(question.getUrl());
+            		reply+="\n"+question.getQuestion_expandedtext();
+            	}
         		while (question.getType().equals("comment")){
         			question = question.answer( null, null);
         			if (question == null) break;

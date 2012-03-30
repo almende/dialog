@@ -6,6 +6,12 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-client-1.11.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jersey-core-1.11.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/eve-core.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-beanutils.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-collections3.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-lang.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-logging.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/ezmorph-1.0.6.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/json-lib-2.4-jdk15.jar"/>
 	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>

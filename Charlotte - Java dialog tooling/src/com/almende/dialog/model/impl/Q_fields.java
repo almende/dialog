@@ -17,6 +17,7 @@ public class Q_fields implements QuestionIntf {
 	String question_id;
 	String question_text;
 	String type;
+	String url;
 	ArrayList<Answer> answers;
 	ArrayList<EventCallback> event_callbacks;
 	
@@ -30,6 +31,9 @@ public class Q_fields implements QuestionIntf {
 	}
 	public String getType() {
 		return type;
+	}
+	public String getUrl() {
+		return url;
 	}
 	public ArrayList<Answer> getAnswers() {
 		return answers;
@@ -45,6 +49,9 @@ public class Q_fields implements QuestionIntf {
 	}
 	public void setType(String type) {
 		this.type = type;
+	}
+	public void setUrl(String url) {
+		this.url = url;
 	}
 	public void setAnswers(ArrayList<Answer> answers) {
 		this.answers = answers;

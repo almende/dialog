@@ -19,7 +19,7 @@ import com.google.appengine.api.xmpp.XMPPServiceFactory;
 
 public class XMPPReceiverServlet extends HttpServlet {
 	private static final long serialVersionUID = 10291032309680299L;
-	private static final Logger log = Logger.getLogger(com.almende.dialog.XMPPReceiverServlet.class.getName()); 	
+	//private static final Logger log = Logger.getLogger(com.almende.dialog.XMPPReceiverServlet.class.getName()); 	
 	//TODO: Add presence info
 	
 	

@@ -11,6 +11,8 @@ public interface AnswerIntf extends Serializable {
 	
 	@JSON(include = false)
 	public String getAnswer_expandedtext();
+	@JSON(include = false)
+	public String getAnswer_expandedtext(String language);
 	
 	public void setAnswer_id(String answer_id);
 	public void setAnswer_text(String answer_text);

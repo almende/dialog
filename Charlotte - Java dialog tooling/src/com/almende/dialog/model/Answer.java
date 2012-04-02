@@ -19,6 +19,8 @@ public class Answer implements AnswerIntf {
 	
 	@JSON(include = false)
 	public String getAnswer_expandedtext() { return answer.getAnswer_expandedtext(); }
+	@JSON(include = false)
+	public String getAnswer_expandedtext(String language) { return answer.getAnswer_expandedtext(language); }
 	
 	public void setAnswer_id(String answer_id) { answer.setAnswer_id(answer_id); }
 	public void setAnswer_text(String answer_text) { answer.setAnswer_text(answer_text); }

@@ -19,6 +19,8 @@ public interface QuestionIntf extends Serializable {
 	
 	@JSON(include = false)
 	public String getQuestion_expandedtext();
+	@JSON(include = false)
+	public String getQuestion_expandedtext(String language);
 	
 	public void setQuestion_id(String question_id);
 	public void setQuestion_text(String question_text);

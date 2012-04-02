@@ -42,9 +42,11 @@ public class A_fields implements AnswerIntf {
 	}
 
 	@Override
-	public String getAnswer_expandedtext() {
+	public String getAnswer_expandedtext(String language) {
 		Client client = ClientCon.client;
-		WebResource webResource = client.resource(this.getAnswer_text());
+		String url = this.getAnswer_text();
+		if (language != null && !language.equals("")) url+="?preferred_language="+language;
+		WebResource webResource = client.resource(url);
 		String text = "";
 		try {
 			text = webResource.type("text/plain").get(String.class);
@@ -53,6 +55,9 @@ public class A_fields implements AnswerIntf {
 		}
 		return text;
 	}
-
+	@Override
+	public String getAnswer_expandedtext() {
+		return getAnswer_expandedtext(null);
+	}
 
 }

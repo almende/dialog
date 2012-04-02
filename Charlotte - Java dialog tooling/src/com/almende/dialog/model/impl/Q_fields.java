@@ -60,9 +60,11 @@ public class Q_fields implements QuestionIntf {
 		this.event_callbacks = event_callbacks;
 	}
 	@Override
-	public String getQuestion_expandedtext() {
+	public String getQuestion_expandedtext(String language) {
 		Client client = ClientCon.client;
-		WebResource webResource = client.resource(this.getQuestion_text());
+		String url = this.getQuestion_text();
+		if (language != null && !language.equals("")) url+="?preferred_language="+language;
+		WebResource webResource = client.resource(url);
 		String text = "";
 		try {
 			text = webResource.type("text/plain").get(String.class);
@@ -70,6 +72,10 @@ public class Q_fields implements QuestionIntf {
 			log.severe(e.toString());
 		}
 		return text;
+	}
+	@Override
+	public String getQuestion_expandedtext() {
+		return getQuestion_expandedtext(null);
 	}
 
 	

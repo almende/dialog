@@ -128,6 +128,8 @@ public class Question implements QuestionIntf {
 	
 	@JSON(include = false)
 	public String getQuestion_expandedtext() { return question.getQuestion_expandedtext(); }
+	@JSON(include = false)
+	public String getQuestion_expandedtext(String language) { return question.getQuestion_expandedtext(language); }
 
 	public void setQuestion_id(String question_id) { question.setQuestion_id(question_id); }
 	public void setQuestion_text(String question_text) { question.setQuestion_text(question_text); }

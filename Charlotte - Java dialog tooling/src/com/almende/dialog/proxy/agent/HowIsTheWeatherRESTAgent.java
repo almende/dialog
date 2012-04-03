@@ -45,7 +45,7 @@ public class HowIsTheWeatherRESTAgent {
 			url="http://commondatastorage.googleapis.com/dialogserver-sounds/testSounds/espeakConv_";
 		}
 		if (Integer.parseInt(question_no) >= 20) {
-			result="{question_text:\""+url+(audio?"Q"+question_no+".wav":"questions/"+question_no)+"\",type:\"comment\",answers:[]}";
+			result="{question_text:\""+url+(audio?"Q"+question_no+".wav":"questions/"+question_no)+"\",type:\"comment\",answers:[],url:\"tel:0107421230\"}";
 		} else {
 			result="{question_text:\""+url+(audio?"Q"+question_no+".wav":"questions/"+question_no)+"\",type:\"closed\",answers:["+
 				   "{answer_text:\""+url+(audio?"A20.wav":"answers/20")+"\",callback:\""+URL+"questions/20?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"},"+

@@ -1,7 +1,6 @@
 package com.almende.dialog;
 
 import java.io.IOException;
-import java.util.logging.Logger;
 //import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServlet;

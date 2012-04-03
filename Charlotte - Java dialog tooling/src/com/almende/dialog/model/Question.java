@@ -2,6 +2,7 @@ package com.almende.dialog.model;
 
 import com.almende.dialog.model.impl.*;
 import com.almende.dialog.model.intf.QuestionIntf;
+import com.eaio.uuid.UUID;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.WebResource;
@@ -57,6 +58,17 @@ public class Question implements QuestionIntf {
 				   serialize(this);
 	}
 	
+	@JSON(include = false)
+	public void generateIds(){
+		if (this.getQuestion_id() == null || this.getQuestion_id().equals("")){
+			this.setQuestion_id(new UUID().toString());
+		}
+		for (Answer ans : this.getAnswers()){
+			if (ans.getAnswer_id() == null || ans.getAnswer_id().equals("")){
+				ans.setAnswer_id(new UUID().toString());
+			}
+		}
+	}
 	@JSON(include = false)
 	public Question answer(String answer_id, String answer_input){
 		Client client = ClientCon.client;

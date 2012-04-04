@@ -57,11 +57,25 @@ public class XMPPReceiverServlet extends HttpServlet {
             if (cmd.equals("reset")){
             	StringStore.dropString(address);
             }
-            if (cmd.equals("help")){
-            	reply="The following commands are understood:\n"+
-            		  "/help : This text\n"+
-              		  "/reset : Return to Charlotte\n"+
-           			  "/language=<lang_code> : Change language (e.g. /language=nl)\n";
+            if (cmd.startsWith("help")){
+            	String[] command = cmd.split(" ");
+            	if (command.length == 1){
+            		reply="The following commands are understood:\n"+
+            		  "/help <command>\n"+
+              		  "/reset \n"+
+           			  "/language=<lang_code>\n";
+            	} else {
+            		if (command[1].equals("reset")){
+            			reply="/reset will return you to Charlotte's initial question.";
+            		}
+            		if (command[1].equals("language")){
+            			reply="/language=<lang_code>, switches the preferred language to the provided lang_code. (e.g. /language=nl)";
+            		}
+            		if (command[1].equals("help")){
+            			reply="/help <command>, provides a help text about the provided command (e.g. /help reset)";
+            		}
+            	}
+            	
             	skip=true;
             }
         }

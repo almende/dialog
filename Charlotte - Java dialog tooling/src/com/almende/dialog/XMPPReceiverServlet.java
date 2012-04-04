@@ -37,39 +37,45 @@ public class XMPPReceiverServlet extends HttpServlet {
         JID jid = message.getFromJid();
 
         String address = jid.getId();
-        String body = message.getBody();
+        String body = message.getBody().trim();
         
         String json = "";
         String preferred_language = null;
         String reply="I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
         
-        if (body.toLowerCase().startsWith("/language=")){
-        	preferred_language = body.substring(10);
-        	if (preferred_language.indexOf(' ')!=-1) preferred_language = preferred_language.substring(0, preferred_language.indexOf(' '));
-        	StringStore.storeString(address+"_language",preferred_language);
-        	reply="Ok, switched preferred language to:"+preferred_language;
-        	skip=true;
-        	//log.warning("switched language to:"+preferred_language);
-        } else {
-        	preferred_language = StringStore.getString(address+"_language");
-        	//log.warning("found language:"+preferred_language);
-        }
-        if (preferred_language == null) preferred_language = "nl";
-    	//log.warning("current language:"+preferred_language);
-
-        if (!body.toLowerCase().startsWith("/reset")){
-        	json=StringStore.getString(address);
-        } else {
-        	StringStore.dropString(address);
+        if (body.toLowerCase().charAt(0) == '/'){
+        	String cmd = body.toLowerCase().substring(1);
+        	if (cmd.startsWith("language=")){
+        		preferred_language = cmd.substring(9);
+        		if (preferred_language.indexOf(' ')!=-1) preferred_language = preferred_language.substring(0, preferred_language.indexOf(' '));
+        		StringStore.storeString(address+"_language",preferred_language);
+        		reply="Ok, switched preferred language to:"+preferred_language;
+        		skip=true;
+        	} else {
+        		preferred_language = StringStore.getString(address+"_language");
+        	}
+            if (cmd.equals("reset")){
+            	StringStore.dropString(address);
+            }
+            if (cmd.equals("help")){
+            	reply="The following commands are understood:\n"+
+            		  "/help : This text\n"+
+              		  "/reset : Return to Charlotte\n"+
+           			  "/language=<lang_code> : Change language (e.g. /language=nl)\n";
+            	skip=true;
+            }
         }
         
-        Question question=null;
-        if (json == null || json == ""){
-        	question=Question.fromURL(DEMODIALOG);
-        } else {
-        	question=Question.fromJSON(json);
-        }
-        if (!skip && question != null){
+        if (!skip){
+        	if (preferred_language == null) preferred_language = "nl";
+        	Question question=null;
+        	json=StringStore.getString(address);
+        	if (json == null || json == ""){
+        		question=Question.fromURL(DEMODIALOG);
+        	} else {
+        		question=Question.fromJSON(json);
+        	}
+        	if (question != null){
        		question = question.answer( null, body);
         	if (question != null){
         		reply = question.getQuestion_expandedtext(preferred_language);
@@ -95,6 +101,7 @@ public class XMPPReceiverServlet extends HttpServlet {
         	} else {
         		StringStore.storeString(address, question.toJSON());
         	}
+        }
         }
         Message msg = new MessageBuilder()
                 .withRecipientJids(jid)

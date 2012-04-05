@@ -13,6 +13,8 @@ import com.almende.dialog.state.StringStore;
 import com.google.appengine.api.xmpp.JID;
 import com.google.appengine.api.xmpp.Message;
 import com.google.appengine.api.xmpp.MessageBuilder;
+import com.google.appengine.api.xmpp.PresenceShow;
+import com.google.appengine.api.xmpp.PresenceType;
 import com.google.appengine.api.xmpp.XMPPService;
 import com.google.appengine.api.xmpp.XMPPServiceFactory;
 
@@ -21,26 +23,76 @@ public class XMPPReceiverServlet extends HttpServlet {
 	//private static final Logger log = Logger.getLogger(com.almende.dialog.XMPPReceiverServlet.class.getName()); 	
 	//TODO: Add presence info
 	
-	
-	//TODO: Make this dynamic (through some routing protocol?)
+	//Charlotte is the agent responsible for routing to other agents....
 	private static final String DEMODIALOG = "http://char-a-lot.appspot.com/charlotte/";
-	//TODO
+	private static XMPPService xmpp = XMPPServiceFactory.getXMPPService();
+	
+    private class Return{
+    	String reply;
+    	Question question;
+    	public Return(String reply,Question question){
+    		this.reply=reply;
+    		this.question=question;
+    	}
+    }
+	public Return formQuestion(Question question,String preferred_language){
+		String reply="";
+    	if (question != null){
+    		reply = question.getQuestion_expandedtext(preferred_language);
+    		if (question.getType().equals("referral")){
+        		question = Question.fromURL(question.getUrl());
+        		reply+="\n"+question.getQuestion_expandedtext(preferred_language);
+        	}
+    		if (question.getType().equals("closed")){
+    			reply+="\n[";
+    			for (Answer ans: question.getAnswers()){
+    				reply+=" "+ans.getAnswer_expandedtext(preferred_language)+" |";
+    			}
+    			reply=reply.substring(0, reply.length()-1)+" ]";
+    		}
+    		while (question.getType().equals("comment")){
+    			question = question.answer( null, null);
+    			if (question == null) break;
+    			reply+="\n"+question.getQuestion_expandedtext(preferred_language);
+    		}
+    	}
+    	return new Return(reply,question);
+	}
+	
+	
+	public void startDialog(String address, String json){
+		JID jid = new JID(address);
+		address = jid.getId().split("/")[0];
+		String preferred_language = StringStore.getString(address+"_language");
+		if (preferred_language == null) preferred_language = "nl";
+		
+		Question question = Question.fromJSON(json);
+		Return reply = formQuestion(question,preferred_language);
+        Message msg = new MessageBuilder()
+        .withRecipientJids(jid)
+        .withBody(reply.reply)
+        .build();
+
+        xmpp.sendMessage(msg);	
+	}
 	
 	@Override
 	public void doPost(HttpServletRequest req, HttpServletResponse res)
           throws IOException {
-
-        XMPPService xmpp = XMPPServiceFactory.getXMPPService();
+		
         boolean skip=false;
+        
         
         Message message = xmpp.parseMessage(req);
         JID jid = message.getFromJid();
-
-        String address = jid.getId();
+        
+        xmpp.sendPresence(jid,PresenceType.AVAILABLE,PresenceShow.CHAT,"");        
+        
+        String address = jid.getId().split("/")[0];
         String body = message.getBody().trim();
         
         String json = "";
-        String preferred_language = null;
+        String preferred_language = StringStore.getString(address+"_language");
         String reply="I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
         
         if (body.toLowerCase().charAt(0) == '/'){
@@ -51,9 +103,7 @@ public class XMPPReceiverServlet extends HttpServlet {
         		StringStore.storeString(address+"_language",preferred_language);
         		reply="Ok, switched preferred language to:"+preferred_language;
         		skip=true;
-        	} else {
-        		preferred_language = StringStore.getString(address+"_language");
-        	}
+        	} 
             if (cmd.equals("reset")){
             	StringStore.dropString(address);
             }
@@ -79,7 +129,6 @@ public class XMPPReceiverServlet extends HttpServlet {
             	skip=true;
             }
         }
-        
         if (!skip){
         	if (preferred_language == null) preferred_language = "nl";
         	Question question=null;
@@ -91,25 +140,9 @@ public class XMPPReceiverServlet extends HttpServlet {
         	}
         	if (question != null){
        		question = question.answer( null, body);
-        	if (question != null){
-        		reply = question.getQuestion_expandedtext(preferred_language);
-        		if (question.getType().equals("referral")){
-            		question = Question.fromURL(question.getUrl());
-            		reply+="\n"+question.getQuestion_expandedtext(preferred_language);
-            	}
-        		if (question.getType().equals("closed")){
-        			reply+="\n[";
-        			for (Answer ans: question.getAnswers()){
-        				reply+=" "+ans.getAnswer_expandedtext(preferred_language)+" |";
-        			}
-        			reply=reply.substring(0, reply.length()-1)+" ]";
-        		}
-        		while (question.getType().equals("comment")){
-        			question = question.answer( null, null);
-        			if (question == null) break;
-        			reply+="\n"+question.getQuestion_expandedtext(preferred_language);
-        		}
-        	}
+       		Return replystr=formQuestion(question,preferred_language);
+       		reply=replystr.reply;
+       		question=replystr.question;
         	if (question == null){
         		StringStore.dropString(address);
         	} else {

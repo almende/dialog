@@ -23,45 +23,57 @@ public class Q_fields implements QuestionIntf {
 	
 	public Q_fields(){}
 	
+	@Override
 	public String getQuestion_id() {
 		return question_id;
 	}
+	@Override
 	public String getQuestion_text() {
 		return question_text;
 	}
+	@Override
 	public String getType() {
 		return type;
 	}
+	@Override
 	public String getUrl() {
 		return url;
 	}
+	@Override
 	public ArrayList<Answer> getAnswers() {
 		return answers;
 	}
+	@Override
 	public ArrayList<EventCallback> getEvent_callbacks() {
 		return event_callbacks;
 	}
+	@Override
 	public void setQuestion_id(String question_id) {
 		this.question_id = question_id;
 	}
+	@Override
 	public void setQuestion_text(String question_text) {
 		this.question_text = question_text;
 	}
+	@Override
 	public void setType(String type) {
 		this.type = type;
 	}
+	@Override
 	public void setUrl(String url) {
 		this.url = url;
 	}
+	@Override
 	public void setAnswers(ArrayList<Answer> answers) {
 		this.answers = answers;
 	}
+	@Override
 	public void setEvent_callbacks(ArrayList<EventCallback> event_callbacks) {
 		this.event_callbacks = event_callbacks;
 	}
 	@Override
 	public String getQuestion_expandedtext(String language) {
-		Client client = ClientCon.client;
+		Client client = ClientCon.getClient();
 		String url = this.getQuestion_text();
 		if (language != null && !language.equals("")) url+="?preferred_language="+language;
 		WebResource webResource = client.resource(url);
@@ -78,5 +90,4 @@ public class Q_fields implements QuestionIntf {
 		return getQuestion_expandedtext(null);
 	}
 
-	
 }

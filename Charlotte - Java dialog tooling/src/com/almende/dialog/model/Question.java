@@ -27,7 +27,7 @@ public class Question implements QuestionIntf {
 	//Factory functions:
 	@JSON(include = false)
 	public static Question fromURL(String url){
-		Client client = ClientCon.client;
+		Client client = ClientCon.getClient();
 		WebResource webResource = client.resource(url);
 		String json = "";
 		try {
@@ -71,7 +71,7 @@ public class Question implements QuestionIntf {
 	}
 	@JSON(include = false)
 	public Question answer(String answer_id, String answer_input){
-		Client client = ClientCon.client;
+		Client client = ClientCon.getClient();
 		Answer answer = null;
 		if (this.getType().equals("open")){
 			answer = this.getAnswers().get(0); //TODO: error handling, what if answer doesn't exist, or multiple answers (=out-of-spec)
@@ -131,22 +131,36 @@ public class Question implements QuestionIntf {
 	}
 	
 	//Getters/Setters:
+	@Override
 	public String getQuestion_id() { return question.getQuestion_id(); }
+	@Override
 	public String getQuestion_text() { return question.getQuestion_text(); }
+	@Override
 	public String getType() { return question.getType(); }
+	@Override
 	public String getUrl() { return question.getUrl(); }
+	@Override
 	public ArrayList<Answer> getAnswers() { return question.getAnswers(); }
+	@Override
 	public ArrayList<EventCallback> getEvent_callbacks() { return question.getEvent_callbacks(); }
 	
+	@Override
 	@JSON(include = false)
 	public String getQuestion_expandedtext() { return question.getQuestion_expandedtext(); }
+	@Override
 	@JSON(include = false)
 	public String getQuestion_expandedtext(String language) { return question.getQuestion_expandedtext(language); }
 
+	@Override
 	public void setQuestion_id(String question_id) { question.setQuestion_id(question_id); }
+	@Override
 	public void setQuestion_text(String question_text) { question.setQuestion_text(question_text); }
+	@Override
 	public void setType(String type) { question.setType(type); }
+	@Override
 	public void setUrl(String url) { question.setUrl(url); }
+	@Override
 	public void setAnswers(ArrayList<Answer> answers) { question.setAnswers(answers); }
+	@Override
 	public void setEvent_callbacks(ArrayList<EventCallback> event_callbacks) { question.setEvent_callbacks(event_callbacks); }
 }

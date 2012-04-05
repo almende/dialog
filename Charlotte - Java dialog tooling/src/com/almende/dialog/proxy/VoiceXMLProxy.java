@@ -140,7 +140,8 @@ public class VoiceXMLProxy {
 			question = question.answer(answer_id,null);
 			question.generateIds();
 			StringStore.storeString(question.getQuestion_id(), question.toJSON());
-
+			StringStore.dropString(question_id);
+			
 			if (question.getType().equals("comment")){
 				reply=renderComment(question);
 			} else if (question.getType().equals("referral")){

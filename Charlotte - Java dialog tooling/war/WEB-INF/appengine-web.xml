@@ -8,7 +8,7 @@
     To allow App Engine to send multiple requests in parallel specify:
   -->
       <threadsafe>true</threadsafe>
-
+	<warmup-requests-enabled>true</warmup-requests-enabled>
 
   <!-- Configure java.util.logging -->
   <system-properties>

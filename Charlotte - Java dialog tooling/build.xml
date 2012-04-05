@@ -37,7 +37,8 @@
 		<delete dir="war/WEB-INF/classes" />
 	</target>
 	<target depends="clean" name="cleanall" />
-	<target depends="compile" name="build" />
+	<target depends="build-subprojects,compile" name="build" />
+    <target name="build-subprojects"/>
 	<target name="compile" depends="init,copyjars" description="Compiles Java source and copies other source files to the WAR.">
 		<echo message="${ant.project.name}: ${ant.file}" />
 		<mkdir dir="war/WEB-INF/classes" />

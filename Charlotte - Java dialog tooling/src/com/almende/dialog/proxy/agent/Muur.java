@@ -15,12 +15,22 @@ public class Muur {
 	private String getQuestion(String question_no){
 		String result = null;
 		if (question_no.equals("10")){
-			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://char-a-lot.appspot.com/kastje/\"}";
+			result= "{ requester:\""+URL+"id\",question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://char-a-lot.appspot.com/kastje/\"}";
 		} else {
-			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"open\",answers:["+
+			result= "{ requester:\""+URL+"id\",question_text:\""+URL+"questions/"+question_no+"\",type:\"open\",answers:["+
 						"{ answer_text:\"\", callback:\""+URL+"questions/10\" }]}";
 		}
 		return result;
+	}
+	
+	@GET
+	@Path("/id/")
+	public Response getId(@QueryParam("preferred_language") String preferred_language){
+		if (preferred_language != null && preferred_language.startsWith("en")){
+			return Response.ok("{ url:\""+URL+"\",nickname:\"Post\"}").build();			
+		} else {
+			return Response.ok("{ url:\""+URL+"\",nickname:\"Muur\"}").build();
+		}
 	}
 	
 	@GET
@@ -45,15 +55,15 @@ public class Muur {
 
 		if (preferred_language != null && preferred_language.startsWith("en")){
 			switch (questionNo){
-				case 0: result="[post] Hi, please ask me a question!"; break;
-				case 10: result="[post] Sorry, I haven't got a clue...! Maybe 'pillar' knows something about that, let me pass you on!"; break;
-				default: result="[post] Eehhh??!?";
+				case 0: result="Hi, please ask me a question!"; break;
+				case 10: result="Sorry, I haven't got a clue...! Maybe 'pillar' knows something about that, let me pass you on!"; break;
+				default: result="Eehhh??!?";
 			}
 		} else{
 			switch (questionNo){
-				case 0: result="[muur] Hoi, stel me maar een vraag!"; break;
-				case 10: result="[muur] Oei, daar weet ik niets van, maar misschien 'Kastje' wel, ik stuur je door!"; break;
-				default: result="[muur] Eehhh??!?";
+				case 0: result="Hoi, stel me maar een vraag!"; break;
+				case 10: result="Oei, daar weet ik niets van, maar misschien 'Kastje' wel, ik stuur je door!"; break;
+				default: result="Eehhh??!?";
 			}
 		}
 		return Response.ok(result).build();

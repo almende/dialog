@@ -42,7 +42,7 @@ public class DialogAgent extends Agent {
 						 @ParameterName("answer_id") @ParameterRequired(false) String answer_id){
 		String reply = "";
 		Question question = getQuestion(url,id,json);
-		if (question != null) question = question.answer(answer_id, answer_input);
+		if (question != null) question = question.answer("",answer_id, answer_input);
 		if (question != null) reply = question.toJSON();
 		if (id != null){
 			if (question == null){

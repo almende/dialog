@@ -1,6 +1,7 @@
 package com.almende.dialog.model.impl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.logging.Logger;
 
 import com.almende.dialog.model.Answer;
@@ -10,6 +11,8 @@ import com.almende.dialog.model.intf.QuestionIntf;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 
+import flexjson.JSONDeserializer;
+
 public class Q_fields implements QuestionIntf {
 	private static final long serialVersionUID = 748817624285821262L;
 	private static final Logger log = Logger.getLogger(com.almende.dialog.model.impl.Q_fields.class.getName()); 	
@@ -18,6 +21,7 @@ public class Q_fields implements QuestionIntf {
 	String question_text;
 	String type;
 	String url;
+	String requester;
 	ArrayList<Answer> answers;
 	ArrayList<EventCallback> event_callbacks;
 	
@@ -38,6 +42,32 @@ public class Q_fields implements QuestionIntf {
 	@Override
 	public String getUrl() {
 		return url;
+	}
+	@Override
+	public String getRequester() {
+		return requester;
+	}
+	@Override
+	public HashMap<String,String> getExpandedRequester(String language) {
+		Client client = ClientCon.getClient();
+		HashMap<String,String> result = new HashMap<String,String>(0);
+		String url = this.getRequester();
+		if (url == null || url.equals("")) return result;
+		if (language != null && !language.equals("")) url+="?preferred_language="+language;
+		try {
+			WebResource webResource = client.resource(url);
+			String text = "";
+			text = webResource.type("text/plain").get(String.class);
+			result = new JSONDeserializer<HashMap<String,String>>().use(null,HashMap.class).deserialize(text);
+		} catch (Exception e){
+			log.severe(e.toString());
+			log.severe(e.getMessage());
+		}
+		return result;
+	}
+	@Override
+	public HashMap<String,String> getExpandedRequester() {
+		return getExpandedRequester(null);
 	}
 	@Override
 	public ArrayList<Answer> getAnswers() {
@@ -71,6 +101,11 @@ public class Q_fields implements QuestionIntf {
 	public void setEvent_callbacks(ArrayList<EventCallback> event_callbacks) {
 		this.event_callbacks = event_callbacks;
 	}
+	@Override
+	public void setRequester(String requester) {
+		this.requester = requester;
+	}
+
 	@Override
 	public String getQuestion_expandedtext(String language) {
 		Client client = ClientCon.getClient();

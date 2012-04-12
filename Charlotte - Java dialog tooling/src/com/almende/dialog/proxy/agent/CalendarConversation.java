@@ -1,5 +1,9 @@
 package com.almende.dialog.proxy.agent;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.TimeZone;
 import java.util.logging.Logger;
 
 import javax.ws.rs.GET;
@@ -11,6 +15,11 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 import com.almende.dialog.model.AnswerPost;
+import com.almende.dialog.model.ClientCon;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.WebResource;
+import com.almende.dialog.proxy.agent.tools.Event;
+import com.almende.dialog.proxy.agent.tools.Result;
 
 import flexjson.JSONDeserializer;
 
@@ -18,28 +27,63 @@ import flexjson.JSONDeserializer;
 public class CalendarConversation {
 	private static final Logger log = Logger.getLogger(com.almende.dialog.proxy.agent.CalendarConversation.class.getName()); 	
 	private static final String URL="http://char-a-lot.appspot.com/calendar/";
-
+	//private static final String USERAGENT = "https://agentplatform.appspot.com/agents/UserAgent/12d3c692-2138-4b4d-bcb2-f29058f21819";
+	private static final String CALENDARAGENT = "https://agentplatform.appspot.com/agents/GoogleCalendarAgent/647fe772-918d-44a8-a199-657a6a8f07c6";
+		
+	private ArrayList<Event> getEventsToday(){
+		Client client = ClientCon.getClient();
+		WebResource wr = client.resource(CALENDARAGENT);
+		try {
+			String s = wr.type("application/json").post(String.class,"{\"id\":1, \"method\":\"getEventsToday\", \"params\":[]}" );
+			Result result = new JSONDeserializer<Result>().
+						use(null, Result.class).
+						deserialize(s);
+			if (result != null){
+				return result.getResult();
+			}
+		} catch (Exception e){
+			log.severe(e.toString());
+		}
+		return null;
+	}
+	
 	private String createEvent(int duration){
 		String reply="";
 		//create meetingagent
 		return reply;
 	}
 	
-	private String renderEnglishAgenda(){
-		String reply="";
-		//get events today
+	private String renderAgenda(){
+		String reply="\n";
+		ArrayList<Event> list = getEventsToday();
+		if (list == null) return reply;
+		
+		for (Event event : list){
+			Date starttime = new Date(event.getWhen().get(0).getStart());
+			String formatPattern = "HH:mm";
+			SimpleDateFormat sdf = new SimpleDateFormat(formatPattern);
+			sdf.setTimeZone(TimeZone.getTimeZone("GMT+2"));
+			reply+=sdf.format(starttime);
+			reply+=" -> '"+event.getTitle()+"'";
+			reply+=";\n";
+		}
 		return reply;
 	}	
-	private String renderDutchAgenda(){
-		String reply="";
-		//get events today
-		return reply;
+	
+	@GET
+	@Path("/id/")
+	public Response getId(@QueryParam("preferred_language") String preferred_language){
+		if (preferred_language != null && preferred_language.startsWith("en")){
+			return Response.ok("{ url:\""+URL+"\",nickname:\"Calendar\"}").build();			
+		} else {
+			return Response.ok("{ url:\""+URL+"\",nickname:\"Kalender\"}").build();
+		}
 	}
 	
 	@GET
 	@Produces("application/json")
 	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium){
-		String response = "{question_text:\""+URL+"questions/0\",type:\"closed\",answers:["+
+		String response = "{requester:\""+URL+"id/\",question_text:\""+URL+"questions/0\",type:\"closed\",answers:["+
 						  "{answer_text:\""+URL+"answers/10\",callback:\""+URL+"questions/10\" },"+
 						  "{answer_text:\""+URL+"answers/11\",callback:\""+URL+"questions/11\" }"+
 						  "]}";
@@ -58,7 +102,7 @@ public class CalendarConversation {
 			case 0:
 				return firstQuestion(preferred_medium);
 			case 10: 
-				result="{question_text:\""+URL+"questions/10\",type:\"open\",answers:["+
+				result="{requester:\""+URL+"id/\",question_text:\""+URL+"questions/10\",type:\"open\",answers:["+
 				       "{answer_text:\"\", callback:\""+URL+"questions/20\" }]}";
 				break;
 			case 20:
@@ -71,10 +115,10 @@ public class CalendarConversation {
 				} catch (Exception e){
 					log.severe(e.toString());
 				}
-				result="{question_text:\""+URL+"questions/20\",type:\"comment\",answers:[]}";
+				result="{requester:\""+URL+"id/\",question_text:\""+URL+"questions/20\",type:\"comment\",answers:[]}";
 				break;
 			case 11: 
-				result="{question_text:\""+URL+"questions/11\",type:\"comment\",answers:[]}";
+				result="{requester:\""+URL+"id/\",question_text:\""+URL+"questions/11\",type:\"comment\",answers:[]}";
 				break;
 		}
 		return Response.ok(result).build();
@@ -89,21 +133,21 @@ public class CalendarConversation {
 
 		if (preferred_language != null && preferred_language.startsWith("en")){
 			switch (questionNo){
-				case 0: result="[Calendar] What do you want me to do?"; break;
-				case 10: result="[Calendar] How long will the event take? (time in minutes)"; break;
-				case 11: result="[Calendar] Today you have the following items in your agenda:";
-						 result+=renderEnglishAgenda();						 
+				case 0: result="What do you want me to do?"; break;
+				case 10: result="How long will the event take? (time in minutes)"; break;
+				case 11: result="Today you have the following items in your agenda:";
+						 result+=renderAgenda();						 
 						 break;
-				default: result="[Calendar] Eehhh??!?";
+				default: result="Eehhh??!?";
 			}
 		} else{
 			switch (questionNo){
-				case 0: result="[Kalender] Wat kan ik voor je doen?"; break;
-				case 10: result="[Kalender] Hoe lang moet de afspraak duren? (tijd in minuten)"; break;
-				case 11: result="[Calendar] Today you have the following items in your agenda:";
-				 		result+=renderDutchAgenda();						 
+				case 0: result="Wat kan ik voor je doen?"; break;
+				case 10: result="Hoe lang moet de afspraak duren? (tijd in minuten)"; break;
+				case 11: result="Voor vandaag heb je de volgende afspraken in je agenda:";
+				 result+=renderAgenda();						 
 				 		break;
-				default: result="[Kalender] Eehhh??!?";
+				default: result="Eehhh??!?";
 			}
 		}
 		return Response.ok(result).build();

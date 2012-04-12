@@ -137,7 +137,7 @@ public class VoiceXMLProxy {
 		String json = StringStore.getString(question_id);
 		if (json != null){
 			Question question = Question.fromJSON(json);
-			question = question.answer(answer_id,null);
+			question = question.answer("",answer_id,null);
 			question.generateIds();
 			StringStore.storeString(question.getQuestion_id(), question.toJSON());
 			StringStore.dropString(question_id);
@@ -145,7 +145,11 @@ public class VoiceXMLProxy {
 			if (question.getType().equals("comment")){
 				reply=renderComment(question);
 			} else if (question.getType().equals("referral")){
-				reply=renderTransfer(question);
+				if (question.getUrl().startsWith("tel:")){
+					reply=renderTransfer(question);	
+				} else {
+					return getNewDialog(question.getUrl());
+				}
 			} else {
 				reply=renderQuestion(question);
 			}

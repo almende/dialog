@@ -1,11 +1,19 @@
 package com.almende.dialog;
 
 import java.io.IOException;
-//import java.util.logging.Logger;
+import java.io.StringReader;
+import java.util.HashMap;
+import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.xml.sax.InputSource;
 
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
@@ -20,7 +28,7 @@ import com.google.appengine.api.xmpp.XMPPServiceFactory;
 
 public class XMPPReceiverServlet extends HttpServlet {
 	private static final long serialVersionUID = 10291032309680299L;
-	//private static final Logger log = Logger.getLogger(com.almende.dialog.XMPPReceiverServlet.class.getName()); 	
+	private static final Logger log = Logger.getLogger(com.almende.dialog.XMPPReceiverServlet.class.getName()); 	
 	//TODO: Add presence info
 	
 	//Charlotte is the agent responsible for routing to other agents....
@@ -35,45 +43,81 @@ public class XMPPReceiverServlet extends HttpServlet {
     		this.question=question;
     	}
     }
-	public Return formQuestion(Question question,String preferred_language){
+	public Return formQuestion(Question question){
 		String reply="";
-    	if (question != null){
-    		reply = question.getQuestion_expandedtext(preferred_language);
+		if (question != null){
+			HashMap<String,String> id =question.getExpandedRequester();
+			if (id.containsKey("nickname")){
+				reply += "*"+id.get("nickname")+":* ";
+			}
+	    	reply += question.getQuestion_expandedtext();
     		if (question.getType().equals("referral")){
+    			String preferred_language=question.getPreferred_language();
         		question = Question.fromURL(question.getUrl());
-        		reply+="\n"+question.getQuestion_expandedtext(preferred_language);
+        		question.setPreferred_language(preferred_language);
+    			id =question.getExpandedRequester();
+    			reply+="\n";
+    			if (id.containsKey("nickname")){
+    				reply += "*"+id.get("nickname")+":* ";
+    			}
+        		reply+=question.getQuestion_expandedtext();
         	}
     		if (question.getType().equals("closed")){
     			reply+="\n[";
     			for (Answer ans: question.getAnswers()){
-    				reply+=" "+ans.getAnswer_expandedtext(preferred_language)+" |";
+    				reply+=" "+ans.getAnswer_expandedtext(question.getPreferred_language())+" |";
     			}
     			reply=reply.substring(0, reply.length()-1)+" ]";
     		}
     		while (question.getType().equals("comment")){
-    			question = question.answer( null, null);
+    			question = question.answer( null, null, null);
     			if (question == null) break;
-    			reply+="\n"+question.getQuestion_expandedtext(preferred_language);
+    			reply+="\n"+question.getQuestion_expandedtext();
     		}
     	}
     	return new Return(reply,question);
 	}
 	
 	
-	public void startDialog(String address, String json){
+	public static void startDialog(String address, String json){
 		JID jid = new JID(address);
+        xmpp.sendInvitation(jid);
+        xmpp.sendPresence(jid,PresenceType.AVAILABLE,PresenceShow.CHAT,""); 
+		
 		address = jid.getId().split("/")[0];
 		String preferred_language = StringStore.getString(address+"_language");
 		if (preferred_language == null) preferred_language = "nl";
 		
 		Question question = Question.fromJSON(json);
-		Return reply = formQuestion(question,preferred_language);
+		question.setPreferred_language(preferred_language);
+
+		Return res = new XMPPReceiverServlet().formQuestion(question);        
+		StringStore.storeString(address, res.question.toJSON());
         Message msg = new MessageBuilder()
         .withRecipientJids(jid)
-        .withBody(reply.reply)
+        .withBody(res.reply)
         .build();
 
         xmpp.sendMessage(msg);	
+	}
+	
+	public void doErrorPost(HttpServletRequest req, HttpServletResponse res)
+          throws IOException {
+		Message message = xmpp.parseMessage(req);
+		log.warning(message.getStanza());
+		
+		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+		DocumentBuilder dBuilder;
+		try {
+			dBuilder = dbFactory.newDocumentBuilder();
+			Document doc = dBuilder.parse(new InputSource(new StringReader(message.getStanza())));
+			Node elem = doc.getElementsByTagName("cli:error").item(0);
+			log.warning("Received error stanza: "+elem.getAttributes().getNamedItem("code").getNodeValue()+":"+elem.getAttributes().getNamedItem("type").getNodeValue());
+			log.warning(elem.getChildNodes().item(0).getNodeName());
+		} catch (Exception e) {
+			log.severe("XML parse error on error stanza:'"+message.getStanza()+"'\n-----\n"+e.toString()+":"+e.getMessage());
+		}
+		
 	}
 	
 	@Override
@@ -82,6 +126,10 @@ public class XMPPReceiverServlet extends HttpServlet {
 		
         boolean skip=false;
         
+        if (req.getServletPath().endsWith("/error/")){
+        	doErrorPost(req,res);
+        	return;
+        }
         
         Message message = xmpp.parseMessage(req);
         JID jid = message.getFromJid();
@@ -139,8 +187,9 @@ public class XMPPReceiverServlet extends HttpServlet {
         		question=Question.fromJSON(json);
         	}
         	if (question != null){
-       		question = question.answer( null, body);
-       		Return replystr=formQuestion(question,preferred_language);
+        	question.setPreferred_language(preferred_language);
+        	question = question.answer( address, null, body);
+       		Return replystr=formQuestion(question);
        		reply=replystr.reply;
        		question=replystr.question;
         	if (question == null){

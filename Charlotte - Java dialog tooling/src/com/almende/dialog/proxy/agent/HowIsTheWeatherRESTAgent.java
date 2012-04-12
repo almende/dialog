@@ -16,6 +16,12 @@ public class HowIsTheWeatherRESTAgent {
 	private static final String URL = "http://char-a-lot.appspot.com/howIsTheWeather/";
 	
 	@GET
+	@Path("/id/")
+	public Response getId(){
+		return Response.ok("{ url:\""+URL+"\",nickname:\"HowIsTheWeather\"}").build();
+	}
+	
+	@GET
 	@Produces("application/json")
 	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium){
 		String result=null;
@@ -25,7 +31,7 @@ public class HowIsTheWeatherRESTAgent {
 			audio = true;
 			url="http://commondatastorage.googleapis.com/dialogserver-sounds/testSounds/espeakConv_";
 		}
-		result="{question_text:\""+url+(audio?"Q0.wav":"questions/0")+"\",type:\"closed\",answers:[";
+		result="{requester:\""+URL+"id/\",question_text:\""+url+(audio?"Q0.wav":"questions/0")+"\",type:\"closed\",answers:[";
 		for (int i = 10; i< 15; i++){
 			result+="{answer_text:\""+url+(audio?"A"+i+".wav":"answers/"+i)+"\",callback:\""+URL+"questions/"+i+"?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"}"+(i<14?",":"");
 		}
@@ -45,9 +51,9 @@ public class HowIsTheWeatherRESTAgent {
 			url="http://commondatastorage.googleapis.com/dialogserver-sounds/testSounds/espeakConv_";
 		}
 		if (Integer.parseInt(question_no) >= 20) {
-			result="{question_text:\""+url+(audio?"Q"+question_no+".wav":"questions/"+question_no)+"\",type:\"comment\",answers:[],url:\"tel:0107421230\"}";
+			result="{requester:\""+URL+"id/\",question_text:\""+url+(audio?"Q"+question_no+".wav":"questions/"+question_no)+"\",type:\"comment\",answers:[],url:\"tel:0107421230\"}";
 		} else {
-			result="{question_text:\""+url+(audio?"Q"+question_no+".wav":"questions/"+question_no)+"\",type:\"closed\",answers:["+
+			result="{requester:\""+URL+"id/\",question_text:\""+url+(audio?"Q"+question_no+".wav":"questions/"+question_no)+"\",type:\"closed\",answers:["+
 				   "{answer_text:\""+url+(audio?"A20.wav":"answers/20")+"\",callback:\""+URL+"questions/20?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"},"+
 				   "{answer_text:\""+url+(audio?"A21.wav":"answers/21")+"\",callback:\""+URL+"questions/21?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"}"+
 				   "]}";

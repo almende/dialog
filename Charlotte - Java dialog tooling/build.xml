@@ -35,6 +35,7 @@
 	</target>
 	<target name="clean">
 		<delete dir="war/WEB-INF/classes" />
+		<delete dir=".tmp_classes" />
 	</target>
 	<target depends="clean" name="cleanall" />
 	<target depends="build-subprojects,compile" name="build" />

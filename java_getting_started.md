@@ -33,6 +33,7 @@ Below is a list of all required packages: (versions may probably vary, mentioned
 + jersey-servlet-1.12.jar
 + uuid-3.3.jar
 + xmlenc-0.52.jar
+
 Currently the dialog has been tested to work with the Google App Engine SDK, version 1.6.2.1.
 
 ##Setup

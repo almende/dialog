@@ -76,7 +76,7 @@ public class VoiceXMLProxy {
 	private String renderQuestion(Question question){
 		ArrayList<Answer> answers=question.getAnswers();
 		
-		String handleAnswerURL = "http://char-a-lot.appspot.com/vxml/answer";
+		String handleAnswerURL = "/vxml/answer";
 
 		//wrap first question into VoiceXML:
 		StringWriter sw = new StringWriter();

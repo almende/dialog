@@ -12,21 +12,9 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 			<param-value>com.almende.dialog.proxy</param-value>
 		</init-param>
 		<init-param>
-			<param-name>com.sun.jersey.config.property.resourceConfigClass</param-name>
-			<param-value>com.sun.jersey.api.core.PackagesResourceConfig</param-value>
+		    <param-name>com.sun.jersey.config.feature.DisableWADL</param-name>
+		    <param-value>true</param-value>
 		</init-param>
-		<init-param>
-			<param-name>com.sun.jersey.config.feature.Trace</param-name>
-			<param-value>true</param-value>
-		</init-param>
-		<init-param>
-			<param-name>com.sun.jersey.config.feature.TracePerRequest</param-name>
-			<param-value>true</param-value>
-		</init-param>
-		<!-- <init-param> <param-name>com.sun.jersey.config.property.WadlGeneratorConfig</param-name>
-		<param-value>com.askcs.appservices.wadl.AskWadlGeneratorConfig</param-value>
-		</init-param> -->
-		<load-on-startup>1</load-on-startup>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>RESTServlet</servlet-name>
@@ -40,7 +28,6 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 			<param-name>agent</param-name>
 			<param-value>com.almende.dialog.DialogAgent</param-value>
 		</init-param>
-		<load-on-startup>1</load-on-startup>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>SingleAgentServlet</servlet-name>
@@ -49,7 +36,6 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	<servlet>
 		<servlet-name>xmppreceiver</servlet-name>
 		<servlet-class>com.almende.dialog.XMPPReceiverServlet</servlet-class>
-		<load-on-startup>1</load-on-startup>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>xmppreceiver</servlet-name>

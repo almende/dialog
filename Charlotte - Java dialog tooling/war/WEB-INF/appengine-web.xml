@@ -9,7 +9,7 @@
   -->
       <threadsafe>true</threadsafe>
 	<warmup-requests-enabled>true</warmup-requests-enabled>
-
+<precompilation-enabled>true</precompilation-enabled>
   <!-- Configure java.util.logging -->
   <system-properties>
     <property name="java.util.logging.config.file" value="WEB-INF/logging.properties"/>

@@ -11,6 +11,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
+import com.sun.jersey.spi.resource.Singleton;
+@Singleton
 @Path("/howIsTheWeather/")
 public class HowIsTheWeatherRESTAgent {
 	private static final String URL = "http://char-a-lot.appspot.com/howIsTheWeather/";

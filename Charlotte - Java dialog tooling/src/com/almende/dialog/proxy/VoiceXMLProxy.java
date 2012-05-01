@@ -15,13 +15,13 @@ import org.znerd.xmlenc.XMLOutputter;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
-
+import com.sun.jersey.spi.resource.Singleton;
+@Singleton
 @Path("/vxml/")
 public class VoiceXMLProxy {
 	private static final Logger log = Logger.getLogger(com.almende.dialog.proxy.VoiceXMLProxy.class.getName()); 	
 	
 	private String renderTransfer(Question question){
-		//wrap first question into VoiceXML:
 		StringWriter sw = new StringWriter();
 		try {
 			XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
@@ -49,7 +49,6 @@ public class VoiceXMLProxy {
 		return sw.toString();	
 	}
 	private String renderComment(Question question){
-		//wrap first question into VoiceXML:
 		StringWriter sw = new StringWriter();
 		try {
 			XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
@@ -78,7 +77,6 @@ public class VoiceXMLProxy {
 		
 		String handleAnswerURL = "/vxml/answer";
 
-		//wrap first question into VoiceXML:
 		StringWriter sw = new StringWriter();
 		try {
 			XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
@@ -122,13 +120,19 @@ public class VoiceXMLProxy {
 	@Path("new")
 	@GET
 	@Produces("application/voicexml+xml")
-	public Response getNewDialog(@QueryParam("url") String url){
+	public Response getNewDialog(@QueryParam("url") String url,@QueryParam("remoteID") String remoteID){
 		Question question = Question.fromURL(url);
 		question.generateIds();
+		
+		//TODO store remoteID;
 		StringStore.storeString(question.getQuestion_id(), question.toJSON());
 		return Response.ok(renderQuestion(question)).build();
 	}
-
+	private Response getNewDialog(@QueryParam("url") String url){
+		//TODO use earlier remoteID if available
+		return getNewDialog(url,null);
+	}
+	
 	@Path("answer")
 	@GET
 	@Produces("application/voicexml+xml")

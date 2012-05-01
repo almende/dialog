@@ -1,6 +1,7 @@
 package com.almende.dialog.proxy.agent;
 
 import java.net.URI;
+
 import java.net.URISyntaxException;
 import java.util.Calendar;
 import java.util.TimeZone;
@@ -15,9 +16,10 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 import com.almende.dialog.model.AnswerPost;
+import com.sun.jersey.spi.resource.Singleton;
 
 import flexjson.JSONDeserializer;
-
+@Singleton
 @Path("/charlotte/")
 public class Charlotte {
 	private static final String URL = "http://char-a-lot.appspot.com/charlotte/";

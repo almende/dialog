@@ -40,7 +40,7 @@
 	<target depends="clean" name="cleanall" />
 	<target depends="build-subprojects,compile" name="build" />
     <target name="build-subprojects"/>
-	<target name="compile" depends="init,copyjars" description="Compiles Java source and copies other source files to the WAR.">
+	<target name="compile" depends="init" description="Compiles Java source and copies other source files to the WAR.">
 		<echo message="${ant.project.name}: ${ant.file}" />
 		<mkdir dir="war/WEB-INF/classes" />
 		<copy todir="war/WEB-INF/classes">
@@ -88,11 +88,21 @@
 	 	<move todir=".tmp_classes">
 	 		<fileset dir="war/WEB-INF/classes"/>
 	 	</move>
+	 	<echo message="Move unused JARs from /lib" />
+	 	<move todir=".tmp_jars">
+	 	    <fileset dir="war/WEB-INF/lib">
+	 	         <include name="*jsr107cache*"/>
+	 	    </fileset>
+	 	</move>
 	 	<echo message="Upload war to appengine..." />
-	    <appcfg action="update" war="war" />
+	    <appcfg action="update" war="war"/>
 	 	<echo message="return moved classes" />
 	 	<move todir="war/WEB-INF/classes">
 	 		<fileset dir=".tmp_classes"/>
+	 	</move>
+	 	<echo message="return moved JARs" />
+	 	<move todir="war/WEB-INF/lib">
+	 		<fileset dir=".tmp_jars"/>
 	 	</move>
 	  </target>
 

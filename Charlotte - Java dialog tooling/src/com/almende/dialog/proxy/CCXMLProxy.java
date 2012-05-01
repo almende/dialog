@@ -9,6 +9,8 @@ import javax.ws.rs.core.Response;
 
 import org.znerd.xmlenc.XMLOutputter;
 
+import com.sun.jersey.spi.resource.Singleton;
+@Singleton
 @Path("/ccxml/")
 public class CCXMLProxy {
 	
@@ -36,6 +38,10 @@ public class CCXMLProxy {
 					outputter.attribute("name", "connectionID");
 					outputter.attribute("expr", "''");
 				outputter.endTag();
+				outputter.startTag("var");
+					outputter.attribute("name", "remoteID");
+					outputter.attribute("expr", "''");
+				outputter.endTag();
 				outputter.startTag("eventprocessor");
 					outputter.attribute("statevariable", "currentState");
 					outputter.startTag("transition");
@@ -44,6 +50,10 @@ public class CCXMLProxy {
 						outputter.startTag("assign");
 							outputter.attribute("name", "connectionID");
 							outputter.attribute("expr", "event$.connectionid");
+						outputter.endTag();
+						outputter.startTag("assign");
+							outputter.attribute("name","remoteID");
+							outputter.attribute("expr","event$.connection.remote");
 						outputter.endTag();
 						outputter.startTag("accept");
 						outputter.endTag();
@@ -55,6 +65,7 @@ public class CCXMLProxy {
 							outputter.attribute("connectionid", "connectionID");
 							outputter.attribute("dialogid", "dialogID");
 							outputter.attribute("src", "vxmlScript");
+							outputter.attribute("namelist", "remoteID");
 						outputter.endTag();
 						outputter.startTag("assign");
 							outputter.attribute("name", "currentState");

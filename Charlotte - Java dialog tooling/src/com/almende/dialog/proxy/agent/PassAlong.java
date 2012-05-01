@@ -13,9 +13,10 @@ import javax.ws.rs.core.Response;
 import com.almende.dialog.XMPPReceiverServlet;
 import com.almende.dialog.model.AnswerPost;
 import com.almende.dialog.state.StringStore;
+import com.sun.jersey.spi.resource.Singleton;
 
 import flexjson.JSONDeserializer;
-
+@Singleton
 @Path("/passAlong/")
 public class PassAlong {
 

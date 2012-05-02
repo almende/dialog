@@ -80,10 +80,11 @@
 	
 	 <target name="update" depends="build"
 	      description="Uploads the application to App Engine.">
-	 	<echo message="Starting to build a jarfile" />
-	 	<jar destfile="war/WEB-INF/lib/dialogHandler.jar" >
-	 	    <fileset dir="war/WEB-INF/classes" />
-	 	</jar>
+	 	<echo message="Run ProGuard to build a jarfile" />
+	 	<java jar="/home/ludo/workspace/proguard4.7/lib/proguard.jar" fork="true" failonerror="true">
+            <jvmarg value="-Dmaximum.inlined.code.length=16" />
+            <arg value="@DialogHandler.pro" />
+        </java>
 	 	<echo message="Move class files from war (jarfile contains them)" />
 	 	<move todir=".tmp_classes">
 	 		<fileset dir="war/WEB-INF/classes"/>
@@ -91,6 +92,9 @@
 	 	<echo message="Move unused JARs from /lib" />
 	 	<move todir=".tmp_jars">
 	 	    <fileset dir="war/WEB-INF/lib">
+	 	         <include name="xmlenc-0.52.jar"/>
+	 	         <include name="uuid-3.3.jar"/>
+	 	         <include name="eve-core.jar"/>
 	 	         <include name="*jsr107cache*"/>
 	 	    </fileset>
 	 	</move>

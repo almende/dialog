@@ -2,6 +2,7 @@ package com.almende.dialog.model;
 
 import com.almende.dialog.model.impl.*;
 import com.almende.dialog.model.intf.QuestionIntf;
+import com.almende.tools.ParallelInit;
 import com.eaio.uuid.UUID;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -18,8 +19,7 @@ import java.util.logging.Logger;
 public class Question implements QuestionIntf {
 	private static final long serialVersionUID = -9069211642074173182L;
 	private static final Logger log = Logger
-			.getLogger(com.almende.dialog.model.Question.class.getName());
-
+			.getLogger("DialogHandler");
 	QuestionIntf question;
 	private String preferred_language = "nl";
 
@@ -30,7 +30,7 @@ public class Question implements QuestionIntf {
 	// Factory functions:
 	@JSON(include = false)
 	public static Question fromURL(String url) {
-		Client client = ClientCon.getClient();
+		Client client = ParallelInit.getClient();
 		WebResource webResource = client.resource(url);
 		String json = "";
 		try {
@@ -74,7 +74,7 @@ public class Question implements QuestionIntf {
 
 	@JSON(include = false)
 	public Question answer(String responder, String answer_id, String answer_input) {
-		Client client = ClientCon.getClient();
+		Client client = ParallelInit.getClient();
 		Answer answer = null;
 		if (this.getType().equals("open")) {
 			answer = this.getAnswers().get(0); // TODO: error handling, what if

@@ -5,9 +5,9 @@ import java.util.HashMap;
 import java.util.logging.Logger;
 
 import com.almende.dialog.model.Answer;
-import com.almende.dialog.model.ClientCon;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.intf.QuestionIntf;
+import com.almende.tools.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 
@@ -15,8 +15,8 @@ import flexjson.JSONDeserializer;
 
 public class Q_fields implements QuestionIntf {
 	private static final long serialVersionUID = 748817624285821262L;
-	private static final Logger log = Logger.getLogger(com.almende.dialog.model.impl.Q_fields.class.getName()); 	
-	
+	private static final Logger log = Logger
+			.getLogger("DialogHandler");
 	String question_id;
 	String question_text;
 	String type;
@@ -49,7 +49,7 @@ public class Q_fields implements QuestionIntf {
 	}
 	@Override
 	public HashMap<String,String> getExpandedRequester(String language) {
-		Client client = ClientCon.getClient();
+		Client client = ParallelInit.getClient();
 		HashMap<String,String> result = new HashMap<String,String>(0);
 		String url = this.getRequester();
 		if (url == null || url.equals("")) return result;
@@ -108,7 +108,7 @@ public class Q_fields implements QuestionIntf {
 
 	@Override
 	public String getQuestion_expandedtext(String language) {
-		Client client = ClientCon.getClient();
+		Client client = ParallelInit.getClient();
 		String url = this.getQuestion_text();
 		if (language != null && !language.equals("")) url+="?preferred_language="+language;
 		WebResource webResource = client.resource(url);

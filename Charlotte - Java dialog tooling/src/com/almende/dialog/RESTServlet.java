@@ -3,14 +3,16 @@ package com.almende.dialog;
 import java.io.IOException;
 import java.net.URL;
 import java.util.logging.Logger;
+//import java.util.Date;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.*;
 
 @SuppressWarnings("serial")
 public class RESTServlet extends com.sun.jersey.spi.container.servlet.ServletContainer {
-	private static final Logger log = Logger.getLogger(com.almende.dialog.RESTServlet.class.getName()); 	
-	
+	private static final Logger log = Logger
+			.getLogger("DialogHandler");
+//	private static long startTime = new Date().getTime();
 	
 	public static boolean get_CORS_headers(java.util.HashMap<String,String> ret, java.util.HashMap<String,String> httpHeaders)
 	{
@@ -78,11 +80,12 @@ public class RESTServlet extends com.sun.jersey.spi.container.servlet.ServletCon
 	@Override
 	public void service(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException
 	{
+//		log.warning("Starting REST service: "+startTime+"/"+(new Date().getTime()));
 		makeCORS(req,res);
 		//TODO: Do Authentication
 
 		//run Jersey
 		super.service(req,res);
-
+//		log.warning("Done REST service: "+ (new Date().getTime()));
 	}
 }

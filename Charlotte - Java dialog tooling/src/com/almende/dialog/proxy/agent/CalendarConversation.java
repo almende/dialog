@@ -15,12 +15,12 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 import com.almende.dialog.model.AnswerPost;
-import com.almende.dialog.model.ClientCon;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.spi.resource.Singleton;
 import com.almende.dialog.proxy.agent.tools.Event;
 import com.almende.dialog.proxy.agent.tools.Result;
+import com.almende.tools.ParallelInit;
 
 import flexjson.JSONDeserializer;
 @Singleton
@@ -32,7 +32,7 @@ public class CalendarConversation {
 	private static final String CALENDARAGENT = "https://agentplatform.appspot.com/agents/GoogleCalendarAgent/647fe772-918d-44a8-a199-657a6a8f07c6";
 		
 	private ArrayList<Event> getEventsToday(){
-		Client client = ClientCon.getClient();
+		Client client = ParallelInit.getClient();
 		WebResource wr = client.resource(CALENDARAGENT);
 		try {
 			String s = wr.type("application/json").post(String.class,"{\"id\":1, \"method\":\"getEventsToday\", \"params\":[]}" );

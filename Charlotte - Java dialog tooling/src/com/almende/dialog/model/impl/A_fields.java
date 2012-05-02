@@ -2,15 +2,15 @@ package com.almende.dialog.model.impl;
 
 import java.util.logging.Logger;
 
-import com.almende.dialog.model.ClientCon;
 import com.almende.dialog.model.intf.AnswerIntf;
+import com.almende.tools.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 
 public class A_fields implements AnswerIntf {
 	private static final long serialVersionUID = -2673880321244315796L;
-	private static final Logger log = Logger.getLogger(com.almende.dialog.model.impl.A_fields.class.getName()); 	
-	
+	private static final Logger log = Logger
+			.getLogger("DialogHandler");
 	String answer_id;
 	String answer_text;
 	String callback;
@@ -49,7 +49,7 @@ public class A_fields implements AnswerIntf {
 
 	@Override
 	public String getAnswer_expandedtext(String language) {
-		Client client = ClientCon.getClient();
+		Client client = ParallelInit.getClient();
 		String url = this.getAnswer_text();
 		if (language != null && !language.equals("")) url+="?preferred_language="+language;
 		WebResource webResource = client.resource(url);

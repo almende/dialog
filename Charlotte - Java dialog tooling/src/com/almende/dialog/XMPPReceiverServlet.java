@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.HashMap;
 import java.util.logging.Logger;
+//import java.util.Date;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -18,6 +19,7 @@ import org.xml.sax.InputSource;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
+import com.almende.tools.ParallelInit;
 import com.google.appengine.api.xmpp.JID;
 import com.google.appengine.api.xmpp.Message;
 import com.google.appengine.api.xmpp.MessageBuilder;
@@ -29,9 +31,10 @@ import com.google.appengine.api.xmpp.XMPPServiceFactory;
 public class XMPPReceiverServlet extends HttpServlet {
 	private static final long serialVersionUID = 10291032309680299L;
 	private static final Logger log = Logger
-			.getLogger(com.almende.dialog.XMPPReceiverServlet.class.getName());
+			.getLogger("DialogHandler");
 	// TODO: Add presence info
 
+//	private static long startTime = new Date().getTime();
 	// Charlotte is the agent responsible for routing to other agents....
 	private static final String DEMODIALOG = "http://char-a-lot.appspot.com/charlotte/";
 	private static XMPPService xmpp = XMPPServiceFactory.getXMPPService();
@@ -134,6 +137,8 @@ public class XMPPReceiverServlet extends HttpServlet {
 	public void doPost(HttpServletRequest req, HttpServletResponse res)
 			throws IOException {
 
+//		log.warning("Starting to handle xmpp post: "+startTime+"/"+(new Date().getTime()));
+		ParallelInit.startThreads();
 		boolean skip = false;
 
 		if (req.getServletPath().endsWith("/error/")) {
@@ -218,6 +223,7 @@ public class XMPPReceiverServlet extends HttpServlet {
 				.withBody(reply).build();
 
 		xmpp.sendMessage(msg);
-
+//		log.warning("Send reply to xmpp post: "+(new Date().getTime()));
+		
 	}
 }

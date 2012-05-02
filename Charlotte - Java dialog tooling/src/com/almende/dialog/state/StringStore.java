@@ -3,8 +3,8 @@ package com.almende.dialog.state;
 import java.util.Iterator;
 //import java.util.logging.Logger;
 
+import com.almende.tools.ParallelInit;
 import com.google.appengine.api.datastore.DatastoreService;
-import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.PreparedQuery;
 import com.google.appengine.api.datastore.Query;
@@ -15,8 +15,7 @@ import com.google.appengine.api.memcache.MemcacheServiceFactory;
 public class StringStore {
 	//private static final Logger log = Logger.getLogger(com.almende.dialog.state.StringStore.class.getName()); 	
 	
-	static DatastoreService datastore = DatastoreServiceFactory
-			.getDatastoreService();
+	static DatastoreService datastore = ParallelInit.getDatastore();
 	static MemcacheService syncCache = MemcacheServiceFactory
 			.getMemcacheService();
 	

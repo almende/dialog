@@ -7,10 +7,17 @@ import com.almende.eve.json.annotation.ParameterName;
 import com.almende.eve.json.annotation.ParameterRequired;
 
 import com.almende.eve.agent.annotation.*;
+import com.almende.tools.ParallelInit;
 
 public class DialogAgent extends Agent {
 	private static final long serialVersionUID = 3874598521367745811L;
-
+	
+	public DialogAgent(){
+		super();
+		ParallelInit.startThreads();
+	}
+	
+	
 	@Access(AccessType.UNAVAILABLE)
 	public Question getQuestion(String url, String id, String json){
 		Question question=null;

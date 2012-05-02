@@ -24,8 +24,8 @@ import flexjson.JSONDeserializer;
 public class Charlotte {
 	private static final String URL = "http://char-a-lot.appspot.com/charlotte/";
 	private static final String SOUNDURL = "http://commondatastorage.googleapis.com/dialogserver-sounds/testSounds/espeakConv_";
-	private static final Logger log = Logger.getLogger(com.almende.dialog.proxy.agent.Charlotte.class.getName()); 	
-	
+	private static final Logger log = Logger
+			.getLogger("DialogHandler");
 	//TODO: Charlotte should have an address book of possible agents, managed through the question interface.
 	
 	private String getGreeting(){

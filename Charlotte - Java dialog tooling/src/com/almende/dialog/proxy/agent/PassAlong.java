@@ -21,8 +21,8 @@ import flexjson.JSONDeserializer;
 public class PassAlong {
 
 	private static final String URL="http://char-a-lot.appspot.com/passAlong/";
-	private static final Logger log = Logger.getLogger(com.almende.dialog.proxy.agent.PassAlong.class.getName()); 	
-	
+	private static final Logger log = Logger
+			.getLogger("DialogHandler");
 	private String getQuestion(String question_no){
 		return getQuestion(question_no,"");
 	}	

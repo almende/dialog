@@ -81,7 +81,7 @@
 	 <target name="update" depends="build"
 	      description="Uploads the application to App Engine.">
 	 	<echo message="Run ProGuard to build a jarfile" />
-	 	<java jar="/home/ludo/workspace/proguard4.7/lib/proguard.jar" fork="true" failonerror="true">
+	 	<java jar="buildTools/proguard.jar" fork="true" failonerror="true">
             <jvmarg value="-Dmaximum.inlined.code.length=16" />
             <arg value="@DialogHandler.pro" />
         </java>

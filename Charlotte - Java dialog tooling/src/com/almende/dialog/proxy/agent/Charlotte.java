@@ -71,6 +71,7 @@ public class Charlotte {
 					use(null, AnswerPost.class).
 					deserialize(answer_json);
 			answer_input=answer.getAnswer_text();
+			log.warning("Received responder: "+answer.getResponder());
 		} catch (Exception e){
 			log.severe(e.toString());
 		}

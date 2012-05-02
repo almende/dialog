@@ -1,6 +1,10 @@
 package com.almende.dialog.model;
 
-import com.almende.dialog.model.impl.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.logging.Logger;
+
+import com.almende.dialog.model.impl.Q_fields;
 import com.almende.dialog.model.intf.QuestionIntf;
 import com.almende.tools.ParallelInit;
 import com.eaio.uuid.UUID;
@@ -11,10 +15,6 @@ import com.sun.jersey.api.client.WebResource;
 import flexjson.JSON;
 import flexjson.JSONDeserializer;
 import flexjson.JSONSerializer;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.logging.Logger;
 
 public class Question implements QuestionIntf {
 	private static final long serialVersionUID = -9069211642074173182L;
@@ -30,11 +30,15 @@ public class Question implements QuestionIntf {
 	// Factory functions:
 	@JSON(include = false)
 	public static Question fromURL(String url) {
+		return fromURL(url,"");
+	}
+	@JSON(include = false)
+	public static Question fromURL(String url,String remoteID) {
 		Client client = ParallelInit.getClient();
 		WebResource webResource = client.resource(url);
 		String json = "";
 		try {
-			json = webResource.type("text/plain").get(String.class);
+			json = webResource.queryParam("responder", remoteID).type("text/plain").get(String.class);
 		} catch (ClientHandlerException e) {
 			log.severe(e.toString());
 		}

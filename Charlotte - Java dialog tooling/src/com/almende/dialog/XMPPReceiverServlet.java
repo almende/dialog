@@ -49,7 +49,7 @@ public class XMPPReceiverServlet extends HttpServlet {
 		}
 	}
 
-	public Return formQuestion(Question question) {
+	public Return formQuestion(Question question,String address) {
 		String reply = "";
 		if (question != null) {
 			HashMap<String, String> id = question.getExpandedRequester();
@@ -59,7 +59,7 @@ public class XMPPReceiverServlet extends HttpServlet {
 			reply += question.getQuestion_expandedtext();
 			if (question.getType().equals("referral")) {
 				String preferred_language = question.getPreferred_language();
-				question = Question.fromURL(question.getUrl());
+				question = Question.fromURL(question.getUrl(),address);
 				question.setPreferred_language(preferred_language);
 				id = question.getExpandedRequester();
 				reply += "\n";
@@ -101,7 +101,7 @@ public class XMPPReceiverServlet extends HttpServlet {
 		Question question = Question.fromJSON(json);
 		question.setPreferred_language(preferred_language);
 
-		Return res = new XMPPReceiverServlet().formQuestion(question);
+		Return res = new XMPPReceiverServlet().formQuestion(question,address);
 		StringStore.storeString(address, res.question.toJSON());
 		Message msg = new MessageBuilder().withRecipientJids(jid)
 				.withBody(res.reply).build();
@@ -202,14 +202,14 @@ public class XMPPReceiverServlet extends HttpServlet {
 			Question question = null;
 			json = StringStore.getString(address);
 			if (json == null || json == "") {
-				question = Question.fromURL(DEMODIALOG);
+				question = Question.fromURL(DEMODIALOG,address);
 			} else {
 				question = Question.fromJSON(json);
 			}
 			if (question != null) {
 				question.setPreferred_language(preferred_language);
 				question = question.answer(address, null, body);
-				Return replystr = formQuestion(question);
+				Return replystr = formQuestion(question,address);
 				reply = replystr.reply;
 				question = replystr.question;
 				if (question == null) {

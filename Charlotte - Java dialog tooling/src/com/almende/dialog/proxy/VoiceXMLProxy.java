@@ -121,11 +121,11 @@ public class VoiceXMLProxy {
 	@GET
 	@Produces("application/voicexml+xml")
 	public Response getNewDialog(@QueryParam("url") String url,@QueryParam("remoteID") String remoteID){
-		Question question = Question.fromURL(url);
+		Question question = Question.fromURL(url,remoteID);
 		question.generateIds();
 		
-		//TODO store remoteID;
 		StringStore.storeString(question.getQuestion_id(), question.toJSON());
+		StringStore.storeString(question.getQuestion_id()+"-remoteID", remoteID);
 		return Response.ok(renderQuestion(question)).build();
 	}
 	private Response getNewDialog(@QueryParam("url") String url){
@@ -141,10 +141,14 @@ public class VoiceXMLProxy {
 		String json = StringStore.getString(question_id);
 		if (json != null){
 			Question question = Question.fromJSON(json);
-			question = question.answer("",answer_id,null);
+			String responder = StringStore.getString(question_id+"-remoteID");
+			question = question.answer(responder,answer_id,null);
 			question.generateIds();
+			
 			StringStore.storeString(question.getQuestion_id(), question.toJSON());
+			StringStore.storeString(question.getQuestion_id()+"-remoteID",responder);
 			StringStore.dropString(question_id);
+			StringStore.dropString(question_id+"-remoteID");
 			
 			if (question.getType().equals("comment")){
 				reply=renderComment(question);

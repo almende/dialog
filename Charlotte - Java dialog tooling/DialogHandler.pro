@@ -9,10 +9,14 @@
 -libraryjars war/WEB-INF/lib/appengine-api-labs-1.6.2.1.jar
 -outjars war/WEB-INF/lib/dialogHandler.jar
 
+-dontnote
 -keepattributes Exceptions,InnerClasses,Signature,Deprecated,
                 SourceFile,LineNumberTable,*Annotation*,EnclosingMethod
 -keepdirectories
--keep public class * {
+-verbose
+
+-keep public class * implements javax.servlet.Servlet
+-keep public class com.almende.dialog.** {
     public protected *;
 }
 -keepclassmembernames class * {

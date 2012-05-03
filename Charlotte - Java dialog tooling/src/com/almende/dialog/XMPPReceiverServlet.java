@@ -1,7 +1,9 @@
 package com.almende.dialog;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.CharBuffer;
 import java.util.HashMap;
 import java.util.logging.Logger;
 //import java.util.Date;
@@ -20,6 +22,10 @@ import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
 import com.almende.tools.ParallelInit;
+import com.google.appengine.api.taskqueue.Queue;
+import com.google.appengine.api.taskqueue.QueueFactory;
+import com.google.appengine.api.taskqueue.TaskOptions;
+import com.google.appengine.api.taskqueue.TaskOptions.Method;
 import com.google.appengine.api.xmpp.JID;
 import com.google.appengine.api.xmpp.Message;
 import com.google.appengine.api.xmpp.MessageBuilder;
@@ -138,17 +144,28 @@ public class XMPPReceiverServlet extends HttpServlet {
 			throws IOException {
 
 //		log.warning("Starting to handle xmpp post: "+startTime+"/"+(new Date().getTime()));
-		ParallelInit.startThreads();
+		boolean loading = ParallelInit.startThreads();
 		boolean skip = false;
 
 		if (req.getServletPath().endsWith("/error/")) {
 			doErrorPost(req, res);
 			return;
 		}
-
+				
+		if (loading){
+			CharBuffer bodyReader = CharBuffer.allocate(req.getContentLength());
+			BufferedReader reader = req.getReader();
+			reader.read(bodyReader);
+			
+			bodyReader.rewind();
+			Queue queue = QueueFactory.getDefaultQueue();
+			TaskOptions taskOptions = TaskOptions.Builder.withUrl("/_ah/xmpp/message/chat/")
+									  .payload(bodyReader.toString()).method(Method.POST);
+			queue.add(taskOptions);
+			return;
+		}
 		Message message = xmpp.parseMessage(req);
 		JID jid = message.getFromJid();
-
 		xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "");
 
 		String address = jid.getId().split("/")[0];

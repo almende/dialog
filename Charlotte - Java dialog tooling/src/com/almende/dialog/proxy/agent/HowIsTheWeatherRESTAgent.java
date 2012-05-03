@@ -2,6 +2,7 @@ package com.almende.dialog.proxy.agent;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.logging.Logger;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -11,11 +12,14 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
-import com.sun.jersey.spi.resource.Singleton;
-@Singleton
+import com.almende.dialog.model.AnswerPost;
+
+import flexjson.JSONDeserializer;
 @Path("/howIsTheWeather/")
 public class HowIsTheWeatherRESTAgent {
 	private static final String URL = "http://char-a-lot.appspot.com/howIsTheWeather/";
+	private static final Logger log = Logger
+			.getLogger("DialogHandler");
 	
 	@GET
 	@Path("/id/")
@@ -46,6 +50,15 @@ public class HowIsTheWeatherRESTAgent {
 	@Produces("application/json")
 	public Response answerQuestion(String answer_json, @PathParam("question_no") String question_no,@QueryParam("preferred_medium") String preferred_medium){
 		String result=null;
+		try {
+			AnswerPost answer = new JSONDeserializer<AnswerPost>().
+					use(null, AnswerPost.class).
+					deserialize(answer_json);
+			log.warning("Received responder: "+answer.getResponder());
+		} catch (Exception e){
+			log.severe(e.toString());
+		}
+		
 		String url=URL;
 		boolean audio = false;
 		if (preferred_medium != null && preferred_medium.startsWith("audio")){

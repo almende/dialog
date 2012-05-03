@@ -9,7 +9,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.*;
 
 @SuppressWarnings("serial")
-public class RESTServlet extends com.sun.jersey.spi.container.servlet.ServletContainer {
+//public class RESTServlet extends com.sun.jersey.spi.container.servlet.ServletContainer {
+public class RESTServlet {
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
 //	private static long startTime = new Date().getTime();
@@ -77,7 +78,7 @@ public class RESTServlet extends com.sun.jersey.spi.container.servlet.ServletCon
 		return isAllowed;
 	}
 	
-	@Override
+//	@Override
 	public void service(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException
 	{
 //		log.warning("Starting REST service: "+startTime+"/"+(new Date().getTime()));
@@ -85,7 +86,7 @@ public class RESTServlet extends com.sun.jersey.spi.container.servlet.ServletCon
 		//TODO: Do Authentication
 
 		//run Jersey
-		super.service(req,res);
+//		super.service(req,res);
 //		log.warning("Done REST service: "+ (new Date().getTime()));
 	}
 }

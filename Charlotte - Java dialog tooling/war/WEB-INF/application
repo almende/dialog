@@ -1,0 +1,8 @@
+com.almende.dialog.proxy.CCXMLProxy
+com.almende.dialog.proxy.VoiceXMLProxy
+com.almende.dialog.proxy.agent.Charlotte
+com.almende.dialog.proxy.agent.CalendarConversation
+com.almende.dialog.proxy.agent.HowIsTheWeatherRESTAgent
+com.almende.dialog.proxy.agent.Kastje
+com.almende.dialog.proxy.agent.Muur
+com.almende.dialog.proxy.agent.PassAlong

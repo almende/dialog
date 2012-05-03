@@ -170,7 +170,11 @@ public class XMPPReceiverServlet extends HttpServlet {
 						preferred_language);
 				reply = "Ok, switched preferred language to:"
 						+ preferred_language;
-				skip = true;
+				body="";
+				Message msg = new MessageBuilder().withRecipientJids(jid)
+						.withBody(reply).build();
+
+				xmpp.sendMessage(msg);
 			}
 			if (cmd.equals("reset")) {
 				StringStore.dropString(address);

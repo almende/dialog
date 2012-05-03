@@ -9,8 +9,6 @@ import javax.ws.rs.core.Response;
 
 import org.znerd.xmlenc.XMLOutputter;
 
-import com.sun.jersey.spi.resource.Singleton;
-@Singleton
 @Path("/ccxml/")
 public class CCXMLProxy {
 	

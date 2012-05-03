@@ -15,8 +15,7 @@ import org.znerd.xmlenc.XMLOutputter;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
-import com.sun.jersey.spi.resource.Singleton;
-@Singleton
+
 @Path("/vxml/")
 public class VoiceXMLProxy {
 	private static final Logger log = Logger.getLogger(com.almende.dialog.proxy.VoiceXMLProxy.class.getName()); 	

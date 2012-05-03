@@ -17,13 +17,11 @@ import javax.ws.rs.core.Response;
 import com.almende.dialog.model.AnswerPost;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.spi.resource.Singleton;
 import com.almende.dialog.proxy.agent.tools.Event;
 import com.almende.dialog.proxy.agent.tools.Result;
 import com.almende.tools.ParallelInit;
 
 import flexjson.JSONDeserializer;
-@Singleton
 @Path("/calendar/")
 public class CalendarConversation {
 	private static final Logger log = Logger.getLogger(com.almende.dialog.proxy.agent.CalendarConversation.class.getName()); 	

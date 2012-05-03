@@ -7,6 +7,7 @@ import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.logging.Logger;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -16,10 +17,8 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 import com.almende.dialog.model.AnswerPost;
-import com.sun.jersey.spi.resource.Singleton;
 
 import flexjson.JSONDeserializer;
-@Singleton
 @Path("/charlotte/")
 public class Charlotte {
 	private static final String URL = "http://char-a-lot.appspot.com/charlotte/";
@@ -51,9 +50,9 @@ public class Charlotte {
 			audio = true;
 			url= SOUNDURL;
 		}
-		result="{question_text:\""+url+(audio?"Q0.wav":"questions/0")+"\",type:\"closed\",answers:[";
+		result="{\"question_text\":\""+url+(audio?"Q0.wav":"questions/0")+"\",\"type\":\"closed\",\"answers\":[";
 		for (int i = 10; i< 15; i++){
-			result+="{answer_text:\""+url+(audio?"A"+i+".wav":"answers/"+i)+"\",callback:\""+URL+"questions/"+i+"?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"}"+(i<14?",":"");
+			result+="{\"answer_text\":\""+url+(audio?"A"+i+".wav":"answers/"+i)+"\",\"callback\":\""+URL+"questions/"+i+"?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"}"+(i<14?",":"");
 		}
 		result+="]}";
 		return Response.ok(result).build();
@@ -62,6 +61,7 @@ public class Charlotte {
 	@Path("/questions/{question_no}")
 	@POST
 	@Produces("application/json")
+	@Consumes("*/*")
 	public Response answerQuestion(String answer_json, @PathParam("question_no") String question_no,@QueryParam("preferred_medium") String preferred_medium){
 		String result=null;
 		String url=URL;
@@ -108,6 +108,7 @@ public class Charlotte {
 	@Path("/questions/{question_no}")
 	@GET
 	@Produces("text/plain")
+	@Consumes("*/*")
 	public  Response getQuestionText(@PathParam("question_no") String question_no, @QueryParam("preferred_medium") String prefered_mimeType ){
 		Integer questionNo = Integer.parseInt(question_no);
 		String result = "";
@@ -141,6 +142,7 @@ public class Charlotte {
 	@Path("/answers/{answer_no}")
 	@GET
 	@Produces("text/plain")
+	@Consumes("*/*")
 	public Response getAnswerText(@PathParam("answer_no") String answer_no, @QueryParam("preferred_medium") String prefered_mimeType){
 		Integer answerNo = Integer.parseInt(answer_no);
 		String result = "";

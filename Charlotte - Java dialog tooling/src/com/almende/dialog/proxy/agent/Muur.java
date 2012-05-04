@@ -8,14 +8,16 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
+import com.almende.dialog.Settings;
+
 @Path("/muur/")
 public class Muur {
-	private static final String URL="http://char-a-lot.appspot.com/muur/";
+	private static final String URL="http://"+Settings.HOST+"/muur/";
 	
 	private String getQuestion(String question_no){
 		String result = null;
 		if (question_no.equals("10")){
-			result= "{ requester:\""+URL+"id\",question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://char-a-lot.appspot.com/kastje/\"}";
+			result= "{ requester:\""+URL+"id\",question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://"+Settings.HOST+"/kastje/\"}";
 		} else {
 			result= "{ requester:\""+URL+"id\",question_text:\""+URL+"questions/"+question_no+"\",type:\"open\",answers:["+
 						"{ answer_text:\"\", callback:\""+URL+"questions/10\" }]}";

@@ -42,7 +42,7 @@ public class XMPPReceiverServlet extends HttpServlet {
 
 //	private static long startTime = new Date().getTime();
 	// Charlotte is the agent responsible for routing to other agents....
-	private static final String DEMODIALOG = "http://char-a-lot.appspot.com/charlotte/";
+	private static final String DEMODIALOG = "http://"+Settings.HOST+"/charlotte/";
 	private static XMPPService xmpp = XMPPServiceFactory.getXMPPService();
 
 	private class Return {

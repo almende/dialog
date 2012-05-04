@@ -10,6 +10,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
+import com.almende.dialog.Settings;
 import com.almende.dialog.XMPPReceiverServlet;
 import com.almende.dialog.model.AnswerPost;
 import com.almende.dialog.state.StringStore;
@@ -19,7 +20,7 @@ import flexjson.JSONDeserializer;
 @Path("/passAlong/")
 public class PassAlong {
 
-	private static final String URL="http://char-a-lot.appspot.com/passAlong/";
+	private static final String URL="http://"+Settings.HOST+"/passAlong/";
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
 	private String getQuestion(String question_no){

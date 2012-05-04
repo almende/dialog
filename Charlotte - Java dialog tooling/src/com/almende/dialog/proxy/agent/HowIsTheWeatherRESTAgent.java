@@ -12,12 +12,13 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
+import com.almende.dialog.Settings;
 import com.almende.dialog.model.AnswerPost;
 
 import flexjson.JSONDeserializer;
 @Path("/howIsTheWeather/")
 public class HowIsTheWeatherRESTAgent {
-	private static final String URL = "http://char-a-lot.appspot.com/howIsTheWeather/";
+	private static final String URL = "http://"+Settings.HOST+"/howIsTheWeather/";
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
 	

@@ -9,6 +9,8 @@ import javax.ws.rs.core.Response;
 
 import org.znerd.xmlenc.XMLOutputter;
 
+import com.almende.dialog.Settings;
+
 @Path("/ccxml/")
 public class CCXMLProxy {
 	
@@ -102,6 +104,6 @@ public class CCXMLProxy {
 	@Produces("application/ccxml+xml")
 	public Response getCCXML(){
 		
-		return Response.ok(renderCCXML("/vxml/new?url=http://char-a-lot.appspot.com/howIsTheWeather/%3Fpreferred_medium=audio/wav")).build();
+		return Response.ok(renderCCXML("/vxml/new?url=http://"+Settings.HOST+"/howIsTheWeather/%3Fpreferred_medium=audio/wav")).build();
 	}
 }

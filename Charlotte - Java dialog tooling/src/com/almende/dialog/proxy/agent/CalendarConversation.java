@@ -14,6 +14,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
+import com.almende.dialog.Settings;
 import com.almende.dialog.model.AnswerPost;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -25,7 +26,7 @@ import flexjson.JSONDeserializer;
 @Path("/calendar/")
 public class CalendarConversation {
 	private static final Logger log = Logger.getLogger(com.almende.dialog.proxy.agent.CalendarConversation.class.getName()); 	
-	private static final String URL="http://char-a-lot.appspot.com/calendar/";
+	private static final String URL="http://"+Settings.HOST+"/calendar/";
 	//private static final String USERAGENT = "https://agentplatform.appspot.com/agents/UserAgent/12d3c692-2138-4b4d-bcb2-f29058f21819";
 	private static final String CALENDARAGENT = "https://agentplatform.appspot.com/agents/GoogleCalendarAgent/647fe772-918d-44a8-a199-657a6a8f07c6";
 		

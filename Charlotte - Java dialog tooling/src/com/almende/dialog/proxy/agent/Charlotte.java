@@ -16,12 +16,13 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
+import com.almende.dialog.Settings;
 import com.almende.dialog.model.AnswerPost;
 
 import flexjson.JSONDeserializer;
 @Path("/charlotte/")
 public class Charlotte {
-	private static final String URL = "http://char-a-lot.appspot.com/charlotte/";
+	private static final String URL = "http://"+Settings.HOST+"/charlotte/";
 	private static final String SOUNDURL = "http://commondatastorage.googleapis.com/dialogserver-sounds/testSounds/espeakConv_";
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
@@ -82,16 +83,16 @@ public class Charlotte {
 		}
 		switch (Integer.parseInt(question_no)){
 		case 10:
-			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://char-a-lot.appspot.com/kastje/\"}";
+			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://"+Settings.HOST+"/kastje/\"}";
 			break;
 		case 11:
-			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://char-a-lot.appspot.com/howIsTheWeather/\"}";
+			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://"+Settings.HOST+"/howIsTheWeather/\"}";
 			break;
 		case 12:
-			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://char-a-lot.appspot.com/calendar/\"}";
+			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://"+Settings.HOST+"/calendar/\"}";
 			break;
 		case 13:
-			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://char-a-lot.appspot.com/passAlong/\"}";
+			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://"+Settings.HOST+"/passAlong/\"}";
 			break;
 		case 14:
 			result="{question_text:\""+url+(audio?"Q"+question_no+".wav":"questions/"+question_no)+"\",type:\"open\",answers:["+

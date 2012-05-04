@@ -26,6 +26,14 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 		<servlet-name>RESTServlet</servlet-name>
 		<url-pattern>/*</url-pattern>
 	</servlet-mapping>
+	<filter>
+		<filter-name>CORS</filter-name>
+		<filter-class>com.thetransactioncompany.cors.CORSFilter</filter-class>
+	</filter>
+	<filter-mapping>
+        <filter-name>CORS</filter-name>
+        <url-pattern>/*</url-pattern>
+	</filter-mapping>
 	<servlet>
 		<servlet-name>SingleAgentServlet</servlet-name>
 		<servlet-class>com.almende.eve.servlet.SingleAgentServlet</servlet-class>

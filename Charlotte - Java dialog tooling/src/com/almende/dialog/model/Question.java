@@ -1,5 +1,7 @@
 package com.almende.dialog.model;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Logger;
@@ -10,6 +12,7 @@ import com.almende.tools.ParallelInit;
 import com.eaio.uuid.UUID;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 
 import flexjson.JSON;
@@ -33,13 +36,18 @@ public class Question implements QuestionIntf {
 		return fromURL(url,"");
 	}
 	@JSON(include = false)
-	public static Question fromURL(String url,String remoteID) {
+	public static Question fromURL(String url,String remoteID)  {
 		Client client = ParallelInit.getClient();
 		WebResource webResource = client.resource(url);
+		
 		String json = "";
 		try {
-			json = webResource.queryParam("responder", remoteID).type("text/plain").get(String.class);
+			json = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).type("text/plain").get(String.class);
 		} catch (ClientHandlerException e) {
+			log.severe(e.toString());
+		} catch (UniformInterfaceException e) {
+			log.severe(e.toString());
+		} catch (UnsupportedEncodingException e) {
 			log.severe(e.toString());
 		}
 		return fromJSON(json);
@@ -69,9 +77,11 @@ public class Question implements QuestionIntf {
 		if (this.getQuestion_id() == null || this.getQuestion_id().equals("")) {
 			this.setQuestion_id(new UUID().toString());
 		}
-		for (Answer ans : this.getAnswers()) {
-			if (ans.getAnswer_id() == null || ans.getAnswer_id().equals("")) {
-				ans.setAnswer_id(new UUID().toString());
+		if(this.getAnswers()!=null) {
+			for (Answer ans : this.getAnswers()) {
+				if (ans.getAnswer_id() == null || ans.getAnswer_id().equals("")) {
+					ans.setAnswer_id(new UUID().toString());
+				}
 			}
 		}
 	}

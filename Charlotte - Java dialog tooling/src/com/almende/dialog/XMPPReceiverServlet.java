@@ -38,6 +38,7 @@ public class XMPPReceiverServlet extends HttpServlet {
 	private static final long serialVersionUID = 10291032309680299L;
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
+	private static final int LOOP_DETECTION=10;
 	// TODO: Add presence info
 
 //	private static long startTime = new Date().getTime();
@@ -54,21 +55,32 @@ public class XMPPReceiverServlet extends HttpServlet {
 			this.question = question;
 		}
 	}
-
+	
 	public Return formQuestion(Question question,String address) {
+		return formQuestion(question, address, 0);
+	}
+
+	public Return formQuestion(Question question,String address, int count) {
 		String reply = "";
 		if (question != null) {
 			HashMap<String, String> id = question.getExpandedRequester();
 			if (id.containsKey("nickname")) {
 				reply += "*" + id.get("nickname") + ":* ";
 			}
-			reply += question.getQuestion_expandedtext();
+			String qText = question.getQuestion_expandedtext();
+			if(qText!=null && !qText.equals("")) reply += qText; else reply = "";
+						
 			if (question.getType().equals("referral")) {
 				String preferred_language = question.getPreferred_language();
 				question = Question.fromURL(question.getUrl(),address);
+				if(question.getType().equals("referral") && count <= LOOP_DETECTION) {
+					count++;
+					return formQuestion(question, address, count);
+				} 
 				question.setPreferred_language(preferred_language);
 				id = question.getExpandedRequester();
-				reply += "\n";
+				if(!reply.equals(""))
+					reply += "\n";
 				if (id.containsKey("nickname")) {
 					reply += "*" + id.get("nickname") + ":* ";
 				}

@@ -120,7 +120,13 @@ public class VoiceXMLProxy {
 	@GET
 	@Produces("application/voicexml+xml")
 	public Response getNewDialog(@QueryParam("url") String url,@QueryParam("remoteID") String remoteID){
+		
+		remoteID=stripPhonenumber(remoteID);
 		Question question = Question.fromURL(url,remoteID);
+		//TODO also handle comment en tel: referral??
+		if(question.getType().equals("referral")) {
+			return getNewDialog(question.getUrl(),remoteID);
+		}
 		question.generateIds();
 		
 		StringStore.storeString(question.getQuestion_id(), question.toJSON());
@@ -162,5 +168,13 @@ public class VoiceXMLProxy {
 			}
 		}
 		return Response.ok(reply).build();
+	}
+	
+	private String stripPhonenumber(String phone) {
+		
+		String[] sPhone = phone.split("@");
+		String result = sPhone[0];
+		result = "+31"+result.replaceFirst("^0","").replace("+31", "");
+		return result;
 	}
 }

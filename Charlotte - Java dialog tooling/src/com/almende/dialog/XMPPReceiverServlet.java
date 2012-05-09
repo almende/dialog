@@ -62,30 +62,19 @@ public class XMPPReceiverServlet extends HttpServlet {
 
 	public Return formQuestion(Question question,String address, int count) {
 		String reply = "";
-		if (question != null) {
+		String preferred_language = question.getPreferred_language();
+		for (count = 0; count<=LOOP_DETECTION; count++){
+			if (question == null) break;
+			question.setPreferred_language(preferred_language);
+			
+			if (!reply.equals("")) reply+="\n";
 			HashMap<String, String> id = question.getExpandedRequester();
 			if (id.containsKey("nickname")) {
 				reply += "*" + id.get("nickname") + ":* ";
-			}
+			}			
 			String qText = question.getQuestion_expandedtext();
-			if(qText!=null && !qText.equals("")) reply += qText; else reply = "";
-						
-			if (question.getType().equals("referral")) {
-				String preferred_language = question.getPreferred_language();
-				question = Question.fromURL(question.getUrl(),address);
-				if(question.getType().equals("referral") && count <= LOOP_DETECTION) {
-					count++;
-					return formQuestion(question, address, count);
-				} 
-				question.setPreferred_language(preferred_language);
-				id = question.getExpandedRequester();
-				if(!reply.equals(""))
-					reply += "\n";
-				if (id.containsKey("nickname")) {
-					reply += "*" + id.get("nickname") + ":* ";
-				}
-				reply += question.getQuestion_expandedtext();
-			}
+			if(qText!=null && !qText.equals("")) reply += qText;
+
 			if (question.getType().equals("closed")) {
 				reply += "\n[";
 				for (Answer ans : question.getAnswers()) {
@@ -94,12 +83,13 @@ public class XMPPReceiverServlet extends HttpServlet {
 									.getPreferred_language()) + " |";
 				}
 				reply = reply.substring(0, reply.length() - 1) + " ]";
-			}
-			while (question.getType().equals("comment")) {
+				break; //Jump from forloop
+			} else if (question.getType().equals("comment")) {
 				question = question.answer(null, null, null);
-				if (question == null)
-					break;
-				reply += "\n" + question.getQuestion_expandedtext();
+			} else 	if (question.getType().equals("referral")) {
+				question = Question.fromURL(question.getUrl(),address);
+			} else {
+				break; //Jump from forloop (open questions, etc.)
 			}
 		}
 		return new Return(reply, question);

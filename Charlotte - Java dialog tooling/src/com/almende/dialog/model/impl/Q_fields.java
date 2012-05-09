@@ -110,6 +110,7 @@ public class Q_fields implements QuestionIntf {
 	public String getQuestion_expandedtext(String language) {
 		Client client = ParallelInit.getClient();
 		String url = this.getQuestion_text();
+		if (url == null || url.equals("")) return "";
 		if (language != null && !language.equals("")) url+="?preferred_language="+language;
 		WebResource webResource = client.resource(url);
 		String text = "";

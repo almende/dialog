@@ -51,6 +51,7 @@ public class A_fields implements AnswerIntf {
 	public String getAnswer_expandedtext(String language) {
 		Client client = ParallelInit.getClient();
 		String url = this.getAnswer_text();
+		if (url == null || url.equals("")) return "";
 		if (language != null && !language.equals("")) url+="?preferred_language="+language;
 		WebResource webResource = client.resource(url);
 		String text = "";

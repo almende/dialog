@@ -77,7 +77,7 @@ public class VoiceXMLProxy {
 							outputter.endTag();
 						}
 					outputter.endTag();
-					if (question.getType().equals("referral")){
+					if (question != null && question.getType().equals("referral")){
 						outputter.startTag("transfer");
 							outputter.attribute("dest", question.getUrl());
 						outputter.endTag();
@@ -124,7 +124,7 @@ public class VoiceXMLProxy {
 			outputter.endTag();
 			outputter.endDocument();
 		} catch (Exception e) {
-			log.severe("Exception in creating closed question XML: "+ e.toString());
+			log.severe("Exception in creating question XML: "+ e.toString());
 		}
 		return sw.toString();
 	}
@@ -189,24 +189,28 @@ public class VoiceXMLProxy {
 	}
 	
 	private Response handleQuestion(Question question,String remoteID){
-		
+		String result="<vxml><exit/></vxml>";
 		Return res = formQuestion(question,remoteID);
 		question = res.question;
-		question.generateIds();
-		StringStore.storeString(question.getQuestion_id(), question.toJSON());
-		StringStore.storeString(question.getQuestion_id()+"-remoteID", remoteID);
 		
-		String result="<vxml><exit/></vxml>";
-		if (question.getType().equals("closed")){
-			result = renderClosedQuestion(question,res.prompts);
-		} else if (question.getType().equals("open")){
-			result = renderOpenQuestion(question,res.prompts);
-		} else if (question.getType().equals("referral")){
-			if (question.getUrl().startsWith("tel:")){
-				result = renderComment(question,res.prompts);	
+		if (question != null){
+			question.generateIds();
+			StringStore.storeString(question.getQuestion_id(), question.toJSON());
+			StringStore.storeString(question.getQuestion_id()+"-remoteID", remoteID);
+		
+			if (question.getType().equals("closed")){
+				result = renderClosedQuestion(question,res.prompts);
+			} else if (question.getType().equals("open")){
+				result = renderOpenQuestion(question,res.prompts);
+			} else if (question.getType().equals("referral")){
+				if (question.getUrl().startsWith("tel:")){
+					result = renderComment(question,res.prompts);	
+				}
+			} else if (res.prompts.size() > 0) {
+				result = renderComment(question,res.prompts);
 			}
-		} else {
-			result = renderComment(question,res.prompts);
+		} else if (res.prompts.size() > 0){
+			result = renderComment(null,res.prompts);
 		}
 		return Response.ok(result).build();
 	}

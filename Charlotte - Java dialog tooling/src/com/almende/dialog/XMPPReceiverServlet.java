@@ -57,13 +57,9 @@ public class XMPPReceiverServlet extends HttpServlet {
 	}
 	
 	public Return formQuestion(Question question,String address) {
-		return formQuestion(question, address, 0);
-	}
-
-	public Return formQuestion(Question question,String address, int count) {
 		String reply = "";
 		String preferred_language = question.getPreferred_language();
-		for (count = 0; count<=LOOP_DETECTION; count++){
+		for (int count = 0; count<=LOOP_DETECTION; count++){
 			if (question == null) break;
 			question.setPreferred_language(preferred_language);
 			

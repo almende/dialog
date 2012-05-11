@@ -6,3 +6,5 @@ com.almende.dialog.proxy.agent.HowIsTheWeatherRESTAgent
 com.almende.dialog.proxy.agent.Kastje
 com.almende.dialog.proxy.agent.Muur
 com.almende.dialog.proxy.agent.PassAlong
+com.almende.dialog.proxy.agent.TalkTalkAgent
+

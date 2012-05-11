@@ -81,7 +81,7 @@ public class XMPPReceiverServlet extends HttpServlet {
 				reply = reply.substring(0, reply.length() - 1) + " ]";
 				break; //Jump from forloop
 			} else if (question.getType().equals("comment")) {
-				question = question.answer(null, null, null);
+				question = question.answer(null, null, null);//Always returns null! So no need, but maybe in future?
 			} else 	if (question.getType().equals("referral")) {
 				question = Question.fromURL(question.getUrl(),address);
 			} else {

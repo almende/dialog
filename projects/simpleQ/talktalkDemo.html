@@ -6,57 +6,54 @@
 		<link rel='stylesheet' href="css/simpleQ.css"/>
 		<link rel='stylesheet' href="../../css/projects.css"/>
 		<script>
-			var show_question = function() {
-				$(".question_container").simpleQ({
-					question_text : "Hi there!<br> How are you today?<br>",
-					answers : [{
-						answer_text : "Fine, thank you!",
-						callback : function() {
-							alert("Nice to hear!");
+		
+			//Post to Eve agent for first TalkTalk question
+			//Post each answer
+			var question_no="";
+			var answer = function(answer_id){
+				if (!answer_id) question_no="";
+				$.ajax({
+					url:"http://char-a-lot.appspot.com/rpc",
+					cache:false,
+					contentType:"application/json",
+					dataType:"json",
+					data:JSON.stringify({
+						method:answer_id!=null?"answer":"startDialog",
+						id:1,
+						params:{
+							question_url:"http://char-a-lot.appspot.com/talktalk?question_no="+question_no,
+							answer_id:answer_id,
+							expanded_texts:true
 						}
-					}, {
-						answer_text : "Not too good...",
-						callback : function() {
-							alert("I'm sorry.");
+					}),
+					type:"POST",
+					success:function(json){
+						//replace callback by local function
+						if (json.result.answers){
+							json.result.answers.map(function (ans){
+								ans.callback=function(){
+									answer(ans.answer_id);
+								}
+							});
 						}
-					}],
-					removeOnAnswer : false
-				})
-			}
+						question_no = json.result.question_id;						
+						$(".question_container").simpleQ(
+							json.result
+						)
+					}
+				});
+			};
 			$(document).ready(function() {
-				show_question();
+				answer(null);
 			});
 
 		</script>
 	</head>
 	<body>
-		<h2>simpleQ - jQuery Question Widget</h2>
-		<h3>Description</h3>
-		<p>
-			This jQuery plugin widget is usable to provide simple notifications and ask simple questions. It is aimed at a maximum of about 5 short answers. Each answer and the close button will trigger a callback function for handling the click.
-		</p>
-		<h3>Usage</h3>
-<pre>
-$(someDiv).simpleQ({
-	question_text: "This is the unchecked, directly presented text, may contain HTML. (Watch out for code injection!)",
-	answers:[
-	{ answer_text:"Answer 1",callback:function(){console.log("Callback on answer 1"); }},
-	{ answer_text:"Answer 2",callback:function(){console.log("Callback on answer 2"); }}
-	],
-	close_callback:function(){console.log("Callback on close button")},
-	removeOnAnswer:true|false
-});
-</pre>
-The "removeOnAnswer" flag determines if the question is removed from the DOM after an answer is selected.<br>
- 
-		<h3>Example</h3>
 		<div class="question_background">
-			<a href="javascript:show_question()">(Re)Open question</a>.
+			<a href="javascript:answer(null)">(Re)Open question</a>.
 			<br>
 			<div class="question_container"></div>
 		</div>
-		<h3>License</h3>
-		Copyright: Ludo Stellingwerff, Almende B.V.<br>
-		License:   Apache License 2.0<br>
 	</body>
 </html>

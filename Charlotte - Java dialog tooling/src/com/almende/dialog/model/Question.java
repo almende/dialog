@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 import com.almende.dialog.model.impl.Q_fields;
 import com.almende.dialog.model.intf.QuestionIntf;
 import com.almende.tools.ParallelInit;
+import com.almende.tools.QuestionTextTransformer;
 import com.eaio.uuid.UUID;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -65,10 +66,14 @@ public class Question implements QuestionIntf {
 		return question;
 	}
 
-	// TODO: implement fromStorage/fromID/fromSessionState
 	@JSON(include = false)
 	public String toJSON() {
-		return new JSONSerializer().exclude("*.class")
+		return toJSON(false);
+	}
+	
+	@JSON(include = false)
+	public String toJSON(boolean expanded_texts) {
+		return new JSONSerializer().exclude("*.class").transform(new QuestionTextTransformer(expanded_texts), "question_text", "question_expandedtext", "answer_text", "answer_expandedtext", "answers.answer_text", "answers.answer_expandedtext")
 				.include("answers", "event_callbacks").serialize(this);
 	}
 
@@ -201,7 +206,6 @@ public class Question implements QuestionIntf {
 	}
 
 	@Override
-	@JSON(include = false)
 	public String getQuestion_expandedtext() {
 		return question.getQuestion_expandedtext(this.preferred_language);
 	}

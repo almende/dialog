@@ -21,7 +21,6 @@ public class Answer implements AnswerIntf {
 	public String getCallback() { return answer.getCallback(); }
 	
 	@Override
-	@JSON(include = false)
 	public String getAnswer_expandedtext() { return answer.getAnswer_expandedtext(); }
 	@Override
 	@JSON(include = false)

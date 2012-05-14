@@ -12,6 +12,7 @@
 			urls:false,
 			removeOnAnswer:true,
 			close_callback:null,
+			vertical_answers:false,
 		};
 		if(options) {
 			$.extend(settings, options);
@@ -29,7 +30,7 @@
 		return this.each(function(){
 		      var $this = $(this);
 		      var question = $("<div class='dialog_question'></div>");
-		      if (settings.answers.length > 0){
+		      if (settings.answers && settings.answers.length > 0){
 		    	  settings.answers.map(function(answer){
 		    		  var answerObj = $("<div class='dialog_answerBox'></div");
 		    		  if (settings.urls){ 

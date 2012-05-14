@@ -2,7 +2,6 @@ package com.almende.dialog.proxy;
 
 import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.logging.Logger;
 
 import javax.ws.rs.GET;

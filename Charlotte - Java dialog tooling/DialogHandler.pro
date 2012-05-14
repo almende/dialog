@@ -6,8 +6,8 @@
 -libraryjars war/WEB-INF/lib/uuid-3.3.jar
 -libraryjars <java.home>/lib/rt.jar
 -libraryjars /usr/share/java/servlet-api.jar
--libraryjars war/WEB-INF/lib/appengine-api-1.0-sdk-1.6.4.jar
--libraryjars war/WEB-INF/lib/appengine-api-labs-1.6.4.jar
+-libraryjars war/WEB-INF/lib/appengine-api-1.0-sdk-1.6.5.jar
+-libraryjars war/WEB-INF/lib/appengine-api-labs-1.6.5.jar
 -outjars war/WEB-INF/lib/dialogHandler.jar
 
 

@@ -25,11 +25,12 @@ public class TalkTalkAgent {
 	@GET
 	@Path("/id/")
 	public Response getId(@QueryParam("preferred_language") String preferred_language){
-		return Response.ok("{ url:\""+URL+"\",nickname:\"talktalk\"}").build();
+		return Response.ok("{ url:\""+URL+"\",nickname:\"TalkTalk_imitator\"}").build();
 	}
 	
 	private String formQuestion(MemoNode question){
-		String result="{ requester:\""+URL+"id\",question_text:\""+URL+"questions/"+question.getId()+"\",";
+		String result="{ requester:\""+URL+"id\",question_id:" +
+				"\""+question.getId()+"\",question_text:\""+URL+"questions/"+question.getId()+"\",";
 		MemoNode firstAnswer = question.getChildByStringValue("firstAnswer");
 		if (firstAnswer == null){
 			firstAnswer = question.getChildByStringValue("answer");
@@ -46,7 +47,7 @@ public class TalkTalkAgent {
 					System.out.println("Answer without next question?? '"+answer.getPropertyValue("answer_text")+"'");
 					break;
 				}
-				result+="{ answer_text:\""+URL+"answers/"+answer.getId()+"\", callback:\""+URL+"questions/"+nextQ.getId()+"\" }";
+				result+="{ answer_id:\""+answer.getId()+"\",answer_text:\""+URL+"answers/"+answer.getId()+"\", callback:\""+URL+"questions/"+nextQ.getId()+"\" }";
 				answer = answer.getChildByStringValue("answer");
 			}
 			result+="]}";
@@ -103,7 +104,7 @@ public class TalkTalkAgent {
 	private MemoNode addAnswer(MemoNode question, MemoNode prev, String answer_text){
 		MemoNode answer = new MemoNode("answer");
 		answer.setPropertyValue("answer_text",answer_text);
-		question.addChild(answer);//needed?
+//		question.addChild(answer);//needed?
 		if (prev != null){
 			prev.addChild(answer);
 		} else {

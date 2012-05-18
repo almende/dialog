@@ -100,6 +100,11 @@ public class Question implements QuestionIntf {
 												// answer doesn't exist, or
 												// multiple answers
 												// (=out-of-spec)
+		} else if (this.getType().equals("comment")) {
+			if(this.getAnswers().size()==0)
+				return null;
+			answer = this.getAnswers().get(0);
+			
 		} else if (answer_id != null) {
 			ArrayList<Answer> answers = question.getAnswers();
 			for (Answer ans : answers) {
@@ -137,24 +142,22 @@ public class Question implements QuestionIntf {
 		}
 		Question newQ = null;
 		// Send answer to answer.callback.
-		if (!this.getType().equals("comment")) {
-			WebResource webResource = client.resource(answer.getCallback());
-			AnswerPost ans = new AnswerPost(null, this.getQuestion_id(),
-					answer.getAnswer_id(), answer_input, responder);
-			String post = new JSONSerializer().exclude("*.class")
-					.serialize(ans);
+		WebResource webResource = client.resource(answer.getCallback());
+		AnswerPost ans = new AnswerPost(null, this.getQuestion_id(),
+				answer.getAnswer_id(), answer_input, responder);
+		String post = new JSONSerializer().exclude("*.class")
+				.serialize(ans);
 
-			// Check if answer.callback gives new question for this dialog
-			try {
-				String s = webResource.type("application/json").post(
-						String.class, post);
+		// Check if answer.callback gives new question for this dialog
+		try {
+			String s = webResource.type("application/json").post(
+					String.class, post);
 
-				newQ = new JSONDeserializer<Question>().use(null,
-						Question.class).deserialize(s);
-				newQ.setPreferred_language(preferred_language);
-			} catch (Exception e) {
-				log.severe(e.toString());
-			}
+			newQ = new JSONDeserializer<Question>().use(null,
+					Question.class).deserialize(s);
+			newQ.setPreferred_language(preferred_language);
+		} catch (Exception e) {
+			log.severe(e.toString());
 		}
 		return newQ;
 	}

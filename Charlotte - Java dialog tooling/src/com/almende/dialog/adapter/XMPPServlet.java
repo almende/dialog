@@ -92,7 +92,8 @@ public class XMPPServlet extends HttpServlet {
 		return new Return(reply, question);
 	}
 
-	public static void startDialog(String address, String json) {
+	
+	public static void startDialog(String address, Question question) {
 		JID jid = new JID(address);
 		xmpp.sendInvitation(jid);
 		xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "");
@@ -103,7 +104,6 @@ public class XMPPServlet extends HttpServlet {
 		if (preferred_language == null)
 			preferred_language = "nl";
 
-		Question question = Question.fromJSON(json);
 		question.setPreferred_language(preferred_language);
 
 		Return res = new XMPPServlet().formQuestion(question,address);
@@ -112,6 +112,11 @@ public class XMPPServlet extends HttpServlet {
 				.withBody(res.reply).build();
 
 		xmpp.sendMessage(msg);
+	}
+
+	public static void startDialog(String address, String json) {
+		Question question = Question.fromJSON(json);
+		XMPPServlet.startDialog(address, question);
 	}
 
 	public void doErrorPost(HttpServletRequest req, HttpServletResponse res)

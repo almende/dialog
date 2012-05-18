@@ -11,9 +11,11 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 import com.almende.dialog.Settings;
-import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.model.AnswerPost;
 import com.almende.dialog.state.StringStore;
+import com.almende.util.ParallelInit;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.WebResource;
 
 
 import flexjson.JSONDeserializer;
@@ -23,9 +25,6 @@ public class PassAlong {
 	private static final String URL="http://"+Settings.HOST+"/passAlong/";
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
-	private String getQuestion(String question_no){
-		return getQuestion(question_no,"");
-	}	
 	
 	private String getQuestion(String question_no,String responder){
 		String result = null;
@@ -58,8 +57,14 @@ public class PassAlong {
 
 	@GET
 	@Produces("application/json")
-	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium){
-		return Response.ok(getQuestion("0")).build();
+	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium,@QueryParam("question_no") String question_no,@QueryParam("responder") String responder){
+		if (question_no == null || question_no.equals("")){
+			question_no = "0";
+		}
+		if (responder == null){
+			responder = "";
+		}
+		return Response.ok(getQuestion(question_no,responder)).build();
 	}
 	
 	@Path("/questions/{question_no}")
@@ -85,12 +90,20 @@ public class PassAlong {
 					StringStore.storeString(responder+"_passAlong_address", answer_input);
 					StringStore.storeString(answer_input+"_passAlong_address", responder); //For the return path!:)
 					break;
-				case 31: //Get address, store somewhere
+				case 31:
 					question_no="1";
 					break;
 				case 2: //Get message, schedule outbound call
 					StringStore.storeString(responder+"_passAlong_message", answer_input);
-					XMPPServlet.startDialog(StringStore.getString(responder+"_passAlong_address"), getQuestion("3",responder));
+					Client client = ParallelInit.getClient();
+					WebResource wr = client.resource("http://"+Settings.HOST+"/rpc");
+					String request = "{\"id\":1, \"method\":\"outboundCall\", \"params\":{"
+							+"\"address\":\""+StringStore.getString(responder+"_passAlong_address")+"\","
+							+"\"url\":\""+URL+"?question_no=3&responder="+responder+"\","
+							+"\"type\":\"gtalk\""
+							+"}}";
+					wr.type("application/json").post(String.class,request);
+
 					break;
 			}
 		}

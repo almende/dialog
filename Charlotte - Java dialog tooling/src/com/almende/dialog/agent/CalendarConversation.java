@@ -34,7 +34,7 @@ public class CalendarConversation {
 		Client client = ParallelInit.getClient();
 		WebResource wr = client.resource(CALENDARAGENT);
 		try {
-			String s = wr.type("application/json").post(String.class,"{\"id\":1, \"method\":\"getEventsToday\", \"params\":[]}" );
+			String s = wr.type("application/json").post(String.class,"{\"id\":1, \"method\":\"getEventsToday\", \"params\":{}}" );
 			Result result = new JSONDeserializer<Result>().
 						use(null, Result.class).
 						deserialize(s);

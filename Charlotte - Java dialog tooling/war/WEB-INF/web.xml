@@ -5,6 +5,14 @@ xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
 http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	<servlet>
+		<servlet-name>TTStest</servlet-name>
+		<servlet-class>com.almende.dialog.HelloWorldTTSServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>TTStest</servlet-name>
+		<url-pattern>/tts</url-pattern>
+	</servlet-mapping>
+	<servlet>
 		<servlet-name>RESTServlet</servlet-name>
 		<servlet-class>org.apache.wink.server.internal.servlet.RestServlet</servlet-class>
         <init-param>
@@ -16,7 +24,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 		<servlet-name>RESTServlet</servlet-name>
 		<url-pattern>/*</url-pattern>
 	</servlet-mapping>
-		<servlet>
+	<servlet>
 		<servlet-name>JSON</servlet-name>
 		<servlet-class>com.chap.memo.memoNodes.JsonExport</servlet-class>
 	</servlet>
@@ -72,7 +80,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	
     <servlet>
   		<servlet-name>mailhandler</servlet-name>
-  		<servlet-class>com.almende.dialog.adapter.mail</servlet-class>
+  		<servlet-class>com.almende.dialog.adapter.MailServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
   		<servlet-name>mailhandler</servlet-name>

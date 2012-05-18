@@ -1,10 +1,10 @@
-com.almende.dialog.proxy.CCXMLProxy
-com.almende.dialog.proxy.VoiceXMLProxy
-com.almende.dialog.proxy.agent.Charlotte
-com.almende.dialog.proxy.agent.CalendarConversation
-com.almende.dialog.proxy.agent.HowIsTheWeatherRESTAgent
-com.almende.dialog.proxy.agent.Kastje
-com.almende.dialog.proxy.agent.Muur
-com.almende.dialog.proxy.agent.PassAlong
-com.almende.dialog.proxy.agent.TalkTalkAgent
+com.almende.dialog.adapter.vxml.CCXMLProxy
+com.almende.dialog.adapter.vxml.VoiceXMLRESTProxy
+com.almende.dialog.agent.Charlotte
+com.almende.dialog.agent.CalendarConversation
+com.almende.dialog.agent.HowIsTheWeatherRESTAgent
+com.almende.dialog.agent.Kastje
+com.almende.dialog.agent.Muur
+com.almende.dialog.agent.PassAlong
+com.almende.dialog.agent.TalkTalkAgent
 

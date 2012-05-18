@@ -1,4 +1,4 @@
-package com.almende.dialog.proxy;
+package com.almende.dialog.adapter.vxml;
 
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -16,8 +16,8 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
 
 @Path("/vxml/")
-public class VoiceXMLProxy {
-	private static final Logger log = Logger.getLogger(com.almende.dialog.proxy.VoiceXMLProxy.class.getName()); 	
+public class VoiceXMLRESTProxy {
+	private static final Logger log = Logger.getLogger(com.almende.dialog.adapter.vxml.VoiceXMLRESTProxy.class.getName()); 	
 	private static final int LOOP_DETECTION=10;
 	private static final String DTMFGRAMMAR="/dtmf2hash.grxml";
 	

@@ -1,4 +1,4 @@
-package com.almende.tools;
+package com.almende.dialog.util;
 
 import flexjson.BasicType;
 import flexjson.TypeContext;

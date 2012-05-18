@@ -7,7 +7,7 @@ import java.util.logging.Logger;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.intf.QuestionIntf;
-import com.almende.tools.ParallelInit;
+import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 

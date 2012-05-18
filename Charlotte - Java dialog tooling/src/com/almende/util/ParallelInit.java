@@ -1,4 +1,4 @@
-package com.almende.tools;
+package com.almende.util;
 
 
 import com.google.appengine.api.ThreadManager;

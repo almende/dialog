@@ -1,0 +1,26 @@
+<html>
+	<head>
+		<title>WebAppTools - jQuery plugins for WebApplication building - CHAP Dialog Tools</title>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+		<script src="js/StateBus.js"></script>
+		<link rel='stylesheet' href="../../css/projects.css"/>
+		<script>
+			console.log(jQuery);
+			var stateBus = jQuery.StateBus();
+			var sink = stateBus.sink("Test");
+			sink.setState("unSet");
+						
+			stateBus.subscribe("Test",function(value,time){ alert('Test state now:'+value);});
+			stateBus.subscribe("Test",function(value,time){ console.log('Test state now:'+value);},1000);
+			
+
+			setTimeout(function(){sink.setState("Set")},2500);
+		</script>
+	</head>
+		<body>
+		<h2>WebAppTools - jQuery plugins for effective WebApplication building</h2>
+		<h3>Description</h3>
+		<p>This package contains a set of tools for building webapps.</p>
+		
+</body>
+</html>

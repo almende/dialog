@@ -1,4 +1,4 @@
-package com.almende.dialog.proxy.agent;
+package com.almende.dialog.agent;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;

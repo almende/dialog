@@ -1,4 +1,4 @@
-package com.almende.dialog.proxy.agent;
+package com.almende.dialog.agent;
 
 import java.util.logging.Logger;
 
@@ -11,7 +11,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 import com.almende.dialog.Settings;
-import com.almende.dialog.XMPPReceiverServlet;
+import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.model.AnswerPost;
 import com.almende.dialog.state.StringStore;
 
@@ -90,7 +90,7 @@ public class PassAlong {
 					break;
 				case 2: //Get message, schedule outbound call
 					StringStore.storeString(responder+"_passAlong_message", answer_input);
-					XMPPReceiverServlet.startDialog(StringStore.getString(responder+"_passAlong_address"), getQuestion("3",responder));
+					XMPPServlet.startDialog(StringStore.getString(responder+"_passAlong_address"), getQuestion("3",responder));
 					break;
 			}
 		}

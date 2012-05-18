@@ -3,7 +3,7 @@ package com.almende.dialog.model.impl;
 import java.util.logging.Logger;
 
 import com.almende.dialog.model.intf.AnswerIntf;
-import com.almende.tools.ParallelInit;
+import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 

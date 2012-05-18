@@ -29,7 +29,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 		<filter-class>com.thetransactioncompany.cors.CORSFilter</filter-class>
 		<init-param>
 		    <param-name>cors.supportedHeaders</param-name>
-		    <param-value>Content-Type</param-value>
+		    <param-value>Content-Type, Accept, Origin</param-value>
+		</init-param>
+		<init-param>
+		    <param-name>cors.supportedMethods</param-name>
+		    <param-value>GET, POST, HEAD, PUT, DELETE, OPTIONS</param-value>
+		</init-param>
+		<init-param>
+		    <param-name>cors.maxAge</param-name>
+		    <param-value>3600</param-value>
 		</init-param>
 	</filter>
 	<filter-mapping>
@@ -42,7 +50,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 		<init-param>
 			<description>The agent classes served by the servlet</description>
 			<param-name>agent</param-name>
-			<param-value>com.almende.dialog.DialogAgent</param-value>
+			<param-value>com.almende.dialog.adapter.DialogAgent</param-value>
 		</init-param>
 	</servlet>
 	<servlet-mapping>
@@ -51,7 +59,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	<servlet>
 		<servlet-name>xmppreceiver</servlet-name>
-		<servlet-class>com.almende.dialog.XMPPReceiverServlet</servlet-class>
+		<servlet-class>com.almende.dialog.adapter.XMPPServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>xmppreceiver</servlet-name>
@@ -60,6 +68,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	<servlet-mapping>
 		<servlet-name>xmppreceiver</servlet-name>
 		<url-pattern>/_ah/xmpp/message/error/</url-pattern>
+	</servlet-mapping>
+	
+    <servlet>
+  		<servlet-name>mailhandler</servlet-name>
+  		<servlet-class>com.almende.dialog.adapter.mail</servlet-class>
+	</servlet>
+	<servlet-mapping>
+  		<servlet-name>mailhandler</servlet-name>
+  		<url-pattern>/_ah/mail/*</url-pattern>
 	</servlet-mapping>
 	<welcome-file-list>
 		<welcome-file>index.html</welcome-file>
@@ -95,5 +112,22 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
             <role-name>admin</role-name>
         </auth-constraint>
     </security-constraint>
+    
+	<security-constraint>
+  		<web-resource-collection>
+    		<url-pattern>/_ah/xmpp/*</url-pattern>
+  		</web-resource-collection>
+  		<auth-constraint>
+    		<role-name>admin</role-name>
+  		</auth-constraint>
+	</security-constraint>
 
+	<security-constraint>
+  		<web-resource-collection>
+    		<url-pattern>/_ah/mail/*</url-pattern>
+  		</web-resource-collection>
+  		<auth-constraint>
+    		<role-name>admin</role-name>
+		</auth-constraint>
+	</security-constraint>
 </web-app>

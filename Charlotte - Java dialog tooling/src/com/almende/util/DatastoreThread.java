@@ -1,4 +1,4 @@
-package com.almende.tools;
+package com.almende.util;
 
 //import java.util.Date;
 //import java.util.logging.Logger;

@@ -3,7 +3,7 @@ package com.almende.dialog.state;
 import java.util.Iterator;
 //import java.util.logging.Logger;
 
-import com.almende.tools.ParallelInit;
+import com.almende.util.ParallelInit;
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.PreparedQuery;

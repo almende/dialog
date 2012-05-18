@@ -1,4 +1,4 @@
-package com.almende.dialog;
+package com.almende.dialog.adapter;
 
 import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
@@ -7,7 +7,7 @@ import com.almende.eve.json.annotation.ParameterName;
 import com.almende.eve.json.annotation.ParameterRequired;
 
 import com.almende.eve.agent.annotation.*;
-import com.almende.tools.ParallelInit;
+import com.almende.util.ParallelInit;
 
 public class DialogAgent extends Agent {
 	private static final long serialVersionUID = 3874598521367745811L;

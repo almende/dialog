@@ -1,4 +1,4 @@
-package com.almende.dialog;
+package com.almende.dialog.adapter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,10 +18,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
+import com.almende.dialog.Settings;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
-import com.almende.tools.ParallelInit;
+import com.almende.util.ParallelInit;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.taskqueue.TaskOptions;
@@ -34,7 +35,7 @@ import com.google.appengine.api.xmpp.PresenceType;
 import com.google.appengine.api.xmpp.XMPPService;
 import com.google.appengine.api.xmpp.XMPPServiceFactory;
 
-public class XMPPReceiverServlet extends HttpServlet {
+public class XMPPServlet extends HttpServlet {
 	private static final long serialVersionUID = 10291032309680299L;
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
@@ -105,7 +106,7 @@ public class XMPPReceiverServlet extends HttpServlet {
 		Question question = Question.fromJSON(json);
 		question.setPreferred_language(preferred_language);
 
-		Return res = new XMPPReceiverServlet().formQuestion(question,address);
+		Return res = new XMPPServlet().formQuestion(question,address);
 		StringStore.storeString(address, res.question.toJSON());
 		Message msg = new MessageBuilder().withRecipientJids(jid)
 				.withBody(res.reply).build();

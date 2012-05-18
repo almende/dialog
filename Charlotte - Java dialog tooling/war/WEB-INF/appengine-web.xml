@@ -17,6 +17,7 @@
     <inbound-services>
         <service>xmpp_message</service>
         <service>xmpp_error</service>
+		<service>mail</service>
     </inbound-services>
 
 </appengine-web-app>

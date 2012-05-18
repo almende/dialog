@@ -8,8 +8,8 @@ import java.util.logging.Logger;
 
 import com.almende.dialog.model.impl.Q_fields;
 import com.almende.dialog.model.intf.QuestionIntf;
-import com.almende.tools.ParallelInit;
-import com.almende.tools.QuestionTextTransformer;
+import com.almende.dialog.util.QuestionTextTransformer;
+import com.almende.util.ParallelInit;
 import com.eaio.uuid.UUID;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;

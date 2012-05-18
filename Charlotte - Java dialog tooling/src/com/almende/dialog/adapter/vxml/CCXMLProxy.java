@@ -1,4 +1,4 @@
-package com.almende.dialog.proxy;
+package com.almende.dialog.adapter.vxml;
 
 import java.io.StringWriter;
 

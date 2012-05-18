@@ -1,8 +1,8 @@
-package com.almende.dialog.proxy.agent.tools;
+package com.almende.dialog.agent.tools;
 
 import java.util.ArrayList;
 
-import com.almende.dialog.proxy.agent.tools.Event;
+import com.almende.dialog.agent.tools.Event;
 
 public class Result{
 	/*

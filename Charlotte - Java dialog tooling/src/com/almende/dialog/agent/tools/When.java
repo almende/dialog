@@ -1,4 +1,4 @@
-package com.almende.dialog.proxy.agent.tools;
+package com.almende.dialog.agent.tools;
 
 public class When{
 	public When(){};

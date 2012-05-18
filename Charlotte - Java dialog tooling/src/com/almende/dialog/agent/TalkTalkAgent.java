@@ -1,4 +1,4 @@
-package com.almende.dialog.proxy.agent;
+package com.almende.dialog.agent;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -96,21 +96,20 @@ public class TalkTalkAgent {
 	}
 	
 	private MemoNode addQuestion(MemoNode answer, String question_text){
-		MemoNode question = new MemoNode("question");
-		question.setPropertyValue("question_text", question_text);
+		MemoNode question = new MemoNode("question")
+								.setPropertyValue("question_text", question_text);
 		answer.addChild(question);
 		return question;
 	}
 	private MemoNode addAnswer(MemoNode question, MemoNode prev, String answer_text){
-		MemoNode answer = new MemoNode("answer");
-		answer.setPropertyValue("answer_text",answer_text);
-//		question.addChild(answer);//needed?
+		MemoNode answer = new MemoNode("answer")
+								.setPropertyValue("answer_text",answer_text);
 		if (prev != null){
 			prev.addChild(answer);
 		} else {
 			MemoNode firstAnswer = new MemoNode("firstAnswer");
-			question.addChild(firstAnswer);
-			firstAnswer.addChild(answer);
+			question.addChild(firstAnswer)
+					.addChild(answer);
 		}
 		return answer;
 	}

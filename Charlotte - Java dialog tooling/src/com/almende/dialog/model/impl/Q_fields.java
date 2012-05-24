@@ -53,7 +53,10 @@ public class Q_fields implements QuestionIntf {
 		HashMap<String,String> result = new HashMap<String,String>(0);
 		String url = this.getRequester();
 		if (url == null || url.equals("")) return result;
-		if (language != null && !language.equals("")) url+="?preferred_language="+language;
+		if (language != null && !language.equals("")){
+			url+=url.indexOf("?")>0?"&":"?";
+			url+="preferred_language="+language;
+		}
 		try {
 			WebResource webResource = client.resource(url);
 			String text = "";
@@ -111,7 +114,10 @@ public class Q_fields implements QuestionIntf {
 		Client client = ParallelInit.getClient();
 		String url = this.getQuestion_text();
 		if (url == null || url.equals("")) return "";
-		if (language != null && !language.equals("")) url+="?preferred_language="+language;
+		if (language != null && !language.equals("")){
+			url+=url.indexOf("?")>0?"&":"?";
+			url+="preferred_language="+language;
+		}
 		WebResource webResource = client.resource(url);
 		String text = "";
 		try {

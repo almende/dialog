@@ -31,6 +31,7 @@ public class DialogAgent extends Agent {
 		return question;
 	}
 	
+	//TODO: Move the dialer to a separate Servlet...
 	public boolean outboundCall(@ParameterName("address") String address, @ParameterName("url") String url, @ParameterName("type") String type){
 		log.warning("outboundCall called: "+address+" / "+ url + " / "+ type);
 		Question question = Question.fromURL(url, address);

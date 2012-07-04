@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <project basedir="." default="build" name="DialogHandler">
 	<property environment="env" />
-	<property name="sdk.dir" location="/usr/share/eclipse/plugins/com.google.appengine.eclipse.sdkbundle_1.6.5/appengine-java-sdk-1.6.5" />
+	<property name="sdk.dir" location="../../../appengine-java-sdk-1.6.6" />
 	<import file="${sdk.dir}/config/user/ant-macros.xml" />
 
 	<property name="ECLIPSE_HOME" value="../../../../../../usr/lib/eclipse" />

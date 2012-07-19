@@ -22,6 +22,7 @@ public class Q_fields implements QuestionIntf {
 	String type;
 	String url;
 	String requester;
+	String data;
 	ArrayList<Answer> answers;
 	ArrayList<EventCallback> event_callbacks;
 	
@@ -130,6 +131,16 @@ public class Q_fields implements QuestionIntf {
 	@Override
 	public String getQuestion_expandedtext() {
 		return getQuestion_expandedtext(null);
+	}
+
+	@Override
+	public String getData() {
+		return this.data;
+	}
+
+	@Override
+	public void setData(String data) {
+		this.data=data;
 	}
 
 }

@@ -264,6 +264,17 @@ public class Question implements QuestionIntf {
 		this.preferred_language = preferred_language;
 	}
 
+	@Override
+	public String getData() {
+		return this.question.getData();
+	}
+
+	@Override
+	public void setData(String data) {
+		this.question.setData(data);
+		
+	}
+
 
 
 

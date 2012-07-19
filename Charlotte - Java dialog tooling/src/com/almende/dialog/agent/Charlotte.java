@@ -2,6 +2,7 @@ package com.almende.dialog.agent;
 
 import java.net.URI;
 
+
 import java.net.URISyntaxException;
 import java.util.Calendar;
 import java.util.TimeZone;
@@ -51,7 +52,7 @@ public class Charlotte {
 			audio = true;
 			url= SOUNDURL;
 		}
-		result="{\"question_text\":\""+url+(audio?"Q0.wav":"questions/0")+"\",\"type\":\"closed\",\"answers\":[";
+		result="{\"question_text\":\""+url+(audio?"Q0.wav":"questions/0")+"\",\"data\":\"hi\",\"type\":\"closed\",\"answers\":[";
 		for (int i = 10; i< 15; i++){
 			result+="{\"answer_text\":\""+url+(audio?"A"+i+".wav":"answers/"+i)+"\",\"callback\":\""+URL+"questions/"+i+"?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"}"+(i<14?",":"");
 		}

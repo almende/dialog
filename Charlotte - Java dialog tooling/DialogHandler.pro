@@ -2,12 +2,14 @@
 -injars war/WEB-INF/lib/xmlenc-0.52.jar(!META-INF/MANIFEST.MF)
 -injars war/WEB-INF/lib/eve-core.jar(!META-INF/MANIFEST.MF)
 -libraryjars war/WEB-INF/lib/
+-libraryjars war/WEB-INF/lib/javassist.jar
+-libraryjars war/WEB-INF/lib/msgpack-0.6.7-SNAPSHOT.jar
 -libraryjars war/WEB-INF/lib/memo.jar
 -libraryjars war/WEB-INF/lib/uuid-3.3.jar
 -libraryjars <java.home>/lib/rt.jar
--libraryjars /usr/share/java/servlet-api.jar
--libraryjars war/WEB-INF/lib/appengine-api-1.0-sdk-1.6.5.jar
--libraryjars war/WEB-INF/lib/appengine-api-labs-1.6.5.jar
+-libraryjars /usr/share/java/tomcat-servlet-api-3.0.jar
+-libraryjars war/WEB-INF/lib/appengine-api-1.0-sdk-1.7.0.jar
+-libraryjars war/WEB-INF/lib/appengine-api-labs.jar
 -outjars war/WEB-INF/lib/dialogHandler.jar
 
 

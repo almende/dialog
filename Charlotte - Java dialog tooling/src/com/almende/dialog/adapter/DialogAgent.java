@@ -5,8 +5,8 @@ import java.util.logging.Logger;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
 import com.almende.eve.agent.Agent;
-import com.almende.eve.json.annotation.ParameterName;
-import com.almende.eve.json.annotation.ParameterRequired;
+import com.almende.eve.json.annotation.Name;
+import com.almende.eve.json.annotation.Required;
 
 import com.almende.eve.agent.annotation.*;
 import com.almende.util.ParallelInit;
@@ -32,7 +32,7 @@ public class DialogAgent extends Agent {
 	}
 	
 	//TODO: Move the dialer to a separate Servlet...
-	public boolean outboundCall(@ParameterName("address") String address, @ParameterName("url") String url, @ParameterName("type") String type){
+	public boolean outboundCall(@Name("address") String address, @Name("url") String url, @Name("type") String type){
 		log.warning("outboundCall called: "+address+" / "+ url + " / "+ type);
 		Question question = Question.fromURL(url, address);
 		if (type.equals("gtalk")){
@@ -45,10 +45,10 @@ public class DialogAgent extends Agent {
 		return true;
 	}
 	
-	public String startDialog(@ParameterName("question_url") @ParameterRequired(false) String url,
-							  @ParameterName("myid") @ParameterRequired(false) String id, 
-							  @ParameterName("question_json") @ParameterRequired(false) String json,
-							  @ParameterName("expanded_texts") @ParameterRequired(false) String expanded_texts){
+	public String startDialog(@Name("question_url") @Required(false) String url,
+							  @Name("myid") @Required(false) String id, 
+							  @Name("question_json") @Required(false) String json,
+							  @Name("expanded_texts") @Required(false) String expanded_texts){
 		String reply = "";
 		Question question = getQuestion(url,id,json);
 		if (expanded_texts == null) expanded_texts = "false";
@@ -62,12 +62,12 @@ public class DialogAgent extends Agent {
 		}
 		return reply;
 	}
-	public String answer(@ParameterName("question_url") @ParameterRequired(false) String url,
-						 @ParameterName("myid") @ParameterRequired(false) String id,
-						 @ParameterName("question_json") @ParameterRequired(false) String json,
-						 @ParameterName("answer_input") @ParameterRequired(false) String answer_input,
-						 @ParameterName("answer_id") @ParameterRequired(false) String answer_id,
-						 @ParameterName("expanded_texts") @ParameterRequired(false) String expanded_texts){
+	public String answer(@Name("question_url") @Required(false) String url,
+						 @Name("myid") @Required(false) String id,
+						 @Name("question_json") @Required(false) String json,
+						 @Name("answer_input") @Required(false) String answer_input,
+						 @Name("answer_id") @Required(false) String answer_id,
+						 @Name("expanded_texts") @Required(false) String expanded_texts){
 		String reply = "";
 		Question question = getQuestion(url,id,json);
 		if (question != null) question = question.answer("",answer_id, answer_input);

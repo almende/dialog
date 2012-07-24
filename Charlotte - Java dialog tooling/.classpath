@@ -8,10 +8,10 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-collections-4.0-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/msgpack-0.6.7-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/javassist.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/eve-core-0.6.jar"/>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/flexjson-2.1.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/eve-core.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-beanutils.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-lang.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-logging.jar"/>

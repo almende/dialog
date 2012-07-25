@@ -28,7 +28,7 @@ public class CalendarConversation {
 	private static final Logger log = Logger.getLogger(com.almende.dialog.agent.CalendarConversation.class.getName()); 	
 	private static final String URL="http://"+Settings.HOST+"/calendar/";
 	//private static final String USERAGENT = "https://agentplatform.appspot.com/agents/UserAgent/12d3c692-2138-4b4d-bcb2-f29058f21819";
-	private static final String CALENDARAGENT = "https://agentplatform.appspot.com/agents/GoogleCalendarAgent/647fe772-918d-44a8-a199-657a6a8f07c6";
+	private static final String CALENDARAGENT = "https://eveagents.appspot.com/agents/GoogleCalendarAgent/647fe772-918d-44a8-a199-657a6a8f07c6";
 		
 	private ArrayList<Event> getEventsToday(){
 		Client client = ParallelInit.getClient();

@@ -14,17 +14,18 @@ import com.almende.dialog.Settings;
 import com.almende.dialog.model.AnswerPost;
 import com.almende.dialog.state.StringStore;
 import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 
 
-import flexjson.JSONDeserializer;
 @Path("/passAlong/")
 public class PassAlong {
 
 	private static final String URL="http://"+Settings.HOST+"/passAlong/";
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
+	static final ObjectMapper om =ParallelInit.getObjectMapper();
 	
 	private String getQuestion(String question_no,String responder){
 		String result = null;
@@ -75,9 +76,7 @@ public class PassAlong {
 		String answer_input="";
 		String responder="";
 		try {
-			AnswerPost answer = new JSONDeserializer<AnswerPost>().
-					use(null, AnswerPost.class).
-					deserialize(answer_json);
+			AnswerPost answer = om.readValue(answer_json,AnswerPost.class); 
 			answer_input=answer.getAnswer_text();
 			responder = answer.getResponder();
 			

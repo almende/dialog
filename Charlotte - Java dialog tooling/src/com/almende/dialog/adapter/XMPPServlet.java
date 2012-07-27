@@ -19,8 +19,11 @@ import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
 import com.almende.dialog.Settings;
+import com.almende.dialog.accounts.Account;
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.util.ParallelInit;
 import com.google.appengine.api.taskqueue.Queue;
@@ -40,7 +43,6 @@ public class XMPPServlet extends HttpServlet {
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
 	private static final int LOOP_DETECTION=10;
-	// TODO: Add presence info
 
 //	private static long startTime = new Date().getTime();
 	// Charlotte is the agent responsible for routing to other agents....
@@ -93,7 +95,10 @@ public class XMPPServlet extends HttpServlet {
 	}
 
 	
-	public static void startDialog(String address, Question question) {
+	public static void startDialog(String address, Question question, Account account) {
+		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("XMPP", account);
+		JID localJid = new JID(config.getMyJID());
+		
 		JID jid = new JID(address);
 		xmpp.sendInvitation(jid);
 		xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "");
@@ -101,22 +106,22 @@ public class XMPPServlet extends HttpServlet {
 		address = jid.getId().split("/")[0];
 		String preferred_language = StringStore
 				.getString(address + "_language");
-		if (preferred_language == null)
-			preferred_language = "nl";
-
+		if (preferred_language == null){
+			preferred_language = config.getPreferred_language();
+		}
 		question.setPreferred_language(preferred_language);
 
 		Return res = new XMPPServlet().formQuestion(question,address);
 		StringStore.storeString(address, res.question.toJSON());
-		Message msg = new MessageBuilder().withRecipientJids(jid)
+		Message msg = new MessageBuilder().withRecipientJids(jid).withFromJid(localJid)
 				.withBody(res.reply).build();
 
 		xmpp.sendMessage(msg);
 	}
 
-	public static void startDialog(String address, String json) {
+	public static void startDialog(String address, String json, Account account) {
 		Question question = Question.fromJSON(json);
-		XMPPServlet.startDialog(address, question);
+		XMPPServlet.startDialog(address, question, account);
 	}
 
 	public void doErrorPost(HttpServletRequest req, HttpServletResponse res)
@@ -169,10 +174,25 @@ public class XMPPServlet extends HttpServlet {
 			return;
 		}
 		Message message = xmpp.parseMessage(req);
+		JID[] toJids = message.getRecipientJids();
+		JID localJid = null;
+		String localaddress = "";
+		//Why multiple addresses? 
+		if (toJids.length>0){
+			localJid = toJids[0];
+		} 
+		if (localJid != null){
+			localaddress = toJids[0].getId().split("/")[0];
+		} else {
+			log.severe("XMPPServlet: Can't determine local address!");
+			return;
+		}
 		JID jid = message.getFromJid();
 		xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "");
 
 		String address = jid.getId().split("/")[0];
+		
+		Session session = Session.getSession("XMPP|"+localaddress+"|"+address);
 		String body = message.getBody().trim();
 
 		String json = "";
@@ -192,13 +212,13 @@ public class XMPPServlet extends HttpServlet {
 				reply = "Ok, switched preferred language to:"
 						+ preferred_language;
 				body="";
-				Message msg = new MessageBuilder().withRecipientJids(jid)
+				Message msg = new MessageBuilder().withRecipientJids(jid).withFromJid(localJid)
 						.withBody(reply).build();
 
 				xmpp.sendMessage(msg);
 			}
 			if (cmd.equals("reset")) {
-				StringStore.dropString(address);
+				StringStore.dropString("question_"+address);
 			}
 			if (cmd.startsWith("help")) {
 				String[] command = cmd.split(" ");
@@ -224,9 +244,11 @@ public class XMPPServlet extends HttpServlet {
 		if (!skip) {
 			if (preferred_language == null)
 				preferred_language = "nl";
+						
 			Question question = null;
-			json = StringStore.getString(address);
-			if (json == null || json == "") {
+			json = StringStore.getString("question_"+address);
+			if (json == null || json.equals("")) {
+				//TODO! get agent URL from adapterconfig
 				question = Question.fromURL(DEMODIALOG,address);
 			} else {
 				question = Question.fromJSON(json);
@@ -237,14 +259,17 @@ public class XMPPServlet extends HttpServlet {
 				Return replystr = formQuestion(question,address);
 				reply = replystr.reply;
 				question = replystr.question;
+				
 				if (question == null) {
-					StringStore.dropString(address);
+					StringStore.dropString("question_"+address);
+					session.drop();
 				} else {
-					StringStore.storeString(address, question.toJSON());
+					StringStore.storeString("question_"+address, question.toJSON());
+					session.storeSession();
 				}
 			}
 		}
-		Message msg = new MessageBuilder().withRecipientJids(jid)
+		Message msg = new MessageBuilder().withRecipientJids(jid).withFromJid(localJid)
 				.withBody(reply).build();
 
 		xmpp.sendMessage(msg);

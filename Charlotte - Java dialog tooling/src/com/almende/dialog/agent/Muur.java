@@ -9,31 +9,48 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 import com.almende.dialog.Settings;
+import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Path("/muur/")
 public class Muur {
 	private static final String URL="http://"+Settings.HOST+"/muur/";
+	static final ObjectMapper om =ParallelInit.getObjectMapper();
 	
 	private String getQuestion(String question_no){
-		String result = null;
+		ObjectNode node= om.createObjectNode();
+		node.put("requester", URL+"id");
+		node.put("question_text",URL+"questions/"+question_no);
 		if (question_no.equals("10")){
-			result= "{ requester:\""+URL+"id\",question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://"+Settings.HOST+"/kastje/\"}";
+			node.put("type", "referral");
+			node.put("url", "http://"+Settings.HOST+"/kastje/");
 		} else {
-			result= "{ requester:\""+URL+"id\",question_text:\""+URL+"questions/"+question_no+"\",type:\"open\",answers:["+
-						"{ answer_text:\"\", callback:\""+URL+"questions/10\" }]}";
+			node.put("type", "open");
+			ArrayNode answers = node.putArray("answers");
+			
+			ObjectNode answerNode = answers.addObject();
+			answerNode.put("answer_text", "");
+			answerNode.put("callback", URL+"questions/10");
 		}
-		return result;
+		return node.toString();
 	}
+	
 	
 	@GET
 	@Path("/id/")
 	public Response getId(@QueryParam("preferred_language") String preferred_language){
+		ObjectNode node= om.createObjectNode();
+		node.put("url", URL);
 		if (preferred_language != null && preferred_language.startsWith("en")){
-			return Response.ok("{ url:\""+URL+"\",nickname:\"Post\"}").build();			
+			node.put("nickname", "Post");			
 		} else {
-			return Response.ok("{ url:\""+URL+"\",nickname:\"Muur\"}").build();
+			node.put("nickname", "Muur");
 		}
+		return Response.ok(node.toString()).build();
 	}
+
 	
 	@GET
 	@Produces("application/json")

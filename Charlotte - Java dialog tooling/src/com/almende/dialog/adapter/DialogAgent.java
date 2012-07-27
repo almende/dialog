@@ -2,6 +2,7 @@ package com.almende.dialog.adapter;
 
 import java.util.logging.Logger;
 
+import com.almende.dialog.accounts.Account;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
 import com.almende.eve.agent.Agent;
@@ -12,7 +13,6 @@ import com.almende.eve.agent.annotation.*;
 import com.almende.util.ParallelInit;
 
 public class DialogAgent extends Agent {
-	private static final long serialVersionUID = 3874598521367745811L;
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
 	
@@ -34,9 +34,11 @@ public class DialogAgent extends Agent {
 	//TODO: Move the dialer to a separate Servlet...
 	public boolean outboundCall(@Name("address") String address, @Name("url") String url, @Name("type") String type){
 		log.warning("outboundCall called: "+address+" / "+ url + " / "+ type);
+		//TODO: account!
+		Account account = new Account();
 		Question question = Question.fromURL(url, address);
 		if (type.equals("gtalk")){
-			XMPPServlet.startDialog(address,question);
+			XMPPServlet.startDialog(address,question,account);
 		} else if (type.equals("phone")){
 			//TODO: implement dialer
 		} else {

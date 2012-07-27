@@ -1,9 +1,6 @@
 package com.almende.dialog.accounts;
 
-import static com.google.appengine.api.datastore.Query.FilterOperator.EQUAL;
-
 import java.io.Serializable;
-import java.util.Iterator;
 import java.util.logging.Logger;
 
 import javax.ws.rs.Consumes;
@@ -93,7 +90,6 @@ public class Account implements Serializable {
 		return Response.serverError().build();
 	}
 	
-
 	public String getId() {
 		return uuid;
 	}

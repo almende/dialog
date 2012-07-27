@@ -19,14 +19,16 @@ import javax.ws.rs.core.Response;
 
 import com.almende.dialog.Settings;
 import com.almende.dialog.model.AnswerPost;
+import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import flexjson.JSONDeserializer;
 @Path("/charlotte/")
 public class Charlotte {
 	private static final String URL = "http://"+Settings.HOST+"/charlotte/";
 	private static final String SOUNDURL = "http://commondatastorage.googleapis.com/dialogserver-sounds/testSounds/espeakConv_";
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
+	static final ObjectMapper om =ParallelInit.getObjectMapper();
 	//TODO: Charlotte should have an address book of possible agents, managed through the question interface.
 	
 	private String getGreeting(){
@@ -69,9 +71,8 @@ public class Charlotte {
 		String url=URL;
 		String answer_input="";
 		try {
-			AnswerPost answer = new JSONDeserializer<AnswerPost>().
-					use(null, AnswerPost.class).
-					deserialize(answer_json);
+			AnswerPost answer = om.readValue(answer_json,AnswerPost.class); 
+
 			answer_input=answer.getAnswer_text();
 			log.warning("Received responder: "+answer.getResponder());
 		} catch (Exception e){
@@ -84,24 +85,24 @@ public class Charlotte {
 		}
 		switch (Integer.parseInt(question_no)){
 		case 10:
-			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://"+Settings.HOST+"/kastje/\"}";
+			result= "{ \"question_text\":\""+URL+"questions/"+question_no+"\",\"type\":\"referral\",\"url\":\"http://"+Settings.HOST+"/kastje/\"}";
 			break;
 		case 11:
-			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://"+Settings.HOST+"/howIsTheWeather/\"}";
+			result= "{ \"question_text\":\""+URL+"questions/"+question_no+"\",\"type\":\"referral\",\"url\":\"http://"+Settings.HOST+"/howIsTheWeather/\"}";
 			break;
 		case 12:
-			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://"+Settings.HOST+"/calendar/\"}";
+			result= "{ \"question_text\":\""+URL+"questions/"+question_no+"\",\"type\":\"referral\",\"url\":\"http://"+Settings.HOST+"/calendar/\"}";
 			break;
 		case 13:
-			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\"http://"+Settings.HOST+"/passAlong/\"}";
+			result= "{ \"question_text\":\""+URL+"questions/"+question_no+"\",\"type\":\"referral\",\"url\":\"http://"+Settings.HOST+"/passAlong/\"}";
 			break;
 		case 14:
-			result="{question_text:\""+url+(audio?"Q"+question_no+".wav":"questions/"+question_no)+"\",type:\"open\",answers:["+
-					   "{answer_text:\""+url+(audio?"A20.wav":"answers/20")+"\",callback:\""+URL+"questions/20?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"}"+
+			result="{\"question_text\":\""+url+(audio?"Q"+question_no+".wav":"questions/"+question_no)+"\",\"type\":\"open\",\"answers\":["+
+					   "{\"answer_text\":\""+url+(audio?"A20.wav":"answers/20")+"\",\"callback\":\""+URL+"questions/20?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"}"+
 					   "]}";
 			break;
 		case 20:
-			result= "{ question_text:\""+URL+"questions/"+question_no+"\",type:\"referral\",url:\""+answer_input+"\"}";
+			result= "{ \"question_text\":\""+URL+"questions/"+question_no+"\",\"type\":\"referral\",\"url\":\""+answer_input+"\"}";
 			break;			
 		}
 		return Response.ok(result).build();

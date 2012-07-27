@@ -11,19 +11,21 @@ import com.almende.dialog.model.intf.QuestionIntf;
 import com.almende.dialog.util.QuestionTextTransformer;
 import com.almende.util.ParallelInit;
 import com.eaio.uuid.UUID;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 
 import flexjson.JSON;
-import flexjson.JSONDeserializer;
 import flexjson.JSONSerializer;
 
 public class Question implements QuestionIntf {
 	private static final long serialVersionUID = -9069211642074173182L;
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
+	static final ObjectMapper om =ParallelInit.getObjectMapper();
+	
 	QuestionIntf question;
 	private String preferred_language = "nl";
 
@@ -58,8 +60,9 @@ public class Question implements QuestionIntf {
 	public static Question fromJSON(String json) {
 		Question question = null;
 		try {
-			question = new JSONDeserializer<Question>().use(null,
-					Question.class).deserialize(json);
+			question = om.readValue(json, Question.class);
+			//question = new JSONDeserializer<Question>().use(null,
+			//		Question.class).deserialize(json);
 		} catch (Exception e) {
 			log.severe(e.toString());
 		}
@@ -145,16 +148,13 @@ public class Question implements QuestionIntf {
 		WebResource webResource = client.resource(answer.getCallback());
 		AnswerPost ans = new AnswerPost(null, this.getQuestion_id(),
 				answer.getAnswer_id(), answer_input, responder);
-		String post = new JSONSerializer().exclude("*.class")
-				.serialize(ans);
-
 		// Check if answer.callback gives new question for this dialog
 		try {
+			String post = om.writeValueAsString(ans);
 			String s = webResource.type("application/json").post(
 					String.class, post);
 
-			newQ = new JSONDeserializer<Question>().use(null,
-					Question.class).deserialize(s);
+			newQ = om.readValue(s, Question.class);
 			newQ.setPreferred_language(preferred_language);
 		} catch (Exception e) {
 			log.severe(e.toString());

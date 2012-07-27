@@ -9,3 +9,4 @@ com.almende.dialog.agent.PassAlong
 com.almende.dialog.agent.TalkTalkAgent
 
 com.almende.dialog.accounts.Account
+com.almende.dialog.accounts.AdapterConfig

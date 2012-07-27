@@ -14,13 +14,15 @@ import javax.ws.rs.core.Response;
 
 import com.almende.dialog.Settings;
 import com.almende.dialog.model.AnswerPost;
+import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import flexjson.JSONDeserializer;
 @Path("/howIsTheWeather/")
 public class HowIsTheWeatherRESTAgent {
 	private static final String URL = "http://"+Settings.HOST+"/howIsTheWeather/";
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
+	static final ObjectMapper om =ParallelInit.getObjectMapper();
 	
 	@GET
 	@Path("/id/")
@@ -52,9 +54,7 @@ public class HowIsTheWeatherRESTAgent {
 	public Response answerQuestion(String answer_json, @PathParam("question_no") String question_no,@QueryParam("preferred_medium") String preferred_medium){
 		String result=null;
 		try {
-			AnswerPost answer = new JSONDeserializer<AnswerPost>().
-					use(null, AnswerPost.class).
-					deserialize(answer_json);
+			AnswerPost answer = om.readValue(answer_json,AnswerPost.class);
 			log.warning("Received responder: "+answer.getResponder());
 		} catch (Exception e){
 			log.severe(e.toString());

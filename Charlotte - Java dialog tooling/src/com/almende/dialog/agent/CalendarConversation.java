@@ -21,23 +21,22 @@ import com.almende.dialog.model.AnswerPost;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import flexjson.JSONDeserializer;
 @Path("/calendar/")
 public class CalendarConversation {
 	private static final Logger log = Logger.getLogger(com.almende.dialog.agent.CalendarConversation.class.getName()); 	
 	private static final String URL="http://"+Settings.HOST+"/calendar/";
 	//private static final String USERAGENT = "https://agentplatform.appspot.com/agents/UserAgent/12d3c692-2138-4b4d-bcb2-f29058f21819";
 	private static final String CALENDARAGENT = "https://eveagents.appspot.com/agents/GoogleCalendarAgent/647fe772-918d-44a8-a199-657a6a8f07c6";
-		
+	static final ObjectMapper om =ParallelInit.getObjectMapper();
+	
 	private ArrayList<Event> getEventsToday(){
 		Client client = ParallelInit.getClient();
 		WebResource wr = client.resource(CALENDARAGENT);
 		try {
 			String s = wr.type("application/json").post(String.class,"{\"id\":1, \"method\":\"getEventsToday\", \"params\":{}}" );
-			Result result = new JSONDeserializer<Result>().
-						use(null, Result.class).
-						deserialize(s);
+			Result result = om.readValue(s,Result.class); 
 			if (result != null){
 				return result.getResult();
 			}
@@ -107,9 +106,7 @@ public class CalendarConversation {
 				break;
 			case 20:
 				try {
-					AnswerPost answer = new JSONDeserializer<AnswerPost>().
-							use(null, AnswerPost.class).
-							deserialize(answer_json);
+					AnswerPost answer = om.readValue(answer_json,AnswerPost.class); 
 					int duration=Integer.parseInt(answer.getAnswer_text());
 					createEvent(duration);	
 				} catch (Exception e){

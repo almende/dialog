@@ -8,15 +8,17 @@ import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.intf.QuestionIntf;
 import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
-
-import flexjson.JSONDeserializer;
 
 public class Q_fields implements QuestionIntf {
 	private static final long serialVersionUID = 748817624285821262L;
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
+	static final ObjectMapper om =ParallelInit.getObjectMapper();
+	
 	String question_id;
 	String question_text;
 	String type;
@@ -62,7 +64,7 @@ public class Q_fields implements QuestionIntf {
 			WebResource webResource = client.resource(url);
 			String text = "";
 			text = webResource.type("text/plain").get(String.class);
-			result = new JSONDeserializer<HashMap<String,String>>().use(null,HashMap.class).deserialize(text);
+			result = om.readValue(text,new TypeReference<HashMap<String,String>>(){}); 
 		} catch (Exception e){
 			log.severe(e.toString());
 			log.severe(e.getMessage());

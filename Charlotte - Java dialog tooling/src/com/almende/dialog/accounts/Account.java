@@ -70,9 +70,25 @@ public class Account implements Serializable {
 	@Produces("application/json")
 	@JsonIgnore
 	public Response updateAccount(@PathParam("uuid") String uuid, String json){
-		
-		return Response.ok().build();
-	}
+		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+
+		Account oldAccount = datastore.load(Account.class,uuid);
+		try {
+			Account postAccount = om.readValue(json, Account.class);
+			if (!postAccount.token.equals("")){
+				oldAccount.token = postAccount.token;
+			}
+			if (!postAccount.description.equals("")){
+				oldAccount.description = postAccount.description;
+			}
+			if (postAccount.disabled != null){
+				oldAccount.disabled = postAccount.disabled;
+			}
+			datastore.update(oldAccount);
+		} catch (Exception e) {
+			log.severe("updateAccount: Exception updating account:"+e.getMessage());
+		}
+		return Response.status(Status.BAD_REQUEST).build();	}
 
 	@Path("/{uuid}/")
 	@GET

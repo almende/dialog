@@ -4,7 +4,9 @@ import java.util.Iterator;
 import java.util.logging.Logger;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -27,6 +29,116 @@ public class AdapterConfig {
 	String account;
 	String adapterType = "";
 	String preferred_language = "nl";
+	String initialAgentURL = "";
+	
+	//TODO: will be moved to subclasses? Or in some form of hashmap?
+	//XMPP:
+	String myJID = "";
+	
+	public AdapterConfig(){};
+	
+	@POST
+	@Consumes("application/json")
+	@Produces("application/json")
+	@JsonIgnore
+	public Response createConfig(@PathParam("accountid") String accountid, String json){
+		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+		try {
+			AdapterConfig newConfig = new AdapterConfig();
+			newConfig.configId = new UUID().toString();
+			newConfig.account = new UUID(accountid).toString();
+			
+			AdapterConfig postConfig = om.readValue(json, AdapterConfig.class);
+			if (!postConfig.adapterType.equals("")){
+				newConfig.adapterType = postConfig.adapterType;
+			}
+			if (newConfig.adapterType.equals("XMPP") && !postConfig.myJID.equals("")){
+				newConfig.myJID = postConfig.myJID;
+			}
+			if (!postConfig.preferred_language.equals("nl")){
+				newConfig.preferred_language = postConfig.preferred_language;
+			}
+			if (!postConfig.initialAgentURL.equals("")){
+				newConfig.initialAgentURL = postConfig.initialAgentURL;
+			}
+			datastore.store(newConfig);
+			return Response.ok(om.writeValueAsString(newConfig)).build();
+		} catch (Exception e){
+			log.severe("CreateConfig: Failed to store new config");
+		}
+		return Response.status(Status.BAD_REQUEST).build();
+	}
+	@PUT
+	@Path("{uuid}")
+	@Consumes("application/json")
+	@Produces("application/json")
+	@JsonIgnore
+	public Response updateConfig(@PathParam("accountid") String accountid, @PathParam("uuid") String configid, String json){
+		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+		try {
+			
+			AdapterConfig oldConfig = datastore.load(AdapterConfig.class,configid);
+			AdapterConfig postConfig = om.readValue(json, AdapterConfig.class);
+
+			if (oldConfig.adapterType.equals("XMPP") && !postConfig.myJID.equals("")){
+				oldConfig.myJID = postConfig.myJID;
+			}
+			if (!postConfig.preferred_language.equals("nl")){
+				oldConfig.preferred_language = postConfig.preferred_language;
+			}
+			if (!postConfig.initialAgentURL.equals("")){
+				oldConfig.initialAgentURL = postConfig.initialAgentURL;
+			}
+			datastore.update(oldConfig);
+			return Response.ok(om.writeValueAsString(oldConfig)).build();
+		} catch (Exception e){
+			log.severe("UpdateConfig: Failed to update config:"+e.getMessage());
+		}
+		return Response.status(Status.BAD_REQUEST).build();
+	}
+	
+	@GET
+	@Path("{uuid}")
+	@Produces("application/json")
+	@JsonIgnore
+	public Response getConfig(@PathParam("accountid") String accountid, @PathParam("uuid") String configid, String json){
+		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+		try {
+			AdapterConfig config = datastore.load(AdapterConfig.class,configid);
+			return Response.ok(om.writeValueAsString(config)).build();
+		} catch (Exception e){
+			log.severe("getConfig: Failed to read config");
+		}
+		return Response.status(Status.BAD_REQUEST).build();
+	}		
+	public static AdapterConfig findAdapterConfig(String adapterType, String lookupKey ){
+		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+		//TODO: make this more generic!
+		if (adapterType.equals("XMPP")){
+			Iterator<AdapterConfig> config = datastore.find(AdapterConfig.class,"myJID",lookupKey);
+			if (config.hasNext()){
+				return config.next();
+			}
+			//generate default config?
+			log.severe("findAdapterConfig: Couldn't find adapterConfig: "+adapterType+"|"+lookupKey);
+		} else {
+			log.severe("findAdapterConfig: Unknown adapterType given:"+adapterType);
+		}
+		
+		return null;
+	}
+	public static AdapterConfig findAdapterConfigForAccount(String adapterType, String accountid ){
+		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+		
+		Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
+				.addFilter("adapterType",EQUAL,adapterType).addFilter("account",EQUAL,accountid).now();
+		if (config.hasNext()){
+			return config.next();
+		}
+		//generate default config?
+		log.severe("findAdapterConfig: Couldn't find adapterConfig: "+adapterType+"|"+accountid);
+		return null;
+	}
 	
 	public String getPreferred_language() {
 		return preferred_language;
@@ -75,71 +187,5 @@ public class AdapterConfig {
 	public void setMyJID(String myJID) {
 		this.myJID = myJID;
 	}
-	String initialAgentURL = "";
-	
-	
-	//TODO: will be moved to subclasses? Or in some form of hashmap?
-	//XMPP:
-	String myJID = "";
-	
-	public AdapterConfig(){};
-	
-	@POST
-	@Consumes("application/json")
-	@Produces("application/json")
-	@JsonIgnore
-	public Response createConfig(@PathParam("accountid") String accountid, String json){
-		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
-		try {
-			AdapterConfig newConfig = new AdapterConfig();
-			newConfig.configId = new UUID().toString();
-			newConfig.account = new UUID(accountid).toString();
-			
-			AdapterConfig postConfig = om.readValue(json, AdapterConfig.class);
-			if (!postConfig.adapterType.equals("")){
-				newConfig.adapterType = postConfig.adapterType;
-			}
-			if (newConfig.adapterType.equals("XMPP") && !postConfig.myJID.equals("")){
-				newConfig.myJID = postConfig.myJID;
-			}
-			if (!postConfig.preferred_language.equals("nl")){
-				newConfig.preferred_language=postConfig.preferred_language;
-			}
-			datastore.store(newConfig);
-			return Response.ok(om.writeValueAsString(newConfig)).build();
-		} catch (Exception e){
-			log.severe("CreateConfig: Failed to store new config");
-		}
-		return Response.status(Status.BAD_REQUEST).build();
-	}
-	public static AdapterConfig findAdapterConfig(String adapterType, String lookupKey ){
-		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
-		//TODO: make this more generic!
-		if (adapterType.equals("XMPP")){
-			Iterator<AdapterConfig> config = datastore.find(AdapterConfig.class,"myJID",lookupKey);
-			if (config.hasNext()){
-				return config.next();
-			}
-			//generate default config?
-			log.severe("findAdapterConfig: Couldn't find adapterConfig: "+adapterType+"|"+lookupKey);
-		} else {
-			log.severe("findAdapterConfig: Unknown adapterType given:"+adapterType);
-		}
-		
-		return null;
-	}
-	public static AdapterConfig findAdapterConfigForAccount(String adapterType, Account account ){
-		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
-		
-		Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
-				.addFilter("type",EQUAL,adapterType).addFilter("acount",EQUAL,account.getId()).now();
-		if (config.hasNext()){
-			return config.next();
-		}
-		//generate default config?
-		log.severe("findAdapterConfig: Couldn't find adapterConfig: "+adapterType+"|"+account.getId());
-		return null;
-	}
-	
 	
 }

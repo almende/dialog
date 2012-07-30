@@ -96,7 +96,7 @@ public class XMPPServlet extends HttpServlet {
 
 	
 	public static void startDialog(String address, Question question, Account account) {
-		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("XMPP", account);
+		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("XMPP", account.getId());
 		JID localJid = new JID(config.getMyJID());
 		
 		JID jid = new JID(address);
@@ -193,8 +193,10 @@ public class XMPPServlet extends HttpServlet {
 		String address = jid.getId().split("/")[0];
 		
 		Session session = Session.getSession("XMPP|"+localaddress+"|"+address);
+		AdapterConfig config= AdapterConfig.findAdapterConfigForAccount("XMPP",session.getAccount());
+		
 		String body = message.getBody().trim();
-
+		
 		String json = "";
 		String preferred_language = StringStore
 				.getString(address + "_language");
@@ -218,7 +220,7 @@ public class XMPPServlet extends HttpServlet {
 				xmpp.sendMessage(msg);
 			}
 			if (cmd.equals("reset")) {
-				StringStore.dropString("question_"+address);
+				StringStore.dropString("question_"+address+"_"+localaddress);
 			}
 			if (cmd.startsWith("help")) {
 				String[] command = cmd.split(" ");
@@ -246,10 +248,13 @@ public class XMPPServlet extends HttpServlet {
 				preferred_language = "nl";
 						
 			Question question = null;
-			json = StringStore.getString("question_"+address);
+			json = StringStore.getString("question_"+address+"_"+localaddress);
 			if (json == null || json.equals("")) {
-				//TODO! get agent URL from adapterconfig
-				question = Question.fromURL(DEMODIALOG,address);
+				if (config.getInitialAgentURL().equals("")){
+					question = Question.fromURL(DEMODIALOG,address);
+				} else {
+					question = Question.fromURL(config.getInitialAgentURL());
+				}
 			} else {
 				question = Question.fromJSON(json);
 			}
@@ -261,10 +266,10 @@ public class XMPPServlet extends HttpServlet {
 				question = replystr.question;
 				
 				if (question == null) {
-					StringStore.dropString("question_"+address);
+					StringStore.dropString("question_"+address+"_"+localaddress);
 					session.drop();
 				} else {
-					StringStore.storeString("question_"+address, question.toJSON());
+					StringStore.storeString("question_"+address+"_"+localaddress, question.toJSON());
 					session.storeSession();
 				}
 			}

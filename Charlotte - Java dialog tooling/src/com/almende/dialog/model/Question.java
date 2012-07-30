@@ -104,7 +104,7 @@ public class Question implements QuestionIntf {
 												// multiple answers
 												// (=out-of-spec)
 		} else if (this.getType().equals("comment")) {
-			if(this.getAnswers().size()==0)
+			if(this.getAnswers() == null || this.getAnswers().size()==0)
 				return null;
 			answer = this.getAnswers().get(0);
 			

@@ -21,6 +21,8 @@ import com.almende.dialog.Settings;
 import com.almende.dialog.model.AnswerPost;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Path("/charlotte/")
 public class Charlotte {
@@ -47,19 +49,22 @@ public class Charlotte {
 	@GET
 	@Produces("application/json")
 	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium){
-		String result=null;
 		String url=URL;
 		boolean audio = false;
 		if (preferred_medium != null && preferred_medium.startsWith("audio")){
 			audio = true;
 			url= SOUNDURL;
 		}
-		result="{\"question_text\":\""+url+(audio?"Q0.wav":"questions/0")+"\",\"data\":\"hi\",\"type\":\"closed\",\"answers\":[";
+		ObjectNode node= om.createObjectNode();
+		node.put("question_text",url+(audio?"Q0.wav":"questions/0"));
+		node.put("type", "closed");
+		ArrayNode answers = node.putArray("answers");
 		for (int i = 10; i< 15; i++){
-			result+="{\"answer_text\":\""+url+(audio?"A"+i+".wav":"answers/"+i)+"\",\"callback\":\""+URL+"questions/"+i+"?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"}"+(i<14?",":"");
+			ObjectNode answerNode = answers.addObject();
+			answerNode.put("answer_text",url+(audio?"A"+i+".wav":"answers/"+i));
+			answerNode.put("callback",URL+"questions/"+i+"?preferred_medium="+(audio?"audio/wav":"text/plain"));
 		}
-		result+="]}";
-		return Response.ok(result).build();
+		return Response.ok(node.toString()).build();
 	}
 	
 	@Path("/questions/{question_no}")
@@ -67,12 +72,10 @@ public class Charlotte {
 	@Produces("application/json")
 	@Consumes("*/*")
 	public Response answerQuestion(String answer_json, @PathParam("question_no") String question_no,@QueryParam("preferred_medium") String preferred_medium){
-		String result=null;
 		String url=URL;
 		String answer_input="";
 		try {
 			AnswerPost answer = om.readValue(answer_json,AnswerPost.class); 
-
 			answer_input=answer.getAnswer_text();
 			log.warning("Received responder: "+answer.getResponder());
 		} catch (Exception e){
@@ -83,29 +86,27 @@ public class Charlotte {
 			audio = true;
 			url=SOUNDURL;
 		}
-		switch (Integer.parseInt(question_no)){
-		case 10:
-			result= "{ \"question_text\":\""+URL+"questions/"+question_no+"\",\"type\":\"referral\",\"url\":\"http://"+Settings.HOST+"/kastje/\"}";
-			break;
-		case 11:
-			result= "{ \"question_text\":\""+URL+"questions/"+question_no+"\",\"type\":\"referral\",\"url\":\"http://"+Settings.HOST+"/howIsTheWeather/\"}";
-			break;
-		case 12:
-			result= "{ \"question_text\":\""+URL+"questions/"+question_no+"\",\"type\":\"referral\",\"url\":\"http://"+Settings.HOST+"/calendar/\"}";
-			break;
-		case 13:
-			result= "{ \"question_text\":\""+URL+"questions/"+question_no+"\",\"type\":\"referral\",\"url\":\"http://"+Settings.HOST+"/passAlong/\"}";
-			break;
-		case 14:
-			result="{\"question_text\":\""+url+(audio?"Q"+question_no+".wav":"questions/"+question_no)+"\",\"type\":\"open\",\"answers\":["+
-					   "{\"answer_text\":\""+url+(audio?"A20.wav":"answers/20")+"\",\"callback\":\""+URL+"questions/20?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"}"+
-					   "]}";
-			break;
-		case 20:
-			result= "{ \"question_text\":\""+URL+"questions/"+question_no+"\",\"type\":\"referral\",\"url\":\""+answer_input+"\"}";
-			break;			
+		ObjectNode node= om.createObjectNode();
+		node.put("question_text",url+(audio?"Q"+question_no+".wav":"questions/"+question_no));
+		String[] scripts = { "kastje", "howIsTheWeather", "calendar", "passAlong" };
+		int qno = Integer.parseInt(question_no)-10; 
+		if ( qno < scripts.length){
+			node.put("type", "referral");
+			node.put("url", "http://"+Settings.HOST+"/"+scripts[qno]+"/");
+		} else if (qno == 4) {
+			node.put("type", "open");
+			ArrayNode answers = node.putArray("answers");
+			ObjectNode ans = answers.addObject();
+			ans.put("answer_text", "");
+			ans.put("callback",URL+"questions/20?preferred_medium="+(audio?"audio/wav":"text/plain"));
+		} else if (qno == 10){
+			node.put("type", "referral");
+			node.put("url",answer_input);
+		} else {
+			node.put("type", "comment");
+			log.warning("Unknown question answered?");
 		}
-		return Response.ok(result).build();
+		return Response.ok(node.toString()).build();
 	}
 	
 	@Path("/questions/{question_no}")

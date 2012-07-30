@@ -59,7 +59,7 @@ public class XMPPServlet extends HttpServlet {
 		}
 	}
 	
-	public Return formQuestion(Question question,String address) {
+	public Return formQuestion(Question question,String address,JID jid) {
 		String reply = "";
 		String preferred_language = question.getPreferred_language();
 		for (int count = 0; count<=LOOP_DETECTION; count++){
@@ -69,6 +69,7 @@ public class XMPPServlet extends HttpServlet {
 			if (!reply.equals("")) reply+="\n";
 			HashMap<String, String> id = question.getExpandedRequester();
 			if (id.containsKey("nickname")) {
+				xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "as: "+id.get("nickname"));
 				reply += "*" + id.get("nickname") + ":* ";
 			}			
 			String qText = question.getQuestion_expandedtext();
@@ -111,7 +112,7 @@ public class XMPPServlet extends HttpServlet {
 		}
 		question.setPreferred_language(preferred_language);
 
-		Return res = new XMPPServlet().formQuestion(question,address);
+		Return res = new XMPPServlet().formQuestion(question,address,jid);
 		StringStore.storeString(address, res.question.toJSON());
 		Message msg = new MessageBuilder().withRecipientJids(jid).withFromJid(localJid)
 				.withBody(res.reply).build();
@@ -227,6 +228,7 @@ public class XMPPServlet extends HttpServlet {
 			}
 			if (cmd.equals("reset")) {
 				StringStore.dropString("question_"+address+"_"+localaddress);
+				xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "");
 			}
 			if (cmd.startsWith("help")) {
 				String[] command = cmd.split(" ");
@@ -267,12 +269,13 @@ public class XMPPServlet extends HttpServlet {
 			if (question != null) {
 				question.setPreferred_language(preferred_language);
 				question = question.answer(address, null, body);
-				Return replystr = formQuestion(question,address);
+				Return replystr = formQuestion(question,address,jid);
 				reply = replystr.reply;
 				question = replystr.question;
 				
 				if (question == null) {
 					StringStore.dropString("question_"+address+"_"+localaddress);
+					xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "");
 					session.drop();
 				} else {
 					StringStore.storeString("question_"+address+"_"+localaddress, question.toJSON());

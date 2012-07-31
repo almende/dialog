@@ -200,6 +200,12 @@ public class XMPPServlet extends HttpServlet {
 		
 		String address = jid.getId().split("/")[0];
 		Session session = Session.getSession("XMPP|"+localaddress+"|"+address);
+		if (session == null){
+			xmpp.sendPresence(jid, PresenceType.UNAVAILABLE, PresenceShow.CHAT, "Broken",localJid);
+			xmpp.sendMessage(new MessageBuilder().withRecipientJids(jid).withFromJid(localJid)
+					.withBody("Sorry, I can't find the account associated with this chat address...").build());
+			return;
+		}
 		AdapterConfig config= AdapterConfig.findAdapterConfigForAccount("XMPP",session.getAccount());
 		
 		String body = message.getBody().trim();

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ccxml version="1.0">
+    <var name="currentState" expr="'initial'"/>
+    <var name="innerConn" expr="''"/>
+    <var name="outerConn" expr="''"/>
+    <var name="remoteID" expr="''"/>
+    <var name="localID" expr="''"/>
+    <var name="direction" expr="'inbound'"/>
+    <var name="dialURL" expr="''"/>
+    <var name="vxmlScript" expr="'/vxml/new'"/>
+    <var name="dialogID" expr="''"/>
+    <eventprocessor statevariable="currentState">
+	<transition state="initial" event="connection.alerting">
+	    <assign name="innerConn" expr="event$.connectionid"/>
+	    <assign name="outerConn" expr="event$.connectionid"/>
+	    <script>
+		var remote = event$.connection.remote;
+		var strings = remote.split('@');
+
+		localID = event$.connection.local;
+		remoteID = strings[0];
+		var domain   = strings[1];
+		if (domain == "outbound") {
+		    direction = "outbound";
+		    dialURL = "sip:"+remoteID+"@asb-02.voipit.nl";
+		}
+	    </script>
+	    <assign name="currentState" expr="'calling'"/>
+	    <accept connectionid="innerConn"/>
+	    <if cond="direction == 'outbound'">
+	        <createcall dest="dialURL" connectionid="outerConn"/>
+	    </if>
+	</transition>
+        <transition state="calling" event="connection.connected">
+	    <if cond="event$.connectionid == outerConn">
+                <assign name="currentState" expr="'connestablished'"/>
+	        <dialogstart connectionid="outerConn" dialogid="dialogID" src="vxmlScript" namelist="direction localID remoteID"/>
+	        <if cond="direction == 'outbound'">
+		    <disconnect connectionid="innerConn"/>
+	        </if>
+	    </if>
+        </transition>
+        <transition state="connestablished" event="dialog.exit">
+            <exit/>
+        </transition>
+        <transition state="connestablished" event="dialog.transfer">
+            <redirect connectionid="outerConn" dest="event$.URI"/>
+        </transition>
+        <transition event="connection.failed">
+            <exit/>
+        </transition>
+    </eventprocessor>
+</ccxml>

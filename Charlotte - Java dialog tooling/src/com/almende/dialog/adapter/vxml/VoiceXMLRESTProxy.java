@@ -11,9 +11,16 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 import org.znerd.xmlenc.XMLOutputter;
+
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
+import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 
 @Path("/vxml/")
 public class VoiceXMLRESTProxy {
@@ -29,6 +36,17 @@ public class VoiceXMLRESTProxy {
 			this.prompts = prompts;
 			this.question = question;
 		}
+	}
+	
+	private String formatNumber(String phone) {
+		PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+		try {
+			PhoneNumber numberProto = phoneUtil.parse(phone,"nl");
+			return phoneUtil.format(numberProto,PhoneNumberFormat.E164);
+		} catch (NumberParseException e) {
+		  log.severe("NumberParseException was thrown: " + e.toString());
+		}
+		return null;	
 	}
 	
 	public Return formQuestion(Question question,String address) {
@@ -217,10 +235,13 @@ public class VoiceXMLRESTProxy {
 	@Path("new")
 	@GET
 	@Produces("application/voicexml+xml")
-	public Response getNewDialog(@QueryParam("url") String url,@QueryParam("remoteID") String remoteID){
-		
-		remoteID=stripPhonenumber(remoteID);
+	public Response getNewDialog(@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID){
+		String url = "http://char-a-lot.appspot.com/howIsTheWeather?preferred_medium=audio/wav";
+		//Session session = Session.getSession("XMPP|"+localID+"|"+remoteID);
+		//AdapterConfig config= AdapterConfig.findAdapterConfigForAccount("VXML",session.getAccount());
+		//TODO
 		Question question = Question.fromURL(url,remoteID);
+		//session.storeSession();
 		return handleQuestion(question,remoteID);
 	}
 	
@@ -229,6 +250,7 @@ public class VoiceXMLRESTProxy {
 	@Produces("application/voicexml+xml")
 	public Response answer(@QueryParam("question_id") String question_id, @QueryParam("answer_id") String answer_id, @QueryParam("answer_input") String answer_input){
 		String reply="<vxml><exit/></vxml>";
+		
 		String json = StringStore.getString(question_id);
 		if (json != null){
 			Question question = Question.fromJSON(json);
@@ -241,13 +263,5 @@ public class VoiceXMLRESTProxy {
 			return handleQuestion(question,responder);
 		}
 		return Response.ok(reply).build();
-	}
-	
-	private String stripPhonenumber(String phone) {
-		if (phone == null || phone.equals("")) return "";
-		String[] sPhone = phone.split("@");
-		String result = sPhone[0];
-		result = "+31"+result.replaceFirst("^0","").replace("+31", "");
-		return result;
 	}
 }

@@ -96,7 +96,7 @@ public class XMPPServlet extends HttpServlet {
 	}
 
 	
-	public static void startDialog(String address, Question question, Account account) {
+	public static void startDialog(String address, String url, Account account) {
 		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("XMPP", account.getId());
 		JID localJid = new JID(config.getMyJID());
 		
@@ -104,6 +104,7 @@ public class XMPPServlet extends HttpServlet {
 		xmpp.sendInvitation(jid);
 		xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "");
 
+		Question question = Question.fromURL(url, address);
 		address = jid.getId().split("/")[0];
 		String preferred_language = StringStore
 				.getString(address + "_language");
@@ -118,11 +119,6 @@ public class XMPPServlet extends HttpServlet {
 				.withBody(res.reply).build();
 
 		xmpp.sendMessage(msg);
-	}
-
-	public static void startDialog(String address, String json, Account account) {
-		Question question = Question.fromJSON(json);
-		XMPPServlet.startDialog(address, question, account);
 	}
 
 	public void doErrorPost(HttpServletRequest req, HttpServletResponse res)

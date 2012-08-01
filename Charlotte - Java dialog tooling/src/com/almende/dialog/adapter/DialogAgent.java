@@ -36,9 +36,8 @@ public class DialogAgent extends Agent {
 		log.warning("outboundCall called: "+address+" / "+ url + " / "+ type);
 		//TODO: account!
 		Account account = new Account();
-		Question question = Question.fromURL(url, address);
 		if (type.equals("gtalk")){
-			XMPPServlet.startDialog(address,question,account);
+			XMPPServlet.startDialog(address,url,account);
 		} else if (type.equals("phone")){
 			//TODO: implement dialer
 		} else {

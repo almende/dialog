@@ -1,4 +1,3 @@
-com.almende.dialog.adapter.vxml.CCXMLProxy
 com.almende.dialog.adapter.vxml.VoiceXMLRESTProxy
 com.almende.dialog.agent.Charlotte
 com.almende.dialog.agent.CalendarConversation

@@ -1,6 +1,6 @@
 -injars war/WEB-INF/classes
 -injars war/WEB-INF/lib/xmlenc-0.52.jar(!META-INF/MANIFEST.MF)
--injars war/WEB-INF/lib/eve-core.jar(!META-INF/MANIFEST.MF)
+-injars war/WEB-INF/lib/eve-core-0.6.jar(!META-INF/MANIFEST.MF)
 -libraryjars war/WEB-INF/lib/
 -libraryjars war/WEB-INF/lib/javassist.jar
 -libraryjars war/WEB-INF/lib/msgpack-0.6.7-SNAPSHOT.jar

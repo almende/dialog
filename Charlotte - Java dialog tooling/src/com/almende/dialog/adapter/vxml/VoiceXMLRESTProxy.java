@@ -1,6 +1,7 @@
 package com.almende.dialog.adapter.vxml;
 
 import java.io.StringWriter;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
@@ -12,21 +13,80 @@ import javax.ws.rs.core.Response;
 
 import org.znerd.xmlenc.XMLOutputter;
 
-import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
-import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
+import com.almende.util.ParallelInit;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 
 @Path("/vxml/")
 public class VoiceXMLRESTProxy {
 	private static final Logger log = Logger.getLogger(com.almende.dialog.adapter.vxml.VoiceXMLRESTProxy.class.getName()); 	
 	private static final int LOOP_DETECTION=10;
 	private static final String DTMFGRAMMAR="/dtmf2hash.grxml";
+	
+	public static void dial(String address){
+		address = formatNumber(address).replaceFirst("\\+31", "0")+"@outbound";
+		Client client = ParallelInit.getClient();
+		//TODO: get the authentication data from the adapterConfig!
+		client.addFilter(new HTTPBasicAuthFilter("U_0107421219@ask.luna.voipit.nl", "askask"));
+		WebResource webResource = client.resource("http://xsp.voipit.nl/com.broadsoft.xsi-actions/v2.0/user/U_0107421219@ask.luna.voipit.nl/calls/new");
+		try {
+			webResource.queryParam("address", URLEncoder.encode(address, "UTF-8")).type("text/plain").post(String.class);
+		} catch (Exception e) {
+			log.severe("Problems dialing out:"+e.getMessage());
+		}
+	}
+	private static String formatNumber(String phone) {
+		PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+		try {
+			PhoneNumber numberProto = phoneUtil.parse(phone,"NL");
+			return phoneUtil.format(numberProto,PhoneNumberFormat.E164);
+		} catch (NumberParseException e) {
+		  log.severe("NumberParseException was thrown: " + e.toString());
+		}
+		return null;	
+	}
+	
+	@Path("new")
+	@GET
+	@Produces("application/voicexml+xml")
+	public Response getNewDialog(@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID){
+		String url = "http://char-a-lot.appspot.com/howIsTheWeather?preferred_medium=audio/wav";
+		//Session session = Session.getSession("XMPP|"+localID+"|"+remoteID);
+		//AdapterConfig config= AdapterConfig.findAdapterConfigForAccount("VXML",session.getAccount());
+		//TODO
+		Question question = Question.fromURL(url,remoteID);
+		//session.storeSession();
+		return handleQuestion(question,remoteID);
+	}
+	
+	@Path("answer")
+	@GET
+	@Produces("application/voicexml+xml")
+	public Response answer(@QueryParam("question_id") String question_id, @QueryParam("answer_id") String answer_id, @QueryParam("answer_input") String answer_input){
+		String reply="<vxml><exit/></vxml>";
+		
+		String json = StringStore.getString(question_id);
+		if (json != null){
+			Question question = Question.fromJSON(json);
+			String responder = StringStore.getString(question_id+"-remoteID");
+			
+			StringStore.dropString(question_id);
+			StringStore.dropString(question_id+"-remoteID");
+
+			question = question.answer(responder,answer_id,answer_input);
+			return handleQuestion(question,responder);
+		}
+		return Response.ok(reply).build();
+	}
+	
 	
 	private class Return {
 		ArrayList<String> prompts;
@@ -38,16 +98,7 @@ public class VoiceXMLRESTProxy {
 		}
 	}
 	
-	private String formatNumber(String phone) {
-		PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
-		try {
-			PhoneNumber numberProto = phoneUtil.parse(phone,"nl");
-			return phoneUtil.format(numberProto,PhoneNumberFormat.E164);
-		} catch (NumberParseException e) {
-		  log.severe("NumberParseException was thrown: " + e.toString());
-		}
-		return null;	
-	}
+
 	
 	public Return formQuestion(Question question,String address) {
 		ArrayList<String> prompts = new ArrayList<String>();
@@ -232,36 +283,5 @@ public class VoiceXMLRESTProxy {
 		return Response.ok(result).build();
 	}
 	
-	@Path("new")
-	@GET
-	@Produces("application/voicexml+xml")
-	public Response getNewDialog(@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID){
-		String url = "http://char-a-lot.appspot.com/howIsTheWeather?preferred_medium=audio/wav";
-		//Session session = Session.getSession("XMPP|"+localID+"|"+remoteID);
-		//AdapterConfig config= AdapterConfig.findAdapterConfigForAccount("VXML",session.getAccount());
-		//TODO
-		Question question = Question.fromURL(url,remoteID);
-		//session.storeSession();
-		return handleQuestion(question,remoteID);
-	}
-	
-	@Path("answer")
-	@GET
-	@Produces("application/voicexml+xml")
-	public Response answer(@QueryParam("question_id") String question_id, @QueryParam("answer_id") String answer_id, @QueryParam("answer_input") String answer_input){
-		String reply="<vxml><exit/></vxml>";
-		
-		String json = StringStore.getString(question_id);
-		if (json != null){
-			Question question = Question.fromJSON(json);
-			String responder = StringStore.getString(question_id+"-remoteID");
-			
-			StringStore.dropString(question_id);
-			StringStore.dropString(question_id+"-remoteID");
 
-			question = question.answer(responder,answer_id,answer_input);
-			return handleQuestion(question,responder);
-		}
-		return Response.ok(reply).build();
-	}
 }

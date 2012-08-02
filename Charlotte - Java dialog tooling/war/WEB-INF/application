@@ -1,4 +1,4 @@
-com.almende.dialog.adapter.vxml.VoiceXMLRESTProxy
+com.almende.dialog.adapter.VoiceXMLRESTProxy
 com.almende.dialog.agent.Charlotte
 com.almende.dialog.agent.CalendarConversation
 com.almende.dialog.agent.HowIsTheWeatherRESTAgent

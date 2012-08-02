@@ -3,7 +3,6 @@ package com.almende.dialog.adapter;
 //import java.util.logging.Logger;
 
 import com.almende.dialog.accounts.Account;
-import com.almende.dialog.adapter.vxml.VoiceXMLRESTProxy;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
 import com.almende.eve.agent.Agent;

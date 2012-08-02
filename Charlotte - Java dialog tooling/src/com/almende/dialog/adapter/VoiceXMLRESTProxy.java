@@ -1,4 +1,4 @@
-package com.almende.dialog.adapter.vxml;
+package com.almende.dialog.adapter;
 
 import java.io.StringWriter;
 import java.net.URLEncoder;
@@ -30,7 +30,7 @@ import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 
 @Path("/vxml/")
 public class VoiceXMLRESTProxy {
-	private static final Logger log = Logger.getLogger(com.almende.dialog.adapter.vxml.VoiceXMLRESTProxy.class.getName()); 	
+	private static final Logger log = Logger.getLogger(com.almende.dialog.adapter.VoiceXMLRESTProxy.class.getName()); 	
 	private static final int LOOP_DETECTION=10;
 	private static final String DTMFGRAMMAR="/dtmf2hash.grxml";
 	

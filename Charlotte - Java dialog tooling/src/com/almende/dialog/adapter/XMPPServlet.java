@@ -170,6 +170,7 @@ public class XMPPServlet extends HttpServlet {
 			TaskOptions taskOptions = TaskOptions.Builder.withUrl("/_ah/xmpp/message/chat/")
 									  .payload(bodyReader.toString()).method(Method.POST);
 			queue.add(taskOptions);
+			return;
 		}
 
 		Message message = xmpp.parseMessage(req);
@@ -190,10 +191,6 @@ public class XMPPServlet extends HttpServlet {
 		xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "",localJid);
 		xmpp.sendMessage(new MessageBuilder().withRecipientJids(jid).withFromJid(localJid)
 				.asXml(true).withBody("<composing xmlns='http://jabber.org/protocol/chatstates'/>").build());
-
-		if (loading){
-			return;
-		}
 		
 		String address = jid.getId().split("/")[0];
 		Session session = Session.getSession("XMPP|"+localaddress+"|"+address);

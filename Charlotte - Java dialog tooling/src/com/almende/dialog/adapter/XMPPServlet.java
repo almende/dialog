@@ -98,7 +98,7 @@ public class XMPPServlet extends HttpServlet {
 	
 	public static void startDialog(String address, String url, Account account) {
 		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("XMPP", account.getId());
-		JID localJid = new JID(config.getMyJID());
+		JID localJid = new JID(config.getMyAddress());
 		
 		JID jid = new JID(address);
 		xmpp.sendInvitation(jid);

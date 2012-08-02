@@ -19,6 +19,7 @@ public class Session implements SessionIntf {
 	
 	SessionIntf session;
 	String key = "";
+	
 	public Session() {
 		this.session = new S_fields();
 	}
@@ -91,5 +92,12 @@ public class Session implements SessionIntf {
 		session.key = key;
 		return session;
 	}
-	
+	@Override
+	public String getStartUrl() {
+		return session.getStartUrl();
+	}
+	@Override
+	public void setStartUrl(String url) {
+		session.setStartUrl(url);
+	}
 }

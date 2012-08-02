@@ -26,12 +26,25 @@ public class Account implements Serializable {
 	static final ObjectMapper om = new ObjectMapper();
 	
 	@Id String uuid;
-	UUID token; //Usefull?
+	String token; //Usefull?
 	String description="";
 	int credits = 0;
 	Boolean disabled;
 	
 	public Account(){
+	}
+	
+	public static Account checkAccount(String accountId, String token){
+		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+		try {
+			Account account = datastore.load(Account.class,accountId);
+			if (account.getToken().equals(token)){
+				return account;
+			}
+		} catch (Exception e){
+			log.warning("Invalid account given!"+accountId+":"+token);
+		}
+		return null;
 	}
 	
 	@POST
@@ -45,7 +58,7 @@ public class Account implements Serializable {
 			
 			newAccount.uuid = new UUID().toString();
 			//newAccount.uuid = new UUID();
-			newAccount.token = new UUID();
+			newAccount.token = new UUID().toString();
 			newAccount.disabled=false;
 			
 			Account postAccount = om.readValue(json, Account.class);
@@ -117,12 +130,12 @@ public class Account implements Serializable {
 
 
 	public String getToken() {
-		return token.toString();
+		return token;
 	}
 
 
 	public void setToken(String token) {
-		this.token = new UUID(token);
+		this.token = new UUID(token).toString();
 	}
 
 

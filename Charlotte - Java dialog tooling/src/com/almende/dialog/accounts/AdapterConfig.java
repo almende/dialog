@@ -16,6 +16,7 @@ import javax.ws.rs.core.Response.Status;
 import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.appengine.api.datastore.Query.FilterOperator;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
 import com.google.code.twig.annotation.Id;
 import static com.google.appengine.api.datastore.Query.FilterOperator.*;
@@ -30,10 +31,12 @@ public class AdapterConfig {
 	String adapterType = "";
 	String preferred_language = "nl";
 	String initialAgentURL = "";
+	String myAddress = "";
 	
-	//TODO: will be moved to subclasses? Or in some form of hashmap?
-	//XMPP:
-	String myJID = "";
+	//Broadsoft:
+	String xsiURL = "";
+	String xsiUser = "";
+	String xsiPasswd = "";
 	
 	public AdapterConfig(){};
 	
@@ -49,17 +52,27 @@ public class AdapterConfig {
 			newConfig.account = new UUID(accountid).toString();
 			
 			AdapterConfig postConfig = om.readValue(json, AdapterConfig.class);
+			//TODO: This doesn't scale:)
 			if (!postConfig.adapterType.equals("")){
 				newConfig.adapterType = postConfig.adapterType;
 			}
-			if (newConfig.adapterType.equals("XMPP") && !postConfig.myJID.equals("")){
-				newConfig.myJID = postConfig.myJID;
+			if (!postConfig.myAddress.equals("")){
+				newConfig.myAddress = postConfig.myAddress;
 			}
 			if (!postConfig.preferred_language.equals("nl")){
 				newConfig.preferred_language = postConfig.preferred_language;
 			}
 			if (!postConfig.initialAgentURL.equals("")){
 				newConfig.initialAgentURL = postConfig.initialAgentURL;
+			}
+			if (!postConfig.xsiURL.equals("")){
+				newConfig.xsiURL = postConfig.xsiURL;
+			}
+			if (!postConfig.xsiUser.equals("")){
+				newConfig.xsiUser = postConfig.xsiUser;
+			}
+			if (!postConfig.xsiPasswd.equals("")){
+				newConfig.xsiPasswd = postConfig.xsiPasswd;
 			}
 			datastore.store(newConfig);
 			return Response.ok(om.writeValueAsString(newConfig)).build();
@@ -80,14 +93,23 @@ public class AdapterConfig {
 			AdapterConfig oldConfig = datastore.load(AdapterConfig.class,configid);
 			AdapterConfig postConfig = om.readValue(json, AdapterConfig.class);
 
-			if (oldConfig.adapterType.equals("XMPP") && !postConfig.myJID.equals("")){
-				oldConfig.myJID = postConfig.myJID;
+			if (!postConfig.myAddress.equals("")){
+				oldConfig.myAddress = postConfig.myAddress;
 			}
 			if (!postConfig.preferred_language.equals("nl")){
 				oldConfig.preferred_language = postConfig.preferred_language;
 			}
 			if (!postConfig.initialAgentURL.equals("")){
 				oldConfig.initialAgentURL = postConfig.initialAgentURL;
+			}
+			if (!postConfig.xsiURL.equals("")){
+				oldConfig.xsiURL = postConfig.xsiURL;
+			}
+			if (!postConfig.xsiUser.equals("")){
+				oldConfig.xsiUser = postConfig.xsiUser;
+			}
+			if (!postConfig.xsiPasswd.equals("")){
+				oldConfig.xsiPasswd = postConfig.xsiPasswd;
 			}
 			datastore.update(oldConfig);
 			return Response.ok(om.writeValueAsString(oldConfig)).build();
@@ -112,19 +134,16 @@ public class AdapterConfig {
 		return Response.status(Status.BAD_REQUEST).build();
 	}		
 	public static AdapterConfig findAdapterConfig(String adapterType, String lookupKey ){
+//		log.warning("Looking for config:'"+adapterType+"':'"+lookupKey+"'");
 		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
-		//TODO: make this more generic!
-		if (adapterType.equals("XMPP")){
-			Iterator<AdapterConfig> config = datastore.find(AdapterConfig.class,"myJID",lookupKey);
-			if (config.hasNext()){
-				return config.next();
-			}
-			//generate default config?
-			log.severe("findAdapterConfig: Couldn't find adapterConfig: "+adapterType+"|"+lookupKey);
-		} else {
-			log.severe("findAdapterConfig: Unknown adapterType given:"+adapterType);
+		Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
+				.addFilter("myAddress",FilterOperator.EQUAL,lookupKey)
+				.addFilter("adapterType",FilterOperator.EQUAL,adapterType)
+				.now();
+		if (config.hasNext()){
+			return config.next();
 		}
-		
+		log.severe("AdapterConfig not found:'"+adapterType+"':'"+lookupKey+"'");
 		return null;
 	}
 	public static AdapterConfig findAdapterConfigForAccount(String adapterType, String accountid ){
@@ -180,12 +199,34 @@ public class AdapterConfig {
 		this.initialAgentURL = initialAgentURL;
 	}
 
-	public String getMyJID() {
-		return myJID;
+	public String getMyAddress() {
+		return myAddress;
 	}
 
-	public void setMyJID(String myJID) {
-		this.myJID = myJID;
+	public void setMyAddress(String myAddress) {
+		this.myAddress = myAddress;
 	}
-	
+	public String getXsiURL() {
+		return xsiURL;
+	}
+
+	public void setXsiURL(String xsiURL) {
+		this.xsiURL = xsiURL;
+	}
+
+	public String getXsiUser() {
+		return xsiUser;
+	}
+
+	public void setXsiUser(String xsiUser) {
+		this.xsiUser = xsiUser;
+	}
+
+	public String getXsiPasswd() {
+		return xsiPasswd;
+	}
+
+	public void setXsiPasswd(String xsiPasswd) {
+		this.xsiPasswd = xsiPasswd;
+	}
 }

@@ -13,8 +13,11 @@ import javax.ws.rs.core.Response;
 
 import org.znerd.xmlenc.XMLOutputter;
 
+import com.almende.dialog.accounts.Account;
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.util.ParallelInit;
 import com.google.i18n.phonenumbers.NumberParseException;
@@ -31,12 +34,19 @@ public class VoiceXMLRESTProxy {
 	private static final int LOOP_DETECTION=10;
 	private static final String DTMFGRAMMAR="/dtmf2hash.grxml";
 	
-	public static void dial(String address){
+	public static void dial(String address, String url, Account account){
+		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("broadsoft", account.getId());
+		
 		address = formatNumber(address).replaceFirst("\\+31", "0")+"@outbound";
+		
+		Session session = Session.getSession("broadsoft|"+config.getMyAddress()+"|"+address);
+		session.setStartUrl(url);
+		session.storeSession();
+		
 		Client client = ParallelInit.getClient();
-		//TODO: get the authentication data from the adapterConfig!
-		client.addFilter(new HTTPBasicAuthFilter("U_0107421219@ask.luna.voipit.nl", "askask"));
-		WebResource webResource = client.resource("http://xsp.voipit.nl/com.broadsoft.xsi-actions/v2.0/user/U_0107421219@ask.luna.voipit.nl/calls/new");
+		//TODO: get the url and authentication data from the adapterConfig!
+		WebResource webResource = client.resource(config.getXsiURL());
+		webResource.addFilter(new HTTPBasicAuthFilter(config.getXsiUser(), config.getXsiPasswd()));
 		try {
 			webResource.queryParam("address", URLEncoder.encode(address, "UTF-8")).type("text/plain").post(String.class);
 		} catch (Exception e) {
@@ -57,13 +67,19 @@ public class VoiceXMLRESTProxy {
 	@Path("new")
 	@GET
 	@Produces("application/voicexml+xml")
-	public Response getNewDialog(@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID){
-		String url = "http://char-a-lot.appspot.com/howIsTheWeather?preferred_medium=audio/wav";
-		//Session session = Session.getSession("XMPP|"+localID+"|"+remoteID);
-		//AdapterConfig config= AdapterConfig.findAdapterConfigForAccount("VXML",session.getAccount());
-		//TODO
+	public Response getNewDialog(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID){
+		log.warning("call started:"+direction+":"+remoteID+":"+localID);
+		AdapterConfig config = AdapterConfig.findAdapterConfig("broadsoft", localID);
+		Session session = Session.getSession("broadsoft|"+localID+"|"+remoteID);
+		String url="";
+		if (direction.equals("inbound")){
+			url = config.getInitialAgentURL();
+			session.setStartUrl(url);
+			session.storeSession();
+		} else {
+			url=session.getStartUrl();
+		}
 		Question question = Question.fromURL(url,remoteID);
-		//session.storeSession();
 		return handleQuestion(question,remoteID);
 	}
 	

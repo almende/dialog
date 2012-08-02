@@ -32,18 +32,18 @@ public class DialogAgent extends Agent {
 	}
 	
 	//TODO: Move the dialer to a separate Servlet...
-	public boolean outboundCall(@Name("address") String address, @Name("url") String url, @Name("type") String type){
+	public String outboundCall(@Name("address") String address, @Name("url") String url, @Name("type") String type, @Name("account") String accountId, @Name("token") String token){
 		//log.warning("outboundCall called: "+address+" / "+ url + " / "+ type);
-		//TODO: account!
-		Account account = new Account();
+		Account account = Account.checkAccount(accountId, token);
+		if (account == null) return "Incorrect account/token given!";
 		if (type.equals("gtalk")){
 			XMPPServlet.startDialog(address,url,account);
 		} else if (type.equals("phone")){
-			VoiceXMLRESTProxy.dial(address);
+			VoiceXMLRESTProxy.dial(address,url,account);
 		} else {
-			return false;
+			return "Unknown type given: either gtalk or phone";
 		}
-		return true;
+		return "ok";
 	}
 	
 	public String startDialog(@Name("question_url") @Required(false) String url,

@@ -51,29 +51,7 @@ public class AdapterConfig {
 			newConfig.configId = new UUID().toString();
 			newConfig.account = new UUID(accountid).toString();
 			
-			AdapterConfig postConfig = om.readValue(json, AdapterConfig.class);
-			//TODO: This doesn't scale:)
-			if (!postConfig.adapterType.equals("")){
-				newConfig.adapterType = postConfig.adapterType;
-			}
-			if (!postConfig.myAddress.equals("")){
-				newConfig.myAddress = postConfig.myAddress;
-			}
-			if (!postConfig.preferred_language.equals("nl")){
-				newConfig.preferred_language = postConfig.preferred_language;
-			}
-			if (!postConfig.initialAgentURL.equals("")){
-				newConfig.initialAgentURL = postConfig.initialAgentURL;
-			}
-			if (!postConfig.xsiURL.equals("")){
-				newConfig.xsiURL = postConfig.xsiURL;
-			}
-			if (!postConfig.xsiUser.equals("")){
-				newConfig.xsiUser = postConfig.xsiUser;
-			}
-			if (!postConfig.xsiPasswd.equals("")){
-				newConfig.xsiPasswd = postConfig.xsiPasswd;
-			}
+			om.readerForUpdating(newConfig).readValue(json);
 			datastore.store(newConfig);
 			return Response.ok(om.writeValueAsString(newConfig)).build();
 		} catch (Exception e){
@@ -91,26 +69,7 @@ public class AdapterConfig {
 		try {
 			
 			AdapterConfig oldConfig = datastore.load(AdapterConfig.class,configid);
-			AdapterConfig postConfig = om.readValue(json, AdapterConfig.class);
-
-			if (!postConfig.myAddress.equals("")){
-				oldConfig.myAddress = postConfig.myAddress;
-			}
-			if (!postConfig.preferred_language.equals("nl")){
-				oldConfig.preferred_language = postConfig.preferred_language;
-			}
-			if (!postConfig.initialAgentURL.equals("")){
-				oldConfig.initialAgentURL = postConfig.initialAgentURL;
-			}
-			if (!postConfig.xsiURL.equals("")){
-				oldConfig.xsiURL = postConfig.xsiURL;
-			}
-			if (!postConfig.xsiUser.equals("")){
-				oldConfig.xsiUser = postConfig.xsiUser;
-			}
-			if (!postConfig.xsiPasswd.equals("")){
-				oldConfig.xsiPasswd = postConfig.xsiPasswd;
-			}
+			om.readerForUpdating(oldConfig).readValue(json);
 			datastore.update(oldConfig);
 			return Response.ok(om.writeValueAsString(oldConfig)).build();
 		} catch (Exception e){

@@ -38,7 +38,7 @@ public class PassAlong {
 			case 3:
 				result= "{requester:\""+URL+"id\",question_text:\""+URL+"questions/"+questionNo+"/"+responder+"\",type:\"closed\",answers:["+
 						"{answer_text:\""+URL+"answers/31\",callback:\""+URL+"questions/31\"},"+
-						"{answer_text:\""+URL+"answers/32\",callback:\""+URL+"questions/4\"},"+
+						"{answer_text:\""+URL+"answers/32\",callback:\""+URL+"questions/4\"}"+
 						"]}";
 				break;
 			default:
@@ -96,10 +96,13 @@ public class PassAlong {
 					StringStore.storeString(responder+"_passAlong_message", answer_input);
 					Client client = ParallelInit.getClient();
 					WebResource wr = client.resource("http://"+Settings.HOST+"/rpc");
+					//TODO: make this somewhat configurable
+					String account = "440cb920-dbdf-11e1-b243-00007f000001";
+					String token = "440ce030-dbdf-11e1-b243-00007f000001";
 					String request = "{\"id\":1, \"method\":\"outboundCall\", \"params\":{"
 							+"\"address\":\""+StringStore.getString(responder+"_passAlong_address")+"\","
 							+"\"url\":\""+URL+"?question_no=3&responder="+responder+"\","
-							+"\"type\":\"gtalk\""
+							+"\"type\":\"gtalk\",\"account\":\""+account+"\",\"token\":\""+token+"\""
 							+"}}";
 					wr.type("application/json").post(String.class,request);
 

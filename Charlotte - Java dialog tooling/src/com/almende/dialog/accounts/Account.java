@@ -61,13 +61,7 @@ public class Account implements Serializable {
 			newAccount.token = new UUID().toString();
 			newAccount.disabled=false;
 			
-			Account postAccount = om.readValue(json, Account.class);
-			if (!postAccount.description.equals("")){
-				newAccount.description = postAccount.description;
-			}
-			if (postAccount.disabled != null){
-				newAccount.disabled = postAccount.disabled;
-			}
+			om.readerForUpdating(newAccount).readValue(json);
 			datastore.store(newAccount);
 
 			return Response.ok(om.writeValueAsString(newAccount)).build();			
@@ -84,20 +78,12 @@ public class Account implements Serializable {
 	@JsonIgnore
 	public Response updateAccount(@PathParam("uuid") String uuid, String json){
 		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
-
+		
 		Account oldAccount = datastore.load(Account.class,uuid);
 		try {
-			Account postAccount = om.readValue(json, Account.class);
-			if (!postAccount.token.equals("")){
-				oldAccount.token = postAccount.token;
-			}
-			if (!postAccount.description.equals("")){
-				oldAccount.description = postAccount.description;
-			}
-			if (postAccount.disabled != null){
-				oldAccount.disabled = postAccount.disabled;
-			}
+			om.readerForUpdating(oldAccount).readValue(json);
 			datastore.update(oldAccount);
+			return Response.ok(om.writeValueAsString(oldAccount)).build();		
 		} catch (Exception e) {
 			log.severe("updateAccount: Exception updating account:"+e.getMessage());
 		}

@@ -99,6 +99,7 @@ public class XMPPServlet extends HttpServlet {
 	public static void startDialog(String address, String url, Account account) {
 		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("XMPP", account.getId());
 		JID localJid = new JID(config.getMyAddress());
+		String localaddress = localJid.getId().split("/")[0];
 		
 		JID jid = new JID(address);
 		xmpp.sendInvitation(jid);
@@ -114,7 +115,7 @@ public class XMPPServlet extends HttpServlet {
 		question.setPreferred_language(preferred_language);
 
 		Return res = new XMPPServlet().formQuestion(question,address,jid,localJid);
-		StringStore.storeString(address, res.question.toJSON());
+		StringStore.storeString("question_"+address+"_"+localaddress, res.question.toJSON());
 		Message msg = new MessageBuilder().withRecipientJids(jid).withFromJid(localJid)
 				.withBody(res.reply).build();
 
@@ -180,7 +181,7 @@ public class XMPPServlet extends HttpServlet {
 			localJid = toJids[0];
 		} 
 		if (localJid != null){
-			localaddress = toJids[0].getId().split("/")[0];
+			localaddress = localJid.getId().split("/")[0];
 		} else {
 			log.severe("XMPPServlet: Can't determine local address!");
 			return;

@@ -59,6 +59,8 @@ Similarly there is an Event structure for usage with the event_callback callback
 		"message":"<string describing the event, error message>"
 	}
 
+Although the above definitions list a set of possible Events, this list is actually adapter (and therefor medium) specific.Not every adapter will support all Events, nor is this list complete.
+
 Normally generation of `"_id"` fields in these structures is optional, but if a question does contain `"_id"`s, these should be returned in the Answer and Event structures.
 
 ## Obtaining content

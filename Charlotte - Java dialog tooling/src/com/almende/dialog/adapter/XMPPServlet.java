@@ -261,7 +261,7 @@ public class XMPPServlet extends HttpServlet {
 				if (config.getInitialAgentURL().equals("")){
 					question = Question.fromURL(DEMODIALOG,address);
 				} else {
-					question = Question.fromURL(config.getInitialAgentURL());
+					question = Question.fromURL(config.getInitialAgentURL(),address);
 				}
 			} else {
 				question = Question.fromJSON(json);

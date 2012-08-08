@@ -259,9 +259,9 @@ public class XMPPServlet extends HttpServlet {
 			json = StringStore.getString("question_"+address+"_"+localaddress);
 			if (json == null || json.equals("")) {
 				if (config.getInitialAgentURL().equals("")){
-					question = Question.fromURL(DEMODIALOG,address);
+					question = Question.fromURL(DEMODIALOG,address,localaddress);
 				} else {
-					question = Question.fromURL(config.getInitialAgentURL(),address);
+					question = Question.fromURL(config.getInitialAgentURL(),address,localaddress);
 				}
 			} else {
 				question = Question.fromJSON(json);

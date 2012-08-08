@@ -79,7 +79,7 @@ public class VoiceXMLRESTProxy {
 		} else {
 			url=session.getStartUrl();
 		}
-		Question question = Question.fromURL(url,remoteID);
+		Question question = Question.fromURL(url,remoteID,localID);
 		return handleQuestion(question,remoteID);
 	}
 	

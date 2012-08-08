@@ -1,9 +1,11 @@
 package com.almende.dialog.accounts;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.logging.Logger;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
@@ -91,7 +93,34 @@ public class AdapterConfig {
 			log.severe("getConfig: Failed to read config");
 		}
 		return Response.status(Status.BAD_REQUEST).build();
-	}		
+	}
+	@DELETE
+	@Path("{uuid}")
+	@Produces("application/json")
+	@JsonIgnore
+	public Response deleteConfig(@PathParam("accountid") String accountid, @PathParam("uuid") String configid, String json){
+		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+		try {
+			AdapterConfig config = datastore.load(AdapterConfig.class,configid);
+			datastore.delete(config);
+			return Response.ok("").build();
+		} catch (Exception e){
+			log.severe("getConfig: Failed to read config");
+		}
+		return Response.status(Status.BAD_REQUEST).build();
+	}
+	@GET
+	@Produces("application/json")
+	@JsonIgnore
+	public Response getAllConfigs(@PathParam("accountid") String accountid){
+		try {
+			ArrayList<AdapterConfig> adapters = findAdaptersForAccount(accountid);
+			return Response.ok(om.writeValueAsString(adapters)).build();
+		} catch (Exception e){
+			log.severe("getConfig: Failed to read config");
+		}
+		return Response.status(Status.BAD_REQUEST).build();
+	}	
 	public static AdapterConfig findAdapterConfig(String adapterType, String lookupKey ){
 //		log.warning("Looking for config:'"+adapterType+"':'"+lookupKey+"'");
 		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
@@ -116,6 +145,18 @@ public class AdapterConfig {
 		//generate default config?
 		log.severe("findAdapterConfig: Couldn't find adapterConfig: "+adapterType+"|"+accountid);
 		return null;
+	}
+	public static ArrayList<AdapterConfig> findAdaptersForAccount( String accountid ){
+		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+		
+		Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
+				.addFilter("account",EQUAL,accountid).now();
+		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+		while (config.hasNext()){
+			adapters.add(config.next());
+		}
+		
+		return adapters;
 	}
 	
 	public String getPreferred_language() {

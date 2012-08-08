@@ -17,6 +17,7 @@ public interface QuestionIntf extends Serializable {
 	public String getUrl();
 	public String getRequester();
 	public String getData();
+	public String getTrackingToken();
 	
 	@JSON(include = false)
 	public HashMap<String,String> getExpandedRequester();
@@ -36,6 +37,7 @@ public interface QuestionIntf extends Serializable {
 	public void setType(String type);
 	public void setUrl(String url);
 	public void setData(String data);
+	public void setTrackingToken(String token);
 	public void setRequester(String requester);
 	public void setAnswers(ArrayList<Answer> answers);
 	public void setEvent_callbacks(ArrayList<EventCallback> event_callbacks);

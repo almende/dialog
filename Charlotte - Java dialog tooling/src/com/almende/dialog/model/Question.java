@@ -275,6 +275,16 @@ public class Question implements QuestionIntf {
 		
 	}
 
+	@Override
+	public String getTrackingToken() {
+		return this.question.getTrackingToken();
+	}
+
+	@Override
+	public void setTrackingToken(String token) {
+		this.question.setTrackingToken(token);
+	}
+
 
 
 

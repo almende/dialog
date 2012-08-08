@@ -25,6 +25,8 @@ public class Q_fields implements QuestionIntf {
 	String url;
 	String requester;
 	String data;
+	String token;
+
 	ArrayList<Answer> answers;
 	ArrayList<EventCallback> event_callbacks;
 	
@@ -141,8 +143,18 @@ public class Q_fields implements QuestionIntf {
 	}
 
 	@Override
+	public String getTrackingToken() {
+		return token;
+	}
+
+	@Override
 	public void setData(String data) {
 		this.data=data;
+	}
+
+	@Override
+	public void setTrackingToken(String token) {
+		this.token = token;
 	}
 
 }

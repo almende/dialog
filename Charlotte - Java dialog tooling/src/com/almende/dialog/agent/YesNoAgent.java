@@ -23,6 +23,7 @@ import com.almende.util.ParallelInit;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.appengine.api.datastore.QueryResultIterator;
 import com.google.code.twig.FindCommand.RootFindCommand;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
@@ -61,16 +62,30 @@ public class YesNoAgent {
 	}
 	
 	@GET
+	@Path("/id/")
+	public Response getId(@QueryParam("preferred_language") String preferred_language){
+		ObjectNode node= om.createObjectNode();
+		node.put("url", URL);
+		node.put("nickname", "YesNo");
+		
+		return Response.ok(node.toString()).build();
+	}
+	
+	@GET
 	@Produces("application/json")
-	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium, @QueryParam("responder") String responder){
+	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium, @QueryParam("responder") String responder, @QueryParam("requester") String requester){
 				
+		int questionNo=0;
+		if(requester.contains("live") || requester.contains("0107421217")){
+			questionNo=1;
+		}
 		try {
 			responder = URLDecoder.decode(responder, "UTF-8");
 		} catch (Exception ex) {
 			log.severe(ex.getMessage());
 		}
 		
-		Question question = getQuestion(0, preferred_medium, responder);
+		Question question = getQuestion(questionNo, preferred_medium, responder);
 		return Response.ok(question.toJSON()).build();
 	}
 	

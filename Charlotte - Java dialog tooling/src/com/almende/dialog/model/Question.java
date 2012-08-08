@@ -40,12 +40,16 @@ public class Question implements QuestionIntf {
 	}
 	@JSON(include = false)
 	public static Question fromURL(String url,String remoteID)  {
+		return fromURL(url, remoteID, "");
+	}
+	@JSON(include = false)
+	public static Question fromURL(String url,String remoteID,String fromID)  {
 		Client client = ParallelInit.getClient();
 		WebResource webResource = client.resource(url);
 		
 		String json = "";
 		try {
-			json = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).type("text/plain").get(String.class);
+			json = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).queryParam("requester", URLEncoder.encode(fromID, "UTF-8")).type("text/plain").get(String.class);
 		} catch (ClientHandlerException e) {
 			log.severe(e.toString());
 		} catch (UniformInterfaceException e) {

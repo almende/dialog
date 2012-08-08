@@ -13,6 +13,11 @@ public class Answer implements AnswerIntf {
 	public Answer(){
 		this.answer = new A_fields();
 	}
+	public Answer(String answer_text, String callback){
+		this.answer = new A_fields();
+		this.answer.setAnswer_text(answer_text);
+		this.answer.setCallback(callback);
+	}
 	@Override
 	public String getAnswer_id() { return answer.getAnswer_id(); }
 	@Override

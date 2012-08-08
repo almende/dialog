@@ -36,11 +36,6 @@ public class YesNoAgent {
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
 	
-	protected String agentId;
-	
-	public YesNoAgent() {
-	}
-	
 	public Question getQuestion(int question_no, String preferred_medium, String phonenumber) {
 		
 		String questionURL = URL+"questions/"+question_no;
@@ -92,9 +87,11 @@ public class YesNoAgent {
 		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
 		datastore.store(group);
 		
-		String questionURL = URL+"questions/99";
+		int responseQuestion=99;
+		
+		String questionURL = URL+"questions/"+responseQuestion;
 		if (preferred_medium != null && preferred_medium.startsWith("audio")){
-			questionURL = this.getAudioFile(99);
+			questionURL = this.getAudioFile(responseQuestion);
 		}
 		
 		Question question=new Question();

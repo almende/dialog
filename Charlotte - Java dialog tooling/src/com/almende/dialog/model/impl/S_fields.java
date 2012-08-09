@@ -9,6 +9,8 @@ public class S_fields implements SessionIntf {
 	String session_id;
 	String account;
 	String startUrl;
+	String remoteAddress;
+	String direction;
 	
 	@Override
 	public String getSession_id() {
@@ -38,6 +40,26 @@ public class S_fields implements SessionIntf {
 	@Override
 	public void setStartUrl(String url) {
 		this.startUrl = url;
+	}
+
+	@Override
+	public String getRemoteAddress() {
+		return this.remoteAddress;
+	}
+
+	@Override
+	public String getDirection() {
+		return this.direction;
+	}
+
+	@Override
+	public void setRemoteAddress(String remoteAddress) {
+		this.remoteAddress=remoteAddress;
+	}
+
+	@Override
+	public void setDirection(String direction) {
+		this.direction=direction;
 	}
 
 }

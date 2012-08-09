@@ -81,6 +81,7 @@ public class Session implements SessionIntf {
 				}
 				session = new Session();
 				session.setAccount(config.getAccount().toString());
+				session.setRemoteAddress(split[2]);
 				session.key = key;
 				session.storeSession();
 			} else {
@@ -99,5 +100,21 @@ public class Session implements SessionIntf {
 	@Override
 	public void setStartUrl(String url) {
 		session.setStartUrl(url);
+	}
+	@Override
+	public String getRemoteAddress() {
+		return this.session.getRemoteAddress();
+	}
+	@Override
+	public String getDirection() {
+		return this.session.getDirection();
+	}
+	@Override
+	public void setRemoteAddress(String remoteAddress) {
+		this.session.setRemoteAddress(remoteAddress);
+	}
+	@Override
+	public void setDirection(String direction) {
+		this.session.setDirection(direction);
 	}
 }

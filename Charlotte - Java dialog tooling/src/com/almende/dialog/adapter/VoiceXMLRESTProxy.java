@@ -13,6 +13,7 @@ import javax.ws.rs.core.Response;
 
 import org.znerd.xmlenc.XMLOutputter;
 
+import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.Account;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Answer;
@@ -41,7 +42,11 @@ public class VoiceXMLRESTProxy {
 		
 		Session session = Session.getSession("broadsoft|"+config.getMyAddress()+"|"+address);
 		session.setStartUrl(url);
+		session.setDirection("outbound");
+		session.setRemoteAddress(address);
 		session.storeSession();
+		
+		DDRWrapper.log(url,"",session,"Dial",config);
 		
 		Client client = ParallelInit.getClient();
 		//TODO: get the url and authentication data from the adapterConfig!
@@ -75,11 +80,14 @@ public class VoiceXMLRESTProxy {
 		if (direction.equals("inbound")){
 			url = config.getInitialAgentURL();
 			session.setStartUrl(url);
-			session.storeSession();
+			session.setDirection("inbound");
+			session.setRemoteAddress(remoteID);
 		} else {
 			url=session.getStartUrl();
 		}
 		Question question = Question.fromURL(url,remoteID,localID);
+		DDRWrapper.log(question,session,"Start",config);
+		session.storeSession();
 		return handleQuestion(question,remoteID);
 	}
 	
@@ -88,7 +96,7 @@ public class VoiceXMLRESTProxy {
 	@Produces("application/voicexml+xml")
 	public Response answer(@QueryParam("question_id") String question_id, @QueryParam("answer_id") String answer_id, @QueryParam("answer_input") String answer_input){
 		String reply="<vxml><exit/></vxml>";
-		
+		//TODO: Add sessionkey somewhjere
 		String json = StringStore.getString(question_id);
 		if (json != null){
 			Question question = Question.fromJSON(json);
@@ -98,6 +106,8 @@ public class VoiceXMLRESTProxy {
 			StringStore.dropString(question_id+"-remoteID");
 
 			question = question.answer(responder,answer_id,answer_input);
+//			DDRWrapper.log(question,session,"Answer",config);
+
 			return handleQuestion(question,responder);
 		}
 		return Response.ok(reply).build();

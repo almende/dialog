@@ -18,6 +18,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
+import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.Account;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -100,6 +101,13 @@ public class XMPPServlet extends HttpServlet {
 		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("XMPP", account.getId());
 		JID localJid = new JID(config.getMyAddress());
 		String localaddress = localJid.getId().split("/")[0];
+		Session session = Session.getSession("XMPP|"+localaddress+"|"+address);
+		if (session == null){
+			log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "+localaddress+":"+address);
+			return;
+		}
+		session.setDirection("outbound");
+		session.storeSession();
 		
 		JID jid = new JID(address);
 		xmpp.sendInvitation(jid);
@@ -119,6 +127,7 @@ public class XMPPServlet extends HttpServlet {
 		Message msg = new MessageBuilder().withRecipientJids(jid).withFromJid(localJid)
 				.withBody(res.reply).build();
 
+		DDRWrapper.log(question,session,"Start",config);
 		xmpp.sendMessage(msg);
 	}
 
@@ -263,6 +272,8 @@ public class XMPPServlet extends HttpServlet {
 				} else {
 					question = Question.fromURL(config.getInitialAgentURL(),address,localaddress);
 				}
+				session.setDirection("inbound");
+				DDRWrapper.log(question,session,"Start",config);
 			} else {
 				question = Question.fromJSON(json);
 			}
@@ -280,6 +291,7 @@ public class XMPPServlet extends HttpServlet {
 				} else {
 					StringStore.storeString("question_"+address+"_"+localaddress, question.toJSON());
 					session.storeSession();
+					DDRWrapper.log(question,session,"Answer",config);
 				}
 			}
 		}

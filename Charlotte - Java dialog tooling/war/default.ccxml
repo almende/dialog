@@ -8,7 +8,11 @@
     <var name="direction" expr="'inbound'"/>
     <var name="dialURL" expr="''"/>
     <var name="vxmlScript" expr="'/vxml/new'"/>
+    <var name="errorScript" expr="'/vxml/error'"/>
+    <var name="transferScript" expr="'/vxml/transfer'"/>
+    <var name="hangupScript" expr="'/vxml/hangup'"/>
     <var name="dialogID" expr="''"/>
+    <var name="timeout" expr="'30s'"/>
     <eventprocessor statevariable="currentState">
 	<transition state="initial" event="connection.alerting">
 	    <assign name="innerConn" expr="event$.connectionid"/>
@@ -20,7 +24,7 @@
 		localID = event$.connection.local;
 		remoteID = strings[0];
 		var domain   = strings[1];
-		if (domain == "outbound") {
+		if (domain.substring(0,8) == "outbound") {
 		    direction = "outbound";
 		    dialURL = "sip:"+remoteID+"@asb-02.voipit.nl";
 		}
@@ -28,7 +32,7 @@
 	    <assign name="currentState" expr="'calling'"/>
 	    <accept connectionid="innerConn"/>
 	    <if cond="direction == 'outbound'">
-	        <createcall dest="dialURL" connectionid="outerConn"/>
+	        <createcall dest="dialURL" connectionid="outerConn" timeout="timeout" />
 	    </if>
 	</transition>
         <transition state="calling" event="connection.connected">
@@ -36,7 +40,7 @@
                 <assign name="currentState" expr="'connestablished'"/>
 	        <dialogstart connectionid="outerConn" dialogid="dialogID" src="vxmlScript" namelist="direction localID remoteID"/>
 	        <if cond="direction == 'outbound'">
-		    <disconnect connectionid="innerConn"/>
+			    <disconnect connectionid="innerConn"/>
 	        </if>
 	    </if>
         </transition>
@@ -44,7 +48,8 @@
             <exit/>
         </transition>
         <transition state="connestablished" event="dialog.transfer">
-            <redirect connectionid="outerConn" dest="event$.URI"/>
+        	<assign name="remoteID" expr="event$.URI"/>
+            <redirect connectionid="outerConn" dest="remoteID"/>
         </transition>
         <transition event="connection.failed">
             <exit/>

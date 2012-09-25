@@ -35,11 +35,15 @@ public class DDRWrapper {
 		}
 	}
 	public static void log(Question question, Session session, String type, AdapterConfig config){
-		log(question.getRequester(),question.getTrackingToken(),session,type,config);
+		if (question == null){
+			log("","",session,type,config);			
+		} else {
+			log(question.getRequester(),question.getTrackingToken(),session,type,config);
+		}
 	}
 	
 	public static void log(Question question, Session session, String type){
 		AdapterConfig config = AdapterConfig.findAdapterConfig(session.getType(), session.getLocalAddress());
-		log(question.getRequester(),question.getTrackingToken(),session,type,config);
+		log(question,session,type,config);
 	}
 }

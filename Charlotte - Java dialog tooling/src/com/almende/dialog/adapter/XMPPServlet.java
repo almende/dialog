@@ -294,6 +294,7 @@ public class XMPPServlet extends HttpServlet {
 					StringStore.dropString("question_"+address+"_"+localaddress);
 					xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "",localJid);
 					session.drop();
+					DDRWrapper.log(question,session,"Hangup",config);
 				} else {
 					StringStore.storeString("question_"+address+"_"+localaddress, question.toJSON());
 					session.storeSession();

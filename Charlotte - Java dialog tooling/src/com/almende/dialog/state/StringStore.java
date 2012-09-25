@@ -51,7 +51,8 @@ public class StringStore {
 		}
 		if (entity == null){
 			Query q = new Query("storedString");
-			q.setFilter(new Query.FilterPredicate("id", Query.FilterOperator.EQUAL, id));
+//			q.setFilter(new Query.FilterPredicate("id", Query.FilterOperator.EQUAL, id));
+			q.addFilter("id", Query.FilterOperator.EQUAL, id);
 			PreparedQuery pq = datastore.prepare(q);
 			try {
 				entity = pq.asSingleEntity();

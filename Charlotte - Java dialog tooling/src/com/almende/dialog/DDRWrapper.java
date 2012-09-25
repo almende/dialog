@@ -29,12 +29,17 @@ public class DDRWrapper {
 		node.put("trackingToken", token);
 		node.put("account", session.getAccount());
 		try {
-			ddr.severe(om.writeValueAsString(node));
+			ddr.info(om.writeValueAsString(node));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	public static void log(Question question, Session session, String type, AdapterConfig config){
+		log(question.getRequester(),question.getTrackingToken(),session,type,config);
+	}
+	
+	public static void log(Question question, Session session, String type){
+		AdapterConfig config = AdapterConfig.findAdapterConfig(session.getType(), session.getLocalAddress());
 		log(question.getRequester(),question.getTrackingToken(),session,type,config);
 	}
 }

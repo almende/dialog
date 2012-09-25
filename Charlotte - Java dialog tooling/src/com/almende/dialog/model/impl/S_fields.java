@@ -10,7 +10,9 @@ public class S_fields implements SessionIntf {
 	String account;
 	String startUrl;
 	String remoteAddress;
+	String localAddress;
 	String direction;
+	String type;
 	
 	@Override
 	public String getSession_id() {
@@ -60,6 +62,26 @@ public class S_fields implements SessionIntf {
 	@Override
 	public void setDirection(String direction) {
 		this.direction=direction;
+	}
+
+	@Override
+	public String getLocalAddress() {
+		return this.localAddress;
+	}
+
+	@Override
+	public void setLocalAddress(String localAddress) {
+		this.localAddress=localAddress;
+	}
+
+	@Override
+	public String getType() {
+		return this.type;
+	}
+
+	@Override
+	public void setType(String type) {
+		this.type=type;
 	}
 
 }

@@ -3,13 +3,14 @@ package com.almende.dialog.model;
 import java.util.logging.Logger;
 
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.VoiceXMLRESTProxy;
+import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.model.impl.S_fields;
 import com.almende.dialog.model.intf.SessionIntf;
 import com.almende.dialog.state.StringStore;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 
 public class Session implements SessionIntf {
 	private static final long serialVersionUID = 2674975096455049670L;
@@ -19,6 +20,7 @@ public class Session implements SessionIntf {
 	
 	SessionIntf session;
 	String key = "";
+	public boolean killed = false;
 	
 	public Session() {
 		this.session = new S_fields();
@@ -40,6 +42,16 @@ public class Session implements SessionIntf {
 		session.setAccount(account);
 	}
 	
+	@JsonIgnore
+	public void kill(){
+		this.killed=true;
+		this.storeSession();
+		if ("XMPP".equals(this.getType())){
+			XMPPServlet.killSession(this);
+		} else {
+			VoiceXMLRESTProxy.killSession(this);
+		}
+	}
 	@JsonIgnore
 	public String toJSON() {
 		try {
@@ -82,6 +94,7 @@ public class Session implements SessionIntf {
 				session = new Session();
 				session.setAccount(config.getAccount().toString());
 				session.setRemoteAddress(split[2]);
+				session.setLocalAddress(localaddress);
 				session.key = key;
 				session.storeSession();
 			} else {
@@ -116,5 +129,21 @@ public class Session implements SessionIntf {
 	@Override
 	public void setDirection(String direction) {
 		this.session.setDirection(direction);
+	}
+	@Override
+	public String getLocalAddress() {
+		return this.session.getLocalAddress();
+	}
+	@Override
+	public void setLocalAddress(String localAddress) {
+		this.session.setLocalAddress(localAddress);
+	}
+	@Override
+	public String getType() {
+		return this.session.getType();
+	}
+	@Override
+	public void setType(String type) {
+		this.session.setType(type);
 	}
 }

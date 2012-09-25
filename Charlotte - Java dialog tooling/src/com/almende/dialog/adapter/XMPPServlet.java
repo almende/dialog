@@ -97,14 +97,15 @@ public class XMPPServlet extends HttpServlet {
 	}
 
 	
-	public static void startDialog(String address, String url, Account account) {
+	public static String startDialog(String address, String url, Account account) {
 		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("XMPP", account.getId());
 		JID localJid = new JID(config.getMyAddress());
 		String localaddress = localJid.getId().split("/")[0];
-		Session session = Session.getSession("XMPP|"+localaddress+"|"+address);
+		String sessionKey ="XMPP|"+localaddress+"|"+address;
+		Session session = Session.getSession(sessionKey);
 		if (session == null){
-			log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "+localaddress+":"+address);
-			return;
+			log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "+sessionKey);
+			return "";
 		}
 		session.setDirection("outbound");
 		session.storeSession();
@@ -129,6 +130,7 @@ public class XMPPServlet extends HttpServlet {
 
 		DDRWrapper.log(question,session,"Start",config);
 		xmpp.sendMessage(msg);
+		return sessionKey;
 	}
 
 	public void doErrorPost(HttpServletRequest req, HttpServletResponse res)
@@ -155,6 +157,10 @@ public class XMPPServlet extends HttpServlet {
 
 	}
 
+	public static void killSession(Session session){
+		StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
+	}
+	
 	@Override
 	public void doPost(HttpServletRequest req, HttpServletResponse res)
 			throws IOException {

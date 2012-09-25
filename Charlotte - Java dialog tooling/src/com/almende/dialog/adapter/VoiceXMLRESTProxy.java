@@ -35,12 +35,20 @@ public class VoiceXMLRESTProxy {
 	private static final int LOOP_DETECTION=10;
 	private static final String DTMFGRAMMAR="/dtmf2hash.grxml";
 	
-	public static void dial(String address, String url, Account account){
+	public static void killSession(Session session){
+		//TODO: kill outstanding calls , will now die after client comes back to server.
+	}
+	
+	public static String dial(String address, String url, Account account){
 		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("broadsoft", account.getId());
 		
 		address = formatNumber(address).replaceFirst("\\+31", "0")+"@outbound";
-		
-		Session session = Session.getSession("broadsoft|"+config.getMyAddress()+"|"+address);
+		String sessionKey = "broadsoft|"+config.getMyAddress()+"|"+address;
+		Session session = Session.getSession(sessionKey);
+		if (session == null){
+			log.severe("VoiceXMLRESTProxy couldn't start new outbound Dialog, adapterConfig not found? "+sessionKey);
+			return "";
+		}
 		session.setStartUrl(url);
 		session.setDirection("outbound");
 		session.setRemoteAddress(address);
@@ -49,7 +57,7 @@ public class VoiceXMLRESTProxy {
 		DDRWrapper.log(url,"",session,"Dial",config);
 		
 		Client client = ParallelInit.getClient();
-		//TODO: get the url and authentication data from the adapterConfig!
+
 		WebResource webResource = client.resource(config.getXsiURL());
 		webResource.addFilter(new HTTPBasicAuthFilter(config.getXsiUser(), config.getXsiPasswd()));
 		try {
@@ -57,6 +65,7 @@ public class VoiceXMLRESTProxy {
 		} catch (Exception e) {
 			log.severe("Problems dialing out:"+e.getMessage());
 		}
+		return sessionKey;
 	}
 	private static String formatNumber(String phone) {
 		PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
@@ -75,7 +84,8 @@ public class VoiceXMLRESTProxy {
 	public Response getNewDialog(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID){
 		log.warning("call started:"+direction+":"+remoteID+":"+localID);
 		AdapterConfig config = AdapterConfig.findAdapterConfig("broadsoft", localID);
-		Session session = Session.getSession("broadsoft|"+localID+"|"+remoteID);
+		String sessionKey = "broadsoft|"+localID+"|"+remoteID;
+		Session session = Session.getSession(sessionKey);
 		String url="";
 		if (direction.equals("inbound")){
 			url = config.getInitialAgentURL();
@@ -88,27 +98,31 @@ public class VoiceXMLRESTProxy {
 		Question question = Question.fromURL(url,remoteID,localID);
 		DDRWrapper.log(question,session,"Start",config);
 		session.storeSession();
-		return handleQuestion(question,remoteID);
+		return handleQuestion(question,remoteID,sessionKey);
 	}
 	
 	@Path("answer")
 	@GET
 	@Produces("application/voicexml+xml")
-	public Response answer(@QueryParam("question_id") String question_id, @QueryParam("answer_id") String answer_id, @QueryParam("answer_input") String answer_input){
+	public Response answer(@QueryParam("question_id") String question_id, @QueryParam("answer_id") String answer_id, @QueryParam("answer_input") String answer_input, @QueryParam("sessionKey") String sessionKey){
 		String reply="<vxml><exit/></vxml>";
-		//TODO: Add sessionkey somewhjere
 		String json = StringStore.getString(question_id);
 		if (json != null){
 			Question question = Question.fromJSON(json);
 			String responder = StringStore.getString(question_id+"-remoteID");
+			Session session = Session.getSession(sessionKey);
+			if (session.killed){
+				return Response.status(Response.Status.BAD_REQUEST).build();
+			}
+			DDRWrapper.log(question,session,"Answer");
 			
 			StringStore.dropString(question_id);
 			StringStore.dropString(question_id+"-remoteID");
 
 			question = question.answer(responder,answer_id,answer_input);
-//			DDRWrapper.log(question,session,"Answer",config);
-
-			return handleQuestion(question,responder);
+			
+			
+			return handleQuestion(question,responder,sessionKey);
 		}
 		return Response.ok(reply).build();
 	}
@@ -184,7 +198,7 @@ public class VoiceXMLRESTProxy {
 		}
 		return sw.toString();	
 	}
-	private String renderClosedQuestion(Question question,ArrayList<String> prompts){
+	private String renderClosedQuestion(Question question,ArrayList<String> prompts,String sessionKey){
 		ArrayList<Answer> answers=question.getAnswers();
 		
 		String handleAnswerURL = "/vxml/answer";
@@ -207,7 +221,7 @@ public class VoiceXMLRESTProxy {
 					for(int cnt=0; cnt<answers.size(); cnt++){
 						outputter.startTag("choice");
 							outputter.attribute("dtmf", new Integer(cnt+1).toString());
-							outputter.attribute("next", handleAnswerURL+"?question_id="+question.getQuestion_id()+"&answer_id="+answers.get(cnt).getAnswer_id());
+							outputter.attribute("next", handleAnswerURL+"?question_id="+question.getQuestion_id()+"&answer_id="+answers.get(cnt).getAnswer_id()+"&sessionKey="+sessionKey);
 						outputter.endTag();
 					}
 					outputter.startTag("noinput");
@@ -222,7 +236,7 @@ public class VoiceXMLRESTProxy {
 		}
 		return sw.toString();
 	}
-	private String renderOpenQuestion(Question question,ArrayList<String> prompts){
+	private String renderOpenQuestion(Question question,ArrayList<String> prompts,String sessionKey){
 		String handleAnswerURL = "/vxml/answer";
 
 		StringWriter sw = new StringWriter();
@@ -239,6 +253,10 @@ public class VoiceXMLRESTProxy {
 				outputter.startTag("var");
 					outputter.attribute("name","question_id");
 					outputter.attribute("expr", "'"+question.getQuestion_id()+"'");
+				outputter.endTag();
+				outputter.startTag("var");
+					outputter.attribute("name","sessionKey");
+					outputter.attribute("expr", "'"+sessionKey+"'");
 				outputter.endTag();
 				outputter.startTag("form");
 					outputter.startTag("field");
@@ -267,7 +285,7 @@ public class VoiceXMLRESTProxy {
 						outputter.endTag();
 						outputter.startTag("submit");
 							outputter.attribute("next", handleAnswerURL);
-							outputter.attribute("namelist","answer_input question_id");
+							outputter.attribute("namelist","answer_input question_id sessionKey");
 						outputter.endTag();
 						outputter.startTag("clear");
 							outputter.attribute("namelist", "answer_input answer");
@@ -282,7 +300,7 @@ public class VoiceXMLRESTProxy {
 		return sw.toString();
 	}
 	
-	private Response handleQuestion(Question question,String remoteID){
+	private Response handleQuestion(Question question,String remoteID,String sessionKey){
 		String result="<vxml><exit/></vxml>";
 		Return res = formQuestion(question,remoteID);
 		question = res.question;
@@ -293,9 +311,9 @@ public class VoiceXMLRESTProxy {
 			StringStore.storeString(question.getQuestion_id()+"-remoteID", remoteID);
 		
 			if (question.getType().equals("closed")){
-				result = renderClosedQuestion(question,res.prompts);
+				result = renderClosedQuestion(question,res.prompts,sessionKey);
 			} else if (question.getType().equals("open")){
-				result = renderOpenQuestion(question,res.prompts);
+				result = renderOpenQuestion(question,res.prompts,sessionKey);
 			} else if (question.getType().equals("referral")){
 				if (question.getUrl().startsWith("tel:")){
 					result = renderComment(question,res.prompts);	

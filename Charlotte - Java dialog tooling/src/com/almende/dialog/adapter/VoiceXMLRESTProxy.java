@@ -84,7 +84,7 @@ public class VoiceXMLRESTProxy {
 	public Response getNewDialog(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID){
 		log.warning("call started:"+direction+":"+remoteID+":"+localID);
 		AdapterConfig config = AdapterConfig.findAdapterConfig("broadsoft", localID);
-		String sessionKey = "broadsoft|"+localID+"|"+remoteID;
+		String sessionKey = "broadsoft|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
 		Session session = Session.getSession(sessionKey);
 		String url="";
 		if (direction.equals("inbound")){

@@ -2,4 +2,4 @@ Charlotte - Java dialog tooling/.settings
 Charlotte - Java dialog tooling/war/WEB-INF/classes
 Charlotte - Java dialog tooling/war/WEB-INF/appengine-generated/datastore-indexes-auto.xml
 Charlotte - Java dialog tooling/war/WEB-INF/appengine-generated/local_db.bin
-Charlotte - Java dialog tooling/war/WEB-INF/lib/dialogHandler.jar
+Charlotte - Java dialog tooling/war/WEB-INF/lib/*.jar

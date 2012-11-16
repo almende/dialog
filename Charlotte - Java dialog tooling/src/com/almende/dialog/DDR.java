@@ -32,23 +32,35 @@ public class DDR implements Serializable  {
 	}
 	@GET
 	@Produces("application/json")
-	public Response getDDRs(@QueryParam("account") String account){
+	public Response getDDRs(@QueryParam("account") String account, @QueryParam("from") String from, @QueryParam("to") String to,
+							@QueryParam("adapter") String adapter){
 		if (account == null || account.equals("")) return Response.status(Response.Status.BAD_REQUEST).build();
 		
 		ArrayNode result = om.createArrayNode();
-	    query.startTimeUsec((System.currentTimeMillis()-86400000)*1000);
+		long start = (System.currentTimeMillis()-86400000)*1000; 
+		if(from != null) {
+			start = Long.parseLong(from)*1000000;
+		}
+		System.out.println("From: "+start);
+	    query.startTimeUsec(start);
+	    if(to != null) {
+			query.endTimeUsec(Long.parseLong(to)*1000000);
+		}
 	    Iterable<RequestLogs> records = ls.fetch(query);
 	    for (RequestLogs record : records) { 
 	    	for (AppLogLine appLog : record.getAppLogLines()) {
 	    		String msg =appLog.getLogMessage(); 
 	    		if (msg.startsWith("com.almende.dialog.DDRWrapper log:")){
-					log.warning("checking record:"+msg);
+					//log.warning("checking record:"+msg);
 	    			JsonNode rec;
 					try {
 						rec = om.readTree(msg.substring(35));
 						if (rec.has("account") && rec.get("account").asText().equals(account)){
-							log.warning("Adding record:"+msg);
-							result.add(rec);
+							
+							if(adapter==null || (rec.has("adapterType") && rec.get("adapterType").asText().equals(adapter))) {
+								
+								result.add(rec);
+							}
 						}
 	    			} catch (Exception e){log.warning("Couldn't parse DDR:"+msg);}
 	    		}

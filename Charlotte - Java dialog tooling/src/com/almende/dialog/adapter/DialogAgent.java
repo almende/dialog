@@ -46,8 +46,12 @@ public class DialogAgent extends Agent {
 			return "{'sessionKey':'"+XMPPServlet.startDialog(address,url,account)+"'}";
 		} else if (type.equals("phone")){
 			return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,account)+"'}";
-		} else {
-			return "Unknown type given: either gtalk or phone";
+		} else if (type.equals("mail")){
+			return "{'sessionKey':'"+new MailServlet().startDialog(address,url,account)+"'}";
+		} /*else if (type.equals("sms")){
+			return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,account)+"'}";
+		}*/ else {
+			return "Unknown type given: either gtalk or phone or mail";
 		}
 	}
 	

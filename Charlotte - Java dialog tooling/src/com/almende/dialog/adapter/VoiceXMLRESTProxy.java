@@ -61,7 +61,8 @@ public class VoiceXMLRESTProxy {
 		WebResource webResource = client.resource(config.getXsiURL());
 		webResource.addFilter(new HTTPBasicAuthFilter(config.getXsiUser(), config.getXsiPasswd()));
 		try {
-			webResource.queryParam("address", URLEncoder.encode(address, "UTF-8")).type("text/plain").post(String.class);
+			String result = webResource.queryParam("address", URLEncoder.encode(address, "UTF-8")).type("text/plain").post(String.class);
+			log.info("Result from BroadSoft: "+result);
 		} catch (Exception e) {
 			log.severe("Problems dialing out:"+e.getMessage());
 		}

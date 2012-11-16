@@ -47,6 +47,15 @@ public class Charlotte {
 	}
 	
 	@GET
+	@Path("/id/")
+	public Response getId(@QueryParam("preferred_language") String preferred_language){
+		ObjectNode node= om.createObjectNode();
+		node.put("url", URL);
+		node.put("nickname", "Charlotte");
+		return Response.ok(node.toString()).build();
+	}
+	
+	@GET
 	@Produces("application/json")
 	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium){
 		String url=URL;
@@ -56,6 +65,7 @@ public class Charlotte {
 			url= SOUNDURL;
 		}
 		ObjectNode node= om.createObjectNode();
+		node.put("requester", URL+"id");
 		node.put("question_text",url+(audio?"Q0.wav":"questions/0"));
 		node.put("type", "closed");
 		ArrayNode answers = node.putArray("answers");

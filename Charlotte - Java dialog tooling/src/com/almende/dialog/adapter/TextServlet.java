@@ -3,7 +3,7 @@ package com.almende.dialog.adapter;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.CharBuffer;
-import java.util.Date;
+import java.util.HashMap;
 import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServlet;
@@ -35,9 +35,9 @@ abstract public class TextServlet extends HttpServlet {
 	protected abstract void sendMessage(String message, String subject, String from, String fromName, 
 										String to, String toName);
 	protected abstract TextMessage receiveMessage(HttpServletRequest req) throws Exception; 
-	protected abstract String getNickname(Question question);
 	protected abstract String getServletPath();
 	protected abstract String getAdapterType();
+	protected abstract void doErrorPost(HttpServletRequest req, HttpServletResponse res) throws IOException;
 	
 	protected class Return {
 		String reply;
@@ -123,6 +123,11 @@ abstract public class TextServlet extends HttpServlet {
 //		log.warning("Starting to handle xmpp post: "+startTime+"/"+(new Date().getTime()));
 		boolean loading = ParallelInit.startThreads();
 		boolean skip = false;
+		
+		if (req.getServletPath().endsWith("/error/")) {
+			doErrorPost(req, res);
+			return;
+		}
 
 		if (loading){
 			CharBuffer bodyReader = CharBuffer.allocate(req.getContentLength());
@@ -242,5 +247,14 @@ abstract public class TextServlet extends HttpServlet {
 		}
 
 		sendMessage(reply, subject, localaddress, fromName, address, toName);
+	}
+	
+	private String getNickname(Question question) {
+		
+		HashMap<String, String> id = question.getExpandedRequester();
+		String nickname = id.get("nickname"); 
+		//xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "as: "+id.get("nickname"), fromJid);
+		
+		return nickname; 
 	}
 }

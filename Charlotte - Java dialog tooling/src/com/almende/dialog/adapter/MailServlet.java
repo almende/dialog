@@ -2,7 +2,6 @@ package com.almende.dialog.adapter;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Properties;
 
 import javax.mail.Address;
@@ -14,9 +13,9 @@ import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.model.Question;
 import com.google.appengine.api.utils.SystemProperty;
 
 
@@ -25,6 +24,8 @@ public class MailServlet extends TextServlet {
 	private static final long serialVersionUID = 6892283600126803780L;
 	private static final String servletPath = "/_ah/mail/";
 	private static final String adapterType = "MAIL";
+	
+	public void doErrorPost(HttpServletRequest req, HttpServletResponse res) {}
 	
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req) throws Exception {
@@ -101,12 +102,6 @@ public class MailServlet extends TextServlet {
 		
 	}
 
-	@Override
-	public String getNickname(Question question) {
-		HashMap<String, String> requester = question.getExpandedRequester();
-		return requester.get("nickname");
-	}
-	
 	@Override
 	protected String getServletPath() {
 		return servletPath;

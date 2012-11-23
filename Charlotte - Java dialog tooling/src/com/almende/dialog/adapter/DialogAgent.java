@@ -43,11 +43,15 @@ public class DialogAgent extends Agent {
 		Account account = Account.checkAccount(accountId, token);
 		if (account == null) return "Incorrect account/token given!";
 		if (type.equals("gtalk")){
-			return "{'sessionKey':'"+XMPPServlet.startDialog(address,url,account)+"'}";
+			return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,account)+"'}";
 		} else if (type.equals("phone")){
 			return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,account)+"'}";
+		} else if (type.equals("mail")){
+			return "{'sessionKey':'"+new MailServlet().startDialog(address,url,account)+"'}";
+		} else if (type.equals("sms")){
+			return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,account)+"'}";
 		} else {
-			return "Unknown type given: either gtalk or phone";
+			return "Unknown type given: either gtalk or phone or mail";
 		}
 	}
 	

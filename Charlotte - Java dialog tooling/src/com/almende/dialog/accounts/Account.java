@@ -1,6 +1,7 @@
 package com.almende.dialog.accounts;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 import javax.ws.rs.Consumes;
@@ -16,6 +17,8 @@ import javax.ws.rs.core.Response.Status;
 import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.appengine.api.datastore.QueryResultIterator;
+import com.google.apphosting.api.DatastorePb.QueryResult;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
 import com.google.code.twig.annotation.Id;
 
@@ -45,6 +48,26 @@ public class Account implements Serializable {
 			log.warning("Invalid account given!"+accountId+":"+token);
 		}
 		return null;
+	}
+	
+	@GET
+	@Produces("application/json")
+	@JsonIgnore
+	public Response getAccounts(){
+		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+
+		ArrayList<Account> accounts = new ArrayList<Account>();
+		QueryResultIterator<Account> it = datastore.find(Account.class);
+		while(it.hasNext()) {
+			accounts.add(it.next());
+		}
+		
+		try {
+			return Response.ok(om.writeValueAsString(accounts)).build();
+		} catch (Exception e) {
+			log.severe("getAccounts: Exception creating JSON:"+e.getMessage());
+		}
+		return Response.serverError().build();
 	}
 	
 	@POST

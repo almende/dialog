@@ -34,7 +34,6 @@ public class DDR implements Serializable  {
 	@Produces("application/json")
 	public Response getDDRs(@QueryParam("account") String account, @QueryParam("from") String from, @QueryParam("to") String to,
 							@QueryParam("adapter") String adapter){
-		if (account == null || account.equals("")) return Response.status(Response.Status.BAD_REQUEST).build();
 		
 		ArrayNode result = om.createArrayNode();
 		long start = (System.currentTimeMillis()-86400000)*1000; 
@@ -55,7 +54,7 @@ public class DDR implements Serializable  {
 	    			JsonNode rec;
 					try {
 						rec = om.readTree(msg.substring(35));
-						if (rec.has("account") && rec.get("account").asText().equals(account)){
+						if (account==null || rec.has("account") && rec.get("account").asText().equals(account)){
 							
 							if(adapter==null || (rec.has("adapterType") && rec.get("adapterType").asText().equals(adapter))) {
 								

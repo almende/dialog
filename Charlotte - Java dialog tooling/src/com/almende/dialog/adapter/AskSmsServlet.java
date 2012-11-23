@@ -64,7 +64,6 @@ public class AskSmsServlet extends TextServlet {
 				log.warning("Failed to parse phone number");
 			}
 			
-			
 			success=true;
 		}
 		

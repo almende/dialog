@@ -18,7 +18,6 @@ import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.appengine.api.datastore.QueryResultIterator;
-import com.google.apphosting.api.DatastorePb.QueryResult;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
 import com.google.code.twig.annotation.Id;
 

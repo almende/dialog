@@ -2,7 +2,6 @@ package com.almende.dialog.adapter;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.net.URLEncoder;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;

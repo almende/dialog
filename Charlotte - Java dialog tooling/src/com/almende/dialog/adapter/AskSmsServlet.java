@@ -3,7 +3,6 @@ package com.almende.dialog.adapter;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Logger;

@@ -43,7 +43,8 @@ public class VoiceXMLRESTProxy {
 		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("broadsoft", account.getId());
 		
 		address = formatNumber(address).replaceFirst("\\+31", "0")+"@outbound";
-		String sessionKey = "broadsoft|"+config.getMyAddress()+"|"+address;
+		String adapterType="broadsoft";
+		String sessionKey = adapterType+"|"+config.getMyAddress()+"|"+address;
 		Session session = Session.getSession(sessionKey);
 		if (session == null){
 			log.severe("VoiceXMLRESTProxy couldn't start new outbound Dialog, adapterConfig not found? "+sessionKey);
@@ -52,6 +53,7 @@ public class VoiceXMLRESTProxy {
 		session.setStartUrl(url);
 		session.setDirection("outbound");
 		session.setRemoteAddress(address);
+		session.setType(adapterType);
 		session.storeSession();
 		
 		DDRWrapper.log(url,"",session,"Dial",config);
@@ -84,8 +86,9 @@ public class VoiceXMLRESTProxy {
 	@Produces("application/voicexml+xml")
 	public Response getNewDialog(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID){
 		log.warning("call started:"+direction+":"+remoteID+":"+localID);
-		AdapterConfig config = AdapterConfig.findAdapterConfig("broadsoft", localID);
-		String sessionKey = "broadsoft|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
+		String adapterType="broadsoft";
+		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterType, localID);
+		String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
 		Session session = Session.getSession(sessionKey);
 		String url="";
 		if (direction.equals("inbound")){
@@ -93,6 +96,7 @@ public class VoiceXMLRESTProxy {
 			session.setStartUrl(url);
 			session.setDirection("inbound");
 			session.setRemoteAddress(remoteID);
+			session.setType(adapterType);
 		} else {
 			url=session.getStartUrl();
 		}

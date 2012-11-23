@@ -34,7 +34,7 @@ abstract public class TextServlet extends HttpServlet {
 	
 	protected abstract void sendMessage(String message, String subject, String from, String fromName, 
 										String to, String toName);
-	protected abstract TextMessage receiveMessage(HttpServletRequest req) throws Exception; 
+	protected abstract TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception; 
 	protected abstract String getServletPath();
 	protected abstract String getAdapterType();
 	protected abstract void doErrorPost(HttpServletRequest req, HttpServletResponse res) throws IOException;
@@ -56,11 +56,7 @@ abstract public class TextServlet extends HttpServlet {
 			if (question == null) break;
 			question.setPreferred_language(preferred_language);
 			
-			if (!reply.equals("")) reply+="\n";
-			/*HashMap<String, String> id = question.getExpandedRequester();
-			if (id.containsKey("nickname")) {
-				reply += "*" + id.get("nickname") + ":* ";
-			}*/			
+			if (!reply.equals("")) reply+="\n";	
 			String qText = question.getQuestion_expandedtext();
 			if(qText!=null && !qText.equals("")) reply += qText;
 
@@ -144,7 +140,7 @@ abstract public class TextServlet extends HttpServlet {
         
 		TextMessage msg;
         try {
-        	msg = receiveMessage(req);
+        	msg = receiveMessage(req, res);
 		} catch(Exception ex) {
 			log.severe("Failed to parse received message: "+ex.getLocalizedMessage());
 			return;
@@ -251,9 +247,11 @@ abstract public class TextServlet extends HttpServlet {
 	
 	private String getNickname(Question question) {
 		
-		HashMap<String, String> id = question.getExpandedRequester();
-		String nickname = id.get("nickname"); 
-		//xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "as: "+id.get("nickname"), fromJid);
+		String nickname="";
+		if(question!=null) {
+			HashMap<String, String> id = question.getExpandedRequester();
+			nickname = id.get("nickname");
+		}
 		
 		return nickname; 
 	}

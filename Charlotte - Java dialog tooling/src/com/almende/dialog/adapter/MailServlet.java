@@ -28,7 +28,7 @@ public class MailServlet extends TextServlet {
 	public void doErrorPost(HttpServletRequest req, HttpServletResponse res) {}
 	
 	@Override
-	protected TextMessage receiveMessage(HttpServletRequest req) throws Exception {
+	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception {
 		
 		TextMessage msg = new TextMessage();
 		Properties props = new Properties();

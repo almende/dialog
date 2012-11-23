@@ -75,7 +75,7 @@ public class XMPPServlet extends TextServlet {
 
 
 	@Override
-	protected TextMessage receiveMessage(HttpServletRequest req)
+	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp)
 			throws Exception {
 		
 		TextMessage msg = new TextMessage();

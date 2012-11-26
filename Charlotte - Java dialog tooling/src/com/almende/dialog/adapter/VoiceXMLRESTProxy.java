@@ -14,7 +14,6 @@ import javax.ws.rs.core.Response;
 import org.znerd.xmlenc.XMLOutputter;
 
 import com.almende.dialog.DDRWrapper;
-import com.almende.dialog.accounts.Account;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
@@ -39,9 +38,8 @@ public class VoiceXMLRESTProxy {
 		//TODO: kill outstanding calls , will now die after client comes back to server.
 	}
 	
-	public static String dial(String address, String url, Account account){
-		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("broadsoft", account.getId());
-		
+	public static String dial(String address, String url, AdapterConfig config){
+
 		address = formatNumber(address).replaceFirst("\\+31", "0")+"@outbound";
 		String sessionKey = "broadsoft|"+config.getMyAddress()+"|"+address;
 		Session session = Session.getSession(sessionKey);

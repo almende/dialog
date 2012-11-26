@@ -2,15 +2,15 @@ package com.almende.dialog.adapter;
 
 //import java.util.logging.Logger;
 
-import com.almende.dialog.accounts.Account;
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.eve.agent.Agent;
+import com.almende.eve.agent.annotation.Access;
+import com.almende.eve.agent.annotation.AccessType;
 import com.almende.eve.json.annotation.Name;
 import com.almende.eve.json.annotation.Required;
-
-import com.almende.eve.agent.annotation.*;
 import com.almende.util.ParallelInit;
 
 public class DialogAgent extends Agent {
@@ -37,19 +37,26 @@ public class DialogAgent extends Agent {
 		session.kill();
 		return "ok";
 	}
-	
-	public String outboundCall(@Name("address") String address, @Name("url") String url, @Name("type") String type, @Name("account") String accountId, @Name("token") String token){
+	public String outboundCall(@Name("address") String address, 
+							   @Name("url") String url, 
+							   @Name("adapterType") @Required(false) String adapterType, 
+							   @Name("adapterID") @Required(false) String adapterID, 
+							   @Name("publicKey") String pubKey,
+							   @Name("privateKey") String privKey){
+//	public String outboundCall(@Name("address") String address, @Name("url") String url, @Name("type") String adapterType, @Name("account") String accountId, @Name("token") String token){
 		//log.warning("outboundCall called: "+address+" / "+ url + " / "+ type);
-		Account account = Account.checkAccount(accountId, token);
-		if (account == null) return "Incorrect account/token given!";
-		if (type.equals("gtalk")){
-			return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,account)+"'}";
-		} else if (type.equals("phone")){
-			return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,account)+"'}";
-		} else if (type.equals("mail")){
-			return "{'sessionKey':'"+new MailServlet().startDialog(address,url,account)+"'}";
-		} else if (type.equals("sms")){
-			return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,account)+"'}";
+//		Account account = Account.checkAccount(accountId, token);
+//		if (account == null) return "Incorrect account/token given!";
+		
+		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterType,adapterID);
+		if (adapterType.equals("gtalk")){
+			return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,config)+"'}";
+		} else if (adapterType.equals("phone")){
+			return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,config)+"'}";
+		} else if (adapterType.equals("mail")){
+			return "{'sessionKey':'"+new MailServlet().startDialog(address,url,config)+"'}";
+		} else if (adapterType.equals("sms")){
+			return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,config)+"'}";
 		} else {
 			return "Unknown type given: either gtalk or phone or mail";
 		}

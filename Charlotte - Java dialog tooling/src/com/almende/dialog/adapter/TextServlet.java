@@ -80,8 +80,7 @@ abstract public class TextServlet extends HttpServlet {
 		return new Return(reply, question);
 	}
 	
-	public String startDialog(String address, String url, Account account) {
-		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount(getAdapterType(), account.getId());
+	public String startDialog(String address, String url, AdapterConfig config) {
 		String localaddress = config.getMyAddress();
 		String sessionKey =getAdapterType()+"|"+localaddress+"|"+address;
 		Session session = Session.getSession(sessionKey);
@@ -158,7 +157,7 @@ abstract public class TextServlet extends HttpServlet {
 			sendMessage("Sorry, I can't find the account associated with this chat address...", subject, localaddress, fromName, address, toName);
 			return;
 		}
-		AdapterConfig config= AdapterConfig.findAdapterConfigForAccount(getAdapterType(),session.getAccount());
+		AdapterConfig config= AdapterConfig.findAdapterConfig(getAdapterType(),session.getAccount());
 		
 		String json = "";
 		String preferred_language = StringStore

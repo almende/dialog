@@ -134,30 +134,6 @@ public class AdapterConfig {
 		log.severe("AdapterConfig not found:'"+adapterType+"':'"+lookupKey+"'");
 		return null;
 	}
-	public static AdapterConfig findAdapterConfigForAccount(String adapterType, String accountid ){
-		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
-		
-		Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
-				.addFilter("adapterType",EQUAL,adapterType).addFilter("account",EQUAL,accountid).now();
-		if (config.hasNext()){
-			return config.next();
-		}
-		//generate default config?
-		log.severe("findAdapterConfig: Couldn't find adapterConfig: "+adapterType+"|"+accountid);
-		return null;
-	}
-	public static ArrayList<AdapterConfig> findAdaptersForAccount( String accountid ){
-		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
-		
-		Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
-				.addFilter("account",EQUAL,accountid).now();
-		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
-		while (config.hasNext()){
-			adapters.add(config.next());
-		}
-		
-		return adapters;
-	}
 	
 	public String getPreferred_language() {
 		return preferred_language;

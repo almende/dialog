@@ -29,17 +29,10 @@ public class Session implements SessionIntf {
 	public String getSession_id() {
 		return session.getSession_id();
 	}
-	@Override
-	public String getAccount() {
-		return session.getAccount();
-	}
+
 	@Override
 	public void setSession_id(String session_id) {
 		session.setSession_id(session_id);
-	}
-	@Override
-	public void setAccount(String account) {
-		session.setAccount(account);
 	}
 	
 	@JsonIgnore
@@ -92,7 +85,7 @@ public class Session implements SessionIntf {
 					return null;
 				}
 				session = new Session();
-				session.setAccount(config.getAccount().toString());
+				session.setPubKey(config.getAccount().toString());
 				session.setRemoteAddress(split[2]);
 				session.setLocalAddress(localaddress);
 				session.key = key;
@@ -145,5 +138,22 @@ public class Session implements SessionIntf {
 	@Override
 	public void setType(String type) {
 		this.session.setType(type);
+	}
+	@Override
+	public String getPubKey() {
+		
+		return this.session.getPubKey();
+	}
+	@Override
+	public String getPrivKey() {
+		return this.session.getPrivKey();
+	}
+	@Override
+	public void setPubKey(String pubKey) {
+		this.session.setPubKey(pubKey);
+	}
+	@Override
+	public void setPrivKey(String privKey) {
+		this.session.setPrivKey(privKey);
 	}
 }

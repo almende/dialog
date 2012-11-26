@@ -12,6 +12,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
@@ -19,11 +20,12 @@ import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.appengine.api.datastore.Query.FilterOperator;
+import com.google.code.twig.FindCommand.RootFindCommand;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
 import com.google.code.twig.annotation.Id;
 import static com.google.appengine.api.datastore.Query.FilterOperator.*;
 
-@Path("/accounts/{accountid}/adapters")
+@Path("/adapters")
 public class AdapterConfig {
 	static final Logger log = Logger.getLogger(AdapterConfig.class.getName());
 	static final ObjectMapper om = new ObjectMapper();
@@ -34,6 +36,7 @@ public class AdapterConfig {
 	String preferred_language = "nl";
 	String initialAgentURL = "";
 	String myAddress = "";
+	String status = "";
 	
 	//Broadsoft:
 	String xsiURL = "";
@@ -46,14 +49,18 @@ public class AdapterConfig {
 	@Consumes("application/json")
 	@Produces("application/json")
 	@JsonIgnore
-	public Response createConfig(@PathParam("accountid") String accountid, String json){
+	public Response createConfig(String json){
 		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
 		try {
 			AdapterConfig newConfig = new AdapterConfig();
 			newConfig.configId = new UUID().toString();
-			newConfig.account = new UUID(accountid).toString();
+			newConfig.account = "";
+			newConfig.status = "OPEN";
 			
 			om.readerForUpdating(newConfig).readValue(json);
+			if(adapterExists(newConfig.getAdapterType(), newConfig.getMyAddress()))
+				return Response.status( Status.CONFLICT ).build();
+				
 			datastore.store(newConfig);
 			return Response.ok(om.writeValueAsString(newConfig)).build();
 		} catch (Exception e){
@@ -66,7 +73,7 @@ public class AdapterConfig {
 	@Consumes("application/json")
 	@Produces("application/json")
 	@JsonIgnore
-	public Response updateConfig(@PathParam("accountid") String accountid, @PathParam("uuid") String configid, String json){
+	public Response updateConfig(@PathParam("uuid") String configid, String json){
 		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
 		try {
 			
@@ -84,7 +91,7 @@ public class AdapterConfig {
 	@Path("{uuid}")
 	@Produces("application/json")
 	@JsonIgnore
-	public Response getConfig(@PathParam("accountid") String accountid, @PathParam("uuid") String configid, String json){
+	public Response getConfig(@PathParam("uuid") String configid, String json){
 		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
 		try {
 			AdapterConfig config = datastore.load(AdapterConfig.class,configid);
@@ -98,7 +105,7 @@ public class AdapterConfig {
 	@Path("{uuid}")
 	@Produces("application/json")
 	@JsonIgnore
-	public Response deleteConfig(@PathParam("accountid") String accountid, @PathParam("uuid") String configid, String json){
+	public Response deleteConfig(@PathParam("uuid") String configid, String json){
 		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
 		try {
 			AdapterConfig config = datastore.load(AdapterConfig.class,configid);
@@ -112,17 +119,17 @@ public class AdapterConfig {
 	@GET
 	@Produces("application/json")
 	@JsonIgnore
-	public Response getAllConfigs(@PathParam("accountid") String accountid){
+	public Response getAllConfigs(@QueryParam("adapter") String adapterType, @QueryParam("account") String accountId){
 		try {
-			ArrayList<AdapterConfig> adapters = findAdaptersForAccount(accountid);
+			ArrayList<AdapterConfig> adapters = findAdapters(adapterType, accountId, null);
 			return Response.ok(om.writeValueAsString(adapters)).build();
 		} catch (Exception e){
 			log.severe("getConfig: Failed to read config");
 		}
 		return Response.status(Status.BAD_REQUEST).build();
-	}	
+	}
+	// TODO: Change this when the accounts are gone.
 	public static AdapterConfig findAdapterConfig(String adapterType, String lookupKey ){
-//		log.warning("Looking for config:'"+adapterType+"':'"+lookupKey+"'");
 		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
 		Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
 				.addFilter("myAddress",FilterOperator.EQUAL,lookupKey)
@@ -137,8 +144,9 @@ public class AdapterConfig {
 	public static AdapterConfig findAdapterConfigForAccount(String adapterType, String accountid ){
 		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
 		
-		Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
-				.addFilter("adapterType",EQUAL,adapterType).addFilter("account",EQUAL,accountid).now();
+		Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class).addFilter("adapterType",EQUAL,adapterType)
+														.addFilter("account",EQUAL,accountid).now();
+		
 		if (config.hasNext()){
 			return config.next();
 		}
@@ -146,17 +154,36 @@ public class AdapterConfig {
 		log.severe("findAdapterConfig: Couldn't find adapterConfig: "+adapterType+"|"+accountid);
 		return null;
 	}
-	public static ArrayList<AdapterConfig> findAdaptersForAccount( String accountid ){
+	public static ArrayList<AdapterConfig> findAdapters( String adapterType, String accountid, String myAddress ){
 		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
 		
-		Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
-				.addFilter("account",EQUAL,accountid).now();
+		RootFindCommand<AdapterConfig> cmd = datastore.find().type(AdapterConfig.class);
+		
+		if(adapterType!=null)
+			cmd.addFilter("adapterType",EQUAL,adapterType);
+		
+		if(accountid!=null)
+			cmd.addFilter("account",EQUAL,accountid);
+		
+		if(myAddress!=null)
+			cmd.addFilter("myAddress",EQUAL,myAddress);
+		
+		Iterator<AdapterConfig> config = cmd.now();
+		
 		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
 		while (config.hasNext()){
 			adapters.add(config.next());
 		}
 		
 		return adapters;
+	}
+	public static boolean adapterExists(String adapterType, String myAddress) {
+		
+		ArrayList<AdapterConfig> adapters = findAdapters(adapterType, null, myAddress);
+		if(adapters.size()>0)
+			return true;
+		
+		return false;
 	}
 	
 	public String getPreferred_language() {
@@ -206,6 +233,15 @@ public class AdapterConfig {
 	public void setMyAddress(String myAddress) {
 		this.myAddress = myAddress;
 	}
+	
+	public void setStatus(String status) {
+		this.status = status;
+	}
+	
+	public String getStatus() {
+		return status;
+	}
+	
 	public String getXsiURL() {
 		return xsiURL;
 	}

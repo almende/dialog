@@ -84,6 +84,7 @@ public class Session implements SessionIntf {
 				if (config == null){
 					return null;
 				}
+				//TODO: check account/pubkey usage here
 				session = new Session();
 				session.setPubKey(config.getAccount().toString());
 				session.setRemoteAddress(split[2]);

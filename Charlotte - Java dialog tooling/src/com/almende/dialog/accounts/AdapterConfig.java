@@ -130,10 +130,11 @@ public class AdapterConfig {
 	@Produces("application/json")
 	@JsonIgnore
 	public Response getAllConfigs(@QueryParam("adapter") String adapterType,
-			@QueryParam("account") String accountId) {
+			@QueryParam("pubKey") String pubKey,@QueryParam("privKey") String privKey ) {
 		try {
-			ArrayList<AdapterConfig> adapters = findAdapters(adapterType,
-					accountId, null);
+			ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+			//TODO: loop through list from keyServer, getting each adapterConfig one-by-one
+			
 			return Response.ok(om.writeValueAsString(adapters)).build();
 		} catch (Exception e) {
 			log.severe("getConfig: Failed to read config");
@@ -141,7 +142,6 @@ public class AdapterConfig {
 		return Response.status(Status.BAD_REQUEST).build();
 	}
 
-	// TODO: Change this when the accounts are gone.
 	public static AdapterConfig findAdapterConfig(String adapterType,
 			String lookupKey) {
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
@@ -159,7 +159,7 @@ public class AdapterConfig {
 	}
 
 	public static ArrayList<AdapterConfig> findAdapters(String adapterType,
-			String accountid, String myAddress) {
+			String myAddress) {
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 
 		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
@@ -167,9 +167,6 @@ public class AdapterConfig {
 
 		if (adapterType != null)
 			cmd.addFilter("adapterType", EQUAL, adapterType);
-
-		if (accountid != null)
-			cmd.addFilter("account", EQUAL, accountid);
 
 		if (myAddress != null)
 			cmd.addFilter("myAddress", EQUAL, myAddress);
@@ -185,7 +182,7 @@ public class AdapterConfig {
 	}
 
 	public static boolean adapterExists(String adapterType, String myAddress) {
-		ArrayList<AdapterConfig> adapters = findAdapters(adapterType, null,
+		ArrayList<AdapterConfig> adapters = findAdapters(adapterType,
 				myAddress);
 		if (adapters.size() > 0)
 			return true;

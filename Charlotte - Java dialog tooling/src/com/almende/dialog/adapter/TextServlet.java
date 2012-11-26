@@ -12,7 +12,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.Settings;
-import com.almende.dialog.accounts.Account;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
@@ -157,7 +156,7 @@ abstract public class TextServlet extends HttpServlet {
 			sendMessage("Sorry, I can't find the account associated with this chat address...", subject, localaddress, fromName, address, toName);
 			return;
 		}
-		AdapterConfig config= AdapterConfig.findAdapterConfig(getAdapterType(),session.getAccount());
+		AdapterConfig config= AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
 		
 		String json = "";
 		String preferred_language = StringStore

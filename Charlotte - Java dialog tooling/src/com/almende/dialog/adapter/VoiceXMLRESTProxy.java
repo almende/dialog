@@ -162,7 +162,10 @@ public class VoiceXMLRESTProxy {
 			} else if (question.getType().equals("comment")) {
 				question = question.answer(null, null, null);
 			} else 	if (question.getType().equals("referral")) {
-				question = Question.fromURL(question.getUrl(),address);
+				if(!question.getUrl().startsWith("tel:")) {
+					question = Question.fromURL(question.getUrl(),address);
+				} else 
+					break;
 			} else {
 				break; //Jump from forloop (open questions, etc.)
 			}

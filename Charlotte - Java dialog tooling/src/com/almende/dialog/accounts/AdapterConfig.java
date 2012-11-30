@@ -32,7 +32,9 @@ public class AdapterConfig {
 
 	@Id
 	String configId;
+	@Deprecated
 	String account;
+	String publicKey="";
 	String adapterType = "";
 	String preferred_language = "nl";
 	String initialAgentURL = "";
@@ -132,8 +134,7 @@ public class AdapterConfig {
 	public Response getAllConfigs(@QueryParam("adapter") String adapterType,
 			@QueryParam("pubKey") String pubKey,@QueryParam("privKey") String privKey ) {
 		try {
-			ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
-			//TODO: loop through list from keyServer, getting each adapterConfig one-by-one
+			ArrayList<AdapterConfig> adapters = findAdapters(adapterType, null, pubKey);
 			
 			return Response.ok(om.writeValueAsString(adapters)).build();
 		} catch (Exception e) {
@@ -159,7 +160,7 @@ public class AdapterConfig {
 	}
 
 	public static ArrayList<AdapterConfig> findAdapters(String adapterType,
-			String myAddress) {
+			String myAddress, String publicKey) {
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 
 		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
@@ -183,7 +184,7 @@ public class AdapterConfig {
 
 	public static boolean adapterExists(String adapterType, String myAddress) {
 		ArrayList<AdapterConfig> adapters = findAdapters(adapterType,
-				myAddress);
+				myAddress, null);
 		if (adapters.size() > 0)
 			return true;
 
@@ -212,6 +213,14 @@ public class AdapterConfig {
 
 	public void setAccount(String account) {
 		this.account = account;
+	}
+	
+	public String getPublicKey() {
+		return publicKey;
+	}
+	
+	public void setPublicKey(String publicKey) {
+		this.publicKey = publicKey;
 	}
 
 	public String getAdapterType() {

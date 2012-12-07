@@ -28,7 +28,7 @@ public class AskSmsServlet extends TextServlet {
 	private static ObjectMapper om = ParallelInit.getObjectMapper();
 	
 	private static final String servletPath = "/_ah/sms/ask/";
-	private static final String adapterType = "asksms";
+	private static final String adapterType = "SMS";
 	
 	@Override
 	protected void sendMessage(String message, String subject, String from,

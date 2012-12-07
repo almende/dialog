@@ -10,16 +10,20 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import org.znerd.xmlenc.XMLOutputter;
 
 import com.almende.dialog.DDRWrapper;
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
@@ -86,22 +90,30 @@ public class VoiceXMLRESTProxy {
 		log.warning("call started:"+direction+":"+remoteID+":"+localID);
 		String adapterType="broadsoft";
 		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterType, localID);
-		String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
-		Session session = Session.getSession(sessionKey);
-		String url="";
-		if (direction.equals("inbound")){
-			url = config.getInitialAgentURL();
-			session.setStartUrl(url);
-			session.setDirection("inbound");
-			session.setRemoteAddress(remoteID);
-			session.setType(adapterType);
+		
+		if(checkCredits(config.getPublicKey())) {
+			log.info("Call is authorized");
+			String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
+			Session session = Session.getSession(sessionKey);
+			String url="";
+			if (direction.equals("inbound")){
+				url = config.getInitialAgentURL();
+				session.setStartUrl(url);
+				session.setDirection("inbound");
+				session.setRemoteAddress(remoteID);
+				session.setType(adapterType);
+				session.setPubKey(config.getPublicKey());
+			} else {
+				url=session.getStartUrl();
+			}
+			Question question = Question.fromURL(url,remoteID,localID);
+			DDRWrapper.log(question,session,"Start",config);
+			session.storeSession();
+			return handleQuestion(question,remoteID,sessionKey);
 		} else {
-			url=session.getStartUrl();
+			DDRWrapper.log(null,null,"FailInbound",config);
+			return Response.status(Status.FORBIDDEN).build();
 		}
-		Question question = Question.fromURL(url,remoteID,localID);
-		DDRWrapper.log(question,session,"Start",config);
-		session.storeSession();
-		return handleQuestion(question,remoteID,sessionKey);
 	}
 	
 	@Path("answer")
@@ -333,5 +345,23 @@ public class VoiceXMLRESTProxy {
 		return Response.ok(result).build();
 	}
 	
-
+	private boolean checkCredits(String pubKey) {
+		
+		String path = "/askAnywaysServices/rest/keys/checkkey/"+pubKey+"/inbound";
+		
+		Client client = ParallelInit.getClient();
+		WebResource webResource = client.resource(Settings.KEYSERVER+path);
+		String res = webResource.get(String.class);
+		
+		ObjectMapper om = ParallelInit.getObjectMapper();
+		try {
+			JsonNode result = om.readValue(res, JsonNode.class);
+			return result.get("valid").asBoolean();
+			
+		} catch(Exception ex) {
+			log.warning("Unable to parse result");
+		}
+		
+		return false;
+	}
 }

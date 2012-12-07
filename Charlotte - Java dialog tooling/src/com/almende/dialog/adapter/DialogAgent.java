@@ -1,7 +1,8 @@
 package com.almende.dialog.adapter;
 
-//import java.util.logging.Logger;
+import java.util.logging.Logger;
 
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
@@ -12,9 +13,14 @@ import com.almende.eve.agent.annotation.AccessType;
 import com.almende.eve.json.annotation.Name;
 import com.almende.eve.json.annotation.Required;
 import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.WebResource;
 
 public class DialogAgent extends Agent {
-//	private static final Logger log = Logger.getLogger("DialogHandler");
+	private static final Logger log = Logger.getLogger("DialogHandler");
 	
 	public DialogAgent(){
 		super();
@@ -43,22 +49,32 @@ public class DialogAgent extends Agent {
 							   @Name("adapterID") @Required(false) String adapterID, 
 							   @Name("publicKey") String pubKey,
 							   @Name("privateKey") String privKey){
-//	public String outboundCall(@Name("address") String address, @Name("url") String url, @Name("type") String adapterType, @Name("account") String accountId, @Name("token") String token){
-		//log.warning("outboundCall called: "+address+" / "+ url + " / "+ type);
-//		Account account = Account.checkAccount(accountId, token);
-//		if (account == null) return "Incorrect account/token given!";
 		
-		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterType,adapterID);
-		if (adapterType.equals("gtalk")){
-			return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,config)+"'}";
-		} else if (adapterType.equals("phone")){
-			return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,config)+"'}";
-		} else if (adapterType.equals("mail")){
-			return "{'sessionKey':'"+new MailServlet().startDialog(address,url,config)+"'}";
-		} else if (adapterType.equals("sms")){
-			return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,config)+"'}";
-		} else {
-			return "Unknown type given: either gtalk or phone or mail";
+		// Authenticate keys with key-server
+		ArrayNode adapterList = this.getAllowedAdapterList(pubKey, privKey, adapterType);
+		
+		if(adapterList==null)
+			return "Invalid key provided";
+		try {
+			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, adapterType,adapterList);
+		
+			if(config!=null) {
+				if (adapterType.equals("XMPP")){
+					return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,config)+"'}";
+				} else if (adapterType.equals("BROADSOFT")){
+					return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,config)+"'}";
+				} else if (adapterType.equals("MAIL")){
+					return "{'sessionKey':'"+new MailServlet().startDialog(address,url,config)+"'}";
+				} else if (adapterType.equals("SMS")){
+					return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,config)+"'}";
+				} else {
+					return "Unknown type given: either gtalk or phone or mail";
+				}
+			} else {
+				return "Invalid adapter found";
+			}
+		} catch(Exception ex) {
+			return "Error in finding adapter";
 		}
 	}
 	
@@ -98,6 +114,29 @@ public class DialogAgent extends Agent {
         	}
 		}
 		return reply;
+	}
+	
+	private ArrayNode getAllowedAdapterList(String pubKey, String privKey, String adapterType) {
+		
+		String path="/askAnywaysServices/rest/keys/checkkey/"+pubKey+"/"+privKey+"/outbound";
+		
+		Client client = ParallelInit.getClient();
+		WebResource webResource = client.resource(Settings.KEYSERVER+path);
+		String res = webResource.get(String.class);
+		
+		ObjectMapper om = ParallelInit.getObjectMapper();
+		try {
+			JsonNode result = om.readValue(res, JsonNode.class);
+			if(!result.get("valid").asBoolean())
+				return null;
+			
+			return (ArrayNode) result.get("adapters");
+			
+		} catch(Exception ex) {
+			log.warning("Unable to parse result");
+		}
+		
+		return null;
 	}
 	
 	@Override

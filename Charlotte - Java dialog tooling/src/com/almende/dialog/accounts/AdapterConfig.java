@@ -18,8 +18,11 @@ import javax.ws.rs.core.Response.Status;
 
 import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.appengine.api.datastore.Query.FilterOperator;
+import com.google.appengine.labs.repackaged.org.json.JSONException;
 import com.google.code.twig.FindCommand.RootFindCommand;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
 import com.google.code.twig.annotation.Id;
@@ -32,8 +35,6 @@ public class AdapterConfig {
 
 	@Id
 	String configId;
-	@Deprecated
-	String account;
 	String publicKey="";
 	String adapterType = "";
 	String preferred_language = "nl";
@@ -58,7 +59,6 @@ public class AdapterConfig {
 		try {
 			AdapterConfig newConfig = new AdapterConfig();
 			newConfig.configId = new UUID().toString();
-			newConfig.account = "";
 			newConfig.status = "OPEN";
 
 			om.readerForUpdating(newConfig).readValue(json);
@@ -142,6 +142,24 @@ public class AdapterConfig {
 		}
 		return Response.status(Status.BAD_REQUEST).build();
 	}
+	
+	public static AdapterConfig findAdapterConfig(String adapterID, String type, ArrayNode adapters) throws JSONException {
+		
+		if(adapterID==null) {
+			
+			for(JsonNode adapter : adapters) {
+				if(adapter.get("adapterType").asText().equals(type) && adapter.get("isDefault").asBoolean()) {
+					adapterID = adapter.get("id").asText();
+					break;
+				}
+			}
+		}
+		
+		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+		AdapterConfig config = datastore.load(AdapterConfig.class, adapterID);
+		
+		return config;
+	}
 
 	public static AdapterConfig findAdapterConfig(String adapterType,
 			String lookupKey) {
@@ -205,14 +223,6 @@ public class AdapterConfig {
 
 	public void setConfigId(String configId) {
 		this.configId = configId;
-	}
-
-	public String getAccount() {
-		return account;
-	}
-
-	public void setAccount(String account) {
-		this.account = account;
 	}
 	
 	public String getPublicKey() {

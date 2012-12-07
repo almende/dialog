@@ -86,7 +86,7 @@ public class Session implements SessionIntf {
 				}
 				//TODO: check account/pubkey usage here
 				session = new Session();
-				session.setPubKey(config.getAccount().toString());
+				session.setPubKey(config.getPublicKey().toString());
 				session.setRemoteAddress(split[2]);
 				session.setLocalAddress(localaddress);
 				session.key = key;

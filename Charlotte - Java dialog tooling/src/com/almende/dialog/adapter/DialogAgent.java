@@ -1,20 +1,19 @@
 package com.almende.dialog.adapter;
 
-//import java.util.logging.Logger;
-
-import com.almende.dialog.accounts.Account;
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.KeyServerLib;
 import com.almende.eve.agent.Agent;
+import com.almende.eve.agent.annotation.Access;
+import com.almende.eve.agent.annotation.AccessType;
 import com.almende.eve.json.annotation.Name;
 import com.almende.eve.json.annotation.Required;
-
-import com.almende.eve.agent.annotation.*;
 import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
 public class DialogAgent extends Agent {
-//	private static final Logger log = Logger.getLogger("DialogHandler");
 	
 	public DialogAgent(){
 		super();
@@ -37,21 +36,38 @@ public class DialogAgent extends Agent {
 		session.kill();
 		return "ok";
 	}
-	
-	public String outboundCall(@Name("address") String address, @Name("url") String url, @Name("type") String type, @Name("account") String accountId, @Name("token") String token){
-		//log.warning("outboundCall called: "+address+" / "+ url + " / "+ type);
-		Account account = Account.checkAccount(accountId, token);
-		if (account == null) return "Incorrect account/token given!";
-		if (type.equals("gtalk")){
-			return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,account)+"'}";
-		} else if (type.equals("phone")){
-			return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,account)+"'}";
-		} else if (type.equals("mail")){
-			return "{'sessionKey':'"+new MailServlet().startDialog(address,url,account)+"'}";
-		} else if (type.equals("sms")){
-			return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,account)+"'}";
-		} else {
-			return "Unknown type given: either gtalk or phone or mail";
+	public String outboundCall(@Name("address") String address, 
+							   @Name("url") String url, 
+							   @Name("adapterType") @Required(false) String adapterType, 
+							   @Name("adapterID") @Required(false) String adapterID, 
+							   @Name("publicKey") String pubKey,
+							   @Name("privateKey") String privKey){
+		
+		// Authenticate keys with key-server
+		ArrayNode adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
+		
+		if(adapterList==null)
+			return "Invalid key provided";
+		try {
+			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, adapterType,adapterList);
+		
+			if(config!=null) {
+				if (adapterType.toUpperCase().equals("XMPP")){
+					return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,config)+"'}";
+				} else if (adapterType.toUpperCase().equals("BROADSOFT")){
+					return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,config)+"'}";
+				} else if (adapterType.toUpperCase().equals("MAIL")){
+					return "{'sessionKey':'"+new MailServlet().startDialog(address,url,config)+"'}";
+				} else if (adapterType.toUpperCase().equals("SMS")){
+					return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,config)+"'}";
+				} else {
+					return "Unknown type given: either broadsoft or xmpp or phone or mail";
+				}
+			} else {
+				return "Invalid adapter found";
+			}
+		} catch(Exception ex) {
+			return "Error in finding adapter";
 		}
 	}
 	

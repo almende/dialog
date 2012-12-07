@@ -10,16 +10,17 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import org.znerd.xmlenc.XMLOutputter;
 
 import com.almende.dialog.DDRWrapper;
-import com.almende.dialog.accounts.Account;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.KeyServerLib;
 import com.almende.util.ParallelInit;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
@@ -39,9 +40,8 @@ public class VoiceXMLRESTProxy {
 		//TODO: kill outstanding calls , will now die after client comes back to server.
 	}
 	
-	public static String dial(String address, String url, Account account){
-		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount("broadsoft", account.getId());
-		
+	public static String dial(String address, String url, AdapterConfig config){
+
 		address = formatNumber(address).replaceFirst("\\+31", "0")+"@outbound";
 		String adapterType="broadsoft";
 		String sessionKey = adapterType+"|"+config.getMyAddress()+"|"+address;
@@ -88,22 +88,30 @@ public class VoiceXMLRESTProxy {
 		log.warning("call started:"+direction+":"+remoteID+":"+localID);
 		String adapterType="broadsoft";
 		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterType, localID);
-		String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
-		Session session = Session.getSession(sessionKey);
-		String url="";
-		if (direction.equals("inbound")){
-			url = config.getInitialAgentURL();
-			session.setStartUrl(url);
-			session.setDirection("inbound");
-			session.setRemoteAddress(remoteID);
-			session.setType(adapterType);
+		
+		if(KeyServerLib.checkCredits(config.getPublicKey())) {
+			log.info("Call is authorized");
+			String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
+			Session session = Session.getSession(sessionKey);
+			String url="";
+			if (direction.equals("inbound")){
+				url = config.getInitialAgentURL();
+				session.setStartUrl(url);
+				session.setDirection("inbound");
+				session.setRemoteAddress(remoteID);
+				session.setType(adapterType);
+				session.setPubKey(config.getPublicKey());
+			} else {
+				url=session.getStartUrl();
+			}
+			Question question = Question.fromURL(url,remoteID,localID);
+			DDRWrapper.log(question,session,"Start",config);
+			session.storeSession();
+			return handleQuestion(question,remoteID,sessionKey);
 		} else {
-			url=session.getStartUrl();
+			DDRWrapper.log(null,null,"FailInbound",config);
+			return Response.status(Status.FORBIDDEN).build();
 		}
-		Question question = Question.fromURL(url,remoteID,localID);
-		DDRWrapper.log(question,session,"Start",config);
-		session.storeSession();
-		return handleQuestion(question,remoteID,sessionKey);
 	}
 	
 	@Path("answer")
@@ -164,7 +172,10 @@ public class VoiceXMLRESTProxy {
 			} else if (question.getType().equals("comment")) {
 				question = question.answer(null, null, null);
 			} else 	if (question.getType().equals("referral")) {
-				question = Question.fromURL(question.getUrl(),address);
+				if(!question.getUrl().startsWith("tel:")) {
+					question = Question.fromURL(question.getUrl(),address);
+				} else 
+					break;
 			} else {
 				break; //Jump from forloop (open questions, etc.)
 			}
@@ -331,6 +342,4 @@ public class VoiceXMLRESTProxy {
 		}
 		return Response.ok(result).build();
 	}
-	
-
 }

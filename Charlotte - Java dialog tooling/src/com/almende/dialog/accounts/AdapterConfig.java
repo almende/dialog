@@ -18,8 +18,11 @@ import javax.ws.rs.core.Response.Status;
 
 import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.appengine.api.datastore.Query.FilterOperator;
+import com.google.appengine.labs.repackaged.org.json.JSONException;
 import com.google.code.twig.FindCommand.RootFindCommand;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
 import com.google.code.twig.annotation.Id;
@@ -30,162 +33,180 @@ public class AdapterConfig {
 	static final Logger log = Logger.getLogger(AdapterConfig.class.getName());
 	static final ObjectMapper om = new ObjectMapper();
 
-	@Id String configId;
-	String account;
+	@Id
+	String configId;
+	String publicKey="";
 	String adapterType = "";
 	String preferred_language = "nl";
 	String initialAgentURL = "";
 	String myAddress = "";
 	String status = "";
-	
-	//Broadsoft:
+	// Broadsoft:
 	String xsiURL = "";
 	String xsiUser = "";
 	String xsiPasswd = "";
-	
-	public AdapterConfig(){};
-	
+
+	public AdapterConfig() {
+	};
+
 	@POST
 	@Consumes("application/json")
 	@Produces("application/json")
 	@JsonIgnore
-	public Response createConfig(String json){
-		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+	public Response createConfig(String json) {
+		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 		try {
 			AdapterConfig newConfig = new AdapterConfig();
 			newConfig.configId = new UUID().toString();
-			newConfig.account = "";
 			newConfig.status = "OPEN";
-			
+
 			om.readerForUpdating(newConfig).readValue(json);
-			if(adapterExists(newConfig.getAdapterType(), newConfig.getMyAddress()))
-				return Response.status( Status.CONFLICT ).build();
-				
+			if (adapterExists(newConfig.getAdapterType(),
+					newConfig.getMyAddress()))
+				return Response.status(Status.CONFLICT).build();
+
 			datastore.store(newConfig);
 			return Response.ok(om.writeValueAsString(newConfig)).build();
-		} catch (Exception e){
+		} catch (Exception e) {
 			log.severe("CreateConfig: Failed to store new config");
 		}
 		return Response.status(Status.BAD_REQUEST).build();
 	}
+
 	@PUT
 	@Path("{uuid}")
 	@Consumes("application/json")
 	@Produces("application/json")
 	@JsonIgnore
-	public Response updateConfig(@PathParam("uuid") String configid, String json){
-		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+	public Response updateConfig(@PathParam("uuid") String configid, String json) {
+		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 		try {
-			
-			AdapterConfig oldConfig = datastore.load(AdapterConfig.class,configid);
+
+			AdapterConfig oldConfig = datastore.load(AdapterConfig.class,
+					configid);
 			om.readerForUpdating(oldConfig).readValue(json);
 			datastore.update(oldConfig);
 			return Response.ok(om.writeValueAsString(oldConfig)).build();
-		} catch (Exception e){
-			log.severe("UpdateConfig: Failed to update config:"+e.getMessage());
+		} catch (Exception e) {
+			log.severe("UpdateConfig: Failed to update config:"
+					+ e.getMessage());
 		}
 		return Response.status(Status.BAD_REQUEST).build();
 	}
-	
+
 	@GET
 	@Path("{uuid}")
 	@Produces("application/json")
 	@JsonIgnore
-	public Response getConfig(@PathParam("uuid") String configid, String json){
-		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+	public Response getConfig(@PathParam("uuid") String configid, String json) {
+		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 		try {
-			AdapterConfig config = datastore.load(AdapterConfig.class,configid);
+			AdapterConfig config = datastore
+					.load(AdapterConfig.class, configid);
 			return Response.ok(om.writeValueAsString(config)).build();
-		} catch (Exception e){
+		} catch (Exception e) {
 			log.severe("getConfig: Failed to read config");
 		}
 		return Response.status(Status.BAD_REQUEST).build();
 	}
+
 	@DELETE
 	@Path("{uuid}")
 	@Produces("application/json")
 	@JsonIgnore
-	public Response deleteConfig(@PathParam("uuid") String configid, String json){
-		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
+	public Response deleteConfig(@PathParam("uuid") String configid, String json) {
+		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 		try {
-			AdapterConfig config = datastore.load(AdapterConfig.class,configid);
+			AdapterConfig config = datastore
+					.load(AdapterConfig.class, configid);
 			datastore.delete(config);
 			return Response.ok("").build();
-		} catch (Exception e){
+		} catch (Exception e) {
 			log.severe("getConfig: Failed to read config");
 		}
 		return Response.status(Status.BAD_REQUEST).build();
 	}
+
 	@GET
 	@Produces("application/json")
 	@JsonIgnore
-	public Response getAllConfigs(@QueryParam("adapter") String adapterType, @QueryParam("account") String accountId){
+	public Response getAllConfigs(@QueryParam("adapter") String adapterType,
+			@QueryParam("pubKey") String pubKey,@QueryParam("privKey") String privKey ) {
 		try {
-			ArrayList<AdapterConfig> adapters = findAdapters(adapterType, accountId, null);
+			ArrayList<AdapterConfig> adapters = findAdapters(adapterType, null, pubKey);
 			return Response.ok(om.writeValueAsString(adapters)).build();
-		} catch (Exception e){
+		} catch (Exception e) {
 			log.severe("getConfig: Failed to read config");
 		}
 		return Response.status(Status.BAD_REQUEST).build();
 	}
-	// TODO: Change this when the accounts are gone.
-	public static AdapterConfig findAdapterConfig(String adapterType, String lookupKey ){
-		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
-		Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
-				.addFilter("myAddress",FilterOperator.EQUAL,lookupKey)
-				.addFilter("adapterType",FilterOperator.EQUAL,adapterType)
+	
+	public static AdapterConfig findAdapterConfig(String adapterID, String type, ArrayNode adapters) throws JSONException {
+		
+		if(adapterID==null) {
+			
+			for(JsonNode adapter : adapters) {
+				if(adapter.get("adapterType").asText().equals(type) && adapter.get("isDefault").asBoolean()) {
+					adapterID = adapter.get("id").asText();
+					break;
+				}
+			}
+		}
+		
+		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+		AdapterConfig config = datastore.load(AdapterConfig.class, adapterID);
+		
+		return config;
+	}
+
+	public static AdapterConfig findAdapterConfig(String adapterType,
+			String lookupKey) {
+		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+		Iterator<AdapterConfig> config = datastore.find()
+				.type(AdapterConfig.class)
+				.addFilter("myAddress", FilterOperator.EQUAL, lookupKey)
+				.addFilter("adapterType", FilterOperator.EQUAL, adapterType)
 				.now();
-		if (config.hasNext()){
+		if (config.hasNext()) {
 			return config.next();
 		}
-		log.severe("AdapterConfig not found:'"+adapterType+"':'"+lookupKey+"'");
+		log.severe("AdapterConfig not found:'" + adapterType + "':'"
+				+ lookupKey + "'");
 		return null;
 	}
-	public static AdapterConfig findAdapterConfigForAccount(String adapterType, String accountid ){
-		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
-		
-		Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class).addFilter("adapterType",EQUAL,adapterType)
-														.addFilter("account",EQUAL,accountid).now();
-		
-		if (config.hasNext()){
-			return config.next();
-		}
-		//generate default config?
-		log.severe("findAdapterConfig: Couldn't find adapterConfig: "+adapterType+"|"+accountid);
-		return null;
-	}
-	public static ArrayList<AdapterConfig> findAdapters( String adapterType, String accountid, String myAddress ){
-		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
-		
-		RootFindCommand<AdapterConfig> cmd = datastore.find().type(AdapterConfig.class);
-		
-		if(adapterType!=null)
-			cmd.addFilter("adapterType",EQUAL,adapterType);
-		
-		if(accountid!=null)
-			cmd.addFilter("account",EQUAL,accountid);
-		
-		if(myAddress!=null)
-			cmd.addFilter("myAddress",EQUAL,myAddress);
-		
+
+	public static ArrayList<AdapterConfig> findAdapters(String adapterType,
+			String myAddress, String publicKey) {
+		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+
+		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
+				AdapterConfig.class);
+
+		if (adapterType != null)
+			cmd.addFilter("adapterType", EQUAL, adapterType);
+
+		if (myAddress != null)
+			cmd.addFilter("myAddress", EQUAL, myAddress);
+
 		Iterator<AdapterConfig> config = cmd.now();
-		
+
 		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
-		while (config.hasNext()){
+		while (config.hasNext()) {
 			adapters.add(config.next());
 		}
-		
+
 		return adapters;
 	}
+
 	public static boolean adapterExists(String adapterType, String myAddress) {
-		
-		ArrayList<AdapterConfig> adapters = findAdapters(adapterType, null, myAddress);
-		if(adapters.size()>0)
+		ArrayList<AdapterConfig> adapters = findAdapters(adapterType,
+				myAddress, null);
+		if (adapters.size() > 0)
 			return true;
-		
+
 		return false;
 	}
-	
+
 	public String getPreferred_language() {
 		return preferred_language;
 	}
@@ -201,13 +222,13 @@ public class AdapterConfig {
 	public void setConfigId(String configId) {
 		this.configId = configId;
 	}
-
-	public String getAccount() {
-		return account;
+	
+	public String getPublicKey() {
+		return publicKey;
 	}
-
-	public void setAccount(String account) {
-		this.account = account;
+	
+	public void setPublicKey(String publicKey) {
+		this.publicKey = publicKey;
 	}
 
 	public String getAdapterType() {
@@ -250,6 +271,7 @@ public class AdapterConfig {
 		this.xsiURL = xsiURL;
 	}
 
+	@JsonIgnore
 	public String getXsiUser() {
 		return xsiUser;
 	}
@@ -258,6 +280,7 @@ public class AdapterConfig {
 		this.xsiUser = xsiUser;
 	}
 
+	@JsonIgnore
 	public String getXsiPasswd() {
 		return xsiPasswd;
 	}

@@ -27,7 +27,7 @@ public class DDRWrapper {
 		node.put("adapterType", config.getAdapterType());
 		node.put("adapterAddress", config.getMyAddress());
 		node.put("trackingToken", token);
-		node.put("account", session.getAccount());
+		node.put("pubKey", session.getPubKey());
 		try {
 			ddr.info(om.writeValueAsString(node));
 		} catch (Exception e) {

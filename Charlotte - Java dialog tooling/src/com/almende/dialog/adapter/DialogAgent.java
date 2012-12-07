@@ -1,26 +1,19 @@
 package com.almende.dialog.adapter;
 
-import java.util.logging.Logger;
-
-import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.KeyServerLib;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.agent.annotation.Access;
 import com.almende.eve.agent.annotation.AccessType;
 import com.almende.eve.json.annotation.Name;
 import com.almende.eve.json.annotation.Required;
 import com.almende.util.ParallelInit;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
 
 public class DialogAgent extends Agent {
-	private static final Logger log = Logger.getLogger("DialogHandler");
 	
 	public DialogAgent(){
 		super();
@@ -51,7 +44,7 @@ public class DialogAgent extends Agent {
 							   @Name("privateKey") String privKey){
 		
 		// Authenticate keys with key-server
-		ArrayNode adapterList = this.getAllowedAdapterList(pubKey, privKey, adapterType);
+		ArrayNode adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
 		
 		if(adapterList==null)
 			return "Invalid key provided";
@@ -59,16 +52,16 @@ public class DialogAgent extends Agent {
 			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, adapterType,adapterList);
 		
 			if(config!=null) {
-				if (adapterType.equals("XMPP")){
+				if (adapterType.toUpperCase().equals("XMPP")){
 					return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,config)+"'}";
-				} else if (adapterType.equals("BROADSOFT")){
+				} else if (adapterType.toUpperCase().equals("BROADSOFT")){
 					return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,config)+"'}";
-				} else if (adapterType.equals("MAIL")){
+				} else if (adapterType.toUpperCase().equals("MAIL")){
 					return "{'sessionKey':'"+new MailServlet().startDialog(address,url,config)+"'}";
-				} else if (adapterType.equals("SMS")){
+				} else if (adapterType.toUpperCase().equals("SMS")){
 					return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,config)+"'}";
 				} else {
-					return "Unknown type given: either gtalk or phone or mail";
+					return "Unknown type given: either broadsoft or xmpp or phone or mail";
 				}
 			} else {
 				return "Invalid adapter found";
@@ -114,29 +107,6 @@ public class DialogAgent extends Agent {
         	}
 		}
 		return reply;
-	}
-	
-	private ArrayNode getAllowedAdapterList(String pubKey, String privKey, String adapterType) {
-		
-		String path="/askAnywaysServices/rest/keys/checkkey/"+pubKey+"/"+privKey+"/outbound";
-		
-		Client client = ParallelInit.getClient();
-		WebResource webResource = client.resource(Settings.KEYSERVER+path);
-		String res = webResource.get(String.class);
-		
-		ObjectMapper om = ParallelInit.getObjectMapper();
-		try {
-			JsonNode result = om.readValue(res, JsonNode.class);
-			if(!result.get("valid").asBoolean())
-				return null;
-			
-			return (ArrayNode) result.get("adapters");
-			
-		} catch(Exception ex) {
-			log.warning("Unable to parse result");
-		}
-		
-		return null;
 	}
 	
 	@Override

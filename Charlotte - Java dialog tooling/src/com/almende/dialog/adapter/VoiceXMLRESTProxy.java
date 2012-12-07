@@ -15,15 +15,13 @@ import javax.ws.rs.core.Response.Status;
 import org.znerd.xmlenc.XMLOutputter;
 
 import com.almende.dialog.DDRWrapper;
-import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.KeyServerLib;
 import com.almende.util.ParallelInit;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
@@ -91,7 +89,7 @@ public class VoiceXMLRESTProxy {
 		String adapterType="broadsoft";
 		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterType, localID);
 		
-		if(checkCredits(config.getPublicKey())) {
+		if(KeyServerLib.checkCredits(config.getPublicKey())) {
 			log.info("Call is authorized");
 			String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
 			Session session = Session.getSession(sessionKey);
@@ -343,25 +341,5 @@ public class VoiceXMLRESTProxy {
 			result = renderComment(null,res.prompts);
 		}
 		return Response.ok(result).build();
-	}
-	
-	private boolean checkCredits(String pubKey) {
-		
-		String path = "/askAnywaysServices/rest/keys/checkkey/"+pubKey+"/inbound";
-		
-		Client client = ParallelInit.getClient();
-		WebResource webResource = client.resource(Settings.KEYSERVER+path);
-		String res = webResource.get(String.class);
-		
-		ObjectMapper om = ParallelInit.getObjectMapper();
-		try {
-			JsonNode result = om.readValue(res, JsonNode.class);
-			return result.get("valid").asBoolean();
-			
-		} catch(Exception ex) {
-			log.warning("Unable to parse result");
-		}
-		
-		return false;
 	}
 }

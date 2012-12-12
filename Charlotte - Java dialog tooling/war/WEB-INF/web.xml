@@ -92,6 +92,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
   		<url-pattern>/sms/ask/*</url-pattern>
 	</servlet-mapping>
 	
+	<servlet>
+  		<servlet-name>authservlet</servlet-name>
+  		<servlet-class>com.almende.dialog.auth.OAuthServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+  		<servlet-name>authservlet</servlet-name>
+  		<url-pattern>/oauth/*</url-pattern>
+	</servlet-mapping>
+	
 	<welcome-file-list>
 		<welcome-file>index.html</welcome-file>
 	</welcome-file-list>

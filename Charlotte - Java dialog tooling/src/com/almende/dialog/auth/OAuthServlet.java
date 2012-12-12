@@ -25,8 +25,6 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Twitter;
 import com.almende.dialog.state.StringStore;
 import com.almende.util.ParallelInit;
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;

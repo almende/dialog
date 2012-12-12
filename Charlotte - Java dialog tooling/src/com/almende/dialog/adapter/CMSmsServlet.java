@@ -8,6 +8,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.znerd.xmlenc.XMLOutputter;
 
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
@@ -29,7 +30,7 @@ public class CMSmsServlet extends TextServlet {
 	
 	@Override
 	protected void sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName) {
+			String fromName, String to, String toName, AdapterConfig config) {
 		
 		// TODO: Check message for special chars, if so change dcs.		
 		String type="TEXT";

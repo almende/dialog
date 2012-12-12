@@ -12,6 +12,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.google.appengine.api.xmpp.JID;
 import com.google.appengine.api.xmpp.Message;
@@ -57,7 +58,7 @@ public class XMPPServlet extends TextServlet {
 
 	@Override
 	protected void sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName) {
+			String fromName, String to, String toName, AdapterConfig config) {
 		
 		JID localJid = new JID(from);
 		JID jid = new JID(to);

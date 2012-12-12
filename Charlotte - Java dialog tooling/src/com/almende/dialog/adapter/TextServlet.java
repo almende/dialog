@@ -33,7 +33,7 @@ abstract public class TextServlet extends HttpServlet {
 	protected static final String DEMODIALOG = "http://"+Settings.HOST+"/charlotte/";
 	
 	protected abstract void sendMessage(String message, String subject, String from, String fromName, 
-										String to, String toName);
+										String to, String toName, AdapterConfig config);
 	protected abstract TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception; 
 	protected abstract String getServletPath();
 	protected abstract String getAdapterType();
@@ -103,7 +103,7 @@ abstract public class TextServlet extends HttpServlet {
 		StringStore.storeString("question_"+address+"_"+localaddress, res.question.toJSON());
 		
 		DDRWrapper.log(question,session,"Start",config);
-		sendMessage(res.reply, "Message from DH", localaddress, fromName, address, "");
+		sendMessage(res.reply, "Message from DH", localaddress, fromName, address, "", config);
 		return sessionKey;
 	}
 	
@@ -117,7 +117,6 @@ abstract public class TextServlet extends HttpServlet {
 
 //		log.warning("Starting to handle xmpp post: "+startTime+"/"+(new Date().getTime()));
 		boolean loading = ParallelInit.startThreads();
-		boolean skip = false;
 		
 		if (req.getServletPath().endsWith("/error/")) {
 			doErrorPost(req, res);
@@ -145,6 +144,12 @@ abstract public class TextServlet extends HttpServlet {
 			return;
 		}
 		
+		processMessage(msg);
+	}
+	
+	protected void processMessage(TextMessage msg) {
+		
+		boolean skip = false;
 		String localaddress = msg.getLocalAddress();
 		String address = msg.getAddress();
 		String subject = msg.getSubject();
@@ -152,12 +157,13 @@ abstract public class TextServlet extends HttpServlet {
 		String toName = msg.getRecipientName();
 		String fromName="DH";
 		
+		AdapterConfig config= AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
+		
 		Session session = Session.getSession(getAdapterType()+"|"+localaddress+"|"+address);
 		if (session == null){
-			sendMessage("Sorry, I can't find the account associated with this chat address...", subject, localaddress, fromName, address, toName);
+			sendMessage("Sorry, I can't find the account associated with this chat address...", subject, localaddress, fromName, address, toName, config);
 			return;
 		}
-		AdapterConfig config= AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
 		
 		String json = "";
 		String preferred_language = StringStore
@@ -178,7 +184,7 @@ abstract public class TextServlet extends HttpServlet {
 					reply = "Ok, switched preferred language to:"
 							+ preferred_language;
 					body="";
-					sendMessage(reply, subject, localaddress, fromName, address, toName);
+					sendMessage(reply, subject, localaddress, fromName, address, toName, config);
 				}
 				if (cmd.startsWith("reset")) {
 					StringStore.dropString("question_"+address+"_"+localaddress);
@@ -247,7 +253,7 @@ abstract public class TextServlet extends HttpServlet {
 			}
 		}
 
-		sendMessage(reply, subject, localaddress, fromName, address, toName);
+		sendMessage(reply, subject, localaddress, fromName, address, toName, config);
 	}
 	
 	private String getNickname(Question question) {

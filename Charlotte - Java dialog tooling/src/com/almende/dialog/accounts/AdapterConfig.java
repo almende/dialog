@@ -45,6 +45,9 @@ public class AdapterConfig {
 	String xsiURL = "";
 	String xsiUser = "";
 	String xsiPasswd = "";
+	//OAuth
+	String accessToken="";
+	String accessTokenSecret="";
 
 	public AdapterConfig() {
 	};
@@ -287,5 +290,23 @@ public class AdapterConfig {
 
 	public void setXsiPasswd(String xsiPasswd) {
 		this.xsiPasswd = xsiPasswd;
+	}
+	
+	@JsonIgnore
+	public String getAccessToken() {
+		return accessToken;
+	}
+	
+	public void setAccessToken(String accessToken) {
+		this.accessToken = accessToken;
+	}
+	
+	@JsonIgnore
+	public String getAccessTokenSecret() {
+		return accessTokenSecret;
+	}
+	
+	public void setAccessTokenSecret(String accessTokenSecret) {
+		this.accessTokenSecret = accessTokenSecret;
 	}
 }

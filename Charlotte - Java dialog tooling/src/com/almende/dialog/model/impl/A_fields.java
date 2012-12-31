@@ -52,6 +52,7 @@ public class A_fields implements AnswerIntf {
 		Client client = ParallelInit.getClient();
 		String url = this.getAnswer_text();
 		if (url == null || url.equals("")) return "";
+		if (url.startsWith("text://")) return url.replace("text://", "");
 		if (language != null && !language.equals("")){
 			url+=url.indexOf("?")>0?"&":"?";
 			url+="preferred_language="+language;

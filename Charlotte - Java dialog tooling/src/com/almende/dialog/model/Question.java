@@ -140,6 +140,15 @@ public class Question implements QuestionIntf {
 					}
 				}
 			}
+			if (answer == null) {
+				try {
+					int answer_nr = Integer.parseInt(answer_input);
+					if(answer_nr <= answers.size())
+						answer = answers.get(answer_nr-1);
+				} catch(NumberFormatException ex) {
+					
+				}
+			}
 		}
 		if (!this.getType().equals("comment") && answer == null) {
 			// Oeps, couldn't find/handle answer, just repeat last question:

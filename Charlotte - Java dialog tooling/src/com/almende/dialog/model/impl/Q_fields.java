@@ -119,6 +119,7 @@ public class Q_fields implements QuestionIntf {
 		Client client = ParallelInit.getClient();
 		String url = this.getQuestion_text();
 		if (url == null || url.equals("")) return "";
+		if (url.startsWith("text://")) return url.replace("text://", "");
 		if (language != null && !language.equals("")){
 			url+=url.indexOf("?")>0?"&":"?";
 			url+="preferred_language="+language;

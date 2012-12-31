@@ -86,6 +86,7 @@ public class VoiceXMLRESTProxy {
 	@Produces("application/voicexml+xml")
 	public Response getNewDialog(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID){
 		log.warning("call started:"+direction+":"+remoteID+":"+localID);
+		
 		String adapterType="broadsoft";
 		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterType, localID);
 		
@@ -171,6 +172,7 @@ public class VoiceXMLRESTProxy {
 				break; //Jump from forloop
 			} else if (question.getType().equals("comment")) {
 				question = question.answer(null, null, null);
+				break;
 			} else 	if (question.getType().equals("referral")) {
 				if(!question.getUrl().startsWith("tel:")) {
 					question = Question.fromURL(question.getUrl(),address);
@@ -183,7 +185,10 @@ public class VoiceXMLRESTProxy {
 		return new Return(prompts, question);
 	}
 	
-	private String renderComment(Question question,ArrayList<String> prompts){
+	private String renderComment(Question question,ArrayList<String> prompts, String sessionKey){
+		
+		String handleAnswerURL = "/vxml/answer";
+		
 		StringWriter sw = new StringWriter();
 		try {
 			XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
@@ -200,6 +205,9 @@ public class VoiceXMLRESTProxy {
 								outputter.endTag();
 							outputter.endTag();
 						}
+						outputter.startTag("goto");
+							outputter.attribute("next", handleAnswerURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+						outputter.endTag();
 					outputter.endTag();
 					if (question != null && question.getType().equals("referral")){
 						outputter.startTag("transfer");
@@ -319,7 +327,8 @@ public class VoiceXMLRESTProxy {
 	private Response handleQuestion(Question question,String remoteID,String sessionKey){
 		String result="<vxml><exit/></vxml>";
 		Return res = formQuestion(question,remoteID);
-		question = res.question;
+		if(!question.getType().equals("comment"))
+			question = res.question;
 		
 		if (question != null){
 			question.generateIds();
@@ -332,13 +341,13 @@ public class VoiceXMLRESTProxy {
 				result = renderOpenQuestion(question,res.prompts,sessionKey);
 			} else if (question.getType().equals("referral")){
 				if (question.getUrl().startsWith("tel:")){
-					result = renderComment(question,res.prompts);	
+					result = renderComment(question,res.prompts, sessionKey);	
 				}
 			} else if (res.prompts.size() > 0) {
-				result = renderComment(question,res.prompts);
+				result = renderComment(question,res.prompts, sessionKey);
 			}
 		} else if (res.prompts.size() > 0){
-			result = renderComment(null,res.prompts);
+			result = renderComment(null,res.prompts, sessionKey);
 		}
 		return Response.ok(result).build();
 	}

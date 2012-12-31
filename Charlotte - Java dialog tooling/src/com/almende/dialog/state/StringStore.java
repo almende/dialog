@@ -44,6 +44,7 @@ public class StringStore {
 		syncCache.put(id, entity);
 
 	}
+	@SuppressWarnings("deprecation")
 	public static Entity getEntity(String id){
 		Entity entity=null;
 		if (syncCache.contains(id)){

@@ -11,6 +11,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.sms.SmsMessage;
 import com.almende.util.ParallelInit;
@@ -32,7 +33,7 @@ public class AskSmsServlet extends TextServlet {
 	
 	@Override
 	protected void sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName) {
+			String fromName, String to, String toName, AdapterConfig config) {
 		
 		try {
 			to = URLDecoder.decode(to, "UTF-8");

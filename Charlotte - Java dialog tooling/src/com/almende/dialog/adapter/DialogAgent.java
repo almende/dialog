@@ -43,15 +43,14 @@ public class DialogAgent extends Agent {
 							   @Name("publicKey") String pubKey,
 							   @Name("privateKey") String privKey){
 		
-		// Authenticate keys with key-server
 		ArrayNode adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
 		
 		if(adapterList==null)
 			return "Invalid key provided";
 		try {
 			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, adapterType,adapterList);
-		
 			if(config!=null) {
+				adapterType = config.getAdapterType();
 				if (adapterType.toUpperCase().equals("XMPP")){
 					return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,config)+"'}";
 				} else if (adapterType.toUpperCase().equals("BROADSOFT")){
@@ -60,6 +59,8 @@ public class DialogAgent extends Agent {
 					return "{'sessionKey':'"+new MailServlet().startDialog(address,url,config)+"'}";
 				} else if (adapterType.toUpperCase().equals("SMS")){
 					return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,config)+"'}";
+				} else if (adapterType.toUpperCase().equals("TWITTER")){
+					return "{'sessionKey':'"+new TwitterServlet().startDialog(address,url,config)+"'}";
 				} else {
 					return "Unknown type given: either broadsoft or xmpp or phone or mail";
 				}
@@ -67,7 +68,7 @@ public class DialogAgent extends Agent {
 				return "Invalid adapter found";
 			}
 		} catch(Exception ex) {
-			return "Error in finding adapter";
+			return "Error in finding adapter: "+ex.getMessage();
 		}
 	}
 	

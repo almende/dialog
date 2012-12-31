@@ -292,7 +292,6 @@ public class AdapterConfig {
 		this.xsiPasswd = xsiPasswd;
 	}
 	
-	@JsonIgnore
 	public String getAccessToken() {
 		return accessToken;
 	}

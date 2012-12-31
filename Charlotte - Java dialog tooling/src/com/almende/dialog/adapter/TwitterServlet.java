@@ -49,7 +49,7 @@ public class TwitterServlet extends TextServlet {
         .build();
 
 		PrintWriter out = resp.getWriter();
-		ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters("TWITTER", null, null);
+		ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters(getAdapterType(), null, null);
 		for(AdapterConfig config : adapters) {
 			String tweetId = StringStore.getString("lasttweet_"+config.getConfigId());
 			Token accessToken = new Token(config.getAccessToken(), config.getAccessTokenSecret());

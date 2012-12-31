@@ -110,6 +110,24 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
   		<url-pattern>/twitter/*</url-pattern>
 	</servlet-mapping>
 	
+	<servlet>
+  		<servlet-name>facebookprivateservlet</servlet-name>
+  		<servlet-class>com.almende.dialog.adapter.PrivateFacebookServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+  		<servlet-name>facebookprivateservlet</servlet-name>
+  		<url-pattern>/facebook_dm/*</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+  		<servlet-name>facebookwallservlet</servlet-name>
+  		<servlet-class>com.almende.dialog.adapter.WallFacebookServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+  		<servlet-name>facebookwallservlet</servlet-name>
+  		<url-pattern>/facebook_wall/*</url-pattern>
+	</servlet-mapping>
+	
 	<welcome-file-list>
 		<welcome-file>index.html</welcome-file>
 	</welcome-file-list>
@@ -167,4 +185,13 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
     		<role-name>admin</role-name>
 		</auth-constraint>
 	</security-constraint>
+	
+	<security-constraint>
+        <web-resource-collection>
+            <url-pattern>/cron/*</url-pattern>
+        </web-resource-collection>
+        <auth-constraint>
+            <role-name>admin</role-name>
+        </auth-constraint>
+    </security-constraint>
 </web-app>

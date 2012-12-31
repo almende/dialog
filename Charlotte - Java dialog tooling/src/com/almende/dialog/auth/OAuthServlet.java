@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.scribe.builder.ServiceBuilder;
+import org.scribe.builder.api.FacebookApi;
 import org.scribe.builder.api.TwitterApi;
 import org.scribe.model.OAuthRequest;
 import org.scribe.model.Response;
@@ -22,6 +23,7 @@ import org.scribe.oauth.OAuthService;
 
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.tools.Facebook;
 import com.almende.dialog.adapter.tools.Twitter;
 import com.almende.dialog.state.StringStore;
 import com.almende.util.ParallelInit;
@@ -51,13 +53,15 @@ public class OAuthServlet extends HttpServlet {
 		setService(service);
 		PrintWriter out = resp.getWriter();
 		
+		log.info("Got request on: "+req.getRequestURL());
+		
 		String[] parts = req.getRequestURI().substring(1).split("/");
 		if(parts.length==1) {
 		
 			// directly redirect to Google authorization page if an agents URL is provided
 			if (this.service != null) {
 				
-				redirectToAuthorization(resp);
+				redirectToAuthorization(resp, service);
 				return;
 			}
 	
@@ -79,10 +83,7 @@ public class OAuthServlet extends HttpServlet {
 				return;
 			} else {
 				
-				String oauthToken = req.getParameter("oauth_token");
-				String oauthVerifier = req.getParameter("oauth_verifier");
-				
-				obtainAccessToken(oauthToken, oauthVerifier, service);
+				obtainAccessToken(req, service);
 				
 				printPageStart(out);
 				printSuccess(out, success);
@@ -92,12 +93,15 @@ public class OAuthServlet extends HttpServlet {
 		}
 	}
 	
-	private void redirectToAuthorization(HttpServletResponse resp) {
+	private void redirectToAuthorization(HttpServletResponse resp, String serv) {
 		
 		try {		
-			Token requestToken = service.getRequestToken();
+			Token requestToken=null;
+			if(!serv.equals("facebook")) {
+				requestToken = service.getRequestToken();
+				StringStore.storeString(requestToken.getToken(), requestToken.getSecret());
+			}
             String authUrl = service.getAuthorizationUrl(requestToken);
-            StringStore.storeString(requestToken.getToken(), requestToken.getSecret());
             
             resp.sendRedirect(authUrl);
             
@@ -111,8 +115,10 @@ public class OAuthServlet extends HttpServlet {
 		
 		String callbackURL = "http://"+Settings.HOST+"/oauth/callback";
 		
-		if(service==null || service.equals(""))
+		if(service==null || service.equals("")) {
+			this.service = null;
 			return;
+		}
 		
 		callbackURL += "?service="+service;
 		
@@ -125,23 +131,33 @@ public class OAuthServlet extends HttpServlet {
 	        .callback(callbackURL)
 	        .build();
 		} else if(service.equals("facebook")) {
-			
+
+			this.service = new ServiceBuilder()
+	        .provider(FacebookApi.class)
+	        .apiKey(Facebook.OAUTH_KEY)
+	        .apiSecret(Facebook.OAUTH_SECRET)
+	        .callback(callbackURL)
+	        .scope("email,read_stream,publish_stream,read_mailbox,read_requests,publish_actions,manage_pages")
+	        .build();
 		}
 		
 		log.info("Set service to "+service);
 	}
 	
-	private void obtainAccessToken(String oauthToken, String oauthVerifier, String service) {
-		
-		String secret = StringStore.getString(oauthToken);
-		StringStore.dropEntity(oauthToken);
-		
-		Token requestToken = new Token(oauthToken, secret);
-		
-		Verifier v = new Verifier(oauthVerifier);
-		Token accessToken = this.service.getAccessToken(requestToken, v);
+	private void obtainAccessToken(HttpServletRequest req, String service) {
 		
 		if(service.equals("twitter")) {
+			
+			String oauthToken = req.getParameter("oauth_token");
+			String oauthVerifier = req.getParameter("oauth_verifier");
+			
+			String secret = StringStore.getString(oauthToken);
+			StringStore.dropEntity(oauthToken);
+			
+			Token requestToken = new Token(oauthToken, secret);
+			
+			Verifier v = new Verifier(oauthVerifier);
+			Token accessToken = this.service.getAccessToken(requestToken, v);
 			
 			OAuthRequest request = new OAuthRequest(Verb.GET, "http://api.twitter.com/1/account/verify_credentials.json");
 			this.service.signRequest(accessToken, request);
@@ -155,10 +171,29 @@ public class OAuthServlet extends HttpServlet {
 				log.warning("Unable to parse result");
 			}
 			
-			storeAccount(accessToken, "@"+res.get("screen_name").asText());
+			storeAccount(accessToken, "@"+res.get("screen_name").asText(), service.toUpperCase());
 			
 		} else if(service.equals("facebook")) {
 			
+			String oauthVerifier = req.getParameter("code");
+			Verifier v = new Verifier(oauthVerifier);
+			Token accessToken = this.service.getAccessToken(null, v);
+			
+			OAuthRequest request = new OAuthRequest(Verb.GET, "https://graph.facebook.com/me");
+			this.service.signRequest(accessToken, request);
+			Response response = request.send();
+			
+			ObjectMapper om = ParallelInit.getObjectMapper();
+			ObjectNode res=null;
+			try {
+				res = om.readValue(response.getBody(), ObjectNode.class);
+			} catch (Exception e) {
+				log.warning("Unable to parse result");
+			}
+			
+			log.info(res.toString());
+			
+			storeAccount(accessToken, res.get("id").asText(), service.toUpperCase());
 		}
 	}
 	
@@ -197,7 +232,7 @@ public class OAuthServlet extends HttpServlet {
 	private void printAuthorizeForm(PrintWriter out) throws IOException {
 		String url = createAuthorizationUrl();
 		out.print("<script type='text/javascript'>" +
-			"function auth() {" +
+			"function auth(send) {" +
 			" var elements = document.getElementsByName('media');" +
 			" var service='';" +
 			" for(x in elements) {" +
@@ -207,14 +242,14 @@ public class OAuthServlet extends HttpServlet {
 			"		break; "+
 			"	 } " +
 			" } " +
-			" var url='" + url + "?send=1&service='+service;" +
+			" var url='" + url + "?send='+send+'&service='+service;" +
 			"  window.location.href=url;" + 
 			"}" +
 			"</script>" +
 			"<table>" +
 			"<tr><td><input type='radio' name='media' value='twitter' /> Twitter</td></tr>" +
 			"<tr><td><input type='radio' name='media' value='facebook' /> Facebook</td></tr>" +
-			"<tr><td><button onclick='auth();'>Authorize</button></td></tr>" +
+			"<tr><td><button onclick='auth(1);'>Authorize</button></td></tr>" +
 			"</table>"
 		);		
 	}
@@ -227,20 +262,24 @@ public class OAuthServlet extends HttpServlet {
 		out.print("<p>An error occurred</p>");			
 	}
 	
-	private void storeAccount(Token accessToken, String myAddress) {
+	private void storeAccount(Token accessToken, String myAddress, String type) {
 		
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
-		AdapterConfig config = AdapterConfig.findAdapterConfig("TWITTER", myAddress);
+		AdapterConfig config = AdapterConfig.findAdapterConfig(type, myAddress);
 		
 		if(config==null) {
 			config = new AdapterConfig();
 			config.setConfigId(UUID.randomUUID().toString());
-			config.setAdapterType("TWITTER");
+			config.setAdapterType(type);
 			config.setMyAddress(myAddress);
 		}
 		
+		log.info("Old token: "+config.getAccessToken());
+		
 		config.setAccessToken(accessToken.getToken());
 		config.setAccessTokenSecret(accessToken.getSecret());
+		
+		log.info("New token: "+config.getAccessToken()+" for: "+config.getMyAddress());
 		
 		datastore.store(config);
 	}

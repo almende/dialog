@@ -156,9 +156,9 @@ public class VoiceXMLRESTProxy {
 	
 	public Return formQuestion(Question question,String address) {
 		ArrayList<String> prompts = new ArrayList<String>();
-		String preferred_language = question.getPreferred_language();
 		for (int count = 0; count<=LOOP_DETECTION; count++){
 			if (question == null) break;
+			String preferred_language = question.getPreferred_language();
 			question.setPreferred_language(preferred_language);	
 			String qText = question.getQuestion_text();
 			
@@ -327,10 +327,10 @@ public class VoiceXMLRESTProxy {
 	private Response handleQuestion(Question question,String remoteID,String sessionKey){
 		String result="<vxml><exit/></vxml>";
 		Return res = formQuestion(question,remoteID);
-		if(!question.getType().equals("comment"))
+		if(question !=null && !question.getType().equals("comment"))
 			question = res.question;
 		
-		if (question != null){
+		if (question != null){						
 			question.generateIds();
 			StringStore.storeString(question.getQuestion_id(), question.toJSON());
 			StringStore.storeString(question.getQuestion_id()+"-remoteID", remoteID);

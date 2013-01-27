@@ -15,6 +15,7 @@ import javax.mail.internet.MimeMessage;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.google.appengine.api.utils.SystemProperty;
 
@@ -77,7 +78,7 @@ public class MailServlet extends TextServlet {
 
 	@Override
 	public void sendMessage(String message, String subject, String from, String fromName,
-			String to, String toName) {
+			String to, String toName, AdapterConfig config) {
 		Properties props = new Properties();
         javax.mail.Session session = javax.mail.Session.getDefaultInstance(props, null);
 

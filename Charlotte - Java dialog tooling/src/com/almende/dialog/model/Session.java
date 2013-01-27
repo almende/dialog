@@ -29,17 +29,10 @@ public class Session implements SessionIntf {
 	public String getSession_id() {
 		return session.getSession_id();
 	}
-	@Override
-	public String getAccount() {
-		return session.getAccount();
-	}
+
 	@Override
 	public void setSession_id(String session_id) {
 		session.setSession_id(session_id);
-	}
-	@Override
-	public void setAccount(String account) {
-		session.setAccount(account);
 	}
 	
 	@JsonIgnore
@@ -91,8 +84,9 @@ public class Session implements SessionIntf {
 				if (config == null){
 					return null;
 				}
+				//TODO: check account/pubkey usage here
 				session = new Session();
-				session.setAccount(config.getAccount().toString());
+				session.setPubKey(config.getPublicKey().toString());
 				session.setRemoteAddress(split[2]);
 				session.setLocalAddress(localaddress);
 				session.key = key;
@@ -105,6 +99,10 @@ public class Session implements SessionIntf {
 		}
 		session.key = key;
 		return session;
+	}
+	@JsonIgnore
+	public AdapterConfig getAdapterConfig() {
+		return AdapterConfig.findAdapterConfig(this.getType(), this.getLocalAddress());
 	}
 	@Override
 	public String getStartUrl() {
@@ -145,5 +143,32 @@ public class Session implements SessionIntf {
 	@Override
 	public void setType(String type) {
 		this.session.setType(type);
+	}
+	@Override
+	public String getPubKey() {
+		
+		return this.session.getPubKey();
+	}
+	@Override
+	public String getPrivKey() {
+		return this.session.getPrivKey();
+	}
+	@Override
+	public void setPubKey(String pubKey) {
+		this.session.setPubKey(pubKey);
+	}
+	@Override
+	public void setPrivKey(String privKey) {
+		this.session.setPrivKey(privKey);
+	}
+	
+	@Override
+	public String getExternalSession() {
+		return this.session.getExternalSession();
+	}
+	
+	@Override
+	public void setExternalSession(String externalSession) {
+		this.session.setExternalSession(externalSession);
 	}
 }

@@ -2,13 +2,13 @@ package com.almende.dialog.adapter;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.net.URLEncoder;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.znerd.xmlenc.XMLOutputter;
 
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
@@ -19,7 +19,7 @@ public class CMSmsServlet extends TextServlet {
 	private static final long serialVersionUID = 408503132941968804L;
 	
 	private static final String servletPath = "/_ah/sms/";
-	private static final String adapterType = "SMS";
+	private static final String adapterType = "CM";
 	
 	// TODO: needs to be moved to the adapter config
 	private static final String userID = "2630";
@@ -30,7 +30,7 @@ public class CMSmsServlet extends TextServlet {
 	
 	@Override
 	protected void sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName) {
+			String fromName, String to, String toName, AdapterConfig config) {
 		
 		// TODO: Check message for special chars, if so change dcs.		
 		String type="TEXT";

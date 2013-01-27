@@ -2,6 +2,8 @@ package com.almende.dialog.adapter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
 import java.nio.CharBuffer;
 import java.util.HashMap;
 import java.util.logging.Logger;
@@ -12,13 +14,13 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.Settings;
-import com.almende.dialog.accounts.Account;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.KeyServerLib;
 import com.almende.util.ParallelInit;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
@@ -33,7 +35,7 @@ abstract public class TextServlet extends HttpServlet {
 	protected static final String DEMODIALOG = "http://"+Settings.HOST+"/charlotte/";
 	
 	protected abstract void sendMessage(String message, String subject, String from, String fromName, 
-										String to, String toName);
+										String to, String toName, AdapterConfig config);
 	protected abstract TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception; 
 	protected abstract String getServletPath();
 	protected abstract String getAdapterType();
@@ -51,7 +53,11 @@ abstract public class TextServlet extends HttpServlet {
 	
 	public Return formQuestion(Question question,String address) {
 		String reply = "";
-		String preferred_language = question.getPreferred_language();
+		
+		String preferred_language = "nl"; // TODO: Change to null??
+		if(question!=null)
+			preferred_language = question.getPreferred_language();
+		
 		for (int count = 0; count<=LOOP_DETECTION; count++){
 			if (question == null) break;
 			question.setPreferred_language(preferred_language);
@@ -80,8 +86,7 @@ abstract public class TextServlet extends HttpServlet {
 		return new Return(reply, question);
 	}
 	
-	public String startDialog(String address, String url, Account account) {
-		AdapterConfig config = AdapterConfig.findAdapterConfigForAccount(getAdapterType(), account.getId());
+	public String startDialog(String address, String url, AdapterConfig config) {
 		String localaddress = config.getMyAddress();
 		String sessionKey =getAdapterType()+"|"+localaddress+"|"+address;
 		Session session = Session.getSession(sessionKey);
@@ -92,6 +97,8 @@ abstract public class TextServlet extends HttpServlet {
 		session.setDirection("outbound");
 		session.storeSession();
 		
+		url = encodeURLParams(url);
+		
 		Question question = Question.fromURL(url, address);
 		String preferred_language = StringStore
 				.getString(address + "_language");
@@ -101,10 +108,11 @@ abstract public class TextServlet extends HttpServlet {
 		question.setPreferred_language(preferred_language);
 		Return res = formQuestion(question,address);
 		String fromName = getNickname(res.question);
-		StringStore.storeString("question_"+address+"_"+localaddress, res.question.toJSON());
+		if(res.question!=null)
+			StringStore.storeString("question_"+address+"_"+localaddress, res.question.toJSON());
 		
 		DDRWrapper.log(question,session,"Start",config);
-		sendMessage(res.reply, "Message from DH", localaddress, fromName, address, "");
+		sendMessage(res.reply, "Message from DH", localaddress, fromName, address, "", config);
 		return sessionKey;
 	}
 	
@@ -118,7 +126,6 @@ abstract public class TextServlet extends HttpServlet {
 
 //		log.warning("Starting to handle xmpp post: "+startTime+"/"+(new Date().getTime()));
 		boolean loading = ParallelInit.startThreads();
-		boolean skip = false;
 		
 		if (req.getServletPath().endsWith("/error/")) {
 			doErrorPost(req, res);
@@ -146,6 +153,12 @@ abstract public class TextServlet extends HttpServlet {
 			return;
 		}
 		
+		processMessage(msg);
+	}
+	
+	protected void processMessage(TextMessage msg) {
+		
+		boolean skip = false;
 		String localaddress = msg.getLocalAddress();
 		String address = msg.getAddress();
 		String subject = msg.getSubject();
@@ -153,56 +166,63 @@ abstract public class TextServlet extends HttpServlet {
 		String toName = msg.getRecipientName();
 		String fromName="DH";
 		
+		AdapterConfig config= AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
+		
 		Session session = Session.getSession(getAdapterType()+"|"+localaddress+"|"+address);
 		if (session == null){
-			sendMessage("Sorry, I can't find the account associated with this chat address...", subject, localaddress, fromName, address, toName);
+			sendMessage("Sorry, I can't find the account associated with this chat address...", subject, localaddress, fromName, address, toName, config);
 			return;
 		}
-		AdapterConfig config= AdapterConfig.findAdapterConfigForAccount(getAdapterType(),session.getAccount());
 		
 		String json = "";
 		String preferred_language = StringStore
 				.getString(address + "_language");
 		String reply = "I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
+		
+		if(KeyServerLib.checkCredits(config.getPublicKey())) {
 
-		if (body.toLowerCase().charAt(0) == '/') {
-			String cmd = body.toLowerCase().substring(1);
-			if (cmd.startsWith("language=")) {
-				preferred_language = cmd.substring(9);
-				if (preferred_language.indexOf(' ') != -1)
-					preferred_language = preferred_language.substring(0,
-							preferred_language.indexOf(' '));
-				StringStore.storeString(address + "_language",
-						preferred_language);
-				reply = "Ok, switched preferred language to:"
-						+ preferred_language;
-				body="";
-				sendMessage(reply, subject, localaddress, fromName, address, toName);
-			}
-			if (cmd.startsWith("reset")) {
-				StringStore.dropString("question_"+address+"_"+localaddress);
-				// Send something else??
-			}
-			if (cmd.startsWith("help")) {
-				String[] command = cmd.split(" ");
-				if (command.length == 1) {
-					reply = "The following commands are understood:\n"
-							+ "/help <command>\n" + "/reset \n"
-							+ "/language=<lang_code>\n";
-				} else {
-					if (command[1].equals("reset")) {
-						reply = "/reset will return you to Charlotte's initial question.";
-					}
-					if (command[1].equals("language")) {
-						reply = "/language=<lang_code>, switches the preferred language to the provided lang_code. (e.g. /language=nl)";
-					}
-					if (command[1].equals("help")) {
-						reply = "/help <command>, provides a help text about the provided command (e.g. /help reset)";
-					}
+			if (body.toLowerCase().charAt(0) == '/') {
+				String cmd = body.toLowerCase().substring(1);
+				if (cmd.startsWith("language=")) {
+					preferred_language = cmd.substring(9);
+					if (preferred_language.indexOf(' ') != -1)
+						preferred_language = preferred_language.substring(0,
+								preferred_language.indexOf(' '));
+					StringStore.storeString(address + "_language",
+							preferred_language);
+					reply = "Ok, switched preferred language to:"
+							+ preferred_language;
+					body="";
+					sendMessage(reply, subject, localaddress, fromName, address, toName, config);
 				}
-
-				skip = true;
+				if (cmd.startsWith("reset")) {
+					StringStore.dropString("question_"+address+"_"+localaddress);
+					// Send something else??
+				}
+				if (cmd.startsWith("help")) {
+					String[] command = cmd.split(" ");
+					if (command.length == 1) {
+						reply = "The following commands are understood:\n"
+								+ "/help <command>\n" + "/reset \n"
+								+ "/language=<lang_code>\n";
+					} else {
+						if (command[1].equals("reset")) {
+							reply = "/reset will return you to Charlotte's initial question.";
+						}
+						if (command[1].equals("language")) {
+							reply = "/language=<lang_code>, switches the preferred language to the provided lang_code. (e.g. /language=nl)";
+						}
+						if (command[1].equals("help")) {
+							reply = "/help <command>, provides a help text about the provided command (e.g. /help reset)";
+						}
+					}
+	
+					skip = true;
+				}
 			}
+		} else {
+			reply = "Not enough credits to return an answer";
+			skip=true;
 		}
 		
 		if (!skip) {
@@ -242,7 +262,7 @@ abstract public class TextServlet extends HttpServlet {
 			}
 		}
 
-		sendMessage(reply, subject, localaddress, fromName, address, toName);
+		sendMessage(reply, subject, localaddress, fromName, address, toName, config);
 	}
 	
 	private String getNickname(Question question) {
@@ -254,5 +274,16 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		
 		return nickname; 
+	}
+	
+	private String encodeURLParams(String url) {
+		try {
+			URL remoteURL = new URL(url);
+			return new URI(remoteURL.getProtocol(), remoteURL.getUserInfo(), remoteURL.getHost(), remoteURL.getPort(), remoteURL.getPath(), remoteURL.getQuery(), remoteURL.getRef()).toString();
+	        
+		} catch (Exception e){
+			e.printStackTrace();
+		}
+		return url;
 	}
 }

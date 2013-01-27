@@ -3,7 +3,6 @@ package com.almende.dialog.adapter;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Logger;
@@ -12,6 +11,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.sms.SmsMessage;
 import com.almende.util.ParallelInit;
@@ -29,11 +29,11 @@ public class AskSmsServlet extends TextServlet {
 	private static ObjectMapper om = ParallelInit.getObjectMapper();
 	
 	private static final String servletPath = "/_ah/sms/ask/";
-	private static final String adapterType = "asksms";
+	private static final String adapterType = "SMS";
 	
 	@Override
 	protected void sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName) {
+			String fromName, String to, String toName, AdapterConfig config) {
 		
 		try {
 			to = URLDecoder.decode(to, "UTF-8");
@@ -64,7 +64,6 @@ public class AskSmsServlet extends TextServlet {
 			} catch(Exception ex) {
 				log.warning("Failed to parse phone number");
 			}
-			
 			
 			success=true;
 		}

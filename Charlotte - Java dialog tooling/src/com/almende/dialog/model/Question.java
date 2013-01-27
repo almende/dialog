@@ -107,7 +107,7 @@ public class Question implements QuestionIntf {
 												// answer doesn't exist, or
 												// multiple answers
 												// (=out-of-spec)
-		} else if (this.getType().equals("comment")) {
+		} else if (this.getType().equals("comment") || this.getType().equals("referral")) {
 			if(this.getAnswers() == null || this.getAnswers().size()==0)
 				return null;
 			answer = this.getAnswers().get(0);
@@ -140,6 +140,15 @@ public class Question implements QuestionIntf {
 					}
 				}
 			}
+			if (answer == null) {
+				try {
+					int answer_nr = Integer.parseInt(answer_input);
+					if(answer_nr <= answers.size())
+						answer = answers.get(answer_nr-1);
+				} catch(NumberFormatException ex) {
+					
+				}
+			}
 		}
 		if (!this.getType().equals("comment") && answer == null) {
 			// Oeps, couldn't find/handle answer, just repeat last question:
@@ -157,9 +166,12 @@ public class Question implements QuestionIntf {
 			String post = om.writeValueAsString(ans);
 			String s = webResource.type("application/json").post(
 					String.class, post);
+			
+			log.info("Received new question: "+s);
 
 			newQ = om.readValue(s, Question.class);
 			newQ.setPreferred_language(preferred_language);
+			log.info("POST: "+newQ);
 		} catch (Exception e) {
 			log.severe(e.toString());
 		}

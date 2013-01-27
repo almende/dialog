@@ -1,4 +1,5 @@
 com.almende.dialog.adapter.VoiceXMLRESTProxy
+com.almende.dialog.agent.AskCharlotte
 com.almende.dialog.agent.Charlotte
 com.almende.dialog.agent.CalendarConversation
 com.almende.dialog.agent.HowIsTheWeatherRESTAgent
@@ -8,7 +9,6 @@ com.almende.dialog.agent.PassAlong
 com.almende.dialog.agent.TalkTalkAgent
 com.almende.dialog.agent.YesNoAgent
 
-com.almende.dialog.accounts.Account
 com.almende.dialog.accounts.AdapterConfig
 
 com.almende.dialog.DDR

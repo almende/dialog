@@ -7,21 +7,18 @@ public class S_fields implements SessionIntf {
 	private static final long serialVersionUID = -8914911091544995923L;
 
 	String session_id;
-	String account;
+	String pubKey;
+	String privKey;
 	String startUrl;
 	String remoteAddress;
 	String localAddress;
 	String direction;
 	String type;
+	String externalSession;
 	
 	@Override
 	public String getSession_id() {
 		return this.session_id;
-	}
-
-	@Override
-	public String getAccount() {
-		return this.account;
 	}
 
 	@Override
@@ -30,8 +27,23 @@ public class S_fields implements SessionIntf {
 	}
 
 	@Override
-	public void setAccount(String account) {
-		this.account = account;
+	public String getPubKey() {
+		return pubKey;
+	}
+
+	@Override
+	public void setPubKey(String pubKey) {
+		this.pubKey = pubKey;
+	}
+
+	@Override
+	public String getPrivKey() {
+		return privKey;
+	}
+
+	@Override
+	public void setPrivKey(String privKey) {
+		this.privKey = privKey;
 	}
 
 	@Override
@@ -84,4 +96,13 @@ public class S_fields implements SessionIntf {
 		this.type=type;
 	}
 
+	@Override
+	public void setExternalSession(String externalSession) {
+		this.externalSession = externalSession;
+	}
+	
+	@Override
+	public String getExternalSession() {
+		return this.externalSession;
+	}
 }

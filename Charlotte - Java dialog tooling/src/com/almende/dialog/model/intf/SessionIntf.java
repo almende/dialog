@@ -5,19 +5,22 @@ import java.io.Serializable;
 public interface SessionIntf extends Serializable  {
 	
 	public String getSession_id();
-	public String getAccount();
+	public String getPubKey();
+	public String getPrivKey();
 	public String getStartUrl();
 	public String getRemoteAddress();
 	public String getLocalAddress();
 	public String getDirection();
 	public String getType();
+	public String getExternalSession();
 	
 	public void setSession_id(String session_id);
-	public void setAccount(String account);
+	public void setPubKey(String pubKey);
+	public void setPrivKey(String privKey);
 	public void setStartUrl(String url);
 	public void setRemoteAddress(String remoteAddress);
 	public void setLocalAddress(String localAddress);
 	public void setDirection(String direction);
 	public void setType(String type);
-	
+	public void setExternalSession(String externalSession);
 }

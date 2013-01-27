@@ -1,6 +1,5 @@
 package com.almende.dialog.agent;
 
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.logging.Logger;
@@ -15,16 +14,21 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 import com.almende.dialog.Settings;
-import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.AnswerPost;
-import com.almende.dialog.model.Question;
+import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import flexjson.JSONDeserializer;
 @Path("/ask-charlotte/")
 public class AskCharlotte {
 	private static final String URL = "http://"+Settings.HOST+"/ask-charlotte/";
+	private static final String SOUNDURL = "http://ask50.ask-cs.nl/~ask/tokyo_a02/rest/";
+	//private static final String SOUNDURL = "http://commondatastorage.googleapis.com/dialogserver-sounds/testSounds/espeakConv_";
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
+	static final ObjectMapper om =ParallelInit.getObjectMapper();
 	//TODO: Charlotte should have an address book of possible agents, managed through the question interface.
 	
 	private String getGreeting(){
@@ -45,18 +49,24 @@ public class AskCharlotte {
 	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium){
 		String result=null;
 		String url=URL;
-		
-		Question question = new Question();
-		question.setQuestion_text(url+"questions/0");
-		question.setType("closed");
-		
-		ArrayList<Answer> answers = new ArrayList<Answer>();
-		for (int i = 10; i< 12; i++){
-			answers.add(new Answer(url+"answers/"+i, url+"questions/"+i+"?preferred_medium=text/plain"));
+		boolean audio = false;
+		if (preferred_medium != null && preferred_medium.startsWith("audio")){
+			audio = true;
+			url= SOUNDURL;
 		}
-		question.setAnswers(answers);
-		result = question.toJSON();
 		
+		ObjectNode node= om.createObjectNode();
+		node.put("requester", URL+"id");
+		node.put("question_text",url+(audio?"1810.wav":"questions/0"));
+		node.put("type", "closed");
+		
+		ArrayNode answers = node.putArray("answers");
+		for (int i = 10; i< 12; i++){
+			ObjectNode answerNode = answers.addObject();
+			answerNode.put("answer_text",url+(audio?"14.wav":"answers/"+i));
+			answerNode.put("callback",URL+"questions/"+i+"?preferred_medium="+(audio?"audio/wav":"text/plain"));
+		}
+		result=node.toString();
 		return Response.ok(result).build();
 	}
 	
@@ -67,31 +77,43 @@ public class AskCharlotte {
 	public Response answerQuestion(String answer_json, @PathParam("question_no") String question_no,@QueryParam("preferred_medium") String preferred_medium){
 		String result=null;
 		
-		@SuppressWarnings("unused")
+		boolean audio=false;
+		if (preferred_medium != null && preferred_medium.startsWith("audio")){
+			audio = true;
+		}
+		
 		String answer_input="";
 		try {
 			AnswerPost answer = new JSONDeserializer<AnswerPost>().
 					use(null, AnswerPost.class).
 					deserialize(answer_json);
 			answer_input=answer.getAnswer_text();
-			log.warning("Received responder: "+answer.getResponder());
+			log.warning("Received responder: "+answer.getResponder()+" input: "+answer_input);
 		} catch (Exception e){
 			log.severe(e.toString());
 		}
-		Question question = new Question();
-		question.setType("referral");
 		
+		ObjectNode node= om.createObjectNode();
+		node.put("type", "referral");		
 		switch (Integer.parseInt(question_no)){
 		case 10:
-			question.setQuestion_text(URL+"questions/"+question_no);
-			question.setUrl("http://sven.ask-services.appspot.com/agents/knrm/");
+			node.put("question_text",URL+"questions/"+question_no);
+			if(audio) {
+				node.put("url","tel:0647771234");
+			} else {
+				node.put("url","http://sven.ask-services.appspot.com/agents/knrm/");
+			}
 			break;
 		case 11:
-			question.setQuestion_text(URL+"questions/"+question_no);
-			question.setUrl("http://sven.ask-services.appspot.com/ns_tokyo/agents/tokyo/");
+			node.put("question_text",URL+"questions/"+question_no);
+			if(audio) {
+				node.put("url","tel:0103032402");
+			} else {
+				node.put("url","http://sven.ask-services.appspot.com/ns_tokyo/agents/tokyo/");
+			}			
 			break;
 		}
-		result=question.toJSON();
+		result=node.toString();
 		return Response.ok(result).build();
 	}
 	

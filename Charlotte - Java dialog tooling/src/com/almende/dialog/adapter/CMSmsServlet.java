@@ -19,7 +19,7 @@ public class CMSmsServlet extends TextServlet {
 	private static final long serialVersionUID = 408503132941968804L;
 	
 	private static final String servletPath = "/_ah/sms/";
-	private static final String adapterType = "SMS";
+	private static final String adapterType = "CM";
 	
 	// TODO: needs to be moved to the adapter config
 	private static final String userID = "2630";

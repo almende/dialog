@@ -17,6 +17,7 @@ public class KeyServerLib {
 	
 	public static ArrayNode getAllowedAdapterList(String pubKey, String privKey, String adapterType) {
 		
+		ObjectMapper om = ParallelInit.getObjectMapper();
 		String path="/askAnywaysServices/rest/keys/checkkey/"+pubKey+"/"+privKey+"/outbound";
 		
 		String res="";
@@ -27,9 +28,9 @@ public class KeyServerLib {
 		} catch(Exception ex) {
 			log.warning(ex.getMessage());
 			log.warning("No response from keyserver so no validation");
-		}
+			return om.createArrayNode();
+		}		
 		
-		ObjectMapper om = ParallelInit.getObjectMapper();
 		try {
 			JsonNode result = om.readValue(res, JsonNode.class);
 			if(!result.get("valid").asBoolean())
@@ -47,7 +48,7 @@ public class KeyServerLib {
 	public static boolean checkCredits(String pubKey) {
 		
 		if(pubKey==null || pubKey.equals(""))
-			return false;
+			return true;
 		
 		String path = "/askAnywaysServices/rest/keys/checkkey/"+pubKey+"/inbound";
 		String res="";
@@ -58,6 +59,7 @@ public class KeyServerLib {
 		} catch(Exception ex) {
 			log.warning(ex.getMessage());
 			log.warning("No response from keyserver so no validation");
+			return true;
 		}
 		
 		ObjectMapper om = ParallelInit.getObjectMapper();

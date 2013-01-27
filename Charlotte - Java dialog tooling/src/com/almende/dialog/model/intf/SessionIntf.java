@@ -12,6 +12,7 @@ public interface SessionIntf extends Serializable  {
 	public String getLocalAddress();
 	public String getDirection();
 	public String getType();
+	public String getExternalSession();
 	
 	public void setSession_id(String session_id);
 	public void setPubKey(String pubKey);
@@ -21,5 +22,5 @@ public interface SessionIntf extends Serializable  {
 	public void setLocalAddress(String localAddress);
 	public void setDirection(String direction);
 	public void setType(String type);
-	
+	public void setExternalSession(String externalSession);
 }

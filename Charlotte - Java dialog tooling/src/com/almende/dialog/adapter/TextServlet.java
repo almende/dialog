@@ -2,6 +2,8 @@ package com.almende.dialog.adapter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
 import java.nio.CharBuffer;
 import java.util.HashMap;
 import java.util.logging.Logger;
@@ -51,7 +53,11 @@ abstract public class TextServlet extends HttpServlet {
 	
 	public Return formQuestion(Question question,String address) {
 		String reply = "";
-		String preferred_language = question.getPreferred_language();
+		
+		String preferred_language = "nl"; // TODO: Change to null??
+		if(question!=null)
+			preferred_language = question.getPreferred_language();
+		
 		for (int count = 0; count<=LOOP_DETECTION; count++){
 			if (question == null) break;
 			question.setPreferred_language(preferred_language);
@@ -91,6 +97,8 @@ abstract public class TextServlet extends HttpServlet {
 		session.setDirection("outbound");
 		session.storeSession();
 		
+		url = encodeURLParams(url);
+		
 		Question question = Question.fromURL(url, address);
 		String preferred_language = StringStore
 				.getString(address + "_language");
@@ -100,7 +108,8 @@ abstract public class TextServlet extends HttpServlet {
 		question.setPreferred_language(preferred_language);
 		Return res = formQuestion(question,address);
 		String fromName = getNickname(res.question);
-		StringStore.storeString("question_"+address+"_"+localaddress, res.question.toJSON());
+		if(res.question!=null)
+			StringStore.storeString("question_"+address+"_"+localaddress, res.question.toJSON());
 		
 		DDRWrapper.log(question,session,"Start",config);
 		sendMessage(res.reply, "Message from DH", localaddress, fromName, address, "", config);
@@ -265,5 +274,16 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		
 		return nickname; 
+	}
+	
+	private String encodeURLParams(String url) {
+		try {
+			URL remoteURL = new URL(url);
+			return new URI(remoteURL.getProtocol(), remoteURL.getUserInfo(), remoteURL.getHost(), remoteURL.getPort(), remoteURL.getPath(), remoteURL.getQuery(), remoteURL.getRef()).toString();
+	        
+		} catch (Exception e){
+			e.printStackTrace();
+		}
+		return url;
 	}
 }

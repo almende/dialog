@@ -1,0 +1,22 @@
+DialogHandler
+https://github.com/almende/dialog/
+
+27-1-2013, version 0.2.0
+- Dialog agent is now capable of collecting call information and is able to terminate calls.
+- The redirect functionality has been changed in the VoiceXMl adapter. It now sets up a conference call,
+  so that the call can be continued if one of the parties leaves the conversation. And also the adapter number
+  will be displayed when calling both parties.
+- Small bug fixes to make the CM adapter work again.
+
+27-11-2012, version 0.1.0
+
+- Dialog Agent to initiate calls.
+- Example dialog agents to demonstrate how these agents can be implemented.
+  Theses agents consist of: AskCharlotte, CalendarConversation, Charlotte, 
+  HowIsTheWeather, Kastje, Muur, PassAlong, TalkTalk and YesNo.
+- REST interface to maintain the adapter configurations.
+- TextServlet to create text based adapters
+- XMPP Adapter (for gTalk)
+- 2 SMS adapters: two-way ASK Adapter and one-way (inbound) CM Adapter
+- Mail adapter
+- Broadsoft VoiceXML adapter

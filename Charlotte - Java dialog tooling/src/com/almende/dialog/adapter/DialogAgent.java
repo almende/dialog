@@ -1,5 +1,8 @@
 package com.almende.dialog.adapter;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
@@ -14,6 +17,8 @@ import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 public class DialogAgent extends Agent {
+	
+	private static final Logger log = Logger.getLogger(DialogAgent.class.getName());
 	
 	public DialogAgent(){
 		super();
@@ -30,7 +35,20 @@ public class DialogAgent extends Agent {
 		return question;
 	}
 	
-	public String killCall(String sessionKey){
+	public String getActiveCalls(@Name("adapterID") String adapterID) {
+		
+		try {
+			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, null, null);
+			if(config.getAdapterType().toLowerCase().equals("broadsoft")) {
+				return VoiceXMLRESTProxy.getActiveCalls(config);
+			}
+		} catch(Exception ex) {
+		}
+		
+		return "";
+	}
+	
+	public String killCall(@Name("session") String sessionKey){
 		Session session = Session.getSession(sessionKey);
 		if (session == null) return "unknown";
 		session.kill();
@@ -42,14 +60,17 @@ public class DialogAgent extends Agent {
 							   @Name("adapterID") @Required(false) String adapterID, 
 							   @Name("publicKey") String pubKey,
 							   @Name("privateKey") String privKey){
-		
-		ArrayNode adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
+		log.setLevel(Level.INFO);
+		ArrayNode adapterList = null;
+		adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
 		
 		if(adapterList==null)
 			return "Invalid key provided";
 		try {
+			log.info("Trying to find config");
 			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, adapterType,adapterList);
 			if(config!=null) {
+				log.info("Config found: "+config.getConfigId());
 				adapterType = config.getAdapterType();
 				if (adapterType.toUpperCase().equals("XMPP")){
 					return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,config)+"'}";
@@ -59,6 +80,8 @@ public class DialogAgent extends Agent {
 					return "{'sessionKey':'"+new MailServlet().startDialog(address,url,config)+"'}";
 				} else if (adapterType.toUpperCase().equals("SMS")){
 					return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,config)+"'}";
+				} else if (adapterType.toUpperCase().equals("CM")){
+					return "{'sessionKey':'"+new CMSmsServlet().startDialog(address,url,config)+"'}";
 				} else if (adapterType.toUpperCase().equals("TWITTER")){
 					return "{'sessionKey':'"+new TwitterServlet().startDialog(address,url,config)+"'}";
 				} else {
@@ -68,6 +91,8 @@ public class DialogAgent extends Agent {
 				return "Invalid adapter found";
 			}
 		} catch(Exception ex) {
+			ex.printStackTrace();
+			log.warning(ex.getLocalizedMessage());
 			return "Error in finding adapter: "+ex.getMessage();
 		}
 	}

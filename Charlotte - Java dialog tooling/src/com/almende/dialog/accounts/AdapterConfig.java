@@ -16,6 +16,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import com.almende.dialog.adapter.tools.Broadsoft;
 import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -48,6 +49,7 @@ public class AdapterConfig {
 	//OAuth
 	String accessToken="";
 	String accessTokenSecret="";
+	boolean anonymous=false;
 
 	public AdapterConfig() {
 	};
@@ -69,6 +71,12 @@ public class AdapterConfig {
 				return Response.status(Status.CONFLICT).build();
 
 			datastore.store(newConfig);
+			
+			if(newConfig.getAdapterType().equals("broadsoft")) {
+				Broadsoft bs = new Broadsoft(newConfig.getXsiUser(), newConfig.getXsiPasswd());
+				bs.hideCallerId(newConfig.isAnonymous());
+			}
+			
 			return Response.ok(om.writeValueAsString(newConfig)).build();
 		} catch (Exception e) {
 			log.severe("CreateConfig: Failed to store new config");
@@ -89,6 +97,12 @@ public class AdapterConfig {
 					configid);
 			om.readerForUpdating(oldConfig).readValue(json);
 			datastore.update(oldConfig);
+			
+			if(oldConfig.getAdapterType().equals("broadsoft")) {
+				Broadsoft bs = new Broadsoft(oldConfig.getXsiUser(), oldConfig.getXsiPasswd());
+				bs.hideCallerId(oldConfig.isAnonymous());
+			}
+			
 			return Response.ok(om.writeValueAsString(oldConfig)).build();
 		} catch (Exception e) {
 			log.severe("UpdateConfig: Failed to update config:"
@@ -274,7 +288,6 @@ public class AdapterConfig {
 		this.xsiURL = xsiURL;
 	}
 
-	@JsonIgnore
 	public String getXsiUser() {
 		return xsiUser;
 	}
@@ -283,7 +296,6 @@ public class AdapterConfig {
 		this.xsiUser = xsiUser;
 	}
 
-	@JsonIgnore
 	public String getXsiPasswd() {
 		return xsiPasswd;
 	}
@@ -307,5 +319,13 @@ public class AdapterConfig {
 	
 	public void setAccessTokenSecret(String accessTokenSecret) {
 		this.accessTokenSecret = accessTokenSecret;
+	}
+	
+	public boolean isAnonymous() {
+		return anonymous;
+	}
+	
+	public void setAnonymous(boolean anonymous) {
+		this.anonymous = anonymous;
 	}
 }

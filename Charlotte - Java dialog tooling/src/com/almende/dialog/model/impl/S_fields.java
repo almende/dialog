@@ -14,6 +14,7 @@ public class S_fields implements SessionIntf {
 	String localAddress;
 	String direction;
 	String type;
+	String externalSession;
 	
 	@Override
 	public String getSession_id() {
@@ -95,4 +96,13 @@ public class S_fields implements SessionIntf {
 		this.type=type;
 	}
 
+	@Override
+	public void setExternalSession(String externalSession) {
+		this.externalSession = externalSession;
+	}
+	
+	@Override
+	public String getExternalSession() {
+		return this.externalSession;
+	}
 }

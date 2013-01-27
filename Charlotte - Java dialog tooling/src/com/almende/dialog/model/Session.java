@@ -100,6 +100,10 @@ public class Session implements SessionIntf {
 		session.key = key;
 		return session;
 	}
+	@JsonIgnore
+	public AdapterConfig getAdapterConfig() {
+		return AdapterConfig.findAdapterConfig(this.getType(), this.getLocalAddress());
+	}
 	@Override
 	public String getStartUrl() {
 		return session.getStartUrl();
@@ -156,5 +160,15 @@ public class Session implements SessionIntf {
 	@Override
 	public void setPrivKey(String privKey) {
 		this.session.setPrivKey(privKey);
+	}
+	
+	@Override
+	public String getExternalSession() {
+		return this.session.getExternalSession();
+	}
+	
+	@Override
+	public void setExternalSession(String externalSession) {
+		this.session.setExternalSession(externalSession);
 	}
 }

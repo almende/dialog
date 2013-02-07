@@ -18,7 +18,7 @@ public class KeyServerLib {
 	public static ArrayNode getAllowedAdapterList(String pubKey, String privKey, String adapterType) {
 		
 		ObjectMapper om = ParallelInit.getObjectMapper();
-		String path="/askAnywaysServices/rest/keys/checkkey/"+pubKey+"/"+privKey+"/outbound";
+		String path="/rest/keys/checkkey/"+pubKey+"/"+privKey+"/outbound";
 		
 		String res="";
 		try {
@@ -50,7 +50,7 @@ public class KeyServerLib {
 		if(pubKey==null || pubKey.equals(""))
 			return true;
 		
-		String path = "/askAnywaysServices/rest/keys/checkkey/"+pubKey+"/inbound";
+		String path = "/rest/keys/checkkey/"+pubKey+"/inbound";
 		String res="";
 		try {
 			Client client = ParallelInit.getClient();

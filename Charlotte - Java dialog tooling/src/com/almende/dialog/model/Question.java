@@ -167,11 +167,51 @@ public class Question implements QuestionIntf {
 			String s = webResource.type("application/json").post(
 					String.class, post);
 			
-			log.info("Received new question: "+s);
+			log.info("Received new question (answer): "+s);
 
 			newQ = om.readValue(s, Question.class);
 			newQ.setPreferred_language(preferred_language);
-			log.info("POST: "+newQ);
+		} catch (Exception e) {
+			log.severe(e.toString());
+			newQ = this.event("exception");
+		}
+		return newQ;
+	}
+	
+	public Question event(String eventType) {
+		log.info("Received: "+eventType);
+		Client client = ParallelInit.getClient();
+		ArrayList<EventCallback> events = this.getEvent_callbacks();
+		EventCallback event=null;
+		if(events!=null) {
+			for(EventCallback e : events) {
+				if(e.getEvent().toLowerCase().equals(eventType)){
+					event = e;
+					break;
+				}
+			}
+		}
+		
+		if(event==null) {
+			// Oeps, couldn't find/handle event, just repeat last question:
+			// TODO: somewhat smarter behavior? Should dialog standard provide
+			// error handling?
+			if(eventType.equals("hangup")) {
+				return null;
+			}
+			
+			return this;
+		}
+		Question newQ = null;
+		WebResource webResource = client.resource(event.getCallback());
+		try {
+			String s = webResource.type("application/json").get(
+					String.class);
+			
+			log.info("Received new question (event): "+s);
+
+			newQ = om.readValue(s, Question.class);
+			newQ.setPreferred_language(preferred_language);
 		} catch (Exception e) {
 			log.severe(e.toString());
 		}

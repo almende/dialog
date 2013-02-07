@@ -26,6 +26,10 @@ import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.taskqueue.TaskOptions;
 import com.google.appengine.api.taskqueue.TaskOptions.Method;
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
+import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
@@ -87,6 +91,8 @@ abstract public class TextServlet extends HttpServlet {
 	}
 	
 	public String startDialog(String address, String url, AdapterConfig config) {
+		if(config.getAdapterType().equals("CM") || config.getAdapterType().equals("SMS"))
+			address = formatNumber(address).replaceFirst("\\+31", "0");
 		String localaddress = config.getMyAddress();
 		String sessionKey =getAdapterType()+"|"+localaddress+"|"+address;
 		Session session = Session.getSession(sessionKey);
@@ -285,5 +291,16 @@ abstract public class TextServlet extends HttpServlet {
 			e.printStackTrace();
 		}
 		return url;
+	}
+	
+	protected String formatNumber(String phone) {
+		PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+		try {
+			PhoneNumber numberProto = phoneUtil.parse(phone,"NL");
+			return phoneUtil.format(numberProto,PhoneNumberFormat.E164);
+		} catch (NumberParseException e) {
+		  log.severe("NumberParseException was thrown: " + e.toString());
+		}
+		return null;	
 	}
 }

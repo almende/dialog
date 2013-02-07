@@ -1,17 +1,24 @@
 package com.almende.dialog.adapter;
 
+import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
 
 import com.almende.dialog.DDRWrapper;
@@ -35,12 +42,10 @@ public class VoiceXMLRESTProxy {
 	
 	public static void killSession(Session session){
 		
-		if(session.getDirection().equals("outbound")) {
-			AdapterConfig config = session.getAdapterConfig();
-			if(config!=null) {
-				Broadsoft bs = new Broadsoft(config.getXsiUser(), config.getXsiPasswd());
-				bs.endCall(session.getExternalSession());
-			}
+		AdapterConfig config = session.getAdapterConfig();
+		if(config!=null) {
+			Broadsoft bs = new Broadsoft(config);
+			bs.endCall(session.getExternalSession());
 		}
 	}
 	
@@ -62,7 +67,9 @@ public class VoiceXMLRESTProxy {
 		
 		DDRWrapper.log(url,"",session,"Dial",config);
 		
-		Broadsoft bs = new Broadsoft(config.getXsiUser(), config.getXsiPasswd());
+		Broadsoft bs = new Broadsoft(config);
+		bs.startSubscription();
+		
 		String extSession = bs.startCall(address);
 		
 		session.setExternalSession(extSession);
@@ -70,9 +77,19 @@ public class VoiceXMLRESTProxy {
 		
 		return sessionKey;
 	}
-	public static String getActiveCalls(AdapterConfig config) {
-		Broadsoft bs = new Broadsoft(config.getXsiUser(), config.getXsiPasswd());
+	public static ArrayList<String> getActiveCalls(AdapterConfig config) {
+		Broadsoft bs = new Broadsoft(config);
 		return bs.getActiveCalls();
+	}
+	
+	public static ArrayList<String> getActiveCallsInfo(AdapterConfig config) {
+		Broadsoft bs = new Broadsoft(config);
+		return bs.getActiveCallsInfo();
+	}
+	
+	public static boolean killActiveCalls(AdapterConfig config) {
+		Broadsoft bs = new Broadsoft(config);
+		return bs.killActiveCalls();
 	}
 	
 	private static String formatNumber(String phone) {
@@ -145,6 +162,8 @@ public class VoiceXMLRESTProxy {
 			List<Answer> answers = question.getAnswers();
 			if(answers!=null && answers.size()>0)
 				question = question.answer(remoteID, answers.get(0).getAnswer_id(), null);
+			else
+				question=null;
 			
 			
 			DDRWrapper.log(question,session,"Continue",config);
@@ -178,6 +197,184 @@ public class VoiceXMLRESTProxy {
 			
 			return handleQuestion(question,responder,sessionKey);
 		}
+		return Response.ok(reply).build();
+	}
+	
+	@Path("timeout")
+	@GET
+	@Produces("application/voicexml+xml")
+	public Response timeout(@QueryParam("question_id") String question_id, @QueryParam("sessionKey") String sessionKey){
+		String reply="<vxml><exit/></vxml>";
+		String json = StringStore.getString(question_id);
+		if (json != null){
+			Question question = Question.fromJSON(json);
+			String responder = StringStore.getString(question_id+"-remoteID");
+			Session session = Session.getSession(sessionKey);
+			if (session.killed){
+				return Response.status(Response.Status.BAD_REQUEST).build();
+			}
+			DDRWrapper.log(question,session,"Timeout");
+			
+			StringStore.dropString(question_id);
+			StringStore.dropString(question_id+"-remoteID");
+			StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
+
+			question = question.event("timeout");
+			
+			return handleQuestion(question,responder,sessionKey);
+		}
+		return Response.ok(reply).build();
+	}
+	
+	@Path("hangup")
+	@GET
+	@Produces("application/voicexml+xml")
+	public Response hangup(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID){
+		log.info("call hangup with:"+direction+":"+remoteID+":"+localID);
+		
+		String adapterType="broadsoft";
+		
+		String sessionKey = adapterType+"|"+localID+"|"+remoteID;
+		Session session = Session.getSession(sessionKey);
+		
+		Question question = null;
+		String json = StringStore.getString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
+		if(json!=null) {
+			question = Question.fromJSON(json);
+			String question_id = question.getQuestion_id();
+			
+			StringStore.dropString(question_id);
+			StringStore.dropString(question_id+"-remoteID");
+			StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
+		} else {
+			question = Question.fromURL(session.getStartUrl(),remoteID,localID);
+		}
+
+		question.event("hangup");
+		DDRWrapper.log(question,session,"Hangup");
+		
+		handleQuestion(null,remoteID,sessionKey);
+		
+		return Response.ok("").build();
+	}
+	
+	@Path("cc")
+	@POST
+	public Response receiveCCMessage(String xml) {
+		
+		log.info("Received cc: "+xml);
+		
+		String reply="";
+		
+		try {
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+			DocumentBuilder db = dbf.newDocumentBuilder();
+			
+			Document dom = db.parse(new ByteArrayInputStream(xml.getBytes("UTF-8")));
+			Node subscriberId = dom.getElementsByTagName("subscriberId").item(0);
+			
+			AdapterConfig config = AdapterConfig.findAdapterConfigByUsername(subscriberId.getTextContent());
+			
+			Node eventData = dom.getElementsByTagName("eventData").item(0);
+			// check if incall event
+			if(eventData.getChildNodes().getLength()>1) {
+				
+				
+				Node call = eventData.getChildNodes().item(1);
+				
+				Node personality = null;
+				Node callState = null;
+				Node remoteParty = null;
+				@SuppressWarnings("unused")
+				Node extTrackingId = null;
+				
+				for(int i=0;i<call.getChildNodes().getLength();i++) {
+					Node node = call.getChildNodes().item(i);
+					if(node.getNodeName().equals("personality")) {
+						personality=node;
+					} else if(node.getNodeName().equals("callState")) {
+						callState=node;
+					} else if(node.getNodeName().equals("remoteParty")) {
+						remoteParty=node;
+					} else if(node.getNodeName().equals("extTrackingId")) {
+						extTrackingId=node;
+					}
+				}				
+				
+				if(callState!=null && callState.getNodeName().equals("callState")) {
+
+					// Check if call
+					if(callState.getTextContent().equals("Released")) {
+						
+						// Check if a sip or network call
+						String type="";
+						String address="";
+						String user="";
+						for(int i=0; i<remoteParty.getChildNodes().getLength();i++) {
+							Node rpChild = remoteParty.getChildNodes().item(i);
+							if(rpChild.getNodeName().equals("address")) {
+								address=rpChild.getTextContent();
+							} else if(rpChild.getNodeName().equals("callType")) {
+								type=rpChild.getTextContent();
+							} else if(rpChild.getNodeName().equals("userId")) {
+								user=rpChild.getTextContent();
+							}
+						}
+						
+						// Check if session can be matched to call
+						if(type.equals("Network") || type.equals("Group")) {
+							
+							if(type.equals("Group")) {
+								address = user.substring(0,user.indexOf("@"));
+							} else if(type.equals("Network")) {
+								address = address.replace("tel:", "");
+							}
+							String direction="inbound";
+							if(personality.getTextContent().equals("Originator")) {
+								address += "@outbound";
+								direction="outbound";
+							}
+							String adapterType="broadsoft";
+							String sessionKey = adapterType+"|"+config.getMyAddress()+"|"+address;
+							String ses = StringStore.getString(sessionKey);
+							
+							if(ses!=null) {
+								log.info("SESSSION FOUND!! SEND HANGUP!!!");
+								this.hangup(direction, address, config.getMyAddress());
+							} else {
+								
+								if(personality.getTextContent().equals("Originator")) {
+									log.info("Probably a disconnect of a redirect");
+								} else if(personality.getTextContent().equals("Terminator")) {
+									log.info("No session for this inbound?????");
+								} else {
+									log.info("What the hell was this?????");
+									log.info("Session already ended?");
+								}
+							}
+							
+						} else {
+							log.warning("Can't handle hangup of type: "+type+" (yet)");
+						}						
+					}
+				}
+			} else {
+				Node eventName = dom.getElementsByTagName("eventName").item(0);
+				if(eventName!=null && eventName.getTextContent().equals("SubscriptionTerminatedEvent")) {
+					
+					Broadsoft bs = new Broadsoft(config);
+					bs.startSubscription();
+					log.info("Start a new dialog");
+				}
+				
+				log.info("Received a subscription update!");
+			}
+			
+		} catch (Exception e) {
+			log.severe("Something failed: "+e.getMessage());
+		}
+		
+		
 		return Response.ok(reply).build();
 	}
 	
@@ -253,6 +450,10 @@ public class VoiceXMLRESTProxy {
 										outputter.endTag();
 									outputter.endTag();
 								}
+								outputter.startTag("filled");
+									outputter.startTag("exit");
+									outputter.endTag();
+								outputter.endTag();
 							outputter.endTag();
 						} else {
 							outputter.startTag("block");
@@ -281,6 +482,7 @@ public class VoiceXMLRESTProxy {
 		ArrayList<Answer> answers=question.getAnswers();
 		
 		String handleAnswerURL = "/vxml/answer";
+		String handleTimeoutURL = "/vxml/timeout";
 
 		StringWriter sw = new StringWriter();
 		try {
@@ -304,7 +506,8 @@ public class VoiceXMLRESTProxy {
 						outputter.endTag();
 					}
 					outputter.startTag("noinput");
-						outputter.startTag("reprompt");
+						outputter.startTag("goto");
+							outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
 						outputter.endTag();
 					outputter.endTag();
 				outputter.endTag();
@@ -406,6 +609,8 @@ public class VoiceXMLRESTProxy {
 			}
 		} else if (res.prompts.size() > 0){
 			result = renderComment(null,res.prompts, sessionKey);
+		} else {
+			log.info("Going to hangup? So clear Session?");
 		}
 		log.info("Sending xml: "+result);
 		return Response.ok(result).build();

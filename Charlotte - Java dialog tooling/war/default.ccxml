@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ccxml version="1.0" xmlns="http://www.w3.org/2002/09/ccxml">
-  <var name="confID" expr="''"/>
   <var name="remoteID" expr="''"/>
   <var name="localID" expr="''"/>
   <var name="direction" expr="'inbound'"/>
   <var name="timeout" expr="'10s'" />
   <var name="incomingCallConnId" expr="''" />
   <var name="outgoingCallConnId" expr="''" />
+  <var name="outerConn" expr="''" />
   <var name="dialogID" expr="''"/>
   <var name="dialURL" expr="''" />
   <var name="results" expr="''" />
@@ -16,6 +16,7 @@
   <eventprocessor statevariable="currentState" >
     <transition state="initial" event="connection.alerting">
       <assign name="incomingCallConnId" expr="event$.connectionid"/>
+      <assign name="outerConn" expr="event$.connectionid"/>
       <script>
           var remote = event$.connection.remote;
           var strings = remote.split('@');
@@ -36,17 +37,7 @@
     </transition>
 
     <transition state="initial" event="connection.connected">
-      <createconference conferenceid="confID" confname="'MyConference'" reservedlisteners="3" />
-      <assign name="currentState" expr="'creatingconference'" />
-    </transition>
-
-    <transition state="creatingconference" event="conference.created" >
-
-      <join id1="incomingCallConnId" id2="confID"/>
-    </transition>
-
-    <transition state="creatingconference" event="conference.joined">
-      <dialogstart src="vxmlScript" conferenceid="confID" dialogid="dialogID" namelist="direction localID remoteID"/>
+      <dialogstart src="vxmlScript" connectionid="incomingCallConnId" dialogid="dialogID" namelist="direction localID remoteID"/>
       <assign name="currentState" expr="'connestablished'" />
     </transition>
 
@@ -68,18 +59,17 @@
     </transition>
 
     <transition state="originatingcall" event="connection.connected">
-      <join id1="outgoingCallConnId" id2="confID" duplex="'full'" />
+      <unjoin id1="incomingCallConnId" id2="dialogID" />
+      <join id1="incomingCallConnId" id2="outgoingCallConnId" duplex="'full'"/>
       <assign name="currentState" expr="'conferenceestablished'" />
-      <send name="'dialog.transfer.connected'"
-            target="dialogID"
-            targettype="'dialog'"/>
     </transition>
 
     <transition state="conferenceestablished" event="connection.disconnected">
       <if cond="event$.connectionid == outgoingCallConnId" >
-        <dialogstart src="vxmlContinue" conferenceid="confID" dialogid="dialogID" namelist="direction localID remoteID"/>
+        <dialogstart src="vxmlContinue" connectionid="incomingCallConnId" dialogid="dialogID" namelist="direction localID remoteID"/>
         <assign name="currentState" expr="'connestablished'" />
       <else />
+        <accept connectionid="outerConn"/>
         <exit/>
       </if>
     </transition>
@@ -91,10 +81,12 @@
 	</transition>
 	 
     <transition event="connection.disconnected">
+      <accept connectionid="outerConn"/>
       <exit/>
     </transition>
 
     <transition state="connestablished" event="dialog.exit">
+      <accept connectionid="outerConn"/>
       <exit/>
     </transition>
 

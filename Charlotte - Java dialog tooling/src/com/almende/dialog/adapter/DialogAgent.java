@@ -1,5 +1,6 @@
 package com.almende.dialog.adapter;
 
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -35,7 +36,7 @@ public class DialogAgent extends Agent {
 		return question;
 	}
 	
-	public String getActiveCalls(@Name("adapterID") String adapterID) {
+	public ArrayList<String> getActiveCalls(@Name("adapterID") String adapterID) {
 		
 		try {
 			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, null, null);
@@ -45,7 +46,35 @@ public class DialogAgent extends Agent {
 		} catch(Exception ex) {
 		}
 		
-		return "";
+		return null;
+	}
+	
+	public ArrayList<String> getActiveCallsInfo(@Name("adapterID") String adapterID) {
+		
+		try {
+			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, null, null);
+			if(config.getAdapterType().toLowerCase().equals("broadsoft")) {
+				return VoiceXMLRESTProxy.getActiveCallsInfo(config);
+			}
+		} catch(Exception ex) {
+		}
+		
+		return null;
+	}
+	
+	public boolean killActiveCalls(@Name("adapterID") String adapterID) {
+		
+		try {
+			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, null, null);
+			if(config.getAdapterType().toLowerCase().equals("broadsoft")) {
+				
+				return VoiceXMLRESTProxy.killActiveCalls(config);
+			}
+		} catch(Exception ex) {
+			ex.printStackTrace();
+		}
+		
+		return false;
 	}
 	
 	public String killCall(@Name("session") String sessionKey){
@@ -59,42 +88,47 @@ public class DialogAgent extends Agent {
 							   @Name("adapterType") @Required(false) String adapterType, 
 							   @Name("adapterID") @Required(false) String adapterID, 
 							   @Name("publicKey") String pubKey,
-							   @Name("privateKey") String privKey){
+							   @Name("privateKey") String privKey) throws Exception{
+		
+		if(adapterType!=null && !adapterType.equals("") &&
+				adapterID!=null && !adapterID.equals("")) {
+			throw new Exception("Choose adapterType or adapterID not both");
+		}
 		log.setLevel(Level.INFO);
 		ArrayNode adapterList = null;
 		adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
 		
 		if(adapterList==null)
-			return "Invalid key provided";
-		try {
-			log.info("Trying to find config");
-			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, adapterType,adapterList);
-			if(config!=null) {
-				log.info("Config found: "+config.getConfigId());
-				adapterType = config.getAdapterType();
-				if (adapterType.toUpperCase().equals("XMPP")){
-					return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,config)+"'}";
-				} else if (adapterType.toUpperCase().equals("BROADSOFT")){
-					return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,config)+"'}";
-				} else if (adapterType.toUpperCase().equals("MAIL")){
-					return "{'sessionKey':'"+new MailServlet().startDialog(address,url,config)+"'}";
-				} else if (adapterType.toUpperCase().equals("SMS")){
-					return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,config)+"'}";
-				} else if (adapterType.toUpperCase().equals("CM")){
-					return "{'sessionKey':'"+new CMSmsServlet().startDialog(address,url,config)+"'}";
-				} else if (adapterType.toUpperCase().equals("TWITTER")){
-					return "{'sessionKey':'"+new TwitterServlet().startDialog(address,url,config)+"'}";
-				} else {
-					return "Unknown type given: either broadsoft or xmpp or phone or mail";
-				}
+			throw new Exception("Invalid key provided");
+		//try {
+		log.info("Trying to find config");
+		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, adapterType,adapterList);
+		if(config!=null) {
+			log.info("Config found: "+config.getConfigId());
+			adapterType = config.getAdapterType();
+			if (adapterType.toUpperCase().equals("XMPP")){
+				return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,config)+"'}";
+			} else if (adapterType.toUpperCase().equals("BROADSOFT")){
+				return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,config)+"'}";
+			} else if (adapterType.toUpperCase().equals("MAIL")){
+				return "{'sessionKey':'"+new MailServlet().startDialog(address,url,config)+"'}";
+			} else if (adapterType.toUpperCase().equals("SMS")){
+				return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,config)+"'}";
+			} else if (adapterType.toUpperCase().equals("CM")){
+				return "{'sessionKey':'"+new CMSmsServlet().startDialog(address,url,config)+"'}";
+			} else if (adapterType.toUpperCase().equals("TWITTER")){
+				return "{'sessionKey':'"+new TwitterServlet().startDialog(address,url,config)+"'}";
 			} else {
-				return "Invalid adapter found";
+				throw new Exception("Unknown type given: either broadsoft or xmpp or phone or mail");
 			}
-		} catch(Exception ex) {
+		} else {
+			throw new Exception("Invalid adapter found");
+		}
+		/*} catch(Exception ex) {
 			ex.printStackTrace();
 			log.warning(ex.getLocalizedMessage());
 			return "Error in finding adapter: "+ex.getMessage();
-		}
+		}*/
 	}
 	
 	public String startDialog(@Name("question_url") @Required(false) String url,

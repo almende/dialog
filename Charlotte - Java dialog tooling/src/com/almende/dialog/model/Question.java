@@ -49,7 +49,11 @@ public class Question implements QuestionIntf {
 		
 		String json = "";
 		try {
-			json = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).queryParam("requester", URLEncoder.encode(fromID, "UTF-8")).type("text/plain").get(String.class);
+			webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
+			log.info("Getting question url: "+webResource.toString());
+			json = webResource.type("text/plain").get(String.class);
+			
+			log.info("Received new question (fromURL): "+json);
 		} catch (ClientHandlerException e) {
 			log.severe(e.toString());
 		} catch (UniformInterfaceException e) {
@@ -63,12 +67,14 @@ public class Question implements QuestionIntf {
 	@JSON(include = false)
 	public static Question fromJSON(String json) {
 		Question question = null;
-		try {
-			question = om.readValue(json, Question.class);
-			//question = new JSONDeserializer<Question>().use(null,
-			//		Question.class).deserialize(json);
-		} catch (Exception e) {
-			log.severe(e.toString());
+		if(json!=null) {
+			try {
+				question = om.readValue(json, Question.class);
+				//question = new JSONDeserializer<Question>().use(null,
+				//		Question.class).deserialize(json);
+			} catch (Exception e) {
+				log.severe(e.toString());
+			}
 		}
 		return question;
 	}
@@ -159,7 +165,7 @@ public class Question implements QuestionIntf {
 		Question newQ = null;
 		// Send answer to answer.callback.
 		WebResource webResource = client.resource(answer.getCallback());
-		AnswerPost ans = new AnswerPost(null, this.getQuestion_id(),
+		AnswerPost ans = new AnswerPost(this.getQuestion_id(),
 				answer.getAnswer_id(), answer_input, responder);
 		// Check if answer.callback gives new question for this dialog
 		try {
@@ -173,45 +179,50 @@ public class Question implements QuestionIntf {
 			newQ.setPreferred_language(preferred_language);
 		} catch (Exception e) {
 			log.severe(e.toString());
-			newQ = this.event("exception");
+			newQ = this.event("exception", "Unable to parse question json", responder);
 		}
 		return newQ;
 	}
 	
-	public Question event(String eventType) {
+	public Question event(String eventType, String message, String responder) {
 		log.info("Received: "+eventType);
 		Client client = ParallelInit.getClient();
 		ArrayList<EventCallback> events = this.getEvent_callbacks();
-		EventCallback event=null;
+		EventCallback eventCallback=null;
 		if(events!=null) {
 			for(EventCallback e : events) {
 				if(e.getEvent().toLowerCase().equals(eventType)){
-					event = e;
+					eventCallback = e;
 					break;
 				}
 			}
 		}
 		
-		if(event==null) {
+		if(eventCallback==null) {
 			// Oeps, couldn't find/handle event, just repeat last question:
 			// TODO: somewhat smarter behavior? Should dialog standard provide
 			// error handling?
-			if(eventType.equals("hangup")) {
+			if(eventType.equals("hangup") || eventType.equals("exception")) {
 				return null;
 			}
 			
 			return this;
 		}
 		Question newQ = null;
-		WebResource webResource = client.resource(event.getCallback());
+		WebResource webResource = client.resource(eventCallback.getCallback());
+		EventPost event = new EventPost(responder, this.getQuestion_id(),
+				eventType, message);
 		try {
-			String s = webResource.type("application/json").get(
-					String.class);
+			String post = om.writeValueAsString(event);
+			String s = webResource.type("application/json").post(
+					String.class, post);
 			
 			log.info("Received new question (event): "+s);
 
-			newQ = om.readValue(s, Question.class);
-			newQ.setPreferred_language(preferred_language);
+			if(s!=null && !s.equals("")) { 
+				newQ = om.readValue(s, Question.class);
+				newQ.setPreferred_language(preferred_language);
+			}
 		} catch (Exception e) {
 			log.severe(e.toString());
 		}

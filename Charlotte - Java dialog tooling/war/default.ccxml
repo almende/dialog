@@ -57,6 +57,14 @@
         <createcall dest="dialURL" connectionid="outgoingCallConnId" />
       </if>
     </transition>
+    
+    <transition state="originatingcall" event="connection.failed">
+	  <assign name="results" expr="event$.reason"/>
+	  <send name="'dialog.transfer.complete'"
+			target="dialogID"
+			targettype="'dialog'"
+			namelist="results" />
+	</transition>
 
     <transition state="originatingcall" event="connection.connected">
       <unjoin id1="incomingCallConnId" id2="dialogID" />

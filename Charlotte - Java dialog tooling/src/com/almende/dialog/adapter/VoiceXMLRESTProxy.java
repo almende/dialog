@@ -17,7 +17,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
 
@@ -111,11 +110,11 @@ public class VoiceXMLRESTProxy {
 		
 		String adapterType="broadsoft";
 		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterType, localID);
+		String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
+		Session session = Session.getSession(sessionKey);
 		
 		if(KeyServerLib.checkCredits(config.getPublicKey())) {
 			log.info("Call is authorized");
-			String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
-			Session session = Session.getSession(sessionKey);
 			String url="";
 			if (direction.equals("inbound")){
 				url = config.getInitialAgentURL();
@@ -146,11 +145,11 @@ public class VoiceXMLRESTProxy {
 		
 		String adapterType="broadsoft";
 		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterType, localID);
+		String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
+		Session session = Session.getSession(sessionKey);		
 		
 		if(KeyServerLib.checkCredits(config.getPublicKey())) {
-			log.info("Call is authorized");
-			String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
-			Session session = Session.getSession(sessionKey);
+			log.info("Call continue is authorized");
 			if (session.killed){
 				return Response.status(Response.Status.BAD_REQUEST).build();
 			}
@@ -219,7 +218,33 @@ public class VoiceXMLRESTProxy {
 			StringStore.dropString(question_id+"-remoteID");
 			StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
 
-			question = question.event("timeout");
+			question = question.event("timeout", "No answer received", responder);
+			
+			return handleQuestion(question,responder,sessionKey);
+		}
+		return Response.ok(reply).build();
+	}
+	
+	@Path("exception")
+	@GET
+	@Produces("application/voicexml+xml")
+	public Response exception(@QueryParam("question_id") String question_id, @QueryParam("sessionKey") String sessionKey){
+		String reply="<vxml><exit/></vxml>";
+		String json = StringStore.getString(question_id);
+		if (json != null){
+			Question question = Question.fromJSON(json);
+			String responder = StringStore.getString(question_id+"-remoteID");
+			Session session = Session.getSession(sessionKey);
+			if (session.killed){
+				return Response.status(Response.Status.BAD_REQUEST).build();
+			}
+			DDRWrapper.log(question,session,"Timeout");
+			
+			StringStore.dropString(question_id);
+			StringStore.dropString(question_id+"-remoteID");
+			StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
+
+			question = question.event("exception", "Wrong answer received", responder);
 			
 			return handleQuestion(question,responder,sessionKey);
 		}
@@ -250,7 +275,7 @@ public class VoiceXMLRESTProxy {
 			question = Question.fromURL(session.getStartUrl(),remoteID,localID);
 		}
 
-		question.event("hangup");
+		question.event("hangup", "Hangup", remoteID);
 		DDRWrapper.log(question,session,"Hangup");
 		
 		handleQuestion(null,remoteID,sessionKey);
@@ -309,7 +334,7 @@ public class VoiceXMLRESTProxy {
 						// Check if a sip or network call
 						String type="";
 						String address="";
-						String user="";
+						String user=null;
 						for(int i=0; i<remoteParty.getChildNodes().getLength();i++) {
 							Node rpChild = remoteParty.getChildNodes().item(i);
 							if(rpChild.getNodeName().equals("address")) {
@@ -325,10 +350,20 @@ public class VoiceXMLRESTProxy {
 						if(type.equals("Network") || type.equals("Group")) {
 							
 							if(type.equals("Group")) {
-								address = user.substring(0,user.indexOf("@"));
+								if(user!=null)
+									address = user.substring(0,user.indexOf("@"));
+								else if(address.contains("tel:"))
+									address = address.replace("tel:", "");
 							} else if(type.equals("Network")) {
 								address = address.replace("tel:", "");
 							}
+							
+							log.info("Going to format phone number: "+address);
+							
+							if(address.startsWith("+")) {
+								address = formatNumber(address).replaceFirst("\\+31", "0");
+							}
+							
 							String direction="inbound";
 							if(personality.getTextContent().equals("Originator")) {
 								address += "@outbound";
@@ -341,6 +376,10 @@ public class VoiceXMLRESTProxy {
 							if(ses!=null) {
 								log.info("SESSSION FOUND!! SEND HANGUP!!!");
 								this.hangup(direction, address, config.getMyAddress());
+								
+								// Extra check if the Click-To-Dial has ended
+								// TODO: fix in the CCXML
+								this.checkCTDLine(config, Session.fromJSON(ses));
 							} else {
 								
 								if(personality.getTextContent().equals("Originator")) {
@@ -389,7 +428,17 @@ public class VoiceXMLRESTProxy {
 		}
 	}
 	
-
+	private void checkCTDLine(AdapterConfig config, Session session) {
+		
+		Broadsoft bs = new Broadsoft(config);
+		ArrayList<String> callIds = bs.getActiveCalls();
+		for(String callId : callIds) {
+			if(callId.equalsIgnoreCase(session.getExternalSession())) {
+				log.severe("INVALID SESSION FOUND!!!!");
+				bs.endCall(callId);
+			}
+		}
+	}
 	
 	@SuppressWarnings("unused")
 	public Return formQuestion(Question question,String address) {
@@ -428,6 +477,8 @@ public class VoiceXMLRESTProxy {
 	private String renderComment(Question question,ArrayList<String> prompts, String sessionKey){
 		
 		String handleAnswerURL = "/vxml/answer";
+		/*String handleTimeoutURL = "/vxml/timeout";
+		String handleExceptionURL = "/vxml/exception";*/
 		
 		StringWriter sw = new StringWriter();
 		try {
@@ -451,6 +502,18 @@ public class VoiceXMLRESTProxy {
 									outputter.endTag();
 								}
 								outputter.startTag("filled");
+									/*outputter.startTag("if");
+										outputter.attribute("cond", "thisCall=='noanswer'");
+										outputter.startTag("goto");
+											outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+										outputter.endTag();
+									outputter.startTag("elseif");
+										outputter.attribute("cond", "thisCall=='busy' || thisCall=='network_busy'");
+									outputter.endTag();
+										outputter.startTag("goto");
+											outputter.attribute("next", handleExceptionURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+										outputter.endTag();										
+									outputter.endTag();*/
 									outputter.startTag("exit");
 									outputter.endTag();
 								outputter.endTag();
@@ -483,6 +546,7 @@ public class VoiceXMLRESTProxy {
 		
 		String handleAnswerURL = "/vxml/answer";
 		String handleTimeoutURL = "/vxml/timeout";
+		String handleExceptionURL = "/vxml/exception";
 
 		StringWriter sw = new StringWriter();
 		try {
@@ -508,6 +572,11 @@ public class VoiceXMLRESTProxy {
 					outputter.startTag("noinput");
 						outputter.startTag("goto");
 							outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+						outputter.endTag();
+					outputter.endTag();
+					outputter.startTag("nomatch");
+						outputter.startTag("goto");
+							outputter.attribute("next", handleExceptionURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
 						outputter.endTag();
 					outputter.endTag();
 				outputter.endTag();

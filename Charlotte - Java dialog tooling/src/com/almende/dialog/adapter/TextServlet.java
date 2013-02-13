@@ -38,8 +38,8 @@ abstract public class TextServlet extends HttpServlet {
 	protected static final int LOOP_DETECTION=10;
 	protected static final String DEMODIALOG = "http://"+Settings.HOST+"/charlotte/";
 	
-	protected abstract void sendMessage(String message, String subject, String from, String fromName, 
-										String to, String toName, AdapterConfig config);
+	protected abstract int sendMessage(String message, String subject, String from, String fromName, 
+										String to, String toName, AdapterConfig config) throws Exception;
 	protected abstract TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception; 
 	protected abstract String getServletPath();
 	protected abstract String getAdapterType();
@@ -90,7 +90,7 @@ abstract public class TextServlet extends HttpServlet {
 		return new Return(reply, question);
 	}
 	
-	public String startDialog(String address, String url, AdapterConfig config) {
+	public String startDialog(String address, String url, AdapterConfig config) throws Exception {
 		if(config.getAdapterType().equals("CM") || config.getAdapterType().equals("SMS"))
 			address = formatNumber(address).replaceFirst("\\+31", "0");
 		String localaddress = config.getMyAddress();
@@ -118,7 +118,10 @@ abstract public class TextServlet extends HttpServlet {
 			StringStore.storeString("question_"+address+"_"+localaddress, res.question.toJSON());
 		
 		DDRWrapper.log(question,session,"Start",config);
-		sendMessage(res.reply, "Message from DH", localaddress, fromName, address, "", config);
+		int count = sendMessage(res.reply, "Message from DH", localaddress, fromName, address, "", config);
+		for(int i=0;i<count;i++) { 
+			DDRWrapper.log(question, session, "Send", config);
+		}
 		return sessionKey;
 	}
 	
@@ -171,12 +174,19 @@ abstract public class TextServlet extends HttpServlet {
 		String body = msg.getBody();
 		String toName = msg.getRecipientName();
 		String fromName="DH";
+		int count=0;
 		
 		AdapterConfig config= AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
 		
 		Session session = Session.getSession(getAdapterType()+"|"+localaddress+"|"+address);
 		if (session == null){
-			sendMessage("Sorry, I can't find the account associated with this chat address...", subject, localaddress, fromName, address, toName, config);
+			try {
+				count = sendMessage("Sorry, I can't find the account associated with this chat address...", subject, localaddress, fromName, address, toName, config);
+			} catch(Exception ex) {
+			}
+			for(int i=0;i<count;i++) { 
+				DDRWrapper.log(null,  null, session, "Send", config);
+			}
 			return;
 		}
 		
@@ -199,7 +209,10 @@ abstract public class TextServlet extends HttpServlet {
 					reply = "Ok, switched preferred language to:"
 							+ preferred_language;
 					body="";
-					sendMessage(reply, subject, localaddress, fromName, address, toName, config);
+					try{
+					 count=sendMessage(reply, subject, localaddress, fromName, address, toName, config);
+					} catch(Exception ex) {
+					}
 				}
 				if (cmd.startsWith("reset")) {
 					StringStore.dropString("question_"+address+"_"+localaddress);
@@ -238,6 +251,7 @@ abstract public class TextServlet extends HttpServlet {
 			Question question = null;
 			json = StringStore.getString("question_"+address+"_"+localaddress);
 			if (json == null || json.equals("")) {
+				body=null; // Remove the body, because it is to start the question
 				if (config.getInitialAgentURL().equals("")){
 					question = Question.fromURL(DEMODIALOG,address,localaddress);
 				} else {
@@ -268,7 +282,14 @@ abstract public class TextServlet extends HttpServlet {
 			}
 		}
 
-		sendMessage(reply, subject, localaddress, fromName, address, toName, config);
+		try{
+			count=sendMessage(reply, subject, localaddress, fromName, address, toName, config);
+		} catch(Exception ex) {
+		}
+		
+		for(int i=0;i<count;i++) { 
+			DDRWrapper.log(null,  null, session, "Send", config);
+		}
 	}
 	
 	private String getNickname(Question question) {

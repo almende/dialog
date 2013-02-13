@@ -107,6 +107,7 @@ public class Question implements QuestionIntf {
 	@JSON(include = false)
 	public Question answer(String responder, String answer_id, String answer_input) {
 		Client client = ParallelInit.getClient();
+		boolean answered=false;
 		Answer answer = null;
 		if (this.getType().equals("open")) {
 			answer = this.getAnswers().get(0); // TODO: error handling, what if
@@ -119,6 +120,7 @@ public class Question implements QuestionIntf {
 			answer = this.getAnswers().get(0);
 			
 		} else if (answer_id != null) {
+			answered=true;
 			ArrayList<Answer> answers = question.getAnswers();
 			for (Answer ans : answers) {
 				if (ans.getAnswer_id().equals(answer_id)) {
@@ -127,6 +129,7 @@ public class Question implements QuestionIntf {
 				}
 			}
 		} else if (answer_input != null) {
+			answered=true;
 			// check all answers of question to see if they match, possibly
 			// retrieving the answer_text for each
 			answer_input = answer_input.trim();
@@ -156,13 +159,18 @@ public class Question implements QuestionIntf {
 				}
 			}
 		}
+		Question newQ = null;
 		if (!this.getType().equals("comment") && answer == null) {
 			// Oeps, couldn't find/handle answer, just repeat last question:
 			// TODO: somewhat smarter behavior? Should dialog standard provide
 			// error handling?
+			if(answered)
+				newQ = this.event("exception","Wrong answer received", responder);
+			if(newQ!=null)
+				return newQ;
+			
 			return this;
 		}
-		Question newQ = null;
 		// Send answer to answer.callback.
 		WebResource webResource = client.resource(answer.getCallback());
 		AnswerPost ans = new AnswerPost(this.getQuestion_id(),

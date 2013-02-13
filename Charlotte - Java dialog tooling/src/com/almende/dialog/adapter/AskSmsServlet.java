@@ -32,7 +32,7 @@ public class AskSmsServlet extends TextServlet {
 	private static final String adapterType = "SMS";
 	
 	@Override
-	protected void sendMessage(String message, String subject, String from,
+	protected int sendMessage(String message, String subject, String from,
 			String fromName, String to, String toName, AdapterConfig config) {
 		
 		try {
@@ -44,7 +44,9 @@ public class AskSmsServlet extends TextServlet {
 		SmsMessage msg = new SmsMessage(to, message);
 		datastore.store(msg);
 		
+		// TODO: Build in message counter
 		log.info("Stored message: "+msg.getMessage()+ " for: "+msg.getTo());
+		return 1;
 	}
 
 	@Override

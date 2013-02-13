@@ -546,7 +546,6 @@ public class VoiceXMLRESTProxy {
 		
 		String handleAnswerURL = "/vxml/answer";
 		String handleTimeoutURL = "/vxml/timeout";
-		String handleExceptionURL = "/vxml/exception";
 
 		StringWriter sw = new StringWriter();
 		try {
@@ -576,7 +575,7 @@ public class VoiceXMLRESTProxy {
 					outputter.endTag();
 					outputter.startTag("nomatch");
 						outputter.startTag("goto");
-							outputter.attribute("next", handleExceptionURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+							outputter.attribute("next", handleAnswerURL+"?question_id="+question.getQuestion_id()+"&answer_id=-1&sessionKey="+sessionKey);
 						outputter.endTag();
 					outputter.endTag();
 				outputter.endTag();

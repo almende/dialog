@@ -314,6 +314,7 @@ public class AdapterConfig {
 		return status;
 	}
 	
+	@JsonIgnore
 	public String getXsiURL() {
 		return xsiURL;
 	}
@@ -330,6 +331,7 @@ public class AdapterConfig {
 		this.xsiUser = xsiUser;
 	}
 
+	@JsonIgnore
 	public String getXsiPasswd() {
 		return xsiPasswd;
 	}

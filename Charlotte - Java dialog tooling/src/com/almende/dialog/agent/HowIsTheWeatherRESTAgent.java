@@ -16,6 +16,7 @@ import com.almende.dialog.Settings;
 import com.almende.dialog.model.AnswerPost;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Path("/howIsTheWeather/")
 public class HowIsTheWeatherRESTAgent {
@@ -45,6 +46,7 @@ public class HowIsTheWeatherRESTAgent {
 			result+="{answer_text:\""+url+(audio?"A"+i+".wav":"answers/"+i)+"\",callback:\""+URL+"questions/"+i+"?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"}"+(i<14?",":"");
 		}
 		result+="]}";
+		result=parseQuestion(result);
 		return Response.ok(result).build();
 	}
 	
@@ -74,6 +76,7 @@ public class HowIsTheWeatherRESTAgent {
 				   "{answer_text:\""+url+(audio?"A21.wav":"answers/21")+"\",callback:\""+URL+"questions/21?preferred_medium="+(audio?"audio/wav":"text/plain")+"\"}"+
 				   "]}";
 		}
+		result=parseQuestion(result);
 		return Response.ok(result).build();
 	}
 	
@@ -143,5 +146,14 @@ public class HowIsTheWeatherRESTAgent {
 		}
 	}
 	
+	private String parseQuestion(String json) {
+		ObjectNode resultObj=null;
+		try {
+			resultObj =om.readValue(json, ObjectNode.class);
+			json = resultObj.toString();
+		} catch(Exception e){
+		}
+		return json;
+	}
 }
 

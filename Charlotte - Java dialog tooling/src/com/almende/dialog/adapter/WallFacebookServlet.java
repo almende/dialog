@@ -100,11 +100,13 @@ public class WallFacebookServlet extends TextServlet {
 	}
 
 	@Override
-	protected void sendMessage(String message, String subject, String from,
+	protected int sendMessage(String message, String subject, String from,
 			String fromName, String to, String toName, AdapterConfig config) {
 		
 		Facebook fb = new Facebook(new Token(config.getAccessToken(), config.getAccessTokenSecret()));
 		fb.sendComment(message, to, toName);
+		
+		return 1;
 	}
 
 	@Override

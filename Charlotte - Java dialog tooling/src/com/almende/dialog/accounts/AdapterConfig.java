@@ -46,6 +46,7 @@ public class AdapterConfig {
 	String xsiURL = "";
 	String xsiUser = "";
 	String xsiPasswd = "";
+	String xsiSubscription = "";
 	//OAuth
 	String accessToken="";
 	String accessTokenSecret="";
@@ -73,7 +74,7 @@ public class AdapterConfig {
 			datastore.store(newConfig);
 			
 			if(newConfig.getAdapterType().equals("broadsoft")) {
-				Broadsoft bs = new Broadsoft(newConfig.getXsiUser(), newConfig.getXsiPasswd());
+				Broadsoft bs = new Broadsoft(newConfig);
 				bs.hideCallerId(newConfig.isAnonymous());
 			}
 			
@@ -99,7 +100,7 @@ public class AdapterConfig {
 			datastore.update(oldConfig);
 			
 			if(oldConfig.getAdapterType().equals("broadsoft")) {
-				Broadsoft bs = new Broadsoft(oldConfig.getXsiUser(), oldConfig.getXsiPasswd());
+				Broadsoft bs = new Broadsoft(oldConfig);
 				bs.hideCallerId(oldConfig.isAnonymous());
 			}
 			
@@ -163,12 +164,15 @@ public class AdapterConfig {
 		if(adapterID==null) {
 			
 			for(JsonNode adapter : adapters) {
-				if(adapter.get("adapterType").asText().equals(type) && adapter.get("isDefault").asBoolean()) {
+				if(adapter.get("adapterType").asText().toUpperCase().equals(type.toUpperCase()) && adapter.get("isDefault").asBoolean()) {
 					adapterID = adapter.get("id").asText();
 					break;
 				}
 			}
 		}
+		
+		if(adapterID==null)
+			return null;
 		
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 		AdapterConfig config = datastore.load(AdapterConfig.class, adapterID);
@@ -189,6 +193,19 @@ public class AdapterConfig {
 		}
 		log.severe("AdapterConfig not found:'" + adapterType + "':'"
 				+ lookupKey + "'");
+		return null;
+	}
+	
+	public static AdapterConfig findAdapterConfigByUsername(String username) {
+		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+		Iterator<AdapterConfig> config = datastore.find()
+				.type(AdapterConfig.class)
+				.addFilter("xsiUser", FilterOperator.EQUAL, username)
+				.now();
+		if (config.hasNext()) {
+			return config.next();
+		}
+		log.severe("AdapterConfig not found:'" + username + "'");
 		return null;
 	}
 
@@ -221,6 +238,23 @@ public class AdapterConfig {
 		if (adapters.size() > 0)
 			return true;
 
+		return false;
+	}
+	
+	public static boolean updateSubscription(String configid, String subscriptionId) {
+		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+		try {
+
+			AdapterConfig oldConfig = datastore.load(AdapterConfig.class,
+					configid);
+			oldConfig.setXsiSubscription(subscriptionId);
+			datastore.update(oldConfig);
+			
+			return true;
+		} catch (Exception e) {
+			log.severe("UpdateConfig: Failed to update config:"
+					+ e.getMessage());
+		}
 		return false;
 	}
 
@@ -280,6 +314,7 @@ public class AdapterConfig {
 		return status;
 	}
 	
+	@JsonIgnore
 	public String getXsiURL() {
 		return xsiURL;
 	}
@@ -296,12 +331,21 @@ public class AdapterConfig {
 		this.xsiUser = xsiUser;
 	}
 
+	@JsonIgnore
 	public String getXsiPasswd() {
 		return xsiPasswd;
 	}
 
 	public void setXsiPasswd(String xsiPasswd) {
 		this.xsiPasswd = xsiPasswd;
+	}
+	
+	public String getXsiSubscription() {
+		return xsiSubscription;
+	}
+
+	public void setXsiSubscription(String xsiSubscription) {
+		this.xsiSubscription = xsiSubscription;
 	}
 	
 	public String getAccessToken() {

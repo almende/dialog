@@ -77,7 +77,7 @@ public class MailServlet extends TextServlet {
 	}
 
 	@Override
-	public void sendMessage(String message, String subject, String from, String fromName,
+	public int sendMessage(String message, String subject, String from, String fromName,
 			String to, String toName, AdapterConfig config) {
 		Properties props = new Properties();
         javax.mail.Session session = javax.mail.Session.getDefaultInstance(props, null);
@@ -101,6 +101,7 @@ public class MailServlet extends TextServlet {
         	log.warning("Failed to send message, because encoding: "+e.getLocalizedMessage());
 		}
 		
+		return 1;		
 	}
 
 	@Override

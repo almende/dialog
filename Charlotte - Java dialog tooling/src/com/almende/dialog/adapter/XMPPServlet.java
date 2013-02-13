@@ -57,7 +57,7 @@ public class XMPPServlet extends TextServlet {
 
 
 	@Override
-	protected void sendMessage(String message, String subject, String from,
+	protected int sendMessage(String message, String subject, String from,
 			String fromName, String to, String toName, AdapterConfig config) {
 		
 		JID localJid = new JID(from);
@@ -72,6 +72,8 @@ public class XMPPServlet extends TextServlet {
 				.withBody(message).build();
 
 		xmpp.sendMessage(msg);
+		
+		return 1;
 	}
 
 

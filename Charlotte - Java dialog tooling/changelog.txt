@@ -1,7 +1,14 @@
 DialogHandler
 https://github.com/almende/dialog/
 
-27-1-2013, version 0.2.0
+13-02-2013, version 0.2.1
+- VoiceXML adapter supports event handling. Exception, timeout and hangup events.
+- VoiceXML adapter registers for call events with broadsoft to be able to support hangup events.
+- VoiceXML adapter session management. Through the Dialog Agent calls of an adapter can be killed.
+- Add a counter to Text Adapter send message function. To count the number of message sent and these
+  are added to the DDRs.
+
+27-01-2013, version 0.2.0
 - Dialog agent is now capable of collecting call information and is able to terminate calls.
 - The redirect functionality has been changed in the VoiceXMl adapter. It now sets up a conference call,
   so that the call can be continued if one of the parties leaves the conversation. And also the adapter number

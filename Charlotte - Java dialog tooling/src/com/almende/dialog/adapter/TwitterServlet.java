@@ -115,7 +115,7 @@ public class TwitterServlet extends TextServlet {
 	}
 
 	@Override
-	protected void sendMessage(String message, String subject, String from,
+	protected int sendMessage(String message, String subject, String from,
 			String fromName, String to, String toName, AdapterConfig config) {
 
 		OAuthService service = new ServiceBuilder()
@@ -123,6 +123,8 @@ public class TwitterServlet extends TextServlet {
         .apiKey(Twitter.OAUTH_KEY)
         .apiSecret(Twitter.OAUTH_SECRET)
         .build();		
+		
+		int count = 0;
 		
 		Token accessToken = new Token(config.getAccessToken(), config.getAccessTokenSecret());
 		for(String messagepart : Splitter.fixedLength(140-(to.length()+1)).split(message)) {
@@ -135,10 +137,14 @@ public class TwitterServlet extends TextServlet {
 				Response response = request.send();
 				log.info("Message send result: "+response.getBody());
 				
+				count++;
+				
 			} catch (Exception ex) {
 				log.warning("Failed to send message");
 			}
 		}
+		
+		return count;
 	}
 
 	@Override

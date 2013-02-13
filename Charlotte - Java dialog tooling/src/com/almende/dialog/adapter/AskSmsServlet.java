@@ -32,7 +32,7 @@ public class AskSmsServlet extends TextServlet {
 	private static final String adapterType = "SMS";
 	
 	@Override
-	protected void sendMessage(String message, String subject, String from,
+	protected int sendMessage(String message, String subject, String from,
 			String fromName, String to, String toName, AdapterConfig config) {
 		
 		try {
@@ -44,7 +44,9 @@ public class AskSmsServlet extends TextServlet {
 		SmsMessage msg = new SmsMessage(to, message);
 		datastore.store(msg);
 		
+		// TODO: Build in message counter
 		log.info("Stored message: "+msg.getMessage()+ " for: "+msg.getTo());
+		return 1;
 	}
 
 	@Override
@@ -56,9 +58,11 @@ public class AskSmsServlet extends TextServlet {
 		boolean success=false;
 		TextMessage msg=null;
 		if(data.get("secret").equals("askask")) {
+			
+			String address = formatNumber(URLDecoder.decode(data.get("from"),"UTF-8")).replaceFirst("\\+31", "0");
 			msg = new TextMessage();
 			msg.setLocalAddress("0615004624");
-			msg.setAddress(data.get("from"));
+			msg.setAddress(address);
 			try {
 				msg.setBody(URLDecoder.decode(data.get("message"), "UTF-8"));
 			} catch(Exception ex) {
@@ -144,6 +148,8 @@ public class AskSmsServlet extends TextServlet {
 	    } catch(IOException e) {
 	        log.warning("getPostData couldn't.. get the post data");  // This has happened if the request's reader is closed    
 	    }
+	    
+	    log.info("Received data: "+sb.toString());
 
 	    HashMap<String, String> data = new HashMap<String, String>();
 		String[] params = sb.toString().split("&");

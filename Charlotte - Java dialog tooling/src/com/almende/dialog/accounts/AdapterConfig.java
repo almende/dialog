@@ -1,5 +1,7 @@
 package com.almende.dialog.accounts;
 
+import static com.google.appengine.api.datastore.Query.FilterOperator.EQUAL;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.logging.Logger;
@@ -23,11 +25,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.appengine.api.datastore.Query.FilterOperator;
-import com.google.appengine.labs.repackaged.org.json.JSONException;
 import com.google.code.twig.FindCommand.RootFindCommand;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
 import com.google.code.twig.annotation.Id;
-import static com.google.appengine.api.datastore.Query.FilterOperator.*;
+
+import flexjson.JSONException;
 
 @Path("/adapters")
 public class AdapterConfig {

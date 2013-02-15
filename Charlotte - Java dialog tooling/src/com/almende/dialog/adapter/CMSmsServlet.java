@@ -2,7 +2,6 @@ package com.almende.dialog.adapter;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -10,10 +9,8 @@ import java.util.Set;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.tools.ant.util.CollectionUtils;
 import org.znerd.xmlenc.XMLOutputter;
 
-import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.util.ParallelInit;
@@ -28,16 +25,15 @@ public class CMSmsServlet extends TextServlet {
 	private static final String adapterType = "CM";
 	
 	// TODO: needs to be moved to the adapter config
-	private static final String userID = "2630";
-	private static final String userName = "Ask54de";
-	private static final String password = "hwdkt6";
+	private static final String userID = "";
+	private static final String userName = "";
+	private static final String password = "";
 	
 	private static final String MIN_MESSAGE_PARTS="1";
 	private static final String MAX_MESSAGE_PARTS="6";
 	
 	private static final String MESSAGE_TYPE_GSM7 = "0";
 	private static final String MESSAGE_TYPE_UTF8 = "8";
-	@SuppressWarnings("unused")
 	private static final String MESSAGE_TYPE_BIN = "4";
 		
 	

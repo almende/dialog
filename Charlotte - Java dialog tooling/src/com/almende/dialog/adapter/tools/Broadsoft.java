@@ -51,10 +51,6 @@ public class Broadsoft {
 		try {
 			String result = webResource.queryParam("address", URLEncoder.encode(address, "UTF-8")).type("text/plain").post(String.class);
 			
-			/*String result = "<CallStartInfo xmlns=\"http://schema.broadsoft.com/xsi\"> " + 
-					 "  <callId>callhalf-488:0</callId> " + 
-					 "  <externalTrackingId>70:1</externalTrackingId> " + 
-					 "</CallStartInfo> ";*/
 			log.info("Result from BroadSoft: "+result);
 			
 			return getCallId(result);

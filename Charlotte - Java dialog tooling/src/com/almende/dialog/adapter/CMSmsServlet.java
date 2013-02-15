@@ -25,9 +25,9 @@ public class CMSmsServlet extends TextServlet {
 	private static final String adapterType = "CM";
 	
 	// TODO: needs to be moved to the adapter config
-	private static final String userID = "2630";
-	private static final String userName = "Ask54de";
-	private static final String password = "hwdkt6";
+	private static final String userID = "";
+	private static final String userName = "";
+	private static final String password = "";
 	
 	private static final String MIN_MESSAGE_PARTS="1";
 	private static final String MAX_MESSAGE_PARTS="6";

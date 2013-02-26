@@ -39,7 +39,7 @@ public class DialogAgent extends Agent {
 	public ArrayList<String> getActiveCalls(@Name("adapterID") String adapterID) {
 		
 		try {
-			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, null, null);
+			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, null, null);
 			if(config.getAdapterType().toLowerCase().equals("broadsoft")) {
 				return VoiceXMLRESTProxy.getActiveCalls(config);
 			}
@@ -52,7 +52,7 @@ public class DialogAgent extends Agent {
 	public ArrayList<String> getActiveCallsInfo(@Name("adapterID") String adapterID) {
 		
 		try {
-			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, null, null);
+			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, null, null);
 			if(config.getAdapterType().toLowerCase().equals("broadsoft")) {
 				return VoiceXMLRESTProxy.getActiveCallsInfo(config);
 			}
@@ -65,7 +65,7 @@ public class DialogAgent extends Agent {
 	public boolean killActiveCalls(@Name("adapterID") String adapterID) {
 		
 		try {
-			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, null, null);
+			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, null, null);
 			if(config.getAdapterType().toLowerCase().equals("broadsoft")) {
 				
 				return VoiceXMLRESTProxy.killActiveCalls(config);
@@ -102,7 +102,7 @@ public class DialogAgent extends Agent {
 			throw new Exception("Invalid key provided");
 		//try {
 		log.info("Trying to find config");
-		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, adapterType,adapterList);
+		AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, adapterType,adapterList);
 		if(config!=null) {
 			log.info("Config found: "+config.getConfigId());
 			adapterType = config.getAdapterType();

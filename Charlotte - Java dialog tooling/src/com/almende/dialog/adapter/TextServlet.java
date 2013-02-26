@@ -95,7 +95,7 @@ abstract public class TextServlet extends HttpServlet {
 			address = formatNumber(address).replaceFirst("\\+31", "0");
 		String localaddress = config.getMyAddress();
 		String sessionKey =getAdapterType()+"|"+localaddress+"|"+address;
-		Session session = Session.getSession(sessionKey);
+		Session session = Session.getSession(sessionKey, config.getKeyword());
 		if (session == null){
 			log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "+sessionKey);
 			return "";
@@ -173,21 +173,42 @@ abstract public class TextServlet extends HttpServlet {
 		String subject = msg.getSubject();
 		String body = msg.getBody();
 		String toName = msg.getRecipientName();
+		String keyword = msg.getKeyword();
 		String fromName="DH";
 		int count=0;
 		
-		AdapterConfig config= AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
 		
-		Session session = Session.getSession(getAdapterType()+"|"+localaddress+"|"+address);
+		AdapterConfig config;
+		Session session = Session.getSession(getAdapterType()+"|"+localaddress+"|"+address, keyword);
+		// If session is null it means the adapter is not found.
 		if (session == null){
+			config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
 			try {
-				count = sendMessage("Sorry, I can't find the account associated with this chat address...", subject, localaddress, fromName, address, toName, config);
+				count = sendMessage(getNoConfigMessage(), subject, localaddress, fromName, address, toName, config);
 			} catch(Exception ex) {
 			}
 			for(int i=0;i<count;i++) { 
 				DDRWrapper.log(null,  null, session, "Send", config);
 			}
 			return;
+		}
+		
+		config = session.getAdapterConfig();
+		//TODO: Remove this check, this is now to support backward compatibility
+		if(config==null) {
+			config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress, keyword);
+			if (config == null){
+				config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
+				try {
+					count = sendMessage(getNoConfigMessage(), subject, localaddress, fromName, address, toName, config);
+				} catch(Exception ex) {
+				}
+				for(int i=0;i<count;i++) { 
+					DDRWrapper.log(null,  null, session, "Send", config);
+				}
+				return;
+			}
+			session.setAdapterID(config.getConfigId());
 		}
 		
 		String json = "";
@@ -290,6 +311,10 @@ abstract public class TextServlet extends HttpServlet {
 		for(int i=0;i<count;i++) { 
 			DDRWrapper.log(null,  null, session, "Send", config);
 		}
+	}
+	
+	protected String getNoConfigMessage() {
+		return "Sorry, I can't find the account associated with this chat address...";
 	}
 	
 	private String getNickname(Question question) {

@@ -265,7 +265,7 @@ public class OAuthServlet extends HttpServlet {
 	private void storeAccount(Token accessToken, String myAddress, String type) {
 		
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
-		AdapterConfig config = AdapterConfig.findAdapterConfig(type, myAddress);
+		AdapterConfig config = AdapterConfig.findAdapterConfig(type, myAddress, null);
 		
 		if(config==null) {
 			config = new AdapterConfig();

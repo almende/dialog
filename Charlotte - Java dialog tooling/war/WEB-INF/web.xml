@@ -93,6 +93,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<servlet>
+  		<servlet-name>mbsmshandler</servlet-name>
+  		<servlet-class>com.almende.dialog.adapter.MBSmsServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+  		<servlet-name>mbsmshandler</servlet-name>
+  		<url-pattern>/sms/mb/*</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
   		<servlet-name>authservlet</servlet-name>
   		<servlet-class>com.almende.dialog.auth.OAuthServlet</servlet-class>
 	</servlet>

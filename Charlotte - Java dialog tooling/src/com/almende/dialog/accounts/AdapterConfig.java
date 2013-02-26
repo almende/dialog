@@ -358,7 +358,7 @@ public class AdapterConfig {
 		this.accessToken = accessToken;
 	}
 	
-	@JsonIgnore
+	//@JsonIgnore
 	public String getAccessTokenSecret() {
 		return accessTokenSecret;
 	}

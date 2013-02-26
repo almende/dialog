@@ -7,8 +7,15 @@ public class TextMessage {
 	private String subject="";
 	private String body="";
 	private String recipientName="";
+	private String keyword="";
+	
+	private boolean extractKeyword = false;
 	
 	public TextMessage(){}
+	
+	public TextMessage(boolean extractKeyword){
+		this.extractKeyword = extractKeyword;
+	}
 
 	public String getLocalAddress() {
 		return localAddress;
@@ -40,6 +47,7 @@ public class TextMessage {
 
 	public void setBody(String body) {
 		this.body = body;
+		extractKeyword();
 	}
 	
 	public String getRecipientName() {
@@ -48,5 +56,27 @@ public class TextMessage {
 	
 	public void setRecipientName(String recipientName) {
 		this.recipientName = recipientName;
+	}
+	
+	public String getKeyword() {
+		return keyword;
+	}
+	
+	private void extractKeyword() {
+		
+		if(!this.body.isEmpty() && extractKeyword) {
+			String[] words = this.body.split(" ");
+			if(words.length>1) {
+				for(String word : words){
+					if(!word.isEmpty()) {
+						this.keyword = word.toUpperCase();
+						return;
+					}
+				}				
+			} else {
+				if(!words[0].isEmpty())
+					this.keyword = words[0].toUpperCase(); 
+			}			
+		}
 	}
 }

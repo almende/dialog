@@ -12,25 +12,23 @@ import javax.servlet.http.HttpServletResponse;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.util.ParallelInit;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class MBSmsServlet extends TextServlet {
 
 	protected static final Logger log = Logger
 			.getLogger("DialogHandler");
 	private static final long serialVersionUID = 2762467148217411999L;
-	private static ObjectMapper om = ParallelInit.getObjectMapper();
 	
 	// Info of MessageBird
 	private static final String servletPath = "/sms/mb/";
 	private static final String adapterType = "MB";
+	private static final boolean USE_KEYWORDS = true;
 	
 	@Override
 	protected int sendMessage(String message, String subject, String from,
 			String fromName, String to, String toName, AdapterConfig config) throws Exception {
 		
-		String[] tokens = config.getAccessToken().split("&");
+		String[] tokens = config.getAccessToken().split("\\|");
 		
 		CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
 		return cm.sendMessage(message, subject, from, fromName, to, toName, config);
@@ -46,7 +44,7 @@ public class MBSmsServlet extends TextServlet {
 			
 		String localAddress = URLDecoder.decode(data.get("receiver"),"UTF-8").replaceFirst("31", "0");
 		String address = formatNumber(URLDecoder.decode(data.get("sender"),"UTF-8").replaceFirst("31", "0"));
-		msg = new TextMessage();
+		msg = new TextMessage(USE_KEYWORDS);
 		msg.setLocalAddress(localAddress);
 		msg.setAddress(address);
 		try {
@@ -100,5 +98,10 @@ public class MBSmsServlet extends TextServlet {
 		}
 		
 		return data;
+	}
+	
+	@Override
+	protected String getNoConfigMessage() {
+		return "U dient het juiste keyword mee te geven.";
 	}
 }

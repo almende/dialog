@@ -71,8 +71,12 @@ public class Session implements SessionIntf {
 	public void drop() {
 		StringStore.dropString(key);
 	}
-	@JsonIgnore
 	public static Session getSession(String key) {
+		return getSession(key, null);
+	}
+	
+	@JsonIgnore
+	public static Session getSession(String key, String keyword) {
 		Session session = null;
 		String session_json = StringStore.getString(key);
 		if (session_json == null || session_json.equals("")){
@@ -80,15 +84,17 @@ public class Session implements SessionIntf {
 			if (split.length == 3){
 				String type = split[0];
 				String localaddress = split[1];
-				AdapterConfig config = AdapterConfig.findAdapterConfig(type, localaddress);
+				AdapterConfig config = AdapterConfig.findAdapterConfig(type, localaddress, keyword);
 				if (config == null){
 					return null;
 				}
 				//TODO: check account/pubkey usage here
 				session = new Session();
+				session.setAdapterID(config.getConfigId());
 				session.setPubKey(config.getPublicKey().toString());
 				session.setRemoteAddress(split[2]);
 				session.setLocalAddress(localaddress);
+				session.setType(type);
 				session.key = key;
 				session.storeSession();
 			} else {
@@ -102,7 +108,10 @@ public class Session implements SessionIntf {
 	}
 	@JsonIgnore
 	public AdapterConfig getAdapterConfig() {
-		return AdapterConfig.findAdapterConfig(this.getType(), this.getLocalAddress());
+		if(session.getAdapterID()!=null)
+			return AdapterConfig.getAdapterConfig(session.getAdapterID());
+		
+		return null;
 	}
 	@Override
 	public String getStartUrl() {
@@ -170,5 +179,15 @@ public class Session implements SessionIntf {
 	@Override
 	public void setExternalSession(String externalSession) {
 		this.session.setExternalSession(externalSession);
+	}
+	
+	@Override
+	public String getAdapterID() {
+		return this.session.getAdapterID();
+	}
+	
+	@Override
+	public void setAdapterID(String adapterID) {
+		this.session.setAdapterID(adapterID);
 	}
 }

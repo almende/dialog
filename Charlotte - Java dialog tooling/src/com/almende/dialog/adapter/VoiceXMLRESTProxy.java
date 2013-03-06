@@ -178,23 +178,28 @@ public class VoiceXMLRESTProxy {
 	@Produces("application/voicexml+xml")
 	public Response answer(@QueryParam("question_id") String question_id, @QueryParam("answer_id") String answer_id, @QueryParam("answer_input") String answer_input, @QueryParam("sessionKey") String sessionKey){
 		String reply="<vxml><exit/></vxml>";
-		String json = StringStore.getString(question_id);
-		if (json != null){
-			Question question = Question.fromJSON(json);
-			String responder = StringStore.getString(question_id+"-remoteID");
-			Session session = Session.getSession(sessionKey);
-			if (session.killed){
-				return Response.status(Response.Status.BAD_REQUEST).build();
+		//String json = StringStore.getString(question_id);
+		Session session = Session.getSession(sessionKey);
+		if (session!=null) {
+			String json = StringStore.getString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
+			if (json != null){
+				Question question = Question.fromJSON(json);
+				//String responder = StringStore.getString(question_id+"-remoteID");
+				String responder = session.getRemoteAddress();
+				session.getRemoteAddress();
+				if (session.killed){
+					return Response.status(Response.Status.BAD_REQUEST).build();
+				}
+				DDRWrapper.log(question,session,"Answer");
+				
+				StringStore.dropString(question_id);
+				StringStore.dropString(question_id+"-remoteID");
+				StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
+	
+				question = question.answer(responder,answer_id,answer_input);
+				
+				return handleQuestion(question,responder,sessionKey);
 			}
-			DDRWrapper.log(question,session,"Answer");
-			
-			StringStore.dropString(question_id);
-			StringStore.dropString(question_id+"-remoteID");
-			StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
-
-			question = question.answer(responder,answer_id,answer_input);
-			
-			return handleQuestion(question,responder,sessionKey);
 		}
 		return Response.ok(reply).build();
 	}

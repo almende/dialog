@@ -185,6 +185,10 @@ abstract public class TextServlet extends HttpServlet {
 			config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
 			try {
 				count = sendMessage(getNoConfigMessage(), subject, localaddress, fromName, address, toName, config);
+				// Create new session to store the send in the ddr.
+				session = new Session();
+				session.setDirection("inbound");
+				session.setRemoteAddress(address);
 			} catch(Exception ex) {
 			}
 			for(int i=0;i<count;i++) { 

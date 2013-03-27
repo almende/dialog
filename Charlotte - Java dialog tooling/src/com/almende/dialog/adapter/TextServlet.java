@@ -100,6 +100,7 @@ abstract public class TextServlet extends HttpServlet {
 			log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "+sessionKey);
 			return "";
 		}
+		session.setPubKey(config.getPublicKey());
 		session.setDirection("outbound");
 		session.storeSession();
 		

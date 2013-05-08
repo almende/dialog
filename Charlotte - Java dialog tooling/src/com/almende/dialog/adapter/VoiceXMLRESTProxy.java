@@ -456,16 +456,16 @@ public class VoiceXMLRESTProxy {
 			
 			if(qText!=null && !qText.equals("")) prompts.add(qText);
 
-			if (question.getType().equals("closed")) {
+			if (question.getType().equalsIgnoreCase("closed")) {
 				for (Answer ans : question.getAnswers()) {
 					String answer = ans.getAnswer_text();
 					if (answer != null && !answer.equals("")) prompts.add(answer);
 				}
 				break; //Jump from forloop
-			} else if (question.getType().equals("comment")) {
+			} else if (question.getType().equalsIgnoreCase("comment")) {
 				question = question.answer(null, null, null);
 				break;
-			} else 	if (question.getType().equals("referral")) {
+			} else 	if (question.getType().equalsIgnoreCase("referral")) {
 				if(!question.getUrl().startsWith("tel:")) {
 					//question = Question.fromURL(question.getUrl(),address);
 					question = question.answer(null, null, null);
@@ -493,7 +493,7 @@ public class VoiceXMLRESTProxy {
 				outputter.attribute("version", "2.1");
 				outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
 				outputter.startTag("form");
-						if (question != null && question.getType().equals("referral")){
+						if (question != null && question.getType().equalsIgnoreCase("referral")){
 							outputter.startTag("transfer");
 								outputter.attribute("name", "thisCall");
 								outputter.attribute("dest", question.getUrl());
@@ -658,7 +658,7 @@ public class VoiceXMLRESTProxy {
 	private Response handleQuestion(Question question,String remoteID,String sessionKey){
 		String result="<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>";
 		Return res = formQuestion(question,remoteID);
-		if(question !=null && !question.getType().equals("comment"))
+		if(question !=null && !question.getType().equalsIgnoreCase("comment"))
 			question = res.question;
 		
 		if (question != null){						
@@ -669,11 +669,11 @@ public class VoiceXMLRESTProxy {
 			Session session = Session.getSession(sessionKey);
 			StringStore.storeString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress(), question.toJSON());
 		
-			if (question.getType().equals("closed")){
+			if (question.getType().equalsIgnoreCase("closed")){
 				result = renderClosedQuestion(question,res.prompts,sessionKey);
-			} else if (question.getType().equals("open")){
+			} else if (question.getType().equalsIgnoreCase("open")){
 				result = renderOpenQuestion(question,res.prompts,sessionKey);
-			} else if (question.getType().equals("referral")){
+			} else if (question.getType().equalsIgnoreCase("referral")){
 				if (question.getUrl().startsWith("tel:")){
 					result = renderComment(question,res.prompts, sessionKey);	
 				}

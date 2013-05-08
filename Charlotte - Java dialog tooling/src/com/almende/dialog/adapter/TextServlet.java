@@ -70,7 +70,7 @@ abstract public class TextServlet extends HttpServlet {
 			String qText = question.getQuestion_expandedtext();
 			if(qText!=null && !qText.equals("")) reply += qText;
 
-			if (question.getType().equals("closed")) {
+			if (question.getType().equalsIgnoreCase("closed")) {
 				reply += "\n[";
 				for (Answer ans : question.getAnswers()) {
 					reply += " "
@@ -79,9 +79,9 @@ abstract public class TextServlet extends HttpServlet {
 				}
 				reply = reply.substring(0, reply.length() - 1) + " ]";
 				break; //Jump from forloop
-			} else if (question.getType().equals("comment")) {
+			} else if (question.getType().equalsIgnoreCase("comment")) {
 				question = question.answer(null, null, null);//Always returns null! So no need, but maybe in future?
-			} else 	if (question.getType().equals("referral")) {
+			} else 	if (question.getType().equalsIgnoreCase("referral")) {
 				question = Question.fromURL(question.getUrl(),address);
 			} else {
 				break; //Jump from forloop (open questions, etc.)

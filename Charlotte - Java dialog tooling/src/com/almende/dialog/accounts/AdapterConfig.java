@@ -21,6 +21,7 @@ import javax.ws.rs.core.Response.Status;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -69,7 +70,7 @@ public class AdapterConfig {
 			newConfig.configId = new UUID().toString();
 			newConfig.status = "OPEN";
 
-			om.readerForUpdating(newConfig).readValue(json);
+			newConfig = om.readerForUpdating(newConfig).readValue(json);
 			if (adapterExists(newConfig.getAdapterType(),
 					newConfig.getMyAddress(), newConfig.getKeyword()))
 				return Response.status(Status.CONFLICT).build();
@@ -367,6 +368,7 @@ public class AdapterConfig {
 		return xsiURL;
 	}
 
+	@JsonProperty
 	public void setXsiURL(String xsiURL) {
 		this.xsiURL = xsiURL;
 	}
@@ -384,6 +386,7 @@ public class AdapterConfig {
 		return xsiPasswd;
 	}
 
+	@JsonProperty
 	public void setXsiPasswd(String xsiPasswd) {
 		this.xsiPasswd = xsiPasswd;
 	}
@@ -404,11 +407,12 @@ public class AdapterConfig {
 		this.accessToken = accessToken;
 	}
 	
-	//@JsonIgnore
+	@JsonIgnore
 	public String getAccessTokenSecret() {
 		return accessTokenSecret;
 	}
 	
+	@JsonProperty
 	public void setAccessTokenSecret(String accessTokenSecret) {
 		this.accessTokenSecret = accessTokenSecret;
 	}

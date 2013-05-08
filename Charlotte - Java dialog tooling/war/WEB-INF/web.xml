@@ -11,6 +11,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
             <param-name>applicationConfigLocation</param-name>
             <param-value>/WEB-INF/application</param-value>
         </init-param>
+        <load-on-startup>1</load-on-startup>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>RESTServlet</servlet-name>

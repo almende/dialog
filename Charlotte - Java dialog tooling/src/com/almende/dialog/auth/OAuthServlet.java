@@ -21,11 +21,11 @@ import org.scribe.model.Verb;
 import org.scribe.model.Verifier;
 import org.scribe.oauth.OAuthService;
 
-import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Facebook;
 import com.almende.dialog.adapter.tools.Twitter;
 import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.RequestUtil;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -50,7 +50,8 @@ public class OAuthServlet extends HttpServlet {
 			throws ServletException, IOException {
 		
 		String service = req.getParameter("service");
-		setService(service);
+		String host = RequestUtil.getHost(req);
+		setService(host, service);
 		PrintWriter out = resp.getWriter();
 		
 		log.info("Got request on: "+req.getRequestURL());
@@ -67,7 +68,7 @@ public class OAuthServlet extends HttpServlet {
 	
 			// First step: show a form to authenticate
 			printPageStart(out);
-			printAuthorizeForm(out);
+			printAuthorizeForm(host, out);
 			printPageEnd(out);
 			return;
 		} else {
@@ -111,9 +112,9 @@ public class OAuthServlet extends HttpServlet {
 		}
 	}
 	
-	private void setService(String service) {
+	private void setService(String host, String service) {
 		
-		String callbackURL = "http://"+Settings.HOST+"/oauth/callback";
+		String callbackURL = host+"/oauth/callback";
 		
 		if(service==null || service.equals("")) {
 			this.service = null;
@@ -199,7 +200,7 @@ public class OAuthServlet extends HttpServlet {
 	
 	private String createAuthorizationUrl() throws IOException {
 		
-		return "http://"+Settings.HOST+"/oauth";
+		return "/oauth";
 	}
 	
 	private void printPageStart(PrintWriter out) {
@@ -229,8 +230,8 @@ public class OAuthServlet extends HttpServlet {
 		);
 	}
 	
-	private void printAuthorizeForm(PrintWriter out) throws IOException {
-		String url = createAuthorizationUrl();
+	private void printAuthorizeForm(String host, PrintWriter out) throws IOException {
+		String url = host+createAuthorizationUrl();
 		out.print("<script type='text/javascript'>" +
 			"function auth(send) {" +
 			" var elements = document.getElementsByName('media');" +

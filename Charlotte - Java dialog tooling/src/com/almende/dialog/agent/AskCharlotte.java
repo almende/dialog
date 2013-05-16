@@ -11,9 +11,10 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
-import com.almende.dialog.Settings;
 import com.almende.dialog.model.AnswerPost;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,7 +24,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import flexjson.JSONDeserializer;
 @Path("/ask-charlotte/")
 public class AskCharlotte {
-	private static final String URL = "http://"+Settings.HOST+"/ask-charlotte/";
 	private static final String SOUNDURL = "http://ask50.ask-cs.nl/~ask/tokyo_a02/rest/";
 	//private static final String SOUNDURL = "http://commondatastorage.googleapis.com/dialogserver-sounds/testSounds/espeakConv_";
 	private static final Logger log = Logger
@@ -46,8 +46,9 @@ public class AskCharlotte {
 	
 	@GET
 	@Produces("application/json")
-	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium){
+	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium, @Context UriInfo ui){
 		String result=null;
+		String URL=ui.getBaseUri().toString();
 		String url=URL;
 		boolean audio = false;
 		if (preferred_medium != null && preferred_medium.startsWith("audio")){
@@ -74,9 +75,9 @@ public class AskCharlotte {
 	@POST
 	@Produces("application/json")
 	@Consumes("*/*")
-	public Response answerQuestion(String answer_json, @PathParam("question_no") String question_no,@QueryParam("preferred_medium") String preferred_medium){
+	public Response answerQuestion(String answer_json, @PathParam("question_no") String question_no,@QueryParam("preferred_medium") String preferred_medium, @Context UriInfo ui){
 		String result=null;
-		
+		String URL=ui.getBaseUri().toString();
 		boolean audio=false;
 		if (preferred_medium != null && preferred_medium.startsWith("audio")){
 			audio = true;

@@ -8,12 +8,12 @@ import java.nio.CharBuffer;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.DDRWrapper;
-import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
@@ -21,6 +21,7 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.KeyServerLib;
+import com.almende.dialog.util.RequestUtil;
 import com.almende.util.ParallelInit;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
@@ -36,7 +37,7 @@ abstract public class TextServlet extends HttpServlet {
 	protected static final Logger log = Logger
 			.getLogger("DialogHandler");
 	protected static final int LOOP_DETECTION=10;
-	protected static final String DEMODIALOG = "http://"+Settings.HOST+"/charlotte/";
+	protected static final String DEMODIALOG = "/charlotte/";
 	
 	protected abstract int sendMessage(String message, String subject, String from, String fromName, 
 										String to, String toName, AdapterConfig config) throws Exception;
@@ -44,6 +45,8 @@ abstract public class TextServlet extends HttpServlet {
 	protected abstract String getServletPath();
 	protected abstract String getAdapterType();
 	protected abstract void doErrorPost(HttpServletRequest req, HttpServletResponse res) throws IOException;
+	
+	private String host="";
 	
 	protected class Return {
 		String reply;
@@ -128,6 +131,13 @@ abstract public class TextServlet extends HttpServlet {
 	
 	public static void killSession(Session session){
 		StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
+	}
+	
+	@Override
+	protected void service(HttpServletRequest req, HttpServletResponse res)
+			throws ServletException, IOException {
+		this.host = RequestUtil.getHost(req);
+		super.service(req, res);
 	}
 	
 	@Override
@@ -279,7 +289,7 @@ abstract public class TextServlet extends HttpServlet {
 			if (json == null || json.equals("")) {
 				body=null; // Remove the body, because it is to start the question
 				if (config.getInitialAgentURL().equals("")){
-					question = Question.fromURL(DEMODIALOG,address,localaddress);
+					question = Question.fromURL(this.host+DEMODIALOG,address,localaddress);
 				} else {
 					question = Question.fromURL(config.getInitialAgentURL(),address,localaddress);
 				}

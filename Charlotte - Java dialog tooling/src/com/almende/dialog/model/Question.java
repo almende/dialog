@@ -1,6 +1,7 @@
 package com.almende.dialog.model;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -114,6 +115,13 @@ public class Question implements QuestionIntf {
 												// answer doesn't exist, or
 												// multiple answers
 												// (=out-of-spec)
+		} else if(this.getType().equals("openaudio")) {
+			answer = this.getAnswers().get(0);
+			try {
+				answer_input = URLDecoder.decode(answer_input, "UTF-8");
+				log.info("Received answer: "+answer_input);
+			} catch (Exception e) {
+			}
 		} else if (this.getType().equals("comment") || this.getType().equals("referral")) {
 			if(this.getAnswers() == null || this.getAnswers().size()==0)
 				return null;
@@ -135,7 +143,7 @@ public class Question implements QuestionIntf {
 			answer_input = answer_input.trim();
 			ArrayList<Answer> answers = question.getAnswers();
 			for (Answer ans : answers) {
-				if (ans.getAnswer_text().equals(answer_input)) {
+				if (ans.getAnswer_text()!=null && ans.getAnswer_text().equals(answer_input)) {
 					answer = ans;
 					break;
 				}
@@ -178,6 +186,7 @@ public class Question implements QuestionIntf {
 		// Check if answer.callback gives new question for this dialog
 		try {
 			String post = om.writeValueAsString(ans);
+			log.info("Going to send: "+post);
 			String s = webResource.type("application/json").post(
 					String.class, post);
 			

@@ -138,6 +138,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
   		<url-pattern>/facebook_wall/*</url-pattern>
 	</servlet-mapping>
 	
+	<servlet>
+		<servlet-name>upload</servlet-name>
+		<servlet-class>com.almende.dialog.util.UploadServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>upload</servlet-name>
+		<url-pattern>/upload/*</url-pattern>
+	</servlet-mapping>
+	
 	<welcome-file-list>
 		<welcome-file>index.html</welcome-file>
 	</welcome-file-list>

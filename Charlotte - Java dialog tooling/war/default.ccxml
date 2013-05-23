@@ -3,7 +3,7 @@
   <var name="remoteID" expr="''"/>
   <var name="localID" expr="''"/>
   <var name="direction" expr="'inbound'"/>
-  <var name="timeout" expr="'10s'" />
+  <var name="timeout" expr="'30s'" />
   <var name="incomingCallConnId" expr="''" />
   <var name="outgoingCallConnId" expr="''" />
   <var name="outerConn" expr="''" />
@@ -30,7 +30,7 @@
           }
         </script>
         <if cond="direction == 'outbound'">
-            <createcall dest="dialURL" connectionid="incomingCallConnId" timeout="timeout" />
+            <createcall dest="dialURL" connectionid="incomingCallConnId" timeout="timeout"/>
         <else />
           <accept connectionid="incomingCallConnId"/>
         </if>
@@ -52,19 +52,20 @@
           var strings = remote.split(':');
           if(strings[0] == "tel")
             dialURL = "sip:"+strings[1]+"@asb-02.voipit.nl";
- 		</script>
+                </script>
         <assign name="currentState" expr="'originatingcall'" />
-        <createcall dest="dialURL" connectionid="outgoingCallConnId" />
+        <createcall dest="dialURL" connectionid="outgoingCallConnId" timeout="event$.connecttimeout"/>
       </if>
     </transition>
-    
+
     <transition state="originatingcall" event="connection.failed">
-	  <assign name="results" expr="event$.reason"/>
-	  <send name="'dialog.transfer.complete'"
-			target="dialogID"
-			targettype="'dialog'"
-			namelist="results" />
-	</transition>
+          <assign name="results" expr="event$.reason"/>
+          <send name="'dialog.transfer.complete'"
+                        target="dialogID"
+                        targettype="'dialog'"
+                        namelist="results" />
+ <assign name="currentState" expr="'connestablished'" />
+        </transition>
 
     <transition state="originatingcall" event="connection.connected">
       <unjoin id1="incomingCallConnId" id2="dialogID" />
@@ -81,13 +82,13 @@
         <exit/>
       </if>
     </transition>
-    
+
     <transition state="originatingcall" event="connection.disconnected">
-	  <if cond="event$.connectionid == incomingCallConnId" >
-	    <disconnect connectionid="outgoingCallConnId"/>
-	  </if>
-	</transition>
-	 
+          <if cond="event$.connectionid == incomingCallConnId" >
+            <disconnect connectionid="outgoingCallConnId"/>
+          </if>
+        </transition>
+
     <transition event="connection.disconnected">
       <accept connectionid="outerConn"/>
       <exit/>
@@ -108,3 +109,4 @@
 
   </eventprocessor>
 </ccxml>
+    

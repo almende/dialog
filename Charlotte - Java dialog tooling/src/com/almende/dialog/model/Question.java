@@ -4,6 +4,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
@@ -29,6 +30,8 @@ public class Question implements QuestionIntf {
 	
 	QuestionIntf question;
 	private String preferred_language = "nl";
+
+    private Collection<MediaHint> media_Hints;
 
 	public Question() {
 		this.question = new Q_fields(); // Default to simple in-memory class
@@ -369,7 +372,19 @@ public class Question implements QuestionIntf {
 		this.question.setTrackingToken(token);
 	}
 
+    public Collection<MediaHint> getMedia_Hints()
+    {
+        return media_Hints;
+    }
 
+    public void setMedia_Hints( Collection<MediaHint> media_Hints )
+    {
+        this.media_Hints = media_Hints;
+    }
 
-
+    public void addMedia_Hint( MediaHint mediaHint )
+    {
+        media_Hints = media_Hints == null ? new ArrayList<MediaHint>() : media_Hints;
+        media_Hints.add( mediaHint );
+    }
 }

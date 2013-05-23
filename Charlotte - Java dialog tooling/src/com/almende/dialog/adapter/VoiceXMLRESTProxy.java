@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -28,6 +29,9 @@ import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.model.Answer;
+import com.almende.dialog.model.MediaHint;
+import com.almende.dialog.model.MediaHint.MediaHintKey;
+import com.almende.dialog.model.MediumType;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
@@ -491,73 +495,91 @@ public class VoiceXMLRESTProxy {
 		return new Return(prompts, question);
 	}
 	
-	private String renderComment(Question question,ArrayList<String> prompts, String sessionKey){
-		
-		String handleAnswerURL = "/vxml/answer";
-		/*String handleTimeoutURL = "/vxml/timeout";
-		String handleExceptionURL = "/vxml/exception";*/
-		
-		StringWriter sw = new StringWriter();
-		try {
-			XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
-			outputter.declaration();
-			outputter.startTag("vxml");
-				outputter.attribute("version", "2.1");
-				outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
-				outputter.startTag("form");
-						if (question != null && question.getType().equalsIgnoreCase("referral")){
-							outputter.startTag("transfer");
-								outputter.attribute("name", "thisCall");
-								outputter.attribute("dest", question.getUrl());
-								outputter.attribute("bridge","true");
-								
-								for (String prompt : prompts){
-									outputter.startTag("prompt");
-										outputter.startTag("audio");
-											outputter.attribute("src", prompt);
-										outputter.endTag();
-									outputter.endTag();
-								}
-								outputter.startTag("filled");
-									/*outputter.startTag("if");
-										outputter.attribute("cond", "thisCall=='noanswer'");
-										outputter.startTag("goto");
-											outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
-										outputter.endTag();
-									outputter.startTag("elseif");
-										outputter.attribute("cond", "thisCall=='busy' || thisCall=='network_busy'");
-									outputter.endTag();
-										outputter.startTag("goto");
-											outputter.attribute("next", handleExceptionURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
-										outputter.endTag();										
-									outputter.endTag();*/
-									outputter.startTag("exit");
-									outputter.endTag();
-								outputter.endTag();
-							outputter.endTag();
-						} else {
-							outputter.startTag("block");
-								for (String prompt : prompts){
-									outputter.startTag("prompt");
-										outputter.startTag("audio");
-											outputter.attribute("src", prompt);
-										outputter.endTag();
-									outputter.endTag();
-								}
-								outputter.startTag("goto");
-									outputter.attribute("next", handleAnswerURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
-								outputter.endTag();
-							outputter.endTag();
-						}
-						
-				outputter.endTag();
-			outputter.endTag();
-			outputter.endDocument();
-		} catch (Exception e) {
-			log.severe("Exception in creating question XML: "+ e.toString());
-		}
-		return sw.toString();	
-	}
+    private String renderComment( Question question, ArrayList<String> prompts, String sessionKey )
+    {
+
+        String handleAnswerURL = "/vxml/answer";
+        String handleTimeoutURL = "/vxml/timeout";
+        String handleExceptionURL = "/vxml/exception";
+
+        StringWriter sw = new StringWriter();
+        try
+        {
+            XMLOutputter outputter = new XMLOutputter( sw, "UTF-8" );
+            outputter.declaration();
+            outputter.startTag( "vxml" );
+            outputter.attribute( "version", "2.1" );
+            outputter.attribute( "xmlns", "http://www.w3.org/2001/vxml" );
+            outputter.startTag( "form" );
+            if ( question != null && question.getType().equals( "referral" ) )
+            {
+                outputter.startTag( "transfer" );
+                outputter.attribute( "name", "thisCall" );
+                outputter.attribute( "dest", question.getUrl() );
+                outputter.attribute( "bridge", "true" );
+
+                String redirectTimeoutHint = getMediaHint( question, MediumType.Broadsoft, MediaHintKey.RedirectTimeOut );
+                if ( redirectTimeoutHint != null )
+                {
+                    outputter.attribute( "connecttimeout", redirectTimeoutHint );
+                }
+
+                for ( String prompt : prompts )
+                {
+                    outputter.startTag( "prompt" );
+                    outputter.startTag( "audio" );
+                    outputter.attribute( "src", prompt );
+                    outputter.endTag();
+                    outputter.endTag();
+                }
+                outputter.startTag( "filled" );
+
+                log.info( "question id seen for redirection" + question.getQuestion_id() );
+                outputter.startTag( "if" );
+                outputter.attribute( "cond", "thisCall=='noanswer'" );
+                outputter.startTag( "goto" );
+
+                outputter.attribute( "next", handleTimeoutURL + "?question_id=" + question.getQuestion_id()
+                + "&sessionKey=" + sessionKey );
+                outputter.endTag();
+                outputter.startTag( "else" );
+                outputter.endTag();
+                outputter.startTag( "goto" );
+                outputter.attribute( "next", handleExceptionURL + "?question_id=" + question.getQuestion_id()
+                + "&sessionKey=" + sessionKey );
+                outputter.endTag();
+                outputter.endTag();
+                outputter.endTag();
+            }
+            else
+            {
+                outputter.startTag( "block" );
+                for ( String prompt : prompts )
+                {
+                    outputter.startTag( "prompt" );
+                    outputter.startTag( "audio" );
+                    outputter.attribute( "src", prompt );
+                    outputter.endTag();
+                    outputter.endTag();
+                }
+                outputter.startTag( "goto" );
+                outputter.attribute( "next", handleAnswerURL + "?question_id=" + question.getQuestion_id()
+                + "&sessionKey=" + sessionKey );
+                outputter.endTag();
+                outputter.endTag();
+            }
+
+            outputter.endTag();
+            outputter.endTag();
+            outputter.endDocument();
+        }
+        catch ( Exception e )
+        {
+            log.severe( "Exception in creating question XML: " + e.toString() );
+        }
+        return sw.toString();
+    }
+
 	private String renderClosedQuestion(Question question,ArrayList<String> prompts,String sessionKey){
 		ArrayList<Answer> answers=question.getAnswers();
 		
@@ -789,4 +811,17 @@ public class VoiceXMLRESTProxy {
 		log.info("Sending xml: "+result);
 		return Response.ok(result).build();
 	}
+
+    private String getMediaHint( Question question, MediumType mediumType, MediaHintKey key )
+    {
+        Collection<MediaHint> media_Hints = question.getMedia_Hints();
+        for ( MediaHint mediaHint : media_Hints )
+        {
+            if ( mediaHint.getMedium() == mediumType )
+            {
+                return mediaHint.getHints().get( key );
+            }
+        }
+        return null;
+    }
 }

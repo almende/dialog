@@ -17,6 +17,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 		<servlet-name>RESTServlet</servlet-name>
 		<url-pattern>/*</url-pattern>
 	</servlet-mapping>
+	    
 	<servlet>
 		<servlet-name>JSON</servlet-name>
 		<servlet-class>com.chap.memo.memoNodes.servlet.MemoJSONServlet</servlet-class>

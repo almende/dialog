@@ -1,4 +1,5 @@
 com.almende.dialog.adapter.VoiceXMLRESTProxy
+com.almende.dialog.adapter.VoxeoVoiceXMLRESTProxy
 com.almende.dialog.agent.AskCharlotte
 com.almende.dialog.agent.Charlotte
 com.almende.dialog.agent.CalendarConversation

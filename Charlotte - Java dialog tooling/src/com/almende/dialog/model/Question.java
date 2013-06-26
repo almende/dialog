@@ -293,6 +293,7 @@ public class Question implements QuestionIntf {
 	}
 
 	@Override
+	@JSON(include = false)
 	public String getQuestion_expandedtext() {
 		return question.getQuestion_expandedtext(this.preferred_language);
 	}

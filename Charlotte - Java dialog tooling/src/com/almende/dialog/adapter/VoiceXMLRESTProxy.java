@@ -42,9 +42,12 @@ import com.sun.jersey.api.client.WebResource;
 
 @Path("/vxml/")
 public class VoiceXMLRESTProxy {
-	private static final Logger log = Logger.getLogger(com.almende.dialog.adapter.VoiceXMLRESTProxy.class.getName()); 	
+	protected static final Logger log = Logger.getLogger(com.almende.dialog.adapter.VoiceXMLRESTProxy.class.getName()); 	
 	private static final int LOOP_DETECTION=10;
-	private static final String DTMFGRAMMAR="/dtmf2hash.grxml";
+	private static final String DTMFGRAMMAR="/vxml/dtmf2hash";
+	
+	protected String TIMEOUT_URL="/vxml/timeout";
+	protected String EXCEPTION_URL="/vxml/exception";
 	
 	private String host = "";
 	
@@ -111,9 +114,42 @@ public class VoiceXMLRESTProxy {
 		return null;	
 	}
 	
+	@Path("dtmf2hash")
+	@GET
+	@Produces("application/srgs+xml")
+	public Response getDTMF2Hash() {
+		
+		String result = "<?xml version=\"1.0\"?> "+
+						"<grammar mode=\"dtmf\" version=\"1.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.w3.org/2001/06/grammar http://www.w3.org/TR/speech-grammar/grammar.xsd\" xmlns=\"http://www.w3.org/2001/06/grammar\"  root=\"untilHash\" > "+
+							"<rule id=\"digit\"> "+
+								"<one-of> "+
+									"<item> 0 </item> "+
+									"<item> 1 </item> "+
+									"<item> 2 </item> "+
+									"<item> 3 </item> "+
+									"<item> 4 </item> "+
+									"<item> 5 </item> "+
+									"<item> 6 </item> "+
+									"<item> 7 </item> "+
+									"<item> 8 </item> "+
+									"<item> 9 </item> "+
+									"<item> * </item> "+
+								"</one-of> "+
+							"</rule> "+
+							"<rule id=\"untilHash\" scope=\"public\"> "+
+								"<one-of> "+
+									"<item repeat=\"0-\"><ruleref uri=\"#digit\"/></item> "+
+									"<item> # </item> "+
+								"</one-of> "+
+							"</rule> "+
+						"</grammar> ";
+		
+		return Response.ok(result).build();
+	}
+	
 	@Path("new")
 	@GET
-	@Produces("application/voicexml+xml")
+	@Produces("application/voicexml")
 	public Response getNewDialog(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID, @Context UriInfo ui){
 		log.warning("call started:"+direction+":"+remoteID+":"+localID);		
 		this.host=ui.getBaseUri().toString().replace(":80", "");
@@ -352,29 +388,19 @@ public class VoiceXMLRESTProxy {
 						// Check if a sip or network call
 						String type="";
 						String address="";
-						String user=null;
 						for(int i=0; i<remoteParty.getChildNodes().getLength();i++) {
 							Node rpChild = remoteParty.getChildNodes().item(i);
 							if(rpChild.getNodeName().equals("address")) {
 								address=rpChild.getTextContent();
 							} else if(rpChild.getNodeName().equals("callType")) {
 								type=rpChild.getTextContent();
-							} else if(rpChild.getNodeName().equals("userId")) {
-								user=rpChild.getTextContent();
 							}
 						}
 						
 						// Check if session can be matched to call
 						if(type.equals("Network") || type.equals("Group")) {
 							
-							if(type.equals("Group")) {
-								if(user!=null)
-									address = user.substring(0,user.indexOf("@"));
-								else if(address.contains("tel:"))
-									address = address.replace("tel:", "");
-							} else if(type.equals("Network")) {
-								address = address.replace("tel:", "");
-							}
+							address = address.replace("tel:", "").replace("sip:", "");
 							
 							log.info("Going to format phone number: "+address);
 							
@@ -383,13 +409,19 @@ public class VoiceXMLRESTProxy {
 							}
 							
 							String direction="inbound";
-							if(personality.getTextContent().equals("Originator")) {
-								address += "@outbound";
+							if(personality.getTextContent().equals("Originator") && !address.contains("outbound")) {
+								//address += "@outbound";
+								direction="transfer";
+								log.info("Transfer detected????");
+							} else if(personality.getTextContent().equals("Originator")) {
+								log.info("Outbound detected?????");
 								direction="outbound";
 							}
 							String adapterType="broadsoft";
 							String sessionKey = adapterType+"|"+config.getMyAddress()+"|"+address;
 							String ses = StringStore.getString(sessionKey);
+							
+							log.info("Session key: "+sessionKey);
 							
 							if(ses!=null) {
 								log.info("SESSSION FOUND!! SEND HANGUP!!!");
@@ -479,11 +511,12 @@ public class VoiceXMLRESTProxy {
 				break;
 			} else 	if (question.getType().equalsIgnoreCase("referral")) {
 				if(!question.getUrl().startsWith("tel:")) {
-					//question = Question.fromURL(question.getUrl(),address);
-					question = question.answer(null, null, null);
+					question = Question.fromURL(question.getUrl(),address);
+					//question = question.answer(null, null, null);
+					//break;
+				} else {
 					break;
-				} else 
-					break;
+				}
 			} else {
 				break; //Jump from forloop (open questions, etc.)
 			}
@@ -491,9 +524,8 @@ public class VoiceXMLRESTProxy {
 		return new Return(prompts, question);
 	}
 	
-	private String renderComment(Question question,ArrayList<String> prompts, String sessionKey){
+	protected String renderComment(Question question,ArrayList<String> prompts, String sessionKey){
 		
-		String handleAnswerURL = "/vxml/answer";
 		/*String handleTimeoutURL = "/vxml/timeout";
 		String handleExceptionURL = "/vxml/exception";*/
 		
@@ -544,9 +576,11 @@ public class VoiceXMLRESTProxy {
 										outputter.endTag();
 									outputter.endTag();
 								}
-								outputter.startTag("goto");
-									outputter.attribute("next", handleAnswerURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
-								outputter.endTag();
+								if(question!=null) {
+									outputter.startTag("goto");
+										outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+									outputter.endTag();
+								}
 							outputter.endTag();
 						}
 						
@@ -561,7 +595,6 @@ public class VoiceXMLRESTProxy {
 	private String renderClosedQuestion(Question question,ArrayList<String> prompts,String sessionKey){
 		ArrayList<Answer> answers=question.getAnswers();
 		
-		String handleAnswerURL = "/vxml/answer";
 		String handleTimeoutURL = "/vxml/timeout";
 
 		StringWriter sw = new StringWriter();
@@ -582,7 +615,7 @@ public class VoiceXMLRESTProxy {
 					for(int cnt=0; cnt<answers.size(); cnt++){
 						outputter.startTag("choice");
 							outputter.attribute("dtmf", new Integer(cnt+1).toString());
-							outputter.attribute("next", handleAnswerURL+"?question_id="+question.getQuestion_id()+"&answer_id="+answers.get(cnt).getAnswer_id()+"&sessionKey="+sessionKey);
+							outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&answer_id="+answers.get(cnt).getAnswer_id()+"&sessionKey="+sessionKey);
 						outputter.endTag();
 					}
 					outputter.startTag("noinput");
@@ -592,7 +625,7 @@ public class VoiceXMLRESTProxy {
 					outputter.endTag();
 					outputter.startTag("nomatch");
 						outputter.startTag("goto");
-							outputter.attribute("next", handleAnswerURL+"?question_id="+question.getQuestion_id()+"&answer_id=-1&sessionKey="+sessionKey);
+							outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&answer_id=-1&sessionKey="+sessionKey);
 						outputter.endTag();
 					outputter.endTag();
 				outputter.endTag();
@@ -604,7 +637,6 @@ public class VoiceXMLRESTProxy {
 		return sw.toString();
 	}
 	private String renderOpenQuestion(Question question,ArrayList<String> prompts,String sessionKey){
-		String handleAnswerURL = "/vxml/answer";
 
 		StringWriter sw = new StringWriter();
 		try {
@@ -613,7 +645,7 @@ public class VoiceXMLRESTProxy {
 			outputter.startTag("vxml");
 				outputter.attribute("version", "2.1");
 				outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
-				outputter.attribute("xml:lang", "nl-NL"); //To prevent "unrecognized input" prompt
+				outputter.attribute("xml:lang", "en-US"); //To prevent "unrecognized input" prompt
 				outputter.startTag("var");
 					outputter.attribute("name","answer_input");
 				outputter.endTag();
@@ -644,18 +676,19 @@ public class VoiceXMLRESTProxy {
 							outputter.startTag("reprompt");
 							outputter.endTag();
 						outputter.endTag();
-					outputter.endTag();
-					outputter.startTag("filled");
-						outputter.startTag("assign");
-							outputter.attribute("name", "answer_input");
-							outputter.attribute("expr", "answer$.utterance.replace(' ','','g')");
-						outputter.endTag();
-						outputter.startTag("submit");
-							outputter.attribute("next", handleAnswerURL);
-							outputter.attribute("namelist","answer_input question_id sessionKey");
-						outputter.endTag();
-						outputter.startTag("clear");
-							outputter.attribute("namelist", "answer_input answer");
+					
+						outputter.startTag("filled");
+							outputter.startTag("assign");
+								outputter.attribute("name", "answer_input");
+								outputter.attribute("expr", "answer$.utterance.replace(' ','','g')");
+							outputter.endTag();
+							outputter.startTag("submit");
+								outputter.attribute("next", getAnswerUrl());
+								outputter.attribute("namelist","answer_input question_id sessionKey");
+							outputter.endTag();
+							outputter.startTag("clear");
+								outputter.attribute("namelist", "answer_input answer");
+							outputter.endTag();
 						outputter.endTag();
 					outputter.endTag();
 				outputter.endTag();
@@ -667,7 +700,6 @@ public class VoiceXMLRESTProxy {
 		return sw.toString();
 	}
 	private String renderOpenQuestionAudio(Question question,ArrayList<String> prompts,String sessionKey){
-		String handleAnswerURL = "/vxml/answer";
 		//String handleTimeoutURL = "/vxml/timeout";
 		
 		String storedAudiofile = this.host+"upload/"+UUID.randomUUID().toString()+".wav";
@@ -731,7 +763,7 @@ public class VoiceXMLRESTProxy {
 							outputter.startTag("if");
 								outputter.attribute("cond", "saveWav.response='SUCCESS'");
 								outputter.startTag("goto");
-									outputter.attribute("next", handleAnswerURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answer_input="+URLEncoder.encode(storedAudiofile, "UTF-8"));
+									outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answer_input="+URLEncoder.encode(storedAudiofile, "UTF-8"));
 								outputter.endTag();
 							outputter.startTag("else");
 							outputter.endTag();
@@ -788,5 +820,9 @@ public class VoiceXMLRESTProxy {
 		}
 		log.info("Sending xml: "+result);
 		return Response.ok(result).build();
+	}
+	
+	protected String getAnswerUrl() {
+		return "/vxml/answer";
 	}
 }

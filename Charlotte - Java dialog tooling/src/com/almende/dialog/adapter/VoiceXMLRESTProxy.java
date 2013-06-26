@@ -159,28 +159,22 @@ public class VoiceXMLRESTProxy {
 		String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
 		Session session = Session.getSession(sessionKey);
 		
-		if(KeyServerLib.checkCredits(config.getPublicKey())) {
-			log.info("Call is authorized");
-			String url="";
-			if (direction.equals("inbound")){
-				url = config.getInitialAgentURL();
-				session.setStartUrl(url);
-				session.setDirection("inbound");
-				session.setRemoteAddress(remoteID);
-				session.setType(adapterType);
-				session.setPubKey(config.getPublicKey());
-			} else {
-				url=session.getStartUrl();
-			}
-			Question question = Question.fromURL(url,remoteID,localID);
-			DDRWrapper.log(question,session,"Start",config);
-			session.storeSession();
-						
-			return handleQuestion(question,remoteID,sessionKey);
+		String url="";
+		if (direction.equals("inbound")){
+			url = config.getInitialAgentURL();
+			session.setStartUrl(url);
+			session.setDirection("inbound");
+			session.setRemoteAddress(remoteID);
+			session.setType(adapterType);
+			session.setPubKey(config.getPublicKey());
 		} else {
-			DDRWrapper.log(null,null,"FailInbound",config);
-			return Response.status(Status.FORBIDDEN).build();
+			url=session.getStartUrl();
 		}
+		Question question = Question.fromURL(url,remoteID,localID);
+		DDRWrapper.log(question,session,"Start",config);
+		session.storeSession();
+					
+		return handleQuestion(question,remoteID,sessionKey);
 	}
 	
 	@Path("continue")

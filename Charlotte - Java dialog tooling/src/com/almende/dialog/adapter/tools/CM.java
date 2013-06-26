@@ -1,9 +1,6 @@
 package com.almende.dialog.adapter.tools;
 
 import java.io.StringWriter;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.logging.Logger;
 
 import org.znerd.xmlenc.XMLOutputter;
@@ -115,37 +112,71 @@ public class CM {
 		return count;
 	}
 	
-private boolean isGSMSeven(String message) {
-		
-		String[] chs = {"40", "0394", "20", "30", "a1", "50", "bf", "70",
-						"a3", "5f", "21", "31", "41", "51", "61", "71",
-						"24", "03a6", "22", "32", "42", "52", "62", "72",
-						"a5", "0393", "23", "33", "43", "53", "63", "73",
-						"e8", "039b", "a4", "34", "35", "44", "54", "64", "74",
-						"e9", "03a9", "25", "45", "45", "55", "65", "75",
-						"f9", "03a0", "26", "36", "46", "56", "66", "76",
-						"ec", "03a8", "27", "37", "47", "57", "67", "77", 
-						"f2", "03a3", "28", "38", "48", "58", "68", "78",
-						"c7", "0398", "29", "39", "49", "59", "69", "79",
-						"0a", "039e", "2a", "3a", "4a", "5a", "6a", "7a",
-						"d8", "1b", "2b", "3b", "4b", "c4", "6b", "e4",
-						"f8", "c6", "2c", "3c", "4c", "d6", "6c", "f6",
-						"0d", "e6", "2d", "3d", "4d", "d1", "6d", "f1",
-						"c5", "df", "2e", "3e", "4e", "dc", "6e", "fc",
-						"e5", "c9", "2f", "3f", "4f", "a7", "6f", "e0", "0", "20ac"};
-		
-		Set<String> chars = new HashSet<String>(Arrays.asList(chs));
-		
-		
-		for(char ch: message.toCharArray()) {
-			if(!chars.contains(Integer.toHexString(ch))) {
-				log.info("Special char: "+ch+" : "+Integer.toHexString(ch));
-				return false;
-			}
-		}
-		
-		return true;
-	}
+	public boolean isGSMSeven(CharSequence str0) {
+        if (str0 == null) {
+            return true;
+        }
+
+        int len = str0.length();
+        for (int i = 0; i < len; i++) {
+            // get the char in this string
+            char c = str0.charAt(i);
+            // simple range checks for most common characters (0x20 -> 0x5F) or (0x61 -> 0x7E)
+            if ((c >= ' ' && c <= '_') || (c >= 'a' && c <= '~')) {
+                continue;
+            } else {
+                // 10X more efficient using a switch statement vs. a lookup table search
+                switch (c) {
+                    case '\u00A3':	// £
+                    case '\u00A5':	// ¥
+                    case '\u00E8':	// è
+                    case '\u00E9':	// é
+                    case '\u00F9':	// ù
+                    case '\u00EC':	// ì
+                    case '\u00F2':	// ò
+                    case '\u00C7':	// Ç
+                    case '\n':          // newline
+                    case '\u00D8':	// Ø
+                    case '\u00F8':	// ø
+                    case '\r':          // carriage return
+                    case '\u00C5':	// Å
+                    case '\u00E5':	// å
+                    case '\u0394':	// Δ
+                    case '\u03A6':	// Φ
+                    case '\u0393':	// Γ
+                    case '\u039B':	// Λ
+                    case '\u03A9':	// Ω
+                    case '\u03A0':	// Π
+                    case '\u03A8':	// Ψ
+                    case '\u03A3':	// Σ
+                    case '\u0398':	// Θ
+                    case '\u039E':	// Ξ
+                    case '\u00C6':	// Æ
+                    case '\u00E6':	// æ
+                    case '\u00DF':	// ß
+                    case '\u00C9':	// É
+                    case '\u00A4':	// ¤
+                    case '\u00A1':	// ¡
+                    case '\u00C4':	// Ä
+                    case '\u00D6':	// Ö
+                    case '\u00D1':	// Ñ
+                    case '\u00DC':	// Ü
+                    case '\u00A7':	// §
+                    case '\u00BF':	// ¿
+                    case '\u00E4':	// ä
+                    case '\u00F6':	// ö
+                    case '\u00F1':	// ñ
+                    case '\u00FC':	// ü
+                    case '\u00E0':	// à
+                    case '\u20AC':	// €
+                        continue;
+                    default:
+                        return false;
+                }
+            }
+        }
+        return true;
+    }
 	
 	private int countMessageParts(String message, String type) {
 

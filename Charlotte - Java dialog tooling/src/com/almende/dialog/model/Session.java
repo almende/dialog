@@ -1,5 +1,7 @@
 package com.almende.dialog.model;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 import com.almende.dialog.accounts.AdapterConfig;
@@ -79,14 +81,36 @@ public class Session implements SessionIntf {
 	public static Session getSession(String key, String keyword) {
 		Session session = null;
 		String session_json = StringStore.getString(key);
+		// If there is no session create a new one for the user
 		if (session_json == null || session_json.equals("")){
 			String[] split = key.split("\\|");
 			if (split.length == 3){
 				String type = split[0];
 				String localaddress = split[1];
-				AdapterConfig config = AdapterConfig.findAdapterConfig(type, localaddress, keyword);
-				if (config == null){
+				AdapterConfig config = null; 
+				ArrayList<AdapterConfig> configs = AdapterConfig.findAdapters(type, localaddress, null);
+				
+				if (configs.size()==0){
+					log.warning("No adapter found for new session type: "+type+" address: "+localaddress);
 					return null;
+				} else if(configs.size()==1) {
+					config = configs.get(0);
+					log.warning("Adapter found for new session type: "+type+" address: "+localaddress);
+				} else {
+					AdapterConfig defaultConfig = null;
+					for(AdapterConfig conf : configs) {
+						if(conf.getKeyword()==null) {
+							defaultConfig = conf;
+						} else if(keyword!=null && conf.getKeyword().equals(keyword)) {
+							config = conf;
+						}
+					}
+					if(config==null) {
+						log.warning("No adapter with right keyword so using default type: "+type+" address: "+localaddress);
+						config=defaultConfig;
+					} else {
+						log.warning("Adapter found with right keyword type: "+type+" address: "+localaddress+" keyword: "+keyword);
+					}
 				}
 				//TODO: check account/pubkey usage here
 				session = new Session();
@@ -100,12 +124,15 @@ public class Session implements SessionIntf {
 			} else {
 				log.severe("getSession: incorrect key given:"+key);
 			}
+		// Session found, so reuse that one.
 		} else {
 			session = Session.fromJSON(session_json);
 		}
 		session.key = key;
 		return session;
 	}
+	
+	
 	@JsonIgnore
 	public AdapterConfig getAdapterConfig() {
 		if(session.getAdapterID()!=null)

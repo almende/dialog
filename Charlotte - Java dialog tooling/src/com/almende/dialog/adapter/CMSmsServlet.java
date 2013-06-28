@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -18,8 +19,9 @@ public class CMSmsServlet extends TextServlet {
 	@Override
 	protected int sendMessage(String message, String subject, String from,
 			String fromName, String to, String toName, AdapterConfig config) throws Exception {
-		
-		CM cm = new CM(config.getAccessToken(), config.getAccessToken(), config.getAccessTokenSecret());
+    	        String[] tokens = config.getAccessToken().split("\\|");
+                
+                CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
 		return cm.sendMessage(message, subject, from, fromName, to, toName, config);
 	}
 

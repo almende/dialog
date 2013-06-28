@@ -21,7 +21,7 @@ public class MBSmsServlet extends TextServlet {
 	
 	// Info of MessageBird
 	private static final String servletPath = "/sms/mb/";
-	private static final String adapterType = "MB";
+	private static final String adapterType = "SMS";
 	private static final boolean USE_KEYWORDS = true;
 	
 	@Override

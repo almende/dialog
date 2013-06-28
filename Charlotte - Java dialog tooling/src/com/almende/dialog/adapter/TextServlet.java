@@ -285,6 +285,7 @@ abstract public class TextServlet extends HttpServlet {
 				preferred_language = "nl";
 						
 			Question question = null;
+			boolean start = false;
 			json = StringStore.getString("question_"+address+"_"+localaddress);
 			if (json == null || json.equals("")) {
 				body=null; // Remove the body, because it is to start the question
@@ -295,12 +296,16 @@ abstract public class TextServlet extends HttpServlet {
 				}
 				session.setDirection("inbound");
 				DDRWrapper.log(question,session,"Start",config);
+				start = true;
 			} else {
 				question = Question.fromJSON(json);
 			}
+			
 			if (question != null) {
 				question.setPreferred_language(preferred_language);
-				question = question.answer(address, null, body);
+				// Do not answer a question, when it's the first and the type is comment or referral anyway.
+				if(!(start && (question.getType().equalsIgnoreCase("comment") || question.getType().equalsIgnoreCase("referral"))))
+					question = question.answer(address, null, body);
 				Return replystr = formQuestion(question,address);
 				reply = replystr.reply;
 				question = replystr.question;

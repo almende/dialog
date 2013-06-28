@@ -16,6 +16,7 @@ import com.almende.eve.json.annotation.Name;
 import com.almende.eve.json.annotation.Required;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.google.code.twig.annotation.AnnotationObjectDatastore;
 
 public class DialogAgent extends Agent {
 	
@@ -129,6 +130,34 @@ public class DialogAgent extends Agent {
 			log.warning(ex.getLocalizedMessage());
 			return "Error in finding adapter: "+ex.getMessage();
 		}*/
+	}
+	
+	public void changeAgent(@Name("url") String url, 
+						   @Name("adapterType") @Required(false) String adapterType, 
+						   @Name("adapterID") @Required(false) String adapterID, 
+						   @Name("publicKey") String pubKey,
+						   @Name("privateKey") String privKey) throws Exception {
+		
+		if(adapterType!=null && !adapterType.equals("") &&
+				adapterID!=null && !adapterID.equals("")) {
+			throw new Exception("Choose adapterType or adapterID not both");
+		}
+		log.setLevel(Level.INFO);
+		ArrayNode adapterList = null;
+		adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
+		
+		if(adapterList==null)
+			throw new Exception("Invalid key provided");
+		
+		AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, adapterType,adapterList);
+		if(config!=null) {
+			log.info("Config found: "+config.getConfigId());
+			AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+			config.setInitialAgentURL(url);
+			datastore.update(config);			
+		} else {
+			throw new Exception("Invalid adapter found");
+		}
 	}
 	
 	public String startDialog(@Name("question_url") @Required(false) String url,

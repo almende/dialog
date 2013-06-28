@@ -44,7 +44,7 @@ public class AdapterConfig {
 	String preferred_language = "nl";
 	String initialAgentURL = "";
 	String myAddress = "";
-	String keyword = "";
+	String keyword = null;
 	String status = "";
 	// Broadsoft:
 	String xsiURL = "";
@@ -186,7 +186,19 @@ public class AdapterConfig {
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 		AdapterConfig config = datastore.load(AdapterConfig.class, adapterID);
 		
-		return config;
+		// Check if config id from database is owned by agent
+		if(config!=null) {
+			for(JsonNode adapter : adapters) {
+				if(adapter.get("id").asText().equals(config.getConfigId()))
+					return config;
+			}
+		} else {
+			log.warning("Adapter with id: "+adapterID+" not found in db");
+		}
+		
+		log.warning("ConfigId: "+adapterID+ " found in db. But is not owned by user??");
+		
+		return null;
 	}
 
 	public static AdapterConfig findAdapterConfig(String adapterType,

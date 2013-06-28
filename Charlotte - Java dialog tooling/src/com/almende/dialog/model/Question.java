@@ -48,9 +48,11 @@ public class Question implements QuestionIntf {
 	}
 	@JSON(include = false)
 	public static Question fromURL(String url,String remoteID,String fromID)  {
-		Client client = ParallelInit.getClient();
+            log.info( String.format( "Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID, fromID  ));
+            
+                Client client = ParallelInit.getClient();
 		WebResource webResource = client.resource(url);
-		
+	
 		String json = "";
 		try {
 			webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
@@ -74,12 +76,16 @@ public class Question implements QuestionIntf {
 		if(json!=null) {
 			try {
 				question = om.readValue(json, Question.class);
+			
+				question.setQuestion_text( URLDecoder.decode( question.getQuestion_text() ) );
+				
 				//question = new JSONDeserializer<Question>().use(null,
 				//		Question.class).deserialize(json);
 			} catch (Exception e) {
 				log.severe(e.toString());
 			}
 		}
+		log.info( "question from JSON: %s" + question );
 		return question;
 	}
 

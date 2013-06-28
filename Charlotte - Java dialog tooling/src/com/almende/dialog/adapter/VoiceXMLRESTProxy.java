@@ -127,7 +127,10 @@ public class VoiceXMLRESTProxy {
 		String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
 		Session session = Session.getSession(sessionKey);
 		
-		if(KeyServerLib.checkCredits(config.getPublicKey())) {
+		//if(KeyServerLib.checkCredits(config.getPublicKey())) {
+            Broadsoft bs = new Broadsoft( config );
+            bs.startSubscription();
+
 			log.info("Call is authorized");
 			String url="";
 			if (direction.equals("inbound")){
@@ -144,11 +147,13 @@ public class VoiceXMLRESTProxy {
 			DDRWrapper.log(question,session,"Start",config);
 			session.storeSession();
 						
+			log.info( "question check: "+question );
+//			log.info( "question text check: "+question.getQuestion_text() );
 			return handleQuestion(question,remoteID,sessionKey);
-		} else {
-			DDRWrapper.log(null,null,"FailInbound",config);
-			return Response.status(Status.FORBIDDEN).build();
-		}
+//		} else {
+//			DDRWrapper.log(null,session,"FailInbound",config);
+//			return Response.status(Status.FORBIDDEN).build();
+//		}
 	}
 	
 	@Path("continue")
@@ -461,7 +466,6 @@ public class VoiceXMLRESTProxy {
 		}
 	}
 	
-	@SuppressWarnings("unused")
 	public Return formQuestion(Question question,String address) {
 		ArrayList<String> prompts = new ArrayList<String>();
 		for (int count = 0; count<=LOOP_DETECTION; count++){
@@ -483,9 +487,9 @@ public class VoiceXMLRESTProxy {
 				break;
 			} else 	if (question.getType().equalsIgnoreCase("referral")) {
 				if(!question.getUrl().startsWith("tel:")) {
-					//question = Question.fromURL(question.getUrl(),address);
-					question = question.answer(null, null, null);
-					break;
+					question = Question.fromURL(question.getUrl(),address);
+					//question = question.answer(null, null, null);
+//					break;
 				} else 
 					break;
 			} else {
@@ -497,7 +501,8 @@ public class VoiceXMLRESTProxy {
 	
     private String renderComment( Question question, ArrayList<String> prompts, String sessionKey )
     {
-
+        log.info( String.format( "question is: %s with prompts size: %s and sessionKey %s", question, prompts.size(), sessionKey  ) );
+        
         String handleAnswerURL = "/vxml/answer";
         String handleTimeoutURL = "/vxml/timeout";
         String handleExceptionURL = "/vxml/exception";
@@ -519,10 +524,9 @@ public class VoiceXMLRESTProxy {
                 outputter.attribute( "bridge", "true" );
 
                 String redirectTimeoutHint = getMediaHint( question, MediumType.Broadsoft, MediaHintKey.RedirectTimeOut );
-                if ( redirectTimeoutHint != null )
-                {
-                    outputter.attribute( "connecttimeout", redirectTimeoutHint );
-                }
+                //assign a default timeout if one is not specified
+                String redirectTimeout = redirectTimeoutHint != null ? redirectTimeoutHint : "40s";
+                outputter.attribute( "connecttimeout", redirectTimeout );
 
                 for ( String prompt : prompts )
                 {
@@ -562,10 +566,16 @@ public class VoiceXMLRESTProxy {
                     outputter.endTag();
                     outputter.endTag();
                 }
-                outputter.startTag( "goto" );
-                outputter.attribute( "next", handleAnswerURL + "?question_id=" + question.getQuestion_id()
-                + "&sessionKey=" + sessionKey );
-                outputter.endTag();
+                
+                if ( question != null )
+                {
+                    outputter.startTag( "goto" );
+                    outputter.attribute( "next",
+                                         handleAnswerURL + "?question_id="
+                                             + question.getQuestion_id() + "&sessionKey="
+                                             + sessionKey );
+                    outputter.endTag();
+                }
                 outputter.endTag();
             }
 
@@ -575,6 +585,7 @@ public class VoiceXMLRESTProxy {
         }
         catch ( Exception e )
         {
+            e.printStackTrace();
             log.severe( "Exception in creating question XML: " + e.toString() );
         }
         return sw.toString();
@@ -782,32 +793,51 @@ public class VoiceXMLRESTProxy {
 		if(question !=null && !question.getType().equalsIgnoreCase("comment"))
 			question = res.question;
 		
-		if (question != null){						
-			question.generateIds();
-			StringStore.storeString(question.getQuestion_id(), question.toJSON());
-			StringStore.storeString(question.getQuestion_id()+"-remoteID", remoteID);
-			
-			Session session = Session.getSession(sessionKey);
-			StringStore.storeString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress(), question.toJSON());
+		log.info( "question formed at handleQuestion is: "+ question );
+		log.info( "prompts formed at handleQuestion is: "+ res.prompts );
 		
-			if (question.getType().equalsIgnoreCase("closed")){
-				result = renderClosedQuestion(question,res.prompts,sessionKey);
-			} else if (question.getType().equalsIgnoreCase("open")){
-				result = renderOpenQuestion(question,res.prompts,sessionKey);
-			} else if (question.getType().equalsIgnoreCase("openaudio")){
-				result = renderOpenQuestionAudio(question,res.prompts,sessionKey);
-			} else if (question.getType().equalsIgnoreCase("referral")){
-				if (question.getUrl().startsWith("tel:")){
-					result = renderComment(question,res.prompts, sessionKey);	
-				}
-			} else if (res.prompts.size() > 0) {
-				result = renderComment(question,res.prompts, sessionKey);
-			}
-		} else if (res.prompts.size() > 0){
-			result = renderComment(null,res.prompts, sessionKey);
-		} else {
-			log.info("Going to hangup? So clear Session?");
-		}
+                if ( question != null )
+                {
+                    question.generateIds();
+                    StringStore.storeString( question.getQuestion_id(), question.toJSON() );
+                    StringStore.storeString( question.getQuestion_id() + "-remoteID", remoteID );
+        
+                    Session session = Session.getSession( sessionKey );
+                    StringStore.storeString( "question_" + session.getRemoteAddress() + "_"
+                                                 + session.getLocalAddress(), question.toJSON() );
+        
+                    if ( question.getType().equalsIgnoreCase( "closed" ) )
+                    {
+                        result = renderClosedQuestion( question, res.prompts, sessionKey );
+                    }
+                    else if ( question.getType().equalsIgnoreCase( "open" ) )
+                    {
+                        result = renderOpenQuestion( question, res.prompts, sessionKey );
+                    }
+                    else if ( question.getType().equalsIgnoreCase( "openaudio" ) )
+                    {
+                        result = renderOpenQuestionAudio( question, res.prompts, sessionKey );
+                    }
+                    else if ( question.getType().equalsIgnoreCase( "referral" ) )
+                    {
+                        if ( question.getUrl().startsWith( "tel:" ) )
+                        {
+                            result = renderComment( question, res.prompts, sessionKey );
+                        }
+                    }
+                    else if ( res.prompts.size() > 0 )
+                    {
+                        result = renderComment( question, res.prompts, sessionKey );
+                    }
+                }
+                else if ( res.prompts.size() > 0 )
+                {
+                    result = renderComment( null, res.prompts, sessionKey );
+                }
+                else
+                {
+                    log.info( "Going to hangup? So clear Session?" );
+                }
 		log.info("Sending xml: "+result);
 		return Response.ok(result).build();
 	}

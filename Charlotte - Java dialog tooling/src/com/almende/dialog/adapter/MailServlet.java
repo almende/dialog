@@ -1,6 +1,7 @@
 package com.almende.dialog.adapter;
 
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Properties;
 
@@ -113,4 +114,12 @@ public class MailServlet extends TextServlet {
 	protected String getAdapterType() {
 		return adapterType;
 	}
+
+    @Override
+    protected int broadcastMessage( String message, String subject, String from, String fromName,
+        ArrayList<String> toList, ArrayList<String> toNames, AdapterConfig config ) throws Exception
+    {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 }

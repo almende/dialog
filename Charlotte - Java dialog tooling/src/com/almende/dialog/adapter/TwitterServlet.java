@@ -13,6 +13,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.joda.time.DateTime;
 import org.scribe.builder.ServiceBuilder;
 import org.scribe.builder.api.TwitterApi;
 import org.scribe.model.OAuthRequest;
@@ -30,8 +31,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.base.Splitter;
-
-import org.joda.time.DateTime;
 
 public class TwitterServlet extends TextServlet {
 	
@@ -168,4 +167,12 @@ public class TwitterServlet extends TextServlet {
 			throws IOException {
 		// TODO Auto-generated method stub
 	}
+
+    @Override
+    protected int broadcastMessage( String message, String subject, String from, String fromName,
+        ArrayList<String> toList, ArrayList<String> toName, AdapterConfig config ) throws Exception
+    {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 }

@@ -84,6 +84,7 @@ public class DialogAgent extends Agent {
 		session.kill();
 		return "ok";
 	}
+	
 	public String outboundCall(@Name("address") String address, 
 							   @Name("url") String url, 
 							   @Name("adapterType") @Required(false) String adapterType, 
@@ -97,6 +98,7 @@ public class DialogAgent extends Agent {
 		}
 		log.setLevel(Level.INFO);
 		ArrayNode adapterList = null;
+		log.info( String.format( "pub: %s pri %s adapterType %s", pubKey, privKey, adapterType ) );
 		adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
 		
 		if(adapterList==null)
@@ -131,6 +133,77 @@ public class DialogAgent extends Agent {
 			return "Error in finding adapter: "+ex.getMessage();
 		}*/
 	}
+	
+        public String outboundCall( @Name( "addressList" ) ArrayList<String> addressList,
+            @Name( "url" ) String url, @Name( "adapterType" ) @Required( false ) String adapterType,
+            @Name( "adapterID" ) @Required( false ) String adapterID,
+            @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
+        {
+    
+            if ( adapterType != null && !adapterType.equals( "" ) && adapterID != null
+                && !adapterID.equals( "" ) )
+            {
+                throw new Exception( "Choose adapterType or adapterID not both" );
+            }
+            log.setLevel( Level.INFO );
+            ArrayNode adapterList = null;
+            log.info( String.format( "pub: %s pri %s adapterType %s", pubKey, privKey, adapterType ) );
+            adapterList = KeyServerLib.getAllowedAdapterList( pubKey, privKey, adapterType );
+    
+            if ( adapterList == null )
+                throw new Exception( "Invalid key provided" );
+            //try {
+            log.info( "Trying to find config" );
+            AdapterConfig config = AdapterConfig.findAdapterConfigFromList( adapterID, adapterType,
+                                                                            adapterList );
+            if ( config != null )
+            {
+                log.info( "Config found: " + config.getConfigId() );
+                adapterType = config.getAdapterType();
+                if ( adapterType.toUpperCase().equals( "XMPP" ) )
+                {
+                    return "{'sessionKey':'" + new XMPPServlet().startDialog( addressList, url, config ) + "'}";
+                }
+                //                else if ( adapterType.toUpperCase().equals( "BROADSOFT" ) )
+                //                {
+                //                    return "{'sessionKey':'" + VoiceXMLRESTProxy.dial( addressList, url, config ) + "'}";
+                //                }
+                else if ( adapterType.toUpperCase().equals( "MAIL" ) )
+                {
+                    return "{'sessionKey':'" + new MailServlet().startDialog( addressList, url, config )
+                        + "'}";
+                }
+                else if ( adapterType.toUpperCase().equals( "SMS" ) )
+                {
+                    return "{'sessionKey':'"
+                        + new AskSmsServlet().startDialog( addressList, url, config ) + "'}";
+                }
+                else if ( adapterType.toUpperCase().equals( "CM" ) )
+                {
+                    return "{'sessionKey':'"
+                        + new CMSmsServlet().startDialog( addressList, url, config ) + "'}";
+                }
+                else if ( adapterType.toUpperCase().equals( "TWITTER" ) )
+                {
+                    return "{'sessionKey':'"
+                        + new TwitterServlet().startDialog( addressList, url, config ) + "'}";
+                }
+                else
+                {
+                    throw new Exception(
+                        "Unknown type given: either broadsoft or xmpp or phone or mail" );
+                }
+            }
+            else
+            {
+                throw new Exception( "Invalid adapter found" );
+            }
+            /*
+             * } catch(Exception ex) { ex.printStackTrace();
+             * log.warning(ex.getLocalizedMessage()); return
+             * "Error in finding adapter: "+ex.getMessage(); }
+             */
+        }
 	
 	public void changeAgent(@Name("url") String url, 
 						   @Name("adapterType") @Required(false) String adapterType, 

@@ -8,6 +8,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.joda.time.DateTime;
 import org.scribe.model.Token;
 
 import com.almende.dialog.accounts.AdapterConfig;
@@ -18,7 +19,6 @@ import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import org.joda.time.DateTime;
 
 public class PrivateFacebookServlet extends TextServlet {
 
@@ -113,6 +113,14 @@ public class PrivateFacebookServlet extends TextServlet {
 		// TODO Auto-generated method stub
 		
 	}
+
+    @Override
+    protected int broadcastMessage( String message, String subject, String from, String fromName,
+        ArrayList<String> toList, ArrayList<String> toNames, AdapterConfig config ) throws Exception
+    {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 	
 	
 	

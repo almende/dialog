@@ -522,7 +522,7 @@ public class VoiceXMLRESTProxy {
 		return new Return(prompts, question);
 	}
 	
-    private String renderComment( Question question, ArrayList<String> prompts, String sessionKey )
+    protected String renderComment( Question question, ArrayList<String> prompts, String sessionKey )
     {
         log.info( String.format( "question is: %s with prompts size: %s and sessionKey %s", question, prompts.size(), sessionKey  ) );
         

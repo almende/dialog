@@ -161,4 +161,12 @@ public class AskSmsServlet extends TextServlet {
 		
 		return data;
 	}
+
+    @Override
+    protected int broadcastMessage( String message, String subject, String from, String fromName,
+        ArrayList<String> toList, ArrayList<String> toNames, AdapterConfig config ) throws Exception
+    {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 }

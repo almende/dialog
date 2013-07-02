@@ -2,6 +2,7 @@ package com.almende.dialog.adapter;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.ArrayList;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -118,5 +119,14 @@ public class XMPPServlet extends TextServlet {
 	protected String getAdapterType() {
 		return adapterType;
 	}
+
+
+    @Override
+    protected int broadcastMessage( String message, String subject, String from, String fromName,
+        ArrayList<String> toList, ArrayList<String> toNames, AdapterConfig config ) throws Exception
+    {
+        // TODO Auto-generated method stub
+        return 0;
+    }
 }
 

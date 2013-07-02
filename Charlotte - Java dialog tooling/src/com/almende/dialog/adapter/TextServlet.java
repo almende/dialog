@@ -135,6 +135,10 @@ abstract public class TextServlet extends HttpServlet {
 		return sessionKey;
 	}
 	
+	/**
+	 * updated startDialog with Broadcast functionality
+	 * @throws Exception
+	 */
         public String startDialog( ArrayList<String> addressList, String url, AdapterConfig config ) throws Exception
         {
             if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )

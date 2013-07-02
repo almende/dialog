@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.CharBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
@@ -41,6 +42,10 @@ abstract public class TextServlet extends HttpServlet {
 	
 	protected abstract int sendMessage(String message, String subject, String from, String fromName, 
 										String to, String toName, AdapterConfig config) throws Exception;
+    
+        protected abstract int broadcastMessage( String message, String subject, String from,
+            String fromName, ArrayList<String> toList, String toName, AdapterConfig config ) throws Exception;
+	
 	protected abstract TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception; 
 	protected abstract String getServletPath();
 	protected abstract String getAdapterType();

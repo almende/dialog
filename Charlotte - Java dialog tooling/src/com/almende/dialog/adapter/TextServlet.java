@@ -24,6 +24,7 @@ import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.taskqueue.TaskOptions;
@@ -144,7 +145,7 @@ abstract public class TextServlet extends HttpServlet {
                 }
             }
             String localaddress = config.getMyAddress();
-            String sessionKey = getAdapterType() + "|" + localaddress + "|" + addressList.toArray();
+            String sessionKey = getAdapterType() + "|" + localaddress + "|" + new ObjectMapper().writeValueAsString( addressList );
             Session session = Session.getSession( sessionKey, config.getKeyword() );
             if ( session == null )
             {

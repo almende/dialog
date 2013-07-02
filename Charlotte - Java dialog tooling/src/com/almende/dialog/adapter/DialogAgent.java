@@ -134,6 +134,10 @@ public class DialogAgent extends Agent {
 		}*/
 	}
 	
+	/**
+	 * updated the outboundCall functionality to support broadcast functionality
+	 * @throws Exception
+	 */
         public String outboundCall( @Name( "addressList" ) ArrayList<String> addressList,
             @Name( "url" ) String url, @Name( "adapterType" ) @Required( false ) String adapterType,
             @Name( "adapterID" ) @Required( false ) String adapterID,

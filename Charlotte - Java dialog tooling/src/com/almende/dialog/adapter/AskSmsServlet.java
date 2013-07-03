@@ -4,7 +4,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
@@ -41,13 +43,37 @@ public class AskSmsServlet extends TextServlet {
 			log.warning("Failed to parse phone number");
 		}
 		AnnotationObjectDatastore datastore  = new AnnotationObjectDatastore();
-		SmsMessage msg = new SmsMessage(to, message);
+		SmsMessage msg = new SmsMessage(Arrays.asList( to), message);
 		datastore.store(msg);
 		
 		// TODO: Build in message counter
-		log.info("Stored message: "+msg.getMessage()+ " for: "+msg.getTo());
+		log.info("Stored message: "+msg.getMessage()+ " for: "+ msg.toJson());
 		return 1;
 	}
+	
+        @Override
+        protected int broadcastMessage( String message, String subject, String from, String fromName, Map<String, String> addressNameMap, 
+                                        AdapterConfig config ) throws Exception
+        {
+            //            try
+            //            {
+            //                for ( String to : toList )
+            //                {
+            //                    to = URLDecoder.decode( to, "UTF-8" );
+            //                }
+            //            }
+            //            catch ( Exception ex )
+            //            {
+            //                log.warning( "Failed to parse phone number" );
+            //            }
+            //            AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+            //            SmsMessage msg = new SmsMessage( toList, message );
+            //            datastore.store( msg );
+            //    
+            //            // TODO: Build in message counter
+            //            log.info( "Stored message: " + msg.getMessage() + " for: " + msg.toJson() );
+            return 1;
+        }
 
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp)
@@ -161,12 +187,4 @@ public class AskSmsServlet extends TextServlet {
 		
 		return data;
 	}
-
-    @Override
-    protected int broadcastMessage( String message, String subject, String from, String fromName,
-        ArrayList<String> toList, ArrayList<String> toNames, AdapterConfig config ) throws Exception
-    {
-        // TODO Auto-generated method stub
-        return 0;
-    }
 }

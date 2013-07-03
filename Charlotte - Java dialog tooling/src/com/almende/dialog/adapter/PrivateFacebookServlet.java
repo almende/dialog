@@ -3,6 +3,7 @@ package com.almende.dialog.adapter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -88,6 +89,13 @@ public class PrivateFacebookServlet extends TextServlet {
 		
 		return 1;
 	}
+	
+        @Override
+        protected int broadcastMessage( String message, String subject, String from, String fromName,
+            Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+        {
+            return 1;
+        }
 
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req,
@@ -113,15 +121,4 @@ public class PrivateFacebookServlet extends TextServlet {
 		// TODO Auto-generated method stub
 		
 	}
-
-    @Override
-    protected int broadcastMessage( String message, String subject, String from, String fromName,
-        ArrayList<String> toList, ArrayList<String> toNames, AdapterConfig config ) throws Exception
-    {
-        // TODO Auto-generated method stub
-        return 0;
-    }
-	
-	
-	
 }

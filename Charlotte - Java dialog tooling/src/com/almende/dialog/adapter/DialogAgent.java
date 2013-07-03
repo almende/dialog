@@ -1,6 +1,9 @@
 package com.almende.dialog.adapter;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -136,9 +139,25 @@ public class DialogAgent extends Agent {
 	
 	/**
 	 * updated the outboundCall functionality to support broadcast functionality
+	 * @param addressList list of addresses
 	 * @throws Exception
 	 */
-        public String outboundCall( @Name( "addressList" ) ArrayList<String> addressList,
+        public String outboundCallWithList( @Name( "addressList" ) Collection<String> addressList,
+            @Name( "url" ) String url, @Name( "adapterType" ) @Required( false ) String adapterType,
+            @Name( "adapterID" ) @Required( false ) String adapterID,
+            @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
+        {
+            Map<String, String> addressNameMap = new HashMap<String, String>();
+            addressNameMap.keySet().addAll( addressList );
+            return outboundCallWithMap( addressNameMap, url, adapterType, adapterID, pubKey, privKey );
+        }
+        
+        /**
+         * updated the outboundCall functionality to support broadcast functionality.
+         * @param addressMap Key: address and Value: name
+         * @throws Exception
+         */
+        public String outboundCallWithMap( @Name( "addressMap" ) Map<String, String> addressMap,
             @Name( "url" ) String url, @Name( "adapterType" ) @Required( false ) String adapterType,
             @Name( "adapterID" ) @Required( false ) String adapterID,
             @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
@@ -166,7 +185,7 @@ public class DialogAgent extends Agent {
                 adapterType = config.getAdapterType();
                 if ( adapterType.toUpperCase().equals( "XMPP" ) )
                 {
-                    return "{'sessionKey':'" + new XMPPServlet().startDialog( addressList, url, config ) + "'}";
+                    return "{'sessionKey':'" + new XMPPServlet().startDialog( addressMap, url, config ) + "'}";
                 }
                 //                else if ( adapterType.toUpperCase().equals( "BROADSOFT" ) )
                 //                {
@@ -174,23 +193,23 @@ public class DialogAgent extends Agent {
                 //                }
                 else if ( adapterType.toUpperCase().equals( "MAIL" ) )
                 {
-                    return "{'sessionKey':'" + new MailServlet().startDialog( addressList, url, config )
+                    return "{'sessionKey':'" + new MailServlet().startDialog( addressMap, url, config )
                         + "'}";
                 }
                 else if ( adapterType.toUpperCase().equals( "SMS" ) )
                 {
                     return "{'sessionKey':'"
-                        + new AskSmsServlet().startDialog( addressList, url, config ) + "'}";
+                        + new AskSmsServlet().startDialog( addressMap, url, config ) + "'}";
                 }
                 else if ( adapterType.toUpperCase().equals( "CM" ) )
                 {
                     return "{'sessionKey':'"
-                        + new CMSmsServlet().startDialog( addressList, url, config ) + "'}";
+                        + new CMSmsServlet().startDialog( addressMap, url, config ) + "'}";
                 }
                 else if ( adapterType.toUpperCase().equals( "TWITTER" ) )
                 {
                     return "{'sessionKey':'"
-                        + new TwitterServlet().startDialog( addressList, url, config ) + "'}";
+                        + new TwitterServlet().startDialog( addressMap, url, config ) + "'}";
                 }
                 else
                 {

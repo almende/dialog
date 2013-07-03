@@ -5,8 +5,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.CharBuffer;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
@@ -44,8 +44,13 @@ abstract public class TextServlet extends HttpServlet {
 	protected abstract int sendMessage(String message, String subject, String from, String fromName, 
 										String to, String toName, AdapterConfig config) throws Exception;
     
+	/**
+	 * update to the sendMessage function to cater broadcast functionality
+	 * @param addressNameMap Map with address (e.g. phonenumber or email) as Key and name as value 
+	 * @throws Exception
+	 */
         protected abstract int broadcastMessage( String message, String subject, String from,
-            String fromName, ArrayList<String> toList, ArrayList<String> toNames, AdapterConfig config ) throws Exception;
+            String fromName, Map<String, String> addressNameMap, AdapterConfig config ) throws Exception;
 	
 	protected abstract TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception; 
 	protected abstract String getServletPath();
@@ -139,17 +144,17 @@ abstract public class TextServlet extends HttpServlet {
 	 * updated startDialog with Broadcast functionality
 	 * @throws Exception
 	 */
-        public String startDialog( ArrayList<String> addressList, String url, AdapterConfig config ) throws Exception
+        public String startDialog( Map<String, String> addressNameMap, String url, AdapterConfig config ) throws Exception
         {
             if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
             {
-                for ( String address : addressList )
+                for ( String address : addressNameMap.keySet() )
                 {
                     address = formatNumber( address ).replaceFirst( "\\+31", "0" );
                 }
             }
             String localaddress = config.getMyAddress();
-            String sessionKey = getAdapterType() + "|" + localaddress + "|" + new ObjectMapper().writeValueAsString( addressList );
+            String sessionKey = getAdapterType() + "|" + localaddress + "|" + new ObjectMapper().writeValueAsString( addressNameMap.keySet() );
             Session session = Session.getSession( sessionKey, config.getKeyword() );
             if ( session == null )
             {
@@ -165,7 +170,7 @@ abstract public class TextServlet extends HttpServlet {
     
             Return res = null;
             Question question = null;
-            for ( String address : addressList )
+            for ( String address : addressNameMap.keySet() )
             {
                 question = Question.fromURL( url, address );
                 String preferred_language = StringStore.getString( address + "_language" );
@@ -182,7 +187,7 @@ abstract public class TextServlet extends HttpServlet {
                 DDRWrapper.log( question, session, "Start", config );
             }
             String fromName = getNickname( res.question );
-            int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, addressList, new ArrayList<String>(), config );
+            int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, addressNameMap, config );
             for ( int i = 0; i < count; i++ )
             {
                 DDRWrapper.log( question, session, "Send", config );

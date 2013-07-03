@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
@@ -145,6 +146,19 @@ public class TwitterServlet extends TextServlet {
 		
 		return count;
 	}
+	
+        @Override
+        protected int broadcastMessage( String message, String subject, String from, String fromName,
+            Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+        {
+            int count = 0;
+            for ( String address : addressNameMap.keySet() )
+            {
+                String toName = addressNameMap.get( address );
+                count = count + sendMessage( message, subject, from, fromName, address, toName, config );
+            }
+            return count;
+        }
 
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req,
@@ -167,12 +181,4 @@ public class TwitterServlet extends TextServlet {
 			throws IOException {
 		// TODO Auto-generated method stub
 	}
-
-    @Override
-    protected int broadcastMessage( String message, String subject, String from, String fromName,
-        ArrayList<String> toList, ArrayList<String> toName, AdapterConfig config ) throws Exception
-    {
-        // TODO Auto-generated method stub
-        return 0;
-    }
 }

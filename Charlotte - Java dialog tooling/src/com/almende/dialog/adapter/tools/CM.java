@@ -1,7 +1,8 @@
 package com.almende.dialog.adapter.tools;
 
 import java.io.StringWriter;
-import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import org.znerd.xmlenc.XMLOutputter;
@@ -114,7 +115,7 @@ public class CM {
 	}
     
         public int broadcastMessage( String message, String subject, String from, String fromName,
-            ArrayList<String> toList, ArrayList<String> toNames, AdapterConfig config ) throws Exception
+            Map<String, String> emailNameMap, AdapterConfig config ) throws Exception
         {
     
             String type = "TEXT";
@@ -144,7 +145,7 @@ public class CM {
                 outputter.attribute( "PASSWORD", password );
                 outputter.endTag();
     
-                for ( String to : toList )
+                for ( String to : emailNameMap.keySet() )
                 {
                     outputter.startTag( "MSG" );
                         outputter.startTag( "CONCATENATIONTYPE" );

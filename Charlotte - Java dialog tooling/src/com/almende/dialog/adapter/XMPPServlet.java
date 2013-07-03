@@ -3,6 +3,7 @@ package com.almende.dialog.adapter;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -76,8 +77,32 @@ public class XMPPServlet extends TextServlet {
 		
 		return 1;
 	}
+	
 
-
+        @Override
+        protected int broadcastMessage( String message, String subject, String from, String fromName,
+            Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+        {
+            JID localJid = new JID(from);
+            ArrayList<JID> jids = new ArrayList<JID>();
+            
+            for ( String address : addressNameMap.keySet() )
+            {
+                JID jid = new JID( address );
+                jids.add( jid );
+                if ( fromName != null )
+                {
+                    xmpp.sendPresence( jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "as: "
+                        + fromName, localJid );
+                    message = "*" + fromName + ":* " + message;
+                }
+            }
+            Message msg = new MessageBuilder().withRecipientJids(jids.toArray( new JID[addressNameMap.size()] ))
+                                              .withFromJid(localJid).withBody(message).build();
+            xmpp.sendMessage(msg);
+            return 1;
+        }
+	    
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp)
 			throws Exception {
@@ -119,14 +144,5 @@ public class XMPPServlet extends TextServlet {
 	protected String getAdapterType() {
 		return adapterType;
 	}
-
-
-    @Override
-    protected int broadcastMessage( String message, String subject, String from, String fromName,
-        ArrayList<String> toList, ArrayList<String> toNames, AdapterConfig config ) throws Exception
-    {
-        // TODO Auto-generated method stub
-        return 0;
-    }
 }
 

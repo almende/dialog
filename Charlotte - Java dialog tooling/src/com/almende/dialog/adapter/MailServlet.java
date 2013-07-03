@@ -1,8 +1,8 @@
 package com.almende.dialog.adapter;
 
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.Date;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.mail.Address;
@@ -104,6 +104,47 @@ public class MailServlet extends TextServlet {
 		
 		return 1;		
 	}
+	
+        @Override
+        protected int broadcastMessage( String message, String subject, String from, String fromName,
+            Map<String, String> addressNameMap, AdapterConfig config )
+        throws Exception
+        {
+            Properties props = new Properties();
+            javax.mail.Session session = javax.mail.Session.getDefaultInstance( props, null );
+    
+            try
+            {
+                Message msg = new MimeMessage( session );
+                msg.setFrom( new InternetAddress( from, fromName ) );
+                for ( String address : addressNameMap.keySet() )
+                {
+                    String toName = addressNameMap.get( address );
+                    msg.addRecipient( Message.RecipientType.TO, new InternetAddress( address, toName ) );
+                }
+                msg.setSubject( subject );
+                msg.setText( message );
+                Transport.send( msg );
+    
+                log.warning( "Send reply to mail post: " + ( new Date().getTime() ) );
+    
+            }
+            catch ( AddressException e )
+            {
+                log.warning( "Failed to send message, because wrong address: "
+                    + e.getLocalizedMessage() );
+            }
+            catch ( MessagingException e )
+            {
+                log.warning( "Failed to send message, because message: " + e.getLocalizedMessage() );
+            }
+            catch ( UnsupportedEncodingException e )
+            {
+                log.warning( "Failed to send message, because encoding: " + e.getLocalizedMessage() );
+            }
+    
+            return 1;
+        }
 
 	@Override
 	protected String getServletPath() {
@@ -114,12 +155,4 @@ public class MailServlet extends TextServlet {
 	protected String getAdapterType() {
 		return adapterType;
 	}
-
-    @Override
-    protected int broadcastMessage( String message, String subject, String from, String fromName,
-        ArrayList<String> toList, ArrayList<String> toNames, AdapterConfig config ) throws Exception
-    {
-        // TODO Auto-generated method stub
-        return 0;
-    }
 }

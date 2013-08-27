@@ -27,7 +27,7 @@ public class DDRWrapper {
 		node.put("adapterType", config.getAdapterType());
 		node.put("adapterAddress", config.getMyAddress());
 		node.put("trackingToken", token);
-		node.put("pubKey", session.getPubKey());
+		node.put("pubKey", config.getPublicKey());
 		try {
 			ddr.info(om.writeValueAsString(node));
 		} catch (Exception e) {
@@ -36,9 +36,16 @@ public class DDRWrapper {
 	}
 	public static void log(Question question, Session session, String type, AdapterConfig config){
 		if (question == null){
-			log("","",session,type,config);			
+			log("",session.getTrackingToken(),session,type,config);			
 		} else {
-			log(question.getRequester(),question.getTrackingToken(),session,type,config);
+			String trackingToken=null;
+			if(question.getTrackingToken()!=null) {
+				trackingToken = question.getTrackingToken(); 
+			} else if(session.getTrackingToken()!=null) {
+				trackingToken=session.getTrackingToken();
+			}
+				
+			log(question.getRequester(),trackingToken,session,type,config);
 		}
 	}
 	

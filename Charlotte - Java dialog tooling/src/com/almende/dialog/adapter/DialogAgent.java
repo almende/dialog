@@ -14,8 +14,11 @@ import com.almende.eve.agent.annotation.Access;
 import com.almende.eve.agent.annotation.AccessType;
 import com.almende.eve.json.annotation.Name;
 import com.almende.eve.json.annotation.Required;
+import com.almende.eve.json.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.code.twig.annotation.AnnotationObjectDatastore;
 
 public class DialogAgent extends Agent {
 	
@@ -39,7 +42,7 @@ public class DialogAgent extends Agent {
 	public ArrayList<String> getActiveCalls(@Name("adapterID") String adapterID) {
 		
 		try {
-			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, null, null);
+			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, null, null);
 			if(config.getAdapterType().toLowerCase().equals("broadsoft")) {
 				return VoiceXMLRESTProxy.getActiveCalls(config);
 			}
@@ -52,7 +55,7 @@ public class DialogAgent extends Agent {
 	public ArrayList<String> getActiveCallsInfo(@Name("adapterID") String adapterID) {
 		
 		try {
-			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, null, null);
+			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, null, null);
 			if(config.getAdapterType().toLowerCase().equals("broadsoft")) {
 				return VoiceXMLRESTProxy.getActiveCallsInfo(config);
 			}
@@ -65,7 +68,7 @@ public class DialogAgent extends Agent {
 	public boolean killActiveCalls(@Name("adapterID") String adapterID) {
 		
 		try {
-			AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, null, null);
+			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, null, null);
 			if(config.getAdapterType().toLowerCase().equals("broadsoft")) {
 				
 				return VoiceXMLRESTProxy.killActiveCalls(config);
@@ -95,6 +98,7 @@ public class DialogAgent extends Agent {
 			throw new Exception("Choose adapterType or adapterID not both");
 		}
 		log.setLevel(Level.INFO);
+		log.info("Starting call with adapterID: "+adapterID+" pubKey: "+pubKey+" privKey: "+privKey);
 		ArrayNode adapterList = null;
 		adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
 		
@@ -102,7 +106,7 @@ public class DialogAgent extends Agent {
 			throw new Exception("Invalid key provided");
 		//try {
 		log.info("Trying to find config");
-		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterID, adapterType,adapterList);
+		AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, adapterType,adapterList);
 		if(config!=null) {
 			log.info("Config found: "+config.getConfigId());
 			adapterType = config.getAdapterType();
@@ -129,6 +133,40 @@ public class DialogAgent extends Agent {
 			log.warning(ex.getLocalizedMessage());
 			return "Error in finding adapter: "+ex.getMessage();
 		}*/
+	}
+	
+	public String changeAgent(@Name("url") String url, 
+						   @Name("adapterType") @Required(false) String adapterType, 
+						   @Name("adapterID") @Required(false) String adapterID, 
+						   @Name("publicKey") String pubKey,
+						   @Name("privateKey") String privKey) throws Exception {
+		
+		if(adapterType!=null && !adapterType.equals("") &&
+				adapterID!=null && !adapterID.equals("")) {
+			throw new Exception("Choose adapterType or adapterID not both");
+		}
+		log.setLevel(Level.INFO);
+		ArrayNode adapterList = null;
+		adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
+		
+		if(adapterList==null)
+			throw new Exception("Invalid key provided");
+		
+		AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, adapterType,adapterList);
+		if(config!=null) {
+			log.info("Config found: "+config.getConfigId());
+			AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+			config.setInitialAgentURL(url);
+			datastore.store(config);
+			
+			ObjectNode result = JOM.createObjectNode();
+			result.put("id", config.getConfigId());
+			result.put("type", config.getAdapterType());
+			result.put("url", config.getInitialAgentURL());
+			return result.toString();
+		} else {
+			throw new Exception("Invalid adapter found");
+		}
 	}
 	
 	public String startDialog(@Name("question_url") @Required(false) String url,

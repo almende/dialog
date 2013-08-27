@@ -1,5 +1,6 @@
 package com.almende.dialog.model;
 
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 import com.almende.dialog.accounts.AdapterConfig;
@@ -71,38 +72,72 @@ public class Session implements SessionIntf {
 	public void drop() {
 		StringStore.dropString(key);
 	}
-	@JsonIgnore
 	public static Session getSession(String key) {
+		return getSession(key, null);
+	}
+	
+	@JsonIgnore
+	public static Session getSession(String key, String keyword) {
 		Session session = null;
 		String session_json = StringStore.getString(key);
+		// If there is no session create a new one for the user
 		if (session_json == null || session_json.equals("")){
 			String[] split = key.split("\\|");
 			if (split.length == 3){
 				String type = split[0];
 				String localaddress = split[1];
-				AdapterConfig config = AdapterConfig.findAdapterConfig(type, localaddress);
-				if (config == null){
+				AdapterConfig config = null; 
+				ArrayList<AdapterConfig> configs = AdapterConfig.findAdapters(type, localaddress, null);
+				
+				if (configs.size()==0){
+					log.warning("No adapter found for new session type: "+type+" address: "+localaddress);
 					return null;
+				} else if(configs.size()==1) {
+					config = configs.get(0);
+					log.warning("Adapter found for new session type: "+type+" address: "+localaddress);
+				} else {
+					AdapterConfig defaultConfig = null;
+					for(AdapterConfig conf : configs) {
+						if(conf.getKeyword()==null) {
+							defaultConfig = conf;
+						} else if(keyword!=null && conf.getKeyword().equals(keyword)) {
+							config = conf;
+						}
+					}
+					if(config==null) {
+						log.warning("No adapter with right keyword so using default type: "+type+" address: "+localaddress);
+						config=defaultConfig;
+					} else {
+						log.warning("Adapter found with right keyword type: "+type+" address: "+localaddress+" keyword: "+keyword);
+					}
 				}
 				//TODO: check account/pubkey usage here
 				session = new Session();
+				session.setAdapterID(config.getConfigId());
 				session.setPubKey(config.getPublicKey().toString());
 				session.setRemoteAddress(split[2]);
 				session.setLocalAddress(localaddress);
+				session.setType(type);
 				session.key = key;
 				session.storeSession();
 			} else {
 				log.severe("getSession: incorrect key given:"+key);
 			}
+		// Session found, so reuse that one.
 		} else {
 			session = Session.fromJSON(session_json);
 		}
 		session.key = key;
 		return session;
 	}
+	
+	
 	@JsonIgnore
 	public AdapterConfig getAdapterConfig() {
-		return AdapterConfig.findAdapterConfig(this.getType(), this.getLocalAddress());
+		if(session.getAdapterID()!=null)
+			return AdapterConfig.getAdapterConfig(session.getAdapterID());
+		
+		return null;
 	}
 	@Override
 	public String getStartUrl() {
@@ -170,5 +205,25 @@ public class Session implements SessionIntf {
 	@Override
 	public void setExternalSession(String externalSession) {
 		this.session.setExternalSession(externalSession);
+	}
+	
+	@Override
+	public String getAdapterID() {
+		return this.session.getAdapterID();
+	}
+	
+	@Override
+	public void setAdapterID(String adapterID) {
+		this.session.setAdapterID(adapterID);
+	}
+	
+	@Override
+	public String getTrackingToken() {
+		return this.session.getTrackingToken();
+	}
+	
+	@Override
+	public void setTrackingToken(String token) {
+		this.session.setTrackingToken(token);
 	}
 }

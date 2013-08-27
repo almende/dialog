@@ -11,11 +11,13 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
             <param-name>applicationConfigLocation</param-name>
             <param-value>/WEB-INF/application</param-value>
         </init-param>
+        <load-on-startup>1</load-on-startup>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>RESTServlet</servlet-name>
 		<url-pattern>/*</url-pattern>
 	</servlet-mapping>
+	    
 	<servlet>
 		<servlet-name>JSON</servlet-name>
 		<servlet-class>com.chap.memo.memoNodes.servlet.MemoJSONServlet</servlet-class>
@@ -93,6 +95,24 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<servlet>
+  		<servlet-name>mbsmshandler</servlet-name>
+  		<servlet-class>com.almende.dialog.adapter.MBSmsServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+  		<servlet-name>mbsmshandler</servlet-name>
+  		<url-pattern>/sms/mb/*</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+  		<servlet-name>nexmosmshandler</servlet-name>
+  		<servlet-class>com.almende.dialog.adapter.NexmoSmsServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+  		<servlet-name>nexmosmshandler</servlet-name>
+  		<url-pattern>/sms/nm/*</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
   		<servlet-name>authservlet</servlet-name>
   		<servlet-class>com.almende.dialog.auth.OAuthServlet</servlet-class>
 	</servlet>
@@ -126,6 +146,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	<servlet-mapping>
   		<servlet-name>facebookwallservlet</servlet-name>
   		<url-pattern>/facebook_wall/*</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>upload</servlet-name>
+		<servlet-class>com.almende.dialog.util.UploadServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>upload</servlet-name>
+		<url-pattern>/upload/*</url-pattern>
 	</servlet-mapping>
 	
 	<welcome-file-list>
@@ -168,6 +197,14 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
         </auth-constraint>
     </security-constraint>
     -->
+    <!-- <security-constraint>
+  		<web-resource-collection>
+    		<url-pattern>/adapters/*</url-pattern>
+  		</web-resource-collection>
+  		<auth-constraint>
+    		<role-name>admin</role-name>
+  		</auth-constraint>
+	</security-constraint>-->
 	<security-constraint>
   		<web-resource-collection>
     		<url-pattern>/_ah/xmpp/*</url-pattern>

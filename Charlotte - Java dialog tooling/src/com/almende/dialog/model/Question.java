@@ -1,6 +1,7 @@
 package com.almende.dialog.model;
 
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -114,6 +115,13 @@ public class Question implements QuestionIntf {
 												// answer doesn't exist, or
 												// multiple answers
 												// (=out-of-spec)
+		} else if(this.getType().equals("openaudio")) {
+			answer = this.getAnswers().get(0);
+			try {
+				answer_input = URLDecoder.decode(answer_input, "UTF-8");
+				log.info("Received answer: "+answer_input);
+			} catch (Exception e) {
+			}
 		} else if (this.getType().equals("comment") || this.getType().equals("referral")) {
 			if(this.getAnswers() == null || this.getAnswers().size()==0)
 				return null;
@@ -135,7 +143,7 @@ public class Question implements QuestionIntf {
 			answer_input = answer_input.trim();
 			ArrayList<Answer> answers = question.getAnswers();
 			for (Answer ans : answers) {
-				if (ans.getAnswer_text().equals(answer_input)) {
+				if (ans.getAnswer_text()!=null && ans.getAnswer_text().equals(answer_input)) {
 					answer = ans;
 					break;
 				}
@@ -178,6 +186,7 @@ public class Question implements QuestionIntf {
 		// Check if answer.callback gives new question for this dialog
 		try {
 			String post = om.writeValueAsString(ans);
+			log.info("Going to send: "+post);
 			String s = webResource.type("application/json").post(
 					String.class, post);
 			
@@ -185,6 +194,10 @@ public class Question implements QuestionIntf {
 
 			newQ = om.readValue(s, Question.class);
 			newQ.setPreferred_language(preferred_language);
+		} catch (ClientHandlerException ioe) {
+			log.severe(ioe.toString());
+			ioe.printStackTrace();
+			newQ = this.event("exception", "Unable to load question", responder);
 		} catch (Exception e) {
 			log.severe(e.toString());
 			newQ = this.event("exception", "Unable to parse question json", responder);
@@ -193,7 +206,7 @@ public class Question implements QuestionIntf {
 	}
 	
 	public Question event(String eventType, String message, String responder) {
-		log.info("Received: "+eventType);
+		log.info("Received: "+eventType+" Message: "+message);
 		Client client = ParallelInit.getClient();
 		ArrayList<EventCallback> events = this.getEvent_callbacks();
 		EventCallback eventCallback=null;
@@ -210,7 +223,7 @@ public class Question implements QuestionIntf {
 			// Oeps, couldn't find/handle event, just repeat last question:
 			// TODO: somewhat smarter behavior? Should dialog standard provide
 			// error handling?
-			if(eventType.equals("hangup") || eventType.equals("exception")) {
+			if(eventType.equals("hangup") || eventType.equals("exception") || this.question.getType().equals("referral") ) {
 				return null;
 			}
 			
@@ -284,6 +297,7 @@ public class Question implements QuestionIntf {
 	}
 
 	@Override
+	@JSON(include = false)
 	public String getQuestion_expandedtext() {
 		return question.getQuestion_expandedtext(this.preferred_language);
 	}

@@ -6,6 +6,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.CharBuffer;
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServlet;
@@ -13,7 +14,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.DDRWrapper;
-import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
@@ -21,6 +21,7 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.KeyServerLib;
+import com.almende.dialog.util.RequestUtil;
 import com.almende.util.ParallelInit;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
@@ -36,7 +37,7 @@ abstract public class TextServlet extends HttpServlet {
 	protected static final Logger log = Logger
 			.getLogger("DialogHandler");
 	protected static final int LOOP_DETECTION=10;
-	protected static final String DEMODIALOG = "http://"+Settings.HOST+"/charlotte/";
+	protected static final String DEMODIALOG = "/charlotte/";
 	
 	protected abstract int sendMessage(String message, String subject, String from, String fromName, 
 										String to, String toName, AdapterConfig config) throws Exception;
@@ -44,6 +45,8 @@ abstract public class TextServlet extends HttpServlet {
 	protected abstract String getServletPath();
 	protected abstract String getAdapterType();
 	protected abstract void doErrorPost(HttpServletRequest req, HttpServletResponse res) throws IOException;
+	
+	private String host="";
 	
 	protected class Return {
 		String reply;
@@ -70,7 +73,7 @@ abstract public class TextServlet extends HttpServlet {
 			String qText = question.getQuestion_expandedtext();
 			if(qText!=null && !qText.equals("")) reply += qText;
 
-			if (question.getType().equals("closed")) {
+			if (question.getType().equalsIgnoreCase("closed")) {
 				reply += "\n[";
 				for (Answer ans : question.getAnswers()) {
 					reply += " "
@@ -79,9 +82,9 @@ abstract public class TextServlet extends HttpServlet {
 				}
 				reply = reply.substring(0, reply.length() - 1) + " ]";
 				break; //Jump from forloop
-			} else if (question.getType().equals("comment")) {
+			} else if (question.getType().equalsIgnoreCase("comment")) {
 				question = question.answer(null, null, null);//Always returns null! So no need, but maybe in future?
-			} else 	if (question.getType().equals("referral")) {
+			} else 	if (question.getType().equalsIgnoreCase("referral")) {
 				question = Question.fromURL(question.getUrl(),address);
 			} else {
 				break; //Jump from forloop (open questions, etc.)
@@ -95,13 +98,14 @@ abstract public class TextServlet extends HttpServlet {
 			address = formatNumber(address).replaceFirst("\\+31", "0");
 		String localaddress = config.getMyAddress();
 		String sessionKey =getAdapterType()+"|"+localaddress+"|"+address;
-		Session session = Session.getSession(sessionKey);
+		Session session = Session.getSession(sessionKey, config.getKeyword());
 		if (session == null){
 			log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "+sessionKey);
 			return "";
 		}
 		session.setPubKey(config.getPublicKey());
 		session.setDirection("outbound");
+		session.setTrackingToken(UUID.randomUUID().toString());
 		session.storeSession();
 		
 		url = encodeURLParams(url);
@@ -131,9 +135,9 @@ abstract public class TextServlet extends HttpServlet {
 	}
 	
 	@Override
-	public void doPost(HttpServletRequest req, HttpServletResponse res)
+	public void service(HttpServletRequest req, HttpServletResponse res)
 			throws IOException {
-
+		this.host = RequestUtil.getHost(req);
 //		log.warning("Starting to handle xmpp post: "+startTime+"/"+(new Date().getTime()));
 		boolean loading = ParallelInit.startThreads();
 		
@@ -174,21 +178,47 @@ abstract public class TextServlet extends HttpServlet {
 		String subject = msg.getSubject();
 		String body = msg.getBody();
 		String toName = msg.getRecipientName();
+		String keyword = msg.getKeyword();
 		String fromName="DH";
 		int count=0;
 		
-		AdapterConfig config= AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
 		
-		Session session = Session.getSession(getAdapterType()+"|"+localaddress+"|"+address);
+		AdapterConfig config;
+		Session session = Session.getSession(getAdapterType()+"|"+localaddress+"|"+address, keyword);
+		// If session is null it means the adapter is not found.
 		if (session == null){
+			config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
 			try {
-				count = sendMessage("Sorry, I can't find the account associated with this chat address...", subject, localaddress, fromName, address, toName, config);
+				count = sendMessage(getNoConfigMessage(), subject, localaddress, fromName, address, toName, config);
+				// Create new session to store the send in the ddr.
+				session = new Session();
+				session.setDirection("inbound");
+				session.setRemoteAddress(address);
+				session.setTrackingToken(UUID.randomUUID().toString());
 			} catch(Exception ex) {
 			}
 			for(int i=0;i<count;i++) { 
 				DDRWrapper.log(null,  null, session, "Send", config);
 			}
 			return;
+		}
+		
+		config = session.getAdapterConfig();
+		//TODO: Remove this check, this is now to support backward compatibility
+		if(config==null) {
+			config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress, keyword);
+			if (config == null){
+				config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
+				try {
+					count = sendMessage(getNoConfigMessage(), subject, localaddress, fromName, address, toName, config);
+				} catch(Exception ex) {
+				}
+				for(int i=0;i<count;i++) { 
+					DDRWrapper.log(null,  null, session, "Send", config);
+				}
+				return;
+			}
+			session.setAdapterID(config.getConfigId());
 		}
 		
 		String json = "";
@@ -250,22 +280,27 @@ abstract public class TextServlet extends HttpServlet {
 				preferred_language = "nl";
 						
 			Question question = null;
+			boolean start = false;
 			json = StringStore.getString("question_"+address+"_"+localaddress);
 			if (json == null || json.equals("")) {
 				body=null; // Remove the body, because it is to start the question
 				if (config.getInitialAgentURL().equals("")){
-					question = Question.fromURL(DEMODIALOG,address,localaddress);
+					question = Question.fromURL(this.host+DEMODIALOG,address,localaddress);
 				} else {
 					question = Question.fromURL(config.getInitialAgentURL(),address,localaddress);
 				}
 				session.setDirection("inbound");
 				DDRWrapper.log(question,session,"Start",config);
+				start = true;
 			} else {
 				question = Question.fromJSON(json);
 			}
+			
 			if (question != null) {
 				question.setPreferred_language(preferred_language);
-				question = question.answer(address, null, body);
+				// Do not answer a question, when it's the first and the type is comment or referral anyway.
+				if(!(start && (question.getType().equalsIgnoreCase("comment") || question.getType().equalsIgnoreCase("referral"))))
+					question = question.answer(address, null, body);
 				Return replystr = formQuestion(question,address);
 				reply = replystr.reply;
 				question = replystr.question;
@@ -291,6 +326,10 @@ abstract public class TextServlet extends HttpServlet {
 		for(int i=0;i<count;i++) { 
 			DDRWrapper.log(null,  null, session, "Send", config);
 		}
+	}
+	
+	protected String getNoConfigMessage() {
+		return "Sorry, I can't find the account associated with this chat address...";
 	}
 	
 	private String getNickname(Question question) {

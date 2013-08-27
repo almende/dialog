@@ -18,6 +18,9 @@ public class KeyServerLib {
 	public static ArrayNode getAllowedAdapterList(String pubKey, String privKey, String adapterType) {
 		
 		ObjectMapper om = ParallelInit.getObjectMapper();
+		if(Settings.KEYSERVER==null)
+			return om.createArrayNode();
+		
 		String path="/rest/keys/checkkey/"+pubKey+"/"+privKey+"/outbound";
 		
 		String res="";

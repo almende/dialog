@@ -18,9 +18,11 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -43,6 +45,7 @@ public class AdapterConfig {
 	String preferred_language = "nl";
 	String initialAgentURL = "";
 	String myAddress = "";
+	String keyword = null;
 	String status = "";
 	// Broadsoft:
 	String xsiURL = "";
@@ -68,9 +71,9 @@ public class AdapterConfig {
 			newConfig.configId = new UUID().toString();
 			newConfig.status = "OPEN";
 
-			om.readerForUpdating(newConfig).readValue(json);
+			newConfig = om.readerForUpdating(newConfig).readValue(json);
 			if (adapterExists(newConfig.getAdapterType(),
-					newConfig.getMyAddress()))
+					newConfig.getMyAddress(), newConfig.getKeyword()))
 				return Response.status(Status.CONFLICT).build();
 
 			datastore.store(newConfig);
@@ -99,6 +102,7 @@ public class AdapterConfig {
 			AdapterConfig oldConfig = datastore.load(AdapterConfig.class,
 					configid);
 			om.readerForUpdating(oldConfig).readValue(json);
+			// TODO Check if fields myAddress, type and keyword have not been changed.
 			datastore.update(oldConfig);
 			
 			if(oldConfig.getAdapterType().equals("broadsoft")) {
@@ -108,6 +112,7 @@ public class AdapterConfig {
 			
 			return Response.ok(om.writeValueAsString(oldConfig)).build();
 		} catch (Exception e) {
+			e.printStackTrace();
 			log.severe("UpdateConfig: Failed to update config:"
 					+ e.getMessage());
 		}
@@ -118,11 +123,9 @@ public class AdapterConfig {
 	@Path("{uuid}")
 	@Produces("application/json")
 	@JsonIgnore
-	public Response getConfig(@PathParam("uuid") String configid, String json) {
-		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+	public Response getConfig(@PathParam("uuid") String configid) {
 		try {
-			AdapterConfig config = datastore
-					.load(AdapterConfig.class, configid);
+			AdapterConfig config = getAdapterConfig(configid);
 			return Response.ok(om.writeValueAsString(config)).build();
 		} catch (Exception e) {
 			log.severe("getConfig: Failed to read config");
@@ -161,7 +164,12 @@ public class AdapterConfig {
 		return Response.status(Status.BAD_REQUEST).build();
 	}
 	
-	public static AdapterConfig findAdapterConfig(String adapterID, String type, ArrayNode adapters) throws JSONException {
+	public static AdapterConfig getAdapterConfig(String adapterID) {
+		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+		return datastore.load(AdapterConfig.class, adapterID);
+	}
+	
+	public static AdapterConfig findAdapterConfigFromList(String adapterID, String type, ArrayNode adapters) throws JSONException {
 		
 		if(adapterID==null) {
 			
@@ -179,7 +187,23 @@ public class AdapterConfig {
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 		AdapterConfig config = datastore.load(AdapterConfig.class, adapterID);
 		
-		return config;
+		// Check if config id from database is owned by agent
+		if(config!=null) {
+			if(Settings.KEYSERVER==null)
+				return config;
+			
+			for(JsonNode adapter : adapters) {
+				log.info("Checking: "+adapter.get("id").asText()+" matches: "+config.getConfigId());
+				if(adapter.get("id").asText().equals(config.getConfigId()))
+					return config;
+			}
+		} else {
+			log.warning("Adapter with id: "+adapterID+" not found in db");
+		}
+		
+		log.warning("ConfigId: "+adapterID+ " found in db. But is not owned by user??");
+		
+		return null;
 	}
 
 	public static AdapterConfig findAdapterConfig(String adapterType,
@@ -189,6 +213,23 @@ public class AdapterConfig {
 				.type(AdapterConfig.class)
 				.addFilter("myAddress", FilterOperator.EQUAL, lookupKey)
 				.addFilter("adapterType", FilterOperator.EQUAL, adapterType)
+				.now();
+		if (config.hasNext()) {
+			return config.next();
+		}
+		log.severe("AdapterConfig not found:'" + adapterType + "':'"
+				+ lookupKey + "'");
+		return null;
+	}
+	
+	public static AdapterConfig findAdapterConfig(String adapterType,
+			String lookupKey, String keyword) {
+		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+		Iterator<AdapterConfig> config = datastore.find()
+				.type(AdapterConfig.class)
+				.addFilter("myAddress", FilterOperator.EQUAL, lookupKey)
+				.addFilter("adapterType", FilterOperator.EQUAL, adapterType)
+				.addFilter("keyword", FilterOperator.EQUAL, keyword)
 				.now();
 		if (config.hasNext()) {
 			return config.next();
@@ -212,7 +253,7 @@ public class AdapterConfig {
 	}
 
 	public static ArrayList<AdapterConfig> findAdapters(String adapterType,
-			String myAddress, String publicKey) {
+			String myAddress, String keyword) {
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 
 		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
@@ -223,6 +264,9 @@ public class AdapterConfig {
 
 		if (myAddress != null)
 			cmd.addFilter("myAddress", EQUAL, myAddress);
+		
+		if (keyword != null)
+			cmd.addFilter("keyword", EQUAL, keyword);
 
 		Iterator<AdapterConfig> config = cmd.now();
 
@@ -234,9 +278,9 @@ public class AdapterConfig {
 		return adapters;
 	}
 
-	public static boolean adapterExists(String adapterType, String myAddress) {
+	public static boolean adapterExists(String adapterType, String myAddress, String keyword) {
 		ArrayList<AdapterConfig> adapters = findAdapters(adapterType,
-				myAddress, null);
+				myAddress, keyword);
 		if (adapters.size() > 0)
 			return true;
 
@@ -259,6 +303,18 @@ public class AdapterConfig {
 		}
 		return false;
 	}
+	
+	// TODO: use this function
+	/*private boolean checkUpdateAllowed(AdapterConfig oldConfig, AdapterConfig newConfig) {
+		if(!oldConfig.getMyAddress().equals(newConfig.getMyAddress()))
+			return false;
+		if(!oldConfig.getAdapterType().equals(newConfig.getAdapterType()))
+			return false;
+		if(!oldConfig.getKeyword().equals(newConfig.getKeyword()))
+			return false;
+		
+		return true;
+	}*/
 
 	public String getPreferred_language() {
 		return preferred_language;
@@ -308,6 +364,16 @@ public class AdapterConfig {
 		this.myAddress = myAddress;
 	}
 	
+	@JsonIgnore
+	public String getKeyword() {
+		return keyword;
+	}
+	
+	@JsonProperty
+	public void setKeyword(String keyword) {
+		this.keyword = keyword;
+	}
+	
 	public void setStatus(String status) {
 		this.status = status;
 	}
@@ -321,6 +387,7 @@ public class AdapterConfig {
 		return xsiURL;
 	}
 
+	@JsonProperty
 	public void setXsiURL(String xsiURL) {
 		this.xsiURL = xsiURL;
 	}
@@ -338,6 +405,7 @@ public class AdapterConfig {
 		return xsiPasswd;
 	}
 
+	@JsonProperty
 	public void setXsiPasswd(String xsiPasswd) {
 		this.xsiPasswd = xsiPasswd;
 	}
@@ -363,6 +431,7 @@ public class AdapterConfig {
 		return accessTokenSecret;
 	}
 	
+	@JsonProperty
 	public void setAccessTokenSecret(String accessTokenSecret) {
 		this.accessTokenSecret = accessTokenSecret;
 	}

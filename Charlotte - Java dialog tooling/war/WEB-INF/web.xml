@@ -104,6 +104,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<servlet>
+  		<servlet-name>nexmosmshandler</servlet-name>
+  		<servlet-class>com.almende.dialog.adapter.NexmoSmsServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+  		<servlet-name>nexmosmshandler</servlet-name>
+  		<url-pattern>/sms/nm/*</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
   		<servlet-name>authservlet</servlet-name>
   		<servlet-class>com.almende.dialog.auth.OAuthServlet</servlet-class>
 	</servlet>

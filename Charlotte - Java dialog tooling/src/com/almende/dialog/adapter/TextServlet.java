@@ -94,8 +94,9 @@ abstract public class TextServlet extends HttpServlet {
 	}
 	
 	public String startDialog(String address, String url, AdapterConfig config) throws Exception {
-		if(config.getAdapterType().equals("CM") || config.getAdapterType().equals("SMS"))
-			address = formatNumber(address).replaceFirst("\\+31", "0");
+		if(config.getAdapterType().equals("CM") || config.getAdapterType().equals("SMS")) {
+			address = formatNumber(address);
+		}
 		String localaddress = config.getMyAddress();
 		String sessionKey =getAdapterType()+"|"+localaddress+"|"+address;
 		Session session = Session.getSession(sessionKey, config.getKeyword());
@@ -119,8 +120,9 @@ abstract public class TextServlet extends HttpServlet {
 		question.setPreferred_language(preferred_language);
 		Return res = formQuestion(question,address);
 		String fromName = getNickname(res.question);
-		if(res.question!=null)
+		if(res.question!=null) {
 			StringStore.storeString("question_"+address+"_"+localaddress, res.question.toJSON());
+		}
 		
 		DDRWrapper.log(question,session,"Start",config);
 		int count = sendMessage(res.reply, "Message from DH", localaddress, fromName, address, "", config);
@@ -187,6 +189,7 @@ abstract public class TextServlet extends HttpServlet {
 		Session session = Session.getSession(getAdapterType()+"|"+localaddress+"|"+address, keyword);
 		// If session is null it means the adapter is not found.
 		if (session == null){
+			log.info("No session so retrieving config");
 			config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
 			try {
 				count = sendMessage(getNoConfigMessage(), subject, localaddress, fromName, address, toName, config);
@@ -206,6 +209,7 @@ abstract public class TextServlet extends HttpServlet {
 		config = session.getAdapterConfig();
 		//TODO: Remove this check, this is now to support backward compatibility
 		if(config==null) {
+			log.info("Session doesn't contain config, so searching it again");
 			config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress, keyword);
 			if (config == null){
 				config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
@@ -355,10 +359,12 @@ abstract public class TextServlet extends HttpServlet {
 	}
 	
 	protected String formatNumber(String phone) {
+		//TODO: Change this so that it will also work with international numbers and providers
 		PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
 		try {
 			PhoneNumber numberProto = phoneUtil.parse(phone,"NL");
-			return phoneUtil.format(numberProto,PhoneNumberFormat.E164);
+			//TODO: Change to E164 as soon as portal is fixed
+			return phoneUtil.format(numberProto,PhoneNumberFormat.NATIONAL).replace(" ","");
 		} catch (NumberParseException e) {
 		  log.severe("NumberParseException was thrown: " + e.toString());
 		}

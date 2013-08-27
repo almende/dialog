@@ -117,7 +117,7 @@ public class DialogAgent extends Agent {
 			} else if (adapterType.toUpperCase().equals("MAIL")){
 				return "{'sessionKey':'"+new MailServlet().startDialog(address,url,config)+"'}";
 			} else if (adapterType.toUpperCase().equals("SMS")){
-				return "{'sessionKey':'"+new AskSmsServlet().startDialog(address,url,config)+"'}";
+				return "{'sessionKey':'"+new MBSmsServlet().startDialog(address,url,config)+"'}";
 			} else if (adapterType.toUpperCase().equals("CM")){
 				return "{'sessionKey':'"+new CMSmsServlet().startDialog(address,url,config)+"'}";
 			} else if (adapterType.toUpperCase().equals("TWITTER")){

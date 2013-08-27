@@ -235,7 +235,8 @@ public class AdapterConfig {
 			return config.next();
 		}
 		log.severe("AdapterConfig not found:'" + adapterType + "':'"
-				+ lookupKey + "'");
+				+ lookupKey + "':'"
+				+ keyword + "'");
 		return null;
 	}
 	

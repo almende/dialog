@@ -17,6 +17,7 @@ public class S_fields implements SessionIntf {
 	String externalSession;
 	String keyword;
 	String adapterID;
+	String trackingToken;
 	
 	@Override
 	public String getSession_id() {
@@ -116,5 +117,15 @@ public class S_fields implements SessionIntf {
 	@Override
 	public void setAdapterID(String adapterID) {
 		this.adapterID = adapterID;
+	}
+	
+	@Override
+	public String getTrackingToken() {
+		return this.trackingToken;
+	}
+	
+	@Override
+	public void setTrackingToken(String token) {
+		this.trackingToken = token;		
 	}
 }

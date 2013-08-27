@@ -1,6 +1,12 @@
 package com.almende.dialog;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.channels.Channels;
+import java.text.Format;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.logging.Logger;
 
 import javax.ws.rs.GET;
@@ -9,10 +15,16 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
+import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.FancyFileWriter;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.google.appengine.api.files.AppEngineFile;
+import com.google.appengine.api.files.FileReadChannel;
+import com.google.appengine.api.files.FileService;
+import com.google.appengine.api.files.FileServiceFactory;
 import com.google.appengine.api.log.AppLogLine;
 import com.google.appengine.api.log.LogQuery;
 import com.google.appengine.api.log.LogService;
@@ -40,10 +52,13 @@ public class DDR implements Serializable  {
 		if(from != null) {
 			start = Long.parseLong(from)*1000000;
 		}
-		System.out.println("From: "+start);
+		//System.out.println("From: "+start);
 	    query.startTimeUsec(start);
 	    if(to != null) {
-			query.endTimeUsec(Long.parseLong(to)*1000000);
+	    	long end = Long.parseLong(to)*1000000; 
+	    	if(start==end)
+	    		end++;
+			query.endTimeUsec(end);
 		}
 	    Iterable<RequestLogs> records = ls.fetch(query);
 	    for (RequestLogs record : records) { 

@@ -5,13 +5,11 @@ import java.util.Date;
 
 import com.google.appengine.api.blobstore.BlobKey;
 import com.google.code.twig.annotation.Id;
-import com.google.code.twig.annotation.Parent;
 
-@SuppressWarnings( "serial" ) // TODO use serialVersionUID in releases?
 public class Item
 implements Serializable {
 	
-	// private static final long serialVersionUID = -2615612848148728107L;
+	 private static final long serialVersionUID = 1L;
 	
 	// TODO ugly, I didn't want any twig specifics in here... But subclassing
 	// doesn't work?

@@ -6,9 +6,9 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.CharBuffer;
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.logging.Logger;
 
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -105,6 +105,7 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		session.setPubKey(config.getPublicKey());
 		session.setDirection("outbound");
+		session.setTrackingToken(UUID.randomUUID().toString());
 		session.storeSession();
 		
 		url = encodeURLParams(url);
@@ -134,16 +135,9 @@ abstract public class TextServlet extends HttpServlet {
 	}
 	
 	@Override
-	protected void service(HttpServletRequest req, HttpServletResponse res)
-			throws ServletException, IOException {
-		this.host = RequestUtil.getHost(req);
-		super.service(req, res);
-	}
-	
-	@Override
-	public void doPost(HttpServletRequest req, HttpServletResponse res)
+	public void service(HttpServletRequest req, HttpServletResponse res)
 			throws IOException {
-
+		this.host = RequestUtil.getHost(req);
 //		log.warning("Starting to handle xmpp post: "+startTime+"/"+(new Date().getTime()));
 		boolean loading = ParallelInit.startThreads();
 		
@@ -200,6 +194,7 @@ abstract public class TextServlet extends HttpServlet {
 				session = new Session();
 				session.setDirection("inbound");
 				session.setRemoteAddress(address);
+				session.setTrackingToken(UUID.randomUUID().toString());
 			} catch(Exception ex) {
 			}
 			for(int i=0;i<count;i++) { 

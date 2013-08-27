@@ -18,6 +18,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -188,7 +189,11 @@ public class AdapterConfig {
 		
 		// Check if config id from database is owned by agent
 		if(config!=null) {
+			if(Settings.KEYSERVER==null)
+				return config;
+			
 			for(JsonNode adapter : adapters) {
+				log.info("Checking: "+adapter.get("id").asText()+" matches: "+config.getConfigId());
 				if(adapter.get("id").asText().equals(config.getConfigId()))
 					return config;
 			}
@@ -359,10 +364,12 @@ public class AdapterConfig {
 		this.myAddress = myAddress;
 	}
 	
+	@JsonIgnore
 	public String getKeyword() {
 		return keyword;
 	}
 	
+	@JsonProperty
 	public void setKeyword(String keyword) {
 		this.keyword = keyword;
 	}

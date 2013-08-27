@@ -1,7 +1,6 @@
 package com.almende.dialog.model;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Logger;
 
 import com.almende.dialog.accounts.AdapterConfig;
@@ -216,5 +215,15 @@ public class Session implements SessionIntf {
 	@Override
 	public void setAdapterID(String adapterID) {
 		this.session.setAdapterID(adapterID);
+	}
+	
+	@Override
+	public String getTrackingToken() {
+		return this.session.getTrackingToken();
+	}
+	
+	@Override
+	public void setTrackingToken(String token) {
+		this.session.setTrackingToken(token);
 	}
 }

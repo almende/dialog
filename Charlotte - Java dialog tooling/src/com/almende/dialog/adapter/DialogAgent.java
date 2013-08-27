@@ -14,8 +14,10 @@ import com.almende.eve.agent.annotation.Access;
 import com.almende.eve.agent.annotation.AccessType;
 import com.almende.eve.json.annotation.Name;
 import com.almende.eve.json.annotation.Required;
+import com.almende.eve.json.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
 
 public class DialogAgent extends Agent {
@@ -96,6 +98,7 @@ public class DialogAgent extends Agent {
 			throw new Exception("Choose adapterType or adapterID not both");
 		}
 		log.setLevel(Level.INFO);
+		log.info("Starting call with adapterID: "+adapterID+" pubKey: "+pubKey+" privKey: "+privKey);
 		ArrayNode adapterList = null;
 		adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
 		
@@ -132,7 +135,7 @@ public class DialogAgent extends Agent {
 		}*/
 	}
 	
-	public void changeAgent(@Name("url") String url, 
+	public String changeAgent(@Name("url") String url, 
 						   @Name("adapterType") @Required(false) String adapterType, 
 						   @Name("adapterID") @Required(false) String adapterID, 
 						   @Name("publicKey") String pubKey,
@@ -154,7 +157,13 @@ public class DialogAgent extends Agent {
 			log.info("Config found: "+config.getConfigId());
 			AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 			config.setInitialAgentURL(url);
-			datastore.update(config);			
+			datastore.store(config);
+			
+			ObjectNode result = JOM.createObjectNode();
+			result.put("id", config.getConfigId());
+			result.put("type", config.getAdapterType());
+			result.put("url", config.getInitialAgentURL());
+			return result.toString();
 		} else {
 			throw new Exception("Invalid adapter found");
 		}

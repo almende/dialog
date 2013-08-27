@@ -194,6 +194,10 @@ public class Question implements QuestionIntf {
 
 			newQ = om.readValue(s, Question.class);
 			newQ.setPreferred_language(preferred_language);
+		} catch (ClientHandlerException ioe) {
+			log.severe(ioe.toString());
+			ioe.printStackTrace();
+			newQ = this.event("exception", "Unable to load question", responder);
 		} catch (Exception e) {
 			log.severe(e.toString());
 			newQ = this.event("exception", "Unable to parse question json", responder);
@@ -202,7 +206,7 @@ public class Question implements QuestionIntf {
 	}
 	
 	public Question event(String eventType, String message, String responder) {
-		log.info("Received: "+eventType);
+		log.info("Received: "+eventType+" Message: "+message);
 		Client client = ParallelInit.getClient();
 		ArrayList<EventCallback> events = this.getEvent_callbacks();
 		EventCallback eventCallback=null;
@@ -219,7 +223,7 @@ public class Question implements QuestionIntf {
 			// Oeps, couldn't find/handle event, just repeat last question:
 			// TODO: somewhat smarter behavior? Should dialog standard provide
 			// error handling?
-			if(eventType.equals("hangup") || eventType.equals("exception")) {
+			if(eventType.equals("hangup") || eventType.equals("exception") || this.question.getType().equals("referral") ) {
 				return null;
 			}
 			

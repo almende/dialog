@@ -38,7 +38,9 @@ public class CM {
 			String fromName, String to, String toName, AdapterConfig config) throws Exception {
 
 		String type="TEXT";
-		String dcs="";
+		String dcs=MESSAGE_TYPE_GSM7;
+
+		message = new String(message.getBytes(), "UTF-8");
 		if(!isGSMSeven(message)) {
 			dcs=MESSAGE_TYPE_UTF8;
 		} else {
@@ -104,8 +106,11 @@ public class CM {
 
 		WebResource webResource = client.resource(url);
 		String result = webResource.type("text/plain").post(String.class, sw.toString());
-		if(!result.equals(""))
+		if(!result.equals("")) {
+			log.severe("No result from CM!");
+			log.severe("Send from: "+from+" to: "+to);
 			throw new Exception(result);
+		}
 		log.info("Result from CM: "+result);
 		
 		int count = countMessageParts(message, dcs);

@@ -45,6 +45,7 @@ public class StringStore {
 
 	}
 
+	@SuppressWarnings("deprecation")
 	public static Entity getEntity(String id){
 		Entity entity=null;
 		if (syncCache.contains(id)){
@@ -53,6 +54,7 @@ public class StringStore {
 		if (entity == null){
 			Query q = new Query("storedString");
 //			q.setFilter(new Query.FilterPredicate("id", Query.FilterOperator.EQUAL, id));
+			//TODO: remove deprecated function.
 			q.addFilter("id", Query.FilterOperator.EQUAL, id);
 			PreparedQuery pq = datastore.prepare(q);
 			try {

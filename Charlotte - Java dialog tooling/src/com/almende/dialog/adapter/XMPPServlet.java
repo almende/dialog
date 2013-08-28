@@ -81,7 +81,7 @@ public class XMPPServlet extends TextServlet {
 	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp)
 			throws Exception {
 		
-		TextMessage msg = new TextMessage();
+		TextMessage msg = new TextMessage(false);
 		Message message = xmpp.parseMessage(req);
 		JID[] toJids = message.getRecipientJids();
 		JID localJid = null;

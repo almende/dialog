@@ -7,7 +7,7 @@ public class TextMessage {
 	private String subject="";
 	private String body="";
 	private String recipientName="";
-	private String keyword="";
+	private String keyword=null;
 	
 	private boolean extractKeyword = false;
 	

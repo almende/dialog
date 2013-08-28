@@ -1,6 +1,10 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+28-08-2013, version 0.3.1
+- Fix sms adapter (translate E164 number to local number)
+- Fix xmpp adapter so it won't use keywords
+
 27-08-2013, version 0.3.0
 - VoiceXML openaudio question type added, to record audio messages.
 - 2 way sms handling from 2 different inbound sms providers

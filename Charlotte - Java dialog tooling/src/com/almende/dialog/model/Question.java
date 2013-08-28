@@ -31,7 +31,7 @@ public class Question implements QuestionIntf {
 	QuestionIntf question;
 	private String preferred_language = "nl";
 
-    private Collection<MediaHint> media_Hints;
+    private Collection<MediaProperty> media_Properties;
 
 	public Question() {
 		this.question = new Q_fields(); // Default to simple in-memory class
@@ -77,7 +77,7 @@ public class Question implements QuestionIntf {
 			try {
 				question = om.readValue(json, Question.class);
 			
-				question.setQuestion_text( URLDecoder.decode( question.getQuestion_text() ) );
+				question.setQuestion_text( URLDecoder.decode( question.getQuestion_text(), "UTF-8" ) );
 				
 				//question = new JSONDeserializer<Question>().use(null,
 				//		Question.class).deserialize(json);
@@ -383,19 +383,19 @@ public class Question implements QuestionIntf {
 		this.question.setTrackingToken(token);
 	}
 
-    public Collection<MediaHint> getMedia_Hints()
+    public Collection<MediaProperty> getMedia_Properties()
     {
-        return media_Hints;
+        return media_Properties;
     }
 
-    public void setMedia_Hints( Collection<MediaHint> media_Hints )
+    public void setMedia_Properties( Collection<MediaProperty> media_Properties )
     {
-        this.media_Hints = media_Hints;
+        this.media_Properties = media_Properties;
     }
 
-    public void addMedia_Hint( MediaHint mediaHint )
+    public void addMedia_Properties( MediaProperty mediaProperty )
     {
-        media_Hints = media_Hints == null ? new ArrayList<MediaHint>() : media_Hints;
-        media_Hints.add( mediaHint );
+        media_Properties = media_Properties == null ? new ArrayList<MediaProperty>() : media_Properties;
+        media_Properties.add( mediaProperty );
     }
 }

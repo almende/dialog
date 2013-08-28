@@ -27,8 +27,8 @@ import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.model.Answer;
-import com.almende.dialog.model.MediaHint;
-import com.almende.dialog.model.MediaHint.MediaHintKey;
+import com.almende.dialog.model.MediaProperty;
+import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediumType;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
@@ -492,9 +492,9 @@ public class VoiceXMLRESTProxy {
 		String handleTimeoutURL = "/vxml/timeout";
 		String handleExceptionURL = "/vxml/exception";
 		
-		String redirectTimeoutHint = getMediaHint( question, MediumType.Broadsoft, MediaHintKey.RedirectTimeOut );
+		String redirectTimeoutProperty = getMediaProperty( question, MediumType.Broadsoft, MediaPropertyKey.RedirectTimeOut );
         //assign a default timeout if one is not specified
-        String redirectTimeout = redirectTimeoutHint != null ? redirectTimeoutHint : "40s";
+        String redirectTimeout = redirectTimeoutProperty != null ? redirectTimeoutProperty : "40s";
 		
 		StringWriter sw = new StringWriter();
 		try {
@@ -814,14 +814,14 @@ public class VoiceXMLRESTProxy {
 		return Response.ok(result).build();
 	}
 
-    private String getMediaHint( Question question, MediumType mediumType, MediaHintKey key )
+    private String getMediaProperty( Question question, MediumType mediumType, MediaPropertyKey key )
     {
-        Collection<MediaHint> media_Hints = question.getMedia_Hints();
-        for ( MediaHint mediaHint : media_Hints )
+        Collection<MediaProperty> media_Properties = question.getMedia_Properties();
+        for ( MediaProperty mediaProperties : media_Properties )
         {
-            if ( mediaHint.getMedium() == mediumType )
+            if ( mediaProperties.getMedium() == mediumType )
             {
-                return mediaHint.getHints().get( key );
+                return mediaProperties.getProperties().get( key );
             }
         }
         return null;

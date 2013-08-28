@@ -5,22 +5,23 @@ import java.util.HashMap;
 import java.util.Map;
 
 
-public class MediaHint
+public class MediaProperty
 {
-    public enum MediaHintKey
+    public enum MediaPropertyKey
     {
         RedirectTimeOut( "timeout" ), AnswerInput( "answer_input" ), Length( "length" );
 
-        private String name;
+        @SuppressWarnings("unused")
+		private String name;
 
-        private MediaHintKey( String name )
+        private MediaPropertyKey( String name )
         {
             this.name = name;
         }
     }
 
     private MediumType medium;
-    private Map<MediaHintKey, String> hints;
+    private Map<MediaPropertyKey, String> hints;
 
     public MediumType getMedium()
     {
@@ -32,14 +33,14 @@ public class MediaHint
         this.medium = medium;
     }
 
-    public Map<MediaHintKey, String> getHints()
+    public Map<MediaPropertyKey, String> getProperties()
     {
         return hints;
     }
 
-    public void addHint( MediaHintKey key, String value )
+    public void addProperty( MediaPropertyKey key, String value )
     {
-        hints = hints != null ? hints : new HashMap<MediaHintKey, String>();
+        hints = hints != null ? hints : new HashMap<MediaPropertyKey, String>();
         hints.put( key, value );
     }
 }

@@ -207,7 +207,7 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		
 		config = session.getAdapterConfig();
-		//TODO: Remove this check, this is now to support backward compatibility
+		//TODO: Remove this check, this is now to support backward compatibility (write patch)
 		if(config==null) {
 			log.info("Session doesn't contain config, so searching it again");
 			config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress, keyword);

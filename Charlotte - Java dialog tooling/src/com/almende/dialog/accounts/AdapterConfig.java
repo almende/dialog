@@ -154,9 +154,9 @@ public class AdapterConfig {
 	@Produces("application/json")
 	@JsonIgnore
 	public Response getAllConfigs(@QueryParam("adapter") String adapterType,
-			@QueryParam("pubKey") String pubKey,@QueryParam("privKey") String privKey ) {
+			@QueryParam("address") String address,@QueryParam("keyword") String keyword ) {
 		try {
-			ArrayList<AdapterConfig> adapters = findAdapters(adapterType, null, pubKey);
+			ArrayList<AdapterConfig> adapters = findAdapters(adapterType, address, keyword);
 			return Response.ok(om.writeValueAsString(adapters)).build();
 		} catch (Exception e) {
 			log.severe("getConfig: Failed to read config");
@@ -266,8 +266,13 @@ public class AdapterConfig {
 		if (myAddress != null)
 			cmd.addFilter("myAddress", EQUAL, myAddress);
 		
-		if (keyword != null)
-			cmd.addFilter("keyword", EQUAL, keyword);
+		if (keyword != null) {
+			if(keyword.equals("null")) {
+				cmd.addFilter("keyword", EQUAL, null);
+			} else {
+				cmd.addFilter("keyword", EQUAL, keyword);
+			}
+		}
 
 		Iterator<AdapterConfig> config = cmd.now();
 

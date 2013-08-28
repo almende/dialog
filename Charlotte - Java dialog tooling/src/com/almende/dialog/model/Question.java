@@ -4,6 +4,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
@@ -30,6 +31,8 @@ public class Question implements QuestionIntf {
 	QuestionIntf question;
 	private String preferred_language = "nl";
 
+    private Collection<MediaHint> media_Hints;
+
 	public Question() {
 		this.question = new Q_fields(); // Default to simple in-memory class
 	}
@@ -45,9 +48,11 @@ public class Question implements QuestionIntf {
 	}
 	@JSON(include = false)
 	public static Question fromURL(String url,String remoteID,String fromID)  {
-		Client client = ParallelInit.getClient();
+            log.info( String.format( "Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID, fromID  ));
+            
+                Client client = ParallelInit.getClient();
 		WebResource webResource = client.resource(url);
-		
+	
 		String json = "";
 		try {
 			webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
@@ -71,12 +76,16 @@ public class Question implements QuestionIntf {
 		if(json!=null) {
 			try {
 				question = om.readValue(json, Question.class);
+			
+				question.setQuestion_text( URLDecoder.decode( question.getQuestion_text() ) );
+				
 				//question = new JSONDeserializer<Question>().use(null,
 				//		Question.class).deserialize(json);
 			} catch (Exception e) {
 				log.severe(e.toString());
 			}
 		}
+		log.info( "question from JSON: %s" + question );
 		return question;
 	}
 
@@ -374,7 +383,19 @@ public class Question implements QuestionIntf {
 		this.question.setTrackingToken(token);
 	}
 
+    public Collection<MediaHint> getMedia_Hints()
+    {
+        return media_Hints;
+    }
 
+    public void setMedia_Hints( Collection<MediaHint> media_Hints )
+    {
+        this.media_Hints = media_Hints;
+    }
 
-
+    public void addMedia_Hint( MediaHint mediaHint )
+    {
+        media_Hints = media_Hints == null ? new ArrayList<MediaHint>() : media_Hints;
+        media_Hints.add( mediaHint );
+    }
 }

@@ -4,6 +4,8 @@ import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -26,6 +28,9 @@ import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.model.Answer;
+import com.almende.dialog.model.MediaHint;
+import com.almende.dialog.model.MediaHint.MediaHintKey;
+import com.almende.dialog.model.MediumType;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
@@ -485,9 +490,12 @@ public class VoiceXMLRESTProxy {
 	
 	protected String renderComment(Question question,ArrayList<String> prompts, String sessionKey){
 
-
 		String handleTimeoutURL = "/vxml/timeout";
 		String handleExceptionURL = "/vxml/exception";
+		
+		String redirectTimeoutHint = getMediaHint( question, MediumType.Broadsoft, MediaHintKey.RedirectTimeOut );
+        //assign a default timeout if one is not specified
+        String redirectTimeout = redirectTimeoutHint != null ? redirectTimeoutHint : "40s";
 		
 		StringWriter sw = new StringWriter();
 		try {
@@ -502,7 +510,7 @@ public class VoiceXMLRESTProxy {
 								outputter.attribute("name", "thisCall");
 								outputter.attribute("dest", question.getUrl());
 								outputter.attribute("bridge","true");
-								outputter.attribute("connecttimeout","20s");
+								outputter.attribute("connecttimeout",redirectTimeout);
 								
 								for (String prompt : prompts){
 									outputter.startTag("prompt");
@@ -556,6 +564,7 @@ public class VoiceXMLRESTProxy {
 		}
 		return sw.toString();	
 	}
+
 	private String renderClosedQuestion(Question question,ArrayList<String> prompts,String sessionKey){
 		ArrayList<Answer> answers=question.getAnswers();
 		
@@ -756,32 +765,51 @@ public class VoiceXMLRESTProxy {
 		if(question !=null && !question.getType().equalsIgnoreCase("comment"))
 			question = res.question;
 		
-		if (question != null){						
-			question.generateIds();
-			StringStore.storeString(question.getQuestion_id(), question.toJSON());
-			StringStore.storeString(question.getQuestion_id()+"-remoteID", remoteID);
-			
-			Session session = Session.getSession(sessionKey);
-			StringStore.storeString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress(), question.toJSON());
+		log.info( "question formed at handleQuestion is: "+ question );
+		log.info( "prompts formed at handleQuestion is: "+ res.prompts );
 		
-			if (question.getType().equalsIgnoreCase("closed")){
-				result = renderClosedQuestion(question,res.prompts,sessionKey);
-			} else if (question.getType().equalsIgnoreCase("open")){
-				result = renderOpenQuestion(question,res.prompts,sessionKey);
-			} else if (question.getType().equalsIgnoreCase("openaudio")){
-				result = renderOpenQuestionAudio(question,res.prompts,sessionKey);
-			} else if (question.getType().equalsIgnoreCase("referral")){
-				if (question.getUrl().startsWith("tel:")){
-					result = renderComment(question,res.prompts, sessionKey);	
-				}
-			} else if (res.prompts.size() > 0) {
-				result = renderComment(question,res.prompts, sessionKey);
-			}
-		} else if (res.prompts.size() > 0){
-			result = renderComment(null,res.prompts, sessionKey);
-		} else {
-			log.info("Going to hangup? So clear Session?");
-		}
+                if ( question != null )
+                {
+                    question.generateIds();
+                    StringStore.storeString( question.getQuestion_id(), question.toJSON() );
+                    StringStore.storeString( question.getQuestion_id() + "-remoteID", remoteID );
+        
+                    Session session = Session.getSession( sessionKey );
+                    StringStore.storeString( "question_" + session.getRemoteAddress() + "_"
+                                                 + session.getLocalAddress(), question.toJSON() );
+        
+                    if ( question.getType().equalsIgnoreCase( "closed" ) )
+                    {
+                        result = renderClosedQuestion( question, res.prompts, sessionKey );
+                    }
+                    else if ( question.getType().equalsIgnoreCase( "open" ) )
+                    {
+                        result = renderOpenQuestion( question, res.prompts, sessionKey );
+                    }
+                    else if ( question.getType().equalsIgnoreCase( "openaudio" ) )
+                    {
+                        result = renderOpenQuestionAudio( question, res.prompts, sessionKey );
+                    }
+                    else if ( question.getType().equalsIgnoreCase( "referral" ) )
+                    {
+                        if ( question.getUrl().startsWith( "tel:" ) )
+                        {
+                            result = renderComment( question, res.prompts, sessionKey );
+                        }
+                    }
+                    else if ( res.prompts.size() > 0 )
+                    {
+                        result = renderComment( question, res.prompts, sessionKey );
+                    }
+                }
+                else if ( res.prompts.size() > 0 )
+                {
+                    result = renderComment( null, res.prompts, sessionKey );
+                }
+                else
+                {
+                    log.info( "Going to hangup? So clear Session?" );
+                }
 		log.info("Sending xml: "+result);
 		return Response.ok(result).build();
 	}
@@ -789,4 +817,17 @@ public class VoiceXMLRESTProxy {
 	protected String getAnswerUrl() {
 		return "/vxml/answer";
 	}
+
+    private String getMediaHint( Question question, MediumType mediumType, MediaHintKey key )
+    {
+        Collection<MediaHint> media_Hints = question.getMedia_Hints();
+        for ( MediaHint mediaHint : media_Hints )
+        {
+            if ( mediaHint.getMedium() == mediumType )
+            {
+                return mediaHint.getHints().get( key );
+            }
+        }
+        return null;
+    }
 }

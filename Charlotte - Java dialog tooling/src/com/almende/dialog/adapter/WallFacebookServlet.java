@@ -3,6 +3,7 @@ package com.almende.dialog.adapter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -108,6 +109,19 @@ public class WallFacebookServlet extends TextServlet {
 		
 		return 1;
 	}
+	
+        @Override
+        protected int broadcastMessage( String message, String subject, String from, String fromName,
+            Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+        {
+            int count = 0;
+            for ( String address : addressNameMap.keySet() )
+            {
+                String toName = addressNameMap.get( address );
+                count = count + sendMessage( message, subject, from, fromName, address, toName, config );
+            }
+            return count;
+        }
 
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req,

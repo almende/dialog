@@ -7,6 +7,7 @@ import java.net.URL;
 import java.nio.CharBuffer;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServlet;
@@ -23,6 +24,7 @@ import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.taskqueue.TaskOptions;
@@ -41,6 +43,15 @@ abstract public class TextServlet extends HttpServlet {
 	
 	protected abstract int sendMessage(String message, String subject, String from, String fromName, 
 										String to, String toName, AdapterConfig config) throws Exception;
+    
+	/**
+	 * update to the sendMessage function to cater broadcast functionality
+	 * @param addressNameMap Map with address (e.g. phonenumber or email) as Key and name as value 
+	 * @throws Exception
+	 */
+        protected abstract int broadcastMessage( String message, String subject, String from,
+            String fromName, Map<String, String> addressNameMap, AdapterConfig config ) throws Exception;
+	
 	protected abstract TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception; 
 	protected abstract String getServletPath();
 	protected abstract String getAdapterType();
@@ -131,6 +142,61 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		return sessionKey;
 	}
+	
+	/**
+	 * updated startDialog with Broadcast functionality
+	 * @throws Exception
+	 */
+        public String startDialog( Map<String, String> addressNameMap, String url, AdapterConfig config ) throws Exception
+        {
+            if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
+            {
+                for ( String address : addressNameMap.keySet() )
+                {
+                    address = formatNumber( address ).replaceFirst( "\\+31", "0" );
+                }
+            }
+            String localaddress = config.getMyAddress();
+            String sessionKey = getAdapterType() + "|" + localaddress + "|" + new ObjectMapper().writeValueAsString( addressNameMap.keySet() );
+            Session session = Session.getSession( sessionKey, config.getKeyword() );
+            if ( session == null )
+            {
+                log.severe( "XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
+                    + sessionKey );
+                return "";
+            }
+            session.setPubKey( config.getPublicKey() );
+            session.setDirection( "outbound" );
+            session.storeSession();
+    
+            url = encodeURLParams( url );
+    
+            Return res = null;
+            Question question = null;
+            for ( String address : addressNameMap.keySet() )
+            {
+                question = Question.fromURL( url, address );
+                String preferred_language = StringStore.getString( address + "_language" );
+                if ( preferred_language == null )
+                {
+                    preferred_language = config.getPreferred_language();
+                }
+                question.setPreferred_language( preferred_language );
+                res = formQuestion( question, address );
+                if ( res.question != null )
+                {
+                    StringStore.storeString( "question_" + address + "_" + localaddress, res.question.toJSON() );
+                }
+                DDRWrapper.log( question, session, "Start", config );
+            }
+            String fromName = getNickname( res.question );
+            int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, addressNameMap, config );
+            for ( int i = 0; i < count; i++ )
+            {
+                DDRWrapper.log( question, session, "Send", config );
+            }
+            return sessionKey;
+        }
 	
 	public static void killSession(Session session){
 		StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());

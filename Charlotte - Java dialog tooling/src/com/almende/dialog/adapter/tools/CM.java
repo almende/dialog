@@ -1,6 +1,8 @@
 package com.almende.dialog.adapter.tools;
 
 import java.io.StringWriter;
+import java.util.Collection;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import org.znerd.xmlenc.XMLOutputter;
@@ -116,6 +118,92 @@ public class CM {
 		int count = countMessageParts(message, dcs);
 		return count;
 	}
+    
+        public int broadcastMessage( String message, String subject, String from, String fromName,
+            Map<String, String> emailNameMap, AdapterConfig config ) throws Exception
+        {
+    
+            String type = "TEXT";
+            String dcs = "";
+            if ( !isGSMSeven( message ) )
+            {
+                dcs = MESSAGE_TYPE_UTF8;
+            }
+            else
+            {
+                dcs = MESSAGE_TYPE_GSM7;
+            }
+    
+            // TODO: Check message for special chars, if so change dcs.             
+            StringWriter sw = new StringWriter();
+            try
+            {
+                XMLOutputter outputter = new XMLOutputter( sw, "UTF-8" );
+                outputter.declaration();
+                outputter.startTag( "MESSAGES" );
+                outputter.startTag( "CUSTOMER" );
+                outputter.attribute( "ID", userID );
+                outputter.endTag();
+    
+                outputter.startTag( "USER" );
+                outputter.attribute( "LOGIN", userName );
+                outputter.attribute( "PASSWORD", password );
+                outputter.endTag();
+    
+                for ( String to : emailNameMap.keySet() )
+                {
+                    outputter.startTag( "MSG" );
+                        outputter.startTag( "CONCATENATIONTYPE" );
+                        outputter.cdata( type );
+                        outputter.endTag();
+            
+                        outputter.startTag( "FROM" );
+                        outputter.cdata( from );
+                        outputter.endTag();
+            
+                        outputter.startTag( "BODY" );
+                        outputter.attribute( "TYPE", type );
+                        outputter.cdata( message );
+                        outputter.endTag();
+            
+                        outputter.startTag( "TO" );
+                        outputter.cdata( to );
+                        outputter.endTag();
+            
+                        outputter.startTag( "DCS" );
+                        outputter.cdata( dcs );
+                        outputter.endTag();
+            
+                        outputter.startTag( "MINIMUMNUMBEROFMESSAGEPARTS" );
+                        outputter.cdata( MIN_MESSAGE_PARTS );
+                        outputter.endTag();
+            
+                        outputter.startTag( "MAXIMUMNUMBEROFMESSAGEPARTS" );
+                        outputter.cdata( MAX_MESSAGE_PARTS );
+                        outputter.endTag();
+        
+                    outputter.endTag(); //MSG
+                }
+                outputter.endTag(); //MESSAGES
+                outputter.endDocument();
+            }
+            catch ( Exception e )
+            {
+                log.severe( "Exception in creating question XML: " + e.toString() );
+                return 0;
+            }
+    
+            Client client = ParallelInit.getClient();
+    
+            WebResource webResource = client.resource( url );
+            String result = webResource.type( "text/plain" ).post( String.class, sw.toString() );
+            if ( !result.equals( "" ) )
+                throw new Exception( result );
+            log.info( "Result from CM: " + result );
+    
+            int count = countMessageParts( message, dcs );
+            return count;
+        }
 	
 	public boolean isGSMSeven(CharSequence str0) {
         if (str0 == null) {

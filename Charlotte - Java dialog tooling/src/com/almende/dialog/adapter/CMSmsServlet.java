@@ -1,6 +1,7 @@
 package com.almende.dialog.adapter;
 
 import java.io.IOException;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -24,6 +25,16 @@ public class CMSmsServlet extends TextServlet {
 		CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
 		return cm.sendMessage(message, subject, from, fromName, to, toName, config);
 	}
+	
+        @Override
+        protected int broadcastMessage( String message, String subject, String from, String fromName,
+            Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+        {
+            String[] tokens = config.getAccessToken().split( "\\|" );
+    
+            CM cm = new CM( tokens[0], tokens[1], config.getAccessTokenSecret() );
+            return cm.broadcastMessage( message, subject, from, fromName, addressNameMap, config );
+        }
 
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp)

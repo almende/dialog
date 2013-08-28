@@ -22,7 +22,7 @@ public class MBSmsServlet extends TextServlet {
 	// Info of MessageBird
 	private static final String servletPath = "/sms/mb/";
 	private static final String adapterType = "SMS";
-	private static final boolean USE_KEYWORDS = true;
+	private static final boolean USE_KEYWORDS = false;
 	
 	@Override
 	protected int sendMessage(String message, String subject, String from,
@@ -79,7 +79,8 @@ public class MBSmsServlet extends TextServlet {
 	        String line;
 	        do {
 	            line = reader.readLine();
-	            sb.append(line).append("\n");
+	            if(line!=null)
+	            	sb.append(line).append("\n");
 	        } while (line != null);
 	        reader.reset();
 	        // do NOT close the reader here, or you won't be able to get the post data twice

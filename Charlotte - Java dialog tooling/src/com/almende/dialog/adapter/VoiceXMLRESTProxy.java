@@ -165,7 +165,7 @@ public class VoiceXMLRESTProxy {
 		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterType, localID);
 		String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
 		Session session = Session.getSession(sessionKey);
-		
+
 		String url="";
 		if (direction.equals("inbound")){
 			url = config.getInitialAgentURL();
@@ -190,7 +190,7 @@ public class VoiceXMLRESTProxy {
 		}
 		DDRWrapper.log(question,session,"Start",config);
 		session.storeSession();
-					
+		
 		return handleQuestion(question,remoteID,sessionKey);
 	}
 	
@@ -477,10 +477,10 @@ public class VoiceXMLRESTProxy {
 				if(!question.getUrl().startsWith("tel:")) {
 					question = Question.fromURL(question.getUrl(),address);
 					//question = question.answer(null, null, null);
-					//break;
+//					break;
 				} else {
-					break;
-				}
+					//break;
+				}			
 			} else {
 				break; //Jump from forloop (open questions, etc.)
 			}
@@ -564,6 +564,7 @@ public class VoiceXMLRESTProxy {
 		}
 		return sw.toString();	
 	}
+
 
 	private String renderClosedQuestion(Question question,ArrayList<String> prompts,String sessionKey){
 		ArrayList<Answer> answers=question.getAnswers();
@@ -813,10 +814,6 @@ public class VoiceXMLRESTProxy {
 		log.info("Sending xml: "+result);
 		return Response.ok(result).build();
 	}
-	
-	protected String getAnswerUrl() {
-		return "/vxml/answer";
-	}
 
     private String getMediaHint( Question question, MediumType mediumType, MediaHintKey key )
     {
@@ -830,4 +827,7 @@ public class VoiceXMLRESTProxy {
         }
         return null;
     }
+	protected String getAnswerUrl() {
+		return "/vxml/answer";
+	}
 }

@@ -7,12 +7,14 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.joda.time.DateTime;
 import org.scribe.builder.ServiceBuilder;
 import org.scribe.builder.api.TwitterApi;
 import org.scribe.model.OAuthRequest;
@@ -30,8 +32,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.base.Splitter;
-
-import org.joda.time.DateTime;
 
 public class TwitterServlet extends TextServlet {
 	
@@ -146,6 +146,19 @@ public class TwitterServlet extends TextServlet {
 		
 		return count;
 	}
+	
+        @Override
+        protected int broadcastMessage( String message, String subject, String from, String fromName,
+            Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+        {
+            int count = 0;
+            for ( String address : addressNameMap.keySet() )
+            {
+                String toName = addressNameMap.get( address );
+                count = count + sendMessage( message, subject, from, fromName, address, toName, config );
+            }
+            return count;
+        }
 
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req,

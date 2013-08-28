@@ -3,11 +3,13 @@ package com.almende.dialog.adapter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.joda.time.DateTime;
 import org.scribe.model.Token;
 
 import com.almende.dialog.accounts.AdapterConfig;
@@ -18,7 +20,6 @@ import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import org.joda.time.DateTime;
 
 public class PrivateFacebookServlet extends TextServlet {
 
@@ -88,6 +89,13 @@ public class PrivateFacebookServlet extends TextServlet {
 		
 		return 1;
 	}
+	
+        @Override
+        protected int broadcastMessage( String message, String subject, String from, String fromName,
+            Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+        {
+            return 1;
+        }
 
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req,
@@ -113,7 +121,4 @@ public class PrivateFacebookServlet extends TextServlet {
 		// TODO Auto-generated method stub
 		
 	}
-	
-	
-	
 }

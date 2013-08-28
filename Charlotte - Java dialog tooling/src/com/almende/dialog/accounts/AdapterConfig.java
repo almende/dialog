@@ -187,6 +187,18 @@ public class AdapterConfig {
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 		AdapterConfig config = datastore.load(AdapterConfig.class, adapterID);
 		
+                try
+                {
+                    log.info( String.format( "config %s for adapterId: %s with adapters %s",
+                                             om.writeValueAsString( config ), om.writeValueAsString( adapterID),
+                                             adapters.toString() ) );
+                }
+                catch ( Exception e )
+                {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+		
 		// Check if config id from database is owned by agent
 		if(config!=null) {
 			if(Settings.KEYSERVER==null)

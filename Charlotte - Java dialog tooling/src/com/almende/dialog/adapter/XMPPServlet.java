@@ -80,7 +80,7 @@ public class XMPPServlet extends TextServlet {
 	
 
         @Override
-        protected int broadcastMessage( String message, String subject, String from, String fromName,
+        protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
             Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
         {
             JID localJid = new JID(from);
@@ -90,6 +90,7 @@ public class XMPPServlet extends TextServlet {
             {
                 JID jid = new JID( address );
                 jids.add( jid );
+                fromName = fromName != null && !fromName.trim().isEmpty() ? fromName : senderName;  
                 if ( fromName != null )
                 {
                     xmpp.sendPresence( jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "as: "

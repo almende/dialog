@@ -36,14 +36,12 @@ public class MBSmsServlet extends TextServlet {
 	}
 	
         @Override
-        protected int broadcastMessage( String message, String subject, String from, String fromName,
+        protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
             Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
         {
-    
             String[] tokens = config.getAccessToken().split( "\\|" );
-    
             CM cm = new CM( tokens[0], tokens[1], config.getAccessTokenSecret() );
-            return cm.broadcastMessage( message, subject, from, fromName, addressNameMap, config );
+            return cm.broadcastMessage( message, subject, from, senderName, addressNameMap, config );
         }
 
 	@Override

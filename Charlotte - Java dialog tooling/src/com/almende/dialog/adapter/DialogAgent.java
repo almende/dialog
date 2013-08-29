@@ -1,6 +1,7 @@
 package com.almende.dialog.adapter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -90,55 +91,14 @@ public class DialogAgent extends Agent {
 		return "ok";
 	}
 	
-	public String outboundCall(@Name("address") String address, 
-							   @Name("url") String url, 
-							   @Name("adapterType") @Required(false) String adapterType, 
-							   @Name("adapterID") @Required(false) String adapterID, 
-							   @Name("publicKey") String pubKey,
-							   @Name("privateKey") String privKey) throws Exception{
-		
-		if(adapterType!=null && !adapterType.equals("") &&
-				adapterID!=null && !adapterID.equals("")) {
-			throw new Exception("Choose adapterType or adapterID not both");
-		}
-		log.setLevel(Level.INFO);
-		log.info("Starting call with adapterID: "+adapterID+" pubKey: "+pubKey+" privKey: "+privKey);
-		ArrayNode adapterList = null;
-		log.info( String.format( "pub: %s pri %s adapterType %s", pubKey, privKey, adapterType ) );
-		adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
-		
-		if(adapterList==null)
-			throw new Exception("Invalid key provided");
-		//try {
-		log.info("Trying to find config");
-		AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, adapterType,adapterList);
-		if(config!=null) {
-			log.info("Config found: "+config.getConfigId());
-			adapterType = config.getAdapterType();
-			if (adapterType.toUpperCase().equals("XMPP")){
-				return "{'sessionKey':'"+new XMPPServlet().startDialog(address,url,config)+"'}";
-			} else if (adapterType.toUpperCase().equals("BROADSOFT")){
-				return "{'sessionKey':'"+VoiceXMLRESTProxy.dial(address,url,config)+"'}";
-			} else if (adapterType.toUpperCase().equals("MAIL")){
-				return "{'sessionKey':'"+new MailServlet().startDialog(address,url,config)+"'}";
-			} else if (adapterType.toUpperCase().equals("SMS")){
-				return "{'sessionKey':'"+new MBSmsServlet().startDialog(address,url,config)+"'}";
-			} else if (adapterType.toUpperCase().equals("CM")){
-				return "{'sessionKey':'"+new CMSmsServlet().startDialog(address,url,config)+"'}";
-			} else if (adapterType.toUpperCase().equals("TWITTER")){
-				return "{'sessionKey':'"+new TwitterServlet().startDialog(address,url,config)+"'}";
-			} else {
-				throw new Exception("Unknown type given: either broadsoft or xmpp or phone or mail");
-			}
-		} else {
-			throw new Exception("Invalid adapter found");
-		}
-		/*} catch(Exception ex) {
-			ex.printStackTrace();
-			log.warning(ex.getLocalizedMessage());
-			return "Error in finding adapter: "+ex.getMessage();
-		}*/
-	}
+        public String outboundCall( @Name( "address" ) String address, 
+            @Name("senderName") @Required( false ) String senderName, @Name( "url" ) String url,
+            @Name( "adapterType" ) @Required( false ) String adapterType,
+            @Name( "adapterID" ) @Required( false ) String adapterID,
+            @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
+        {
+            return outboundCallWithList( Arrays.asList( address ), senderName, url, adapterType, adapterID, pubKey, privKey );
+        }
 	
 	/**
 	 * updated the outboundCall functionality to support broadcast functionality
@@ -146,13 +106,14 @@ public class DialogAgent extends Agent {
 	 * @throws Exception
 	 */
         public String outboundCallWithList( @Name( "addressList" ) Collection<String> addressList,
-            @Name( "url" ) String url, @Name( "adapterType" ) @Required( false ) String adapterType,
+            @Name("senderName") @Required( false ) String senderName, @Name( "url" ) String url, 
+            @Name( "adapterType" ) @Required( false ) String adapterType,
             @Name( "adapterID" ) @Required( false ) String adapterID,
             @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
         {
             Map<String, String> addressNameMap = new HashMap<String, String>();
             addressNameMap.keySet().addAll( addressList );
-            return outboundCallWithMap( addressNameMap, url, adapterType, adapterID, pubKey, privKey );
+            return outboundCallWithMap( addressNameMap, senderName, url, adapterType, adapterID, pubKey, privKey );
         }
         
         /**
@@ -161,11 +122,11 @@ public class DialogAgent extends Agent {
          * @throws Exception
          */
         public String outboundCallWithMap( @Name( "addressMap" ) Map<String, String> addressMap,
-            @Name( "url" ) String url, @Name( "adapterType" ) @Required( false ) String adapterType,
+            @Name("senderName") @Required( false ) String senderName, @Name( "url" ) String url, 
+            @Name( "adapterType" ) @Required( false ) String adapterType,
             @Name( "adapterID" ) @Required( false ) String adapterID,
             @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
         {
-    
             if ( adapterType != null && !adapterType.equals( "" ) && adapterID != null
                 && !adapterID.equals( "" ) )
             {
@@ -188,31 +149,27 @@ public class DialogAgent extends Agent {
                 adapterType = config.getAdapterType();
                 if ( adapterType.toUpperCase().equals( "XMPP" ) )
                 {
-                    return "{'sessionKey':'" + new XMPPServlet().startDialog( addressMap, url, config ) + "'}";
+                    return "{'sessionKey':'" + new XMPPServlet().startDialog( addressMap, url, senderName, config ) + "'}";
                 }
-                //                else if ( adapterType.toUpperCase().equals( "BROADSOFT" ) )
-                //                {
-                //                    return "{'sessionKey':'" + VoiceXMLRESTProxy.dial( addressList, url, config ) + "'}";
-                //                }
                 else if ( adapterType.toUpperCase().equals( "MAIL" ) )
                 {
-                    return "{'sessionKey':'" + new MailServlet().startDialog( addressMap, url, config )
+                    return "{'sessionKey':'" + new MailServlet().startDialog( addressMap, url, senderName, config )
                         + "'}";
                 }
                 else if ( adapterType.toUpperCase().equals( "SMS" ) )
                 {
                     return "{'sessionKey':'"
-                        + new AskSmsServlet().startDialog( addressMap, url, config ) + "'}";
+                        + new AskSmsServlet().startDialog( addressMap, url, senderName, config ) + "'}";
                 }
                 else if ( adapterType.toUpperCase().equals( "CM" ) )
                 {
                     return "{'sessionKey':'"
-                        + new CMSmsServlet().startDialog( addressMap, url, config ) + "'}";
+                        + new CMSmsServlet().startDialog( addressMap, url, senderName, config ) + "'}";
                 }
                 else if ( adapterType.toUpperCase().equals( "TWITTER" ) )
                 {
                     return "{'sessionKey':'"
-                        + new TwitterServlet().startDialog( addressMap, url, config ) + "'}";
+                        + new TwitterServlet().startDialog( addressMap, url, senderName, config ) + "'}";
                 }
                 else
                 {
@@ -224,11 +181,6 @@ public class DialogAgent extends Agent {
             {
                 throw new Exception( "Invalid adapter found" );
             }
-            /*
-             * } catch(Exception ex) { ex.printStackTrace();
-             * log.warning(ex.getLocalizedMessage()); return
-             * "Error in finding adapter: "+ex.getMessage(); }
-             */
         }
 	
 	public String changeAgent(@Name("url") String url,

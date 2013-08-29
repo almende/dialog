@@ -6,8 +6,8 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.CharBuffer;
 import java.util.HashMap;
-import java.util.UUID;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServlet;
@@ -50,7 +50,7 @@ abstract public class TextServlet extends HttpServlet {
 	 * @throws Exception
 	 */
         protected abstract int broadcastMessage( String message, String subject, String from,
-            String fromName, Map<String, String> addressNameMap, AdapterConfig config ) throws Exception;
+            String fromName, String senderName, Map<String, String> addressNameMap, AdapterConfig config ) throws Exception;
 	
 	protected abstract TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception; 
 	protected abstract String getServletPath();
@@ -147,7 +147,7 @@ abstract public class TextServlet extends HttpServlet {
 	 * updated startDialog with Broadcast functionality
 	 * @throws Exception
 	 */
-        public String startDialog( Map<String, String> addressNameMap, String url, AdapterConfig config ) throws Exception
+        public String startDialog( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config ) throws Exception
         {
             if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
             {
@@ -190,7 +190,8 @@ abstract public class TextServlet extends HttpServlet {
                 DDRWrapper.log( question, session, "Start", config );
             }
             String fromName = getNickname( res.question );
-            int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, addressNameMap, config );
+            log.info( String.format( "fromName: %s senderName %s", fromName, senderName ) );
+            int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, senderName, addressNameMap, config );
             for ( int i = 0; i < count; i++ )
             {
                 DDRWrapper.log( question, session, "Send", config );

@@ -106,7 +106,7 @@ public class MailServlet extends TextServlet {
 	}
 	
         @Override
-        protected int broadcastMessage( String message, String subject, String from, String fromName,
+        protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
             Map<String, String> addressNameMap, AdapterConfig config )
         throws Exception
         {
@@ -116,7 +116,7 @@ public class MailServlet extends TextServlet {
             try
             {
                 Message msg = new MimeMessage( session );
-                msg.setFrom( new InternetAddress( from, fromName ) );
+                msg.setFrom( new InternetAddress( from, senderName ) );
                 for ( String address : addressNameMap.keySet() )
                 {
                     String toName = addressNameMap.get( address );
@@ -127,7 +127,6 @@ public class MailServlet extends TextServlet {
                 Transport.send( msg );
     
                 log.warning( "Send reply to mail post: " + ( new Date().getTime() ) );
-    
             }
             catch ( AddressException e )
             {

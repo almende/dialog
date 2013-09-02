@@ -785,7 +785,6 @@ public class VoiceXMLRESTProxy {
 		log.info("Sending xml: "+result);
 		return Response.ok(result).build();
 	}
-	
 	protected String getAnswerUrl() {
 		return "/vxml/answer";
 	}

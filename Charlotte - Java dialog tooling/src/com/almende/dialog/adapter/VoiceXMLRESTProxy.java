@@ -767,49 +767,49 @@ public class VoiceXMLRESTProxy {
 		
 		log.info( "question formed at handleQuestion is: "+ question );
 		log.info( "prompts formed at handleQuestion is: "+ res.prompts );
-		
-                if ( question != null )
+
+        if ( question != null )
+        {
+            question.generateIds();
+            StringStore.storeString( question.getQuestion_id(), question.toJSON() );
+            StringStore.storeString( question.getQuestion_id() + "-remoteID", remoteID );
+
+            Session session = Session.getSession( sessionKey );
+            StringStore.storeString( "question_" + session.getRemoteAddress() + "_"
+                                         + session.getLocalAddress(), question.toJSON() );
+
+            if ( question.getType().equalsIgnoreCase( "closed" ) )
+            {
+                result = renderClosedQuestion( question, res.prompts, sessionKey );
+            }
+            else if ( question.getType().equalsIgnoreCase( "open" ) )
+            {
+                result = renderOpenQuestion( question, res.prompts, sessionKey );
+            }
+            else if ( question.getType().equalsIgnoreCase( "openaudio" ) )
+            {
+                result = renderOpenQuestionAudio( question, res.prompts, sessionKey );
+            }
+            else if ( question.getType().equalsIgnoreCase( "referral" ) )
+            {
+                if ( question.getUrl().startsWith( "tel:" ) )
                 {
-                    question.generateIds();
-                    StringStore.storeString( question.getQuestion_id(), question.toJSON() );
-                    StringStore.storeString( question.getQuestion_id() + "-remoteID", remoteID );
-        
-                    Session session = Session.getSession( sessionKey );
-                    StringStore.storeString( "question_" + session.getRemoteAddress() + "_"
-                                                 + session.getLocalAddress(), question.toJSON() );
-        
-                    if ( question.getType().equalsIgnoreCase( "closed" ) )
-                    {
-                        result = renderClosedQuestion( question, res.prompts, sessionKey );
-                    }
-                    else if ( question.getType().equalsIgnoreCase( "open" ) )
-                    {
-                        result = renderOpenQuestion( question, res.prompts, sessionKey );
-                    }
-                    else if ( question.getType().equalsIgnoreCase( "openaudio" ) )
-                    {
-                        result = renderOpenQuestionAudio( question, res.prompts, sessionKey );
-                    }
-                    else if ( question.getType().equalsIgnoreCase( "referral" ) )
-                    {
-                        if ( question.getUrl().startsWith( "tel:" ) )
-                        {
-                            result = renderComment( question, res.prompts, sessionKey );
-                        }
-                    }
-                    else if ( res.prompts.size() > 0 )
-                    {
-                        result = renderComment( question, res.prompts, sessionKey );
-                    }
+                    result = renderComment( question, res.prompts, sessionKey );
                 }
-                else if ( res.prompts.size() > 0 )
-                {
-                    result = renderComment( null, res.prompts, sessionKey );
-                }
-                else
-                {
-                    log.info( "Going to hangup? So clear Session?" );
-                }
+            }
+            else if ( res.prompts.size() > 0 )
+            {
+                result = renderComment( question, res.prompts, sessionKey );
+            }
+        }
+        else if ( res.prompts.size() > 0 )
+        {
+            result = renderComment( null, res.prompts, sessionKey );
+        }
+        else
+        {
+            log.info( "Going to hangup? So clear Session?" );
+        }
 		log.info("Sending xml: "+result);
 		return Response.ok(result).build();
 	}
@@ -817,15 +817,18 @@ public class VoiceXMLRESTProxy {
     private String getMediaProperty( Question question, MediumType mediumType, MediaPropertyKey key )
     {
         Collection<MediaProperty> media_Properties = question.getMedia_Properties();
-        for ( MediaProperty mediaProperties : media_Properties )
-        {
-            if ( mediaProperties.getMedium() == mediumType )
-            {
-                return mediaProperties.getProperties().get( key );
-            }
+        if(media_Properties!=null) {
+		    for ( MediaProperty mediaProperties : media_Properties )
+		    {
+		        if ( mediaProperties.getMedium() == mediumType )
+		        {
+		            return mediaProperties.getProperties().get( key );
+		        }
+		    }
         }
         return null;
     }
+
 	protected String getAnswerUrl() {
 		return "/vxml/answer";
 	}

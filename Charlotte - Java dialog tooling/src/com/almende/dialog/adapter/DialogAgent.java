@@ -109,7 +109,7 @@ public class DialogAgent extends Agent {
 		
 		if(adapterList==null)
 			throw new Exception("Invalid key provided");
-		//try {
+
 		log.info("Trying to find config");
 		AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, adapterType,adapterList);
 		if(config!=null) {
@@ -133,11 +133,6 @@ public class DialogAgent extends Agent {
 		} else {
 			throw new Exception("Invalid adapter found");
 		}
-		/*} catch(Exception ex) {
-			ex.printStackTrace();
-			log.warning(ex.getLocalizedMessage());
-			return "Error in finding adapter: "+ex.getMessage();
-		}*/
 	}
 	
 	/**

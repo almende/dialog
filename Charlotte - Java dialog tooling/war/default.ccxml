@@ -41,11 +41,13 @@
     </transition>
 
     <transition state="initial" event="connection.connected">
-      <dialogstart src="vxmlScript" connectionid="inConn" dialogid="dialogID" namelist="direction localID remoteID"/>
-      <if cond="ctdConn != ''">
-          <disconnect connectionid="ctdConn"/>
+      <if cond="inConn == event$.connectionid">
+	    <dialogstart src="vxmlScript" connectionid="inConn" dialogid="dialogID" namelist="direction localID remoteID"/>
+	    <if cond="ctdConn != ''">
+	        <disconnect connectionid="ctdConn"/>
+	    </if>
+	    <assign name="currentState" expr="'connestablished'" />
       </if>
-      <assign name="currentState" expr="'connestablished'" />
     </transition>
 
     <transition state="connestablished" event="dialog.transfer">
@@ -68,36 +70,42 @@
 
     
     <transition state="originatingcall" event="connection.failed">
-        <assign name="currentState" expr="'connestablished'" />
-        <assign name="results" expr="'event$.result'"/>
-        <send name="'dialog.transfer.complete'"
-          target="dialogID"
-          targettype="'dialog'"
-          namelist="results" />
-      </transition>
-
-      <transition state="originatingcall" event="connection.connected">
-        <unjoin id1="inConn" id2="dialogID" />
-        <join id1="inConn" id2="outConn" duplex="'full'"/>
-        <send name="'dialog.transfer.connected'"
-                target="dialogID"
-                targettype="'dialog'"/>
-        <assign name="currentState" expr="'conferenceestablished'" />
-      </transition>
-
-      <transition state="conferenceestablished" event="connection.disconnected">
-            <if cond="event$.connectionid == outConn" >
-              <join id1="inConn" id2="dialogID" />
-              <assign name="currentState" expr="'connestablished'" />
-              <assign name="results" expr="'far_end_disconnect'" />
-              <send name="'dialog.transfer.complete'"
-                    target="dialogID"
-                    targettype="'dialog'"
-                    namelist="results" />
-            <else />
-              <exit/>
-            </if>
-      </transition>
+	    <assign name="currentState" expr="'connestablished'" />
+	    <assign name="results" expr="'event$.result'"/>
+	    <send name="'dialog.transfer.complete'"
+	      target="dialogID"
+	      targettype="'dialog'"
+	      namelist="results" />
+	  </transition>
+	
+	  <transition state="originatingcall" event="connection.connected">
+	    <unjoin id1="inConn" id2="dialogID" />
+	    <join id1="inConn" id2="outConn" duplex="'full'"/>
+	    <send name="'dialog.transfer.connected'"
+	            target="dialogID"
+	            targettype="'dialog'"/>
+	    <assign name="currentState" expr="'conferenceestablished'" />
+	  </transition>
+	
+	  <transition state="conferenceestablished" event="connection.disconnected">
+	        <if cond="event$.connectionid == outConn" >
+	          <join id1="inConn" id2="dialogID" />
+	          <assign name="currentState" expr="'connestablished'" />
+	          <assign name="results" expr="'far_end_disconnect'" />
+	          <send name="'dialog.transfer.complete'"
+	                target="dialogID"
+	                targettype="'dialog'"
+	                namelist="results" />
+	        <else />
+	          <exit/>
+	        </if>
+	  </transition>
+      
+    <transition state="originatingcall" event="connection.disconnected">
+      <if cond="event$.connectionid == inConn" >
+        <disconnect connectionid="outConn"/>
+      </if>
+    </transition>
    
     <transition event="connection.disconnected">
       <if cond="event$.connectionid == inConn" >

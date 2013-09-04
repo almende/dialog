@@ -36,11 +36,16 @@ import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
-	protected static final Logger log = Logger
-			.getLogger("DialogHandler");
+	protected static final Logger log = Logger.getLogger(TextServlet.class.getSimpleName());
 	protected static final int LOOP_DETECTION=10;
 	protected static final String DEMODIALOG = "/charlotte/";
 	
+        /**
+         * @deprecated use {@link #broadcastMessage(String,String,String,
+                                    String, String, Map<String, String>, AdapterConfig) 
+            broadcastMessage method} instead.  
+         */
+        @Deprecated
 	protected abstract int sendMessage(String message, String subject, String from, String fromName, 
 										String to, String toName, AdapterConfig config) throws Exception;
     
@@ -68,6 +73,25 @@ abstract public class TextServlet extends HttpServlet {
 			this.question = question;
 		}
 	}
+	
+	/**
+         * info for generating a Return when a user enters
+         * an escape command as input. E.g. /reset
+         * @author Shravan
+         */
+        private class EscapeInputCommand
+        {
+            boolean skip;
+            String body;
+            String preferred_language;
+            String reply;
+            
+            @Override
+            public String toString()
+            {
+                return String.format( "Skip: %s body: %s preferred_lang: %s reply %s", skip, body, preferred_language, reply );
+            }
+        }
 	
 	public Return formQuestion(Question question,String address) {
 		String reply = "";
@@ -104,6 +128,10 @@ abstract public class TextServlet extends HttpServlet {
 		return new Return(reply, question);
 	}
 	
+	/**
+	 * @deprecated use {@link #startDialog( Map<String,String>,String,String,AdapterConfig) startDialog method} instead.  
+	 */
+	@Deprecated
 	public String startDialog(String address, String url, AdapterConfig config) throws Exception {
 		if(config.getAdapterType().equals("CM") || config.getAdapterType().equals("SMS")) {
 			address = formatNumber(address);
@@ -239,9 +267,8 @@ abstract public class TextServlet extends HttpServlet {
 		processMessage(msg);
 	}
 	
-	protected void processMessage(TextMessage msg) {
+	protected int processMessage(TextMessage msg) {
 		
-		boolean skip = false;
 		String localaddress = msg.getLocalAddress();
 		String address = msg.getAddress();
 		String subject = msg.getSubject();
@@ -259,7 +286,7 @@ abstract public class TextServlet extends HttpServlet {
 			log.info("No session so retrieving config");
 			config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
 			try {
-				count = sendMessage(getNoConfigMessage(), subject, localaddress, fromName, address, toName, config);
+				count = sendMessage( getNoConfigMessage(), subject, localaddress, fromName, address, toName, config);
 				// Create new session to store the send in the ddr.
 				session = new Session();
 				session.setDirection("inbound");
@@ -270,7 +297,7 @@ abstract public class TextServlet extends HttpServlet {
 			for(int i=0;i<count;i++) { 
 				DDRWrapper.log(null,  null, session, "Send", config);
 			}
-			return;
+			return count;
 		}
 		
 		config = session.getAdapterConfig();
@@ -287,68 +314,41 @@ abstract public class TextServlet extends HttpServlet {
 				for(int i=0;i<count;i++) { 
 					DDRWrapper.log(null,  null, session, "Send", config);
 				}
-				return;
+				return count;
 			}
 			session.setAdapterID(config.getConfigId());
 		}
 		
-		String json = "";
-		String preferred_language = StringStore
-				.getString(address + "_language");
-		String reply = "I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
-		
-		if(KeyServerLib.checkCredits(config.getPublicKey())) {
-
-			if (body.toLowerCase().charAt(0) == '/') {
-				String cmd = body.toLowerCase().substring(1);
-				if (cmd.startsWith("language=")) {
-					preferred_language = cmd.substring(9);
-					if (preferred_language.indexOf(' ') != -1)
-						preferred_language = preferred_language.substring(0,
-								preferred_language.indexOf(' '));
-					StringStore.storeString(address + "_language",
-							preferred_language);
-					reply = "Ok, switched preferred language to:"
-							+ preferred_language;
-					body="";
-					try{
-					 count=sendMessage(reply, subject, localaddress, fromName, address, toName, config);
-					} catch(Exception ex) {
-					}
-				}
-				if (cmd.startsWith("reset")) {
-					StringStore.dropString("question_"+address+"_"+localaddress);
-					// Send something else??
-				}
-				if (cmd.startsWith("help")) {
-					String[] command = cmd.split(" ");
-					if (command.length == 1) {
-						reply = "The following commands are understood:\n"
-								+ "/help <command>\n" + "/reset \n"
-								+ "/language=<lang_code>\n";
-					} else {
-						if (command[1].equals("reset")) {
-							reply = "/reset will return you to Charlotte's initial question.";
-						}
-						if (command[1].equals("language")) {
-							reply = "/language=<lang_code>, switches the preferred language to the provided lang_code. (e.g. /language=nl)";
-						}
-						if (command[1].equals("help")) {
-							reply = "/help <command>, provides a help text about the provided command (e.g. /help reset)";
-						}
-					}
-	
-					skip = true;
-				}
-			}
-		} else {
-			reply = "Not enough credits to return an answer";
-			skip=true;
-		}
-		
-		if (!skip) {
-			if (preferred_language == null)
-				preferred_language = "nl";
+                String json = "";
+                String preferred_language = StringStore.getString( address + "_language" );
+        
+                EscapeInputCommand escapeInput = new EscapeInputCommand();
+                escapeInput.skip = false;
+                escapeInput.body = body;
+                escapeInput.preferred_language = preferred_language;
+                escapeInput.reply = "I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
+        
+                if ( KeyServerLib.checkCredits( config.getPublicKey() ) )
+                {
+                    //check if any escape input command is received
+                    if ( escapeInput.body.toLowerCase().trim().charAt( 0 ) == '/' )
+                    {
+                        count = processEscapeInputCommand( msg, fromName, config, escapeInput );
+                        log.info( escapeInput.toString() );
+                    }
+                }
+                else
+                {
+                    escapeInput.reply = "Not enough credits to return an answer";
+                    escapeInput.skip = true;
+                }
+                
+		if (!escapeInput.skip) 
+		{
+		        if ( escapeInput.preferred_language == null )
+	                {
+	                    escapeInput.preferred_language = "nl";
+	                }
 						
 			Question question = null;
 			boolean start = false;
@@ -373,7 +373,7 @@ abstract public class TextServlet extends HttpServlet {
 				if(!(start && (question.getType().equalsIgnoreCase("comment") || question.getType().equalsIgnoreCase("referral"))))
 					question = question.answer(address, null, body);
 				Return replystr = formQuestion(question,address);
-				reply = replystr.reply;
+				escapeInput.reply = replystr.reply;
 				question = replystr.question;
 				fromName = getNickname(question);
 				
@@ -388,16 +388,86 @@ abstract public class TextServlet extends HttpServlet {
 				}
 			}
 		}
-
-		try{
-			count=sendMessage(reply, subject, localaddress, fromName, address, toName, config);
-		} catch(Exception ex) {
+		try
+		{
+			count = sendMessage(escapeInput.reply, subject, localaddress, fromName, address, toName, config);
+		} 
+		catch(Exception ex) 
+		{
 		}
-		
-		for(int i=0;i<count;i++) { 
+		for(int i=0;i<count;i++) 
+		{ 
 			DDRWrapper.log(null,  null, session, "Send", config);
 		}
+		return count;
 	}
+	
+	/**
+         * processses any escape command entered by the user
+         * @return
+         */
+        private int processEscapeInputCommand( TextMessage msg, String fromName, AdapterConfig config, EscapeInputCommand escapeInput )
+        {
+            log.info( String.format( "escape charecter seen.. input %s", escapeInput.body ) );
+            int result = 0;
+            String cmd = escapeInput.body.toLowerCase().substring( 1 );
+            if ( cmd.startsWith( "language=" ) )
+            {
+                escapeInput.preferred_language = cmd.substring( 9 );
+                if ( escapeInput.preferred_language.indexOf( ' ' ) != -1 )
+                    escapeInput.preferred_language = escapeInput.preferred_language.substring( 0,
+                                                                                               escapeInput.preferred_language.indexOf( ' ' ) );
+
+                StringStore.storeString( msg.getAddress() + "_language", escapeInput.preferred_language );
+
+                escapeInput.reply = "Ok, switched preferred language to:" + escapeInput.preferred_language;
+                escapeInput.body = "";
+                try
+                {
+                    HashMap<String, String> addressNameMap = new HashMap<String, String>( 1 );
+                    addressNameMap.put( msg.getAddress(), msg.getRecipientName() );
+                     result = broadcastMessage( escapeInput.reply, msg.getSubject(), msg.getLocalAddress(), fromName, fromName, 
+                                                addressNameMap, config );
+                }
+                catch ( Exception ex )
+                {
+                }
+            }
+            else if ( cmd.startsWith( "reset" ) )
+            {
+                    StringStore.dropString( "question_" + msg.getAddress() + "_" + msg.getLocalAddress());
+            } 
+
+            else if ( cmd.startsWith( "help" ) )
+            {
+                String[] command = cmd.split( " " );
+                if ( command.length == 1 )
+                {
+                    escapeInput.reply = "The following commands are understood:\n" + "/help <command>\n"
+                        + "/reset \n" + "/language=<lang_code>\n";
+                }
+                else
+                {
+                    if ( command[1].equals( "reset" ) )
+                    {
+                        escapeInput.reply = "/reset will return you to Charlotte's initial question.";
+                    }
+
+                    if ( command[1].equals( "language" ) )
+                    {
+                        escapeInput.reply = "/language=<lang_code>, switches the preferred language to the provided lang_code. (e.g. /language=nl)";
+                    }
+
+                    if ( command[1].equals( "help" ) )
+                    {
+                        escapeInput.reply = "/help <command>, provides a help text about the provided command (e.g. /help reset)";
+                    }
+                }
+   
+                escapeInput.skip = true;
+            }
+            return result;
+        }
 	
 	protected String getNoConfigMessage() {
 		return "Sorry, I can't find the account associated with this chat address...";

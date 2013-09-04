@@ -1,7 +1,6 @@
 package com.almende.dialog.adapter.tools;
 
 import java.io.StringWriter;
-import java.util.Collection;
 import java.util.Map;
 import java.util.logging.Logger;
 

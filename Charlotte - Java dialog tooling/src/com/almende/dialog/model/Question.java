@@ -8,9 +8,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
+import com.almende.dialog.TestFramework;
 import com.almende.dialog.model.impl.Q_fields;
 import com.almende.dialog.model.intf.QuestionIntf;
 import com.almende.dialog.util.QuestionTextTransformer;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +20,7 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.research.ws.wadl.HTTPMethods;
 
 import flexjson.JSON;
 import flexjson.JSONSerializer;
@@ -48,12 +51,14 @@ public class Question implements QuestionIntf {
 	}
 	@JSON(include = false)
 	public static Question fromURL(String url,String remoteID,String fromID)  {
-            log.info( String.format( "Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID, fromID  ));
             
+	    log.info( String.format( "Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID, fromID  ));
+            String json = "";            
+            if( !ServerUtils.isInUnitTestingEnvironment() )
+            {
                 Client client = ParallelInit.getClient();
 		WebResource webResource = client.resource(url);
 	
-		String json = "";
 		try {
 			webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
 			log.info("Getting question url: "+webResource.toString());
@@ -67,7 +72,21 @@ public class Question implements QuestionIntf {
 		} catch (UnsupportedEncodingException e) {
 			log.severe(e.toString());
 		}
-		return fromJSON(json);
+            }
+            else
+            {
+                try
+                {
+                    url = ServerUtils.getURLWithQueryParams( url, "responder", URLEncoder.encode(remoteID, "UTF-8") );
+                    url = ServerUtils.getURLWithQueryParams( url, "requester", URLEncoder.encode(fromID, "UTF-8") );
+                    json = TestFramework.fetchResponse( HTTPMethods.GET, url, null );
+                }
+                catch ( UnsupportedEncodingException e )
+                {
+                    log.severe(e.toString());
+                }
+            }
+            return fromJSON(json);
 	}
 
 	@JSON(include = false)
@@ -138,7 +157,7 @@ public class Question implements QuestionIntf {
 			
 		} else if (answer_id != null) {
 			answered=true;
-			ArrayList<Answer> answers = question.getAnswers();
+			Collection<Answer> answers = question.getAnswers();
 			for (Answer ans : answers) {
 				if (ans.getAnswer_id().equals(answer_id)) {
 					answer = ans;
@@ -196,12 +215,19 @@ public class Question implements QuestionIntf {
 		try {
 			String post = om.writeValueAsString(ans);
 			log.info("Going to send: "+post);
-			String s = webResource.type("application/json").post(
-					String.class, post);
+			String newQuestionJSON = null;
+			if( !ServerUtils.isInUnitTestingEnvironment() )
+			{
+			    newQuestionJSON = webResource.type("application/json").post(String.class, post);
+			}
+			else
+			{
+			    newQuestionJSON = TestFramework.fetchResponse( HTTPMethods.POST, answer.getCallback(), post );
+			}
 			
-			log.info("Received new question (answer): "+s);
+			log.info("Received new question (answer): "+ newQuestionJSON);
 
-			newQ = om.readValue(s, Question.class);
+			newQ = om.readValue(newQuestionJSON, Question.class);
 			newQ.setPreferred_language(preferred_language);
 		} catch (ClientHandlerException ioe) {
 			log.severe(ioe.toString());

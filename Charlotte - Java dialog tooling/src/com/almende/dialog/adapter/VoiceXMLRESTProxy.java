@@ -29,7 +29,7 @@ import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
-import com.almende.dialog.model.MediumType;
+import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;

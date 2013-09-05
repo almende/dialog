@@ -80,7 +80,7 @@ public class XMPPServlet extends TextServlet {
 	
 
         @Override
-        protected int broadcastMessage( String message, String subject, String from, String fromName,
+        protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
             Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
         {
             JID localJid = new JID(from);
@@ -90,6 +90,7 @@ public class XMPPServlet extends TextServlet {
             {
                 JID jid = new JID( address );
                 jids.add( jid );
+                fromName = fromName != null && !fromName.trim().isEmpty() ? fromName : senderName;  
                 if ( fromName != null )
                 {
                     xmpp.sendPresence( jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "as: "
@@ -105,34 +106,44 @@ public class XMPPServlet extends TextServlet {
 	    
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp)
-			throws Exception {
+	throws Exception {
 		
-		TextMessage msg = new TextMessage(false);
 		Message message = xmpp.parseMessage(req);
-		JID[] toJids = message.getRecipientJids();
-		JID localJid = null;
-
-		//Why multiple addresses? 
-		if (toJids.length>0){
-			localJid = toJids[0];
-		} 
-		if (localJid != null){
-			msg.setLocalAddress(localJid.getId().split("/")[0]);
-		} else {
-			throw new Exception("XMPPServlet: Can't determine local address!");
-		}
-		JID jid = message.getFromJid();
-		
-		msg.setAddress(jid.getId().split("/")[0]);
-		
-		msg.setBody(message.getBody().trim());
-		
-		xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "",localJid);
-		xmpp.sendMessage(new MessageBuilder().withRecipientJids(jid).withFromJid(localJid)
-				.asXml(true).withBody("<composing xmlns='http://jabber.org/protocol/chatstates'/>").build());
-		
-		return msg;
+		return receiveMessage( message );
 	}
+
+        /**
+         * @param message
+         * @return
+         * @throws Exception
+         */
+        private TextMessage receiveMessage( Message message ) throws Exception
+        {
+            TextMessage msg = new TextMessage(false);
+    		JID[] toJids = message.getRecipientJids();
+    		JID localJid = null;
+    
+    		//Why multiple addresses? 
+    		if (toJids.length>0){
+    			localJid = toJids[0];
+    		} 
+    		if (localJid != null){
+    			msg.setLocalAddress(localJid.getId().split("/")[0]);
+    		} else {
+    			throw new Exception("XMPPServlet: Can't determine local address!");
+    		}
+    		JID jid = message.getFromJid();
+    		
+    		msg.setAddress(jid.getId().split("/")[0]);
+    		
+    		msg.setBody(message.getBody().trim());
+    		
+    		xmpp.sendPresence(jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "",localJid);
+    		xmpp.sendMessage(new MessageBuilder().withRecipientJids(jid).withFromJid(localJid)
+    				.asXml(true).withBody("<composing xmlns='http://jabber.org/protocol/chatstates'/>").build());
+    		
+    		return msg;
+        }
 
 	@Override
 	protected String getServletPath() {

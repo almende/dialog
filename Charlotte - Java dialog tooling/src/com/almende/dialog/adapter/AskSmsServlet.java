@@ -52,8 +52,9 @@ public class AskSmsServlet extends TextServlet {
 	}
 	
         @Override
-        protected int broadcastMessage( String message, String subject, String from, String fromName, Map<String, String> addressNameMap, 
-                                        AdapterConfig config ) throws Exception
+        protected int broadcastMessage( String message, String subject, String from, String fromName,
+            String senderName, Map<String, String> addressNameMap, AdapterConfig config )
+        throws Exception
         {
             //            try
             //            {

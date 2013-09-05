@@ -12,7 +12,7 @@ public class MediaProperty
         RedirectTimeOut( "timeout" ), AnswerInput( "answer_input" ), Length( "length" );
 
         @SuppressWarnings("unused")
-		private String name;
+        private String name;
 
         private MediaPropertyKey( String name )
         {
@@ -20,6 +20,11 @@ public class MediaProperty
         }
     }
 
+    public enum MediumType
+    {
+        Broadsoft, GTalk, Skype, SMS;
+    }
+    
     private MediumType medium;
     private Map<MediaPropertyKey, String> hints;
 

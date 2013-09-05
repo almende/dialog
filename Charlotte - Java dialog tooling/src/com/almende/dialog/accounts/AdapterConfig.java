@@ -68,14 +68,18 @@ public class AdapterConfig {
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 		try {
 			AdapterConfig newConfig = new AdapterConfig();
-			newConfig.configId = new UUID().toString();
 			newConfig.status = "OPEN";
 
 			newConfig = om.readerForUpdating(newConfig).readValue(json);
 			if (adapterExists(newConfig.getAdapterType(),
 					newConfig.getMyAddress(), newConfig.getKeyword()))
 				return Response.status(Status.CONFLICT).build();
-
+			if(configId == null)
+			{
+			    newConfig.configId = new UUID().toString();
+			}
+			newConfig.setMyAddress( newConfig.getMyAddress() != null ? newConfig.getMyAddress().toLowerCase() 
+			                                                                     : null );
 			datastore.store(newConfig);
 			
 			if(newConfig.getAdapterType().equals("broadsoft")) {

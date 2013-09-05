@@ -1,5 +1,6 @@
 package com.almende.dialog.adapter;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.util.Map;
@@ -12,7 +13,10 @@ import javax.mail.Multipart;
 import javax.mail.Transport;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
+import javax.mail.internet.InternetHeaders;
+import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -32,11 +36,10 @@ public class MailServlet extends TextServlet {
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception {
 		
-		TextMessage msg = new TextMessage();
 		Properties props = new Properties();
 		javax.mail.Session mailSession = javax.mail.Session.getDefaultInstance(props, null);
+		
 		MimeMessage message = new MimeMessage(mailSession, req.getInputStream());
-		msg.setSubject("RE: "+message.getSubject());
 		
 		String uri = req.getRequestURI();
 		String recipient = uri.substring(servletPath.length());
@@ -46,39 +49,69 @@ public class MailServlet extends TextServlet {
 		if (recipients.length>0){
 			recipient = recipients[0];
 		}*/ 
-		if (recipient != null && !recipient.equals("")){
-			msg.setLocalAddress(recipient.toString());
-		} else if(SystemProperty.environment.value() == com.google.appengine.api.utils.SystemProperty.Environment.Value.Development) {
-			
-			Address[] recipients = message.getAllRecipients();
-			if (recipients.length>0){
-				InternetAddress recip= (InternetAddress)recipients[0];
-				msg.setLocalAddress(recip.getAddress());
-			} else
-				throw new Exception("MailServlet: Can't determine local address! (Dev)");
-			
-		} else {
-			throw new Exception("MailServlet: Can't determine local address!");
-		}
-		
-		Address[] senders = message.getFrom();
-		if(senders.length>0) {
-			InternetAddress sender = (InternetAddress) senders[0];
-			msg.setAddress(sender.getAddress());
-			msg.setRecipientName(sender.getPersonal());
-		}
-		
-		Multipart mp = (Multipart) message.getContent();
-		if(mp.getCount()>0) {
-			msg.setBody(mp.getBodyPart(0).getContent().toString());
-			log.info("Receive mail: "+msg.getBody());
-		}
-		
-		return msg;
+		return receiveMessage( message, recipient );
 	}
 
+        /**
+         * @param msg
+         * @param message
+         * @param recipient
+         * @return
+         * @throws MessagingException
+         * @throws Exception
+         * @throws IOException
+         */
+        private TextMessage receiveMessage( MimeMessage message, String recipient )
+        throws MessagingException, Exception, IOException
+        {
+            TextMessage msg = new TextMessage();
+            msg.setSubject("RE: "+message.getSubject());
+            if (recipient != null && !recipient.equals("")){
+    			msg.setLocalAddress(recipient.toString());
+    		} else if(SystemProperty.environment.value() == com.google.appengine.api.utils.SystemProperty.Environment.Value.Development) {
+    			
+    			Address[] recipients = message.getAllRecipients();
+    			if (recipients.length>0){
+    				InternetAddress recip= (InternetAddress)recipients[0];
+    				msg.setLocalAddress(recip.getAddress());
+    			} else
+    				throw new Exception("MailServlet: Can't determine local address! (Dev)");
+    			
+    		} else {
+    			throw new Exception("MailServlet: Can't determine local address!");
+    		}
+    		
+    		Address[] senders = message.getFrom();
+    		if(senders != null && senders.length>0) {
+    			InternetAddress sender = (InternetAddress) senders[0];
+    			msg.setAddress(sender.getAddress());
+    			msg.setRecipientName(sender.getPersonal());
+    		}
+    		
+                Multipart mp = null;
+                if(message.getContent() instanceof Multipart)
+                {
+                    mp = (Multipart) message.getContent();
+                }
+                else 
+                {
+                    mp = new MimeMultipart();
+                    mp.addBodyPart( new MimeBodyPart(new InternetHeaders(), message.getContent().toString().getBytes()) ); 
+                }
+    		if(mp.getCount()>0) {
+    			msg.setBody(mp.getBodyPart(0).getContent().toString());
+    			log.info("Receive mail: "+msg.getBody());
+    		}
+    		
+    		return msg;
+        }
+
+        @Deprecated
+        /**
+         * @Deprecated use broadcastMessage instead
+         */
 	@Override
-	public int sendMessage(String message, String subject, String from, String fromName,
+	protected int sendMessage(String message, String subject, String from, String fromName,
 			String to, String toName, AdapterConfig config) {
 		Properties props = new Properties();
         javax.mail.Session session = javax.mail.Session.getDefaultInstance(props, null);
@@ -92,7 +125,7 @@ public class MailServlet extends TextServlet {
             msg.setText(message);
             Transport.send(msg);
             
-            log.warning("Send reply to mail post: "+(new Date().getTime()));
+            log.info("Send reply to mail post: "+(new Date().getTime()));
 
         } catch (AddressException e) {
             log.warning("Failed to send message, because wrong address: "+e.getLocalizedMessage());
@@ -106,17 +139,15 @@ public class MailServlet extends TextServlet {
 	}
 	
         @Override
-        protected int broadcastMessage( String message, String subject, String from, String fromName,
+        protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
             Map<String, String> addressNameMap, AdapterConfig config )
         throws Exception
         {
-            Properties props = new Properties();
-            javax.mail.Session session = javax.mail.Session.getDefaultInstance( props, null );
-    
+            javax.mail.Session session = javax.mail.Session.getDefaultInstance( new Properties(), null );
             try
             {
                 Message msg = new MimeMessage( session );
-                msg.setFrom( new InternetAddress( from, fromName ) );
+                msg.setFrom( new InternetAddress( from, senderName ) );
                 for ( String address : addressNameMap.keySet() )
                 {
                     String toName = addressNameMap.get( address );
@@ -126,8 +157,7 @@ public class MailServlet extends TextServlet {
                 msg.setText( message );
                 Transport.send( msg );
     
-                log.warning( "Send reply to mail post: " + ( new Date().getTime() ) );
-    
+                log.info( "Send reply to mail post: " + ( new Date().getTime() ) );
             }
             catch ( AddressException e )
             {
@@ -142,7 +172,6 @@ public class MailServlet extends TextServlet {
             {
                 log.warning( "Failed to send message, because encoding: " + e.getLocalizedMessage() );
             }
-    
             return 1;
         }
 

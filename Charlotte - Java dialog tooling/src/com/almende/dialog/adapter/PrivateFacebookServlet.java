@@ -91,7 +91,7 @@ public class PrivateFacebookServlet extends TextServlet {
 	}
 	
         @Override
-        protected int broadcastMessage( String message, String subject, String from, String fromName,
+        protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
             Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
         {
             return 1;

@@ -125,7 +125,7 @@ public class MailServlet extends TextServlet {
             msg.setText(message);
             Transport.send(msg);
             
-            log.warning("Send reply to mail post: "+(new Date().getTime()));
+            log.info("Send reply to mail post: "+(new Date().getTime()));
 
         } catch (AddressException e) {
             log.warning("Failed to send message, because wrong address: "+e.getLocalizedMessage());
@@ -157,7 +157,7 @@ public class MailServlet extends TextServlet {
                 msg.setText( message );
                 Transport.send( msg );
     
-                log.warning( "Send reply to mail post: " + ( new Date().getTime() ) );
+                log.info( "Send reply to mail post: " + ( new Date().getTime() ) );
             }
             catch ( AddressException e )
             {

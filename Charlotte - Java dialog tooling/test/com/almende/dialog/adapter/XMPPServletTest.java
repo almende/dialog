@@ -1,4 +1,4 @@
-package com.almende.dialog.agent.tools;
+package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertTrue;
 
@@ -10,8 +10,7 @@ import org.junit.Test;
 import com.almende.dialog.LoggedPrintStream;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.adapter.TextServlet;
-import com.almende.dialog.adapter.XMPPServlet;
+import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.test.TestServlet;
 import com.google.appengine.api.xmpp.Message;
 
@@ -22,7 +21,7 @@ public class XMPPServletTest extends TestFramework
      * @throws Exception 
      */
     @Test
-    public void XMPPServletReceiveHelpMessageTest() throws Exception
+    public void ReceiveHelpMessageTest() throws Exception
     {
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig( "XMPP", "agent1@ask-cs.com", localAddressChat, "" );
@@ -47,7 +46,7 @@ public class XMPPServletTest extends TestFramework
      * @throws Exception 
      */
     @Test
-    public void XMPPServletReceiveAppointmentNewSessionMessageTest() throws Exception
+    public void ReceiveAppointmentNewSessionMessageTest() throws Exception
     {
         String initialAgentURL = TestServlet.TEXT_SERVLET_PATH + "?appointment=start";
         //create mail adapter
@@ -57,10 +56,10 @@ public class XMPPServletTest extends TestFramework
 
         LoggedPrintStream lpsOut = xmppAppointmentInteraction("hi");
         
-        assertTrue( lpsOut.buf.toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.buf.toString().contains( "Are you available today?\n[ Yup | Nope  ]" ) );
-        assertTrue( lpsOut.buf.toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.buf.toString().contains( "sshetty@ask-cs.com" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "Sending an XMPP Message:" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "Are you available today?\n[ Yup | Nope  ]" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "info@dialog-handler.appspotchat.com" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "sshetty@ask-cs.com" ) );
     }
     
     /**
@@ -69,17 +68,17 @@ public class XMPPServletTest extends TestFramework
      * @throws Exception 
      */
     @Test
-    public void XMPPServletReceiveAppointmentExistingSessionYesMessageTest() throws Exception
+    public void ReceiveAppointmentExistingSessionYesMessageTest() throws Exception
     {
         //initiate session with a new message
-        XMPPServletReceiveAppointmentNewSessionMessageTest();
+        ReceiveAppointmentNewSessionMessageTest();
         
         //respond with a "Yup" message. which is a valid answer
         LoggedPrintStream lpsOut = xmppAppointmentInteraction( "Yup" );
-        assertTrue( lpsOut.buf.toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.buf.toString().contains( "How long are you available? (in mins)" ) );
-        assertTrue( lpsOut.buf.toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.buf.toString().contains( "sshetty@ask-cs.com" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "Sending an XMPP Message:" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "How long are you available? (in mins)" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "info@dialog-handler.appspotchat.com" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "sshetty@ask-cs.com" ) );
     }
     
     /**
@@ -88,17 +87,17 @@ public class XMPPServletTest extends TestFramework
      * @throws Exception 
      */
     @Test
-    public void XMPPServletReceiveAppointmentExistingSessionNoMessageTest() throws Exception
+    public void ReceiveAppointmentExistingSessionNoMessageTest() throws Exception
     {
         //initiate session with a new message
-        XMPPServletReceiveAppointmentNewSessionMessageTest();
+        ReceiveAppointmentNewSessionMessageTest();
         
         //respond with a "Yup" message. which is a valid answer
         LoggedPrintStream lpsOut = xmppAppointmentInteraction( "Nope" );
-        assertTrue( lpsOut.buf.toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.buf.toString().contains( "Thanks for responding to the invitation!" ) );
-        assertTrue( lpsOut.buf.toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.buf.toString().contains( "sshetty@ask-cs.com" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "Sending an XMPP Message:" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "Thanks for responding to the invitation!" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "info@dialog-handler.appspotchat.com" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "sshetty@ask-cs.com" ) );
     }
     
     /**
@@ -107,17 +106,17 @@ public class XMPPServletTest extends TestFramework
      * @throws Exception 
      */
     @Test
-    public void XMPPServletReceiveAppointmentExistingSessionFreeMessageTest() throws Exception
+    public void ReceiveAppointmentExistingSessionFreeMessageTest() throws Exception
     {
         //initiate teh session with a new message and yes messsage
-        XMPPServletReceiveAppointmentExistingSessionYesMessageTest();
+        ReceiveAppointmentExistingSessionYesMessageTest();
         
         //respond with a "Yup" message. which is a valid answer
         LoggedPrintStream lpsOut = xmppAppointmentInteraction( "30" );
-        assertTrue( lpsOut.buf.toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.buf.toString().contains( "Thanks for accepting the invitation!" ) );
-        assertTrue( lpsOut.buf.toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.buf.toString().contains( "sshetty@ask-cs.com" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "Sending an XMPP Message:" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "Thanks for accepting the invitation!" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "info@dialog-handler.appspotchat.com" ) );
+        assertTrue( lpsOut.getOutput().toString().contains( "sshetty@ask-cs.com" ) );
     }
 
     /**
@@ -141,7 +140,8 @@ public class XMPPServletTest extends TestFramework
         
         int count = (Integer) invokeMethodByReflection( processMessage, xmppServlet, textMessage );
         
-        LoggedPrintStream.dispose();
+        System.out.flush();
+        System.setOut( lpsOut.underlying );
         
         assertTrue( count == 1 );
         return lpsOut;

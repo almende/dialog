@@ -112,8 +112,8 @@ public class TestFramework
         adapterConfig.setMyAddress( myAddress );
         adapterConfig.setAccessToken( "2630|Ask54de" );
         adapterConfig.setInitialAgentURL( initiatAgentURL );
-        adapterConfig.createConfig( ServerUtils.serialize( adapterConfig ));
-        return adapterConfig;
+        String adapterConfigString = adapterConfig.createConfig( ServerUtils.serialize( adapterConfig )).getEntity().toString();
+        return ServerUtils.deserialize( adapterConfigString, AdapterConfig.class);
     }
     
     public static Method fetchMethodByReflection( String methodName, Class<?> class1, Class<?> parameterType )

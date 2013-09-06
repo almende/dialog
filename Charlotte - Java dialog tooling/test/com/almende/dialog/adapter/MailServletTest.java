@@ -19,7 +19,6 @@ import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.test.TestServlet;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 
 public class MailServletTest extends TestFramework
 {
@@ -94,16 +93,19 @@ public class MailServletTest extends TestFramework
     {
         String initialAgentURL = TestServlet.TEXT_SERVLET_PATH + "?appointment=start";
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", "agent1@ask-cs.com", localAddressMail, initialAgentURL );
+        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", "agent1@ask-cs.com",
+                                                           localAddressMail, initialAgentURL );
         //create session
         getOrCreateSession( adapterConfig, Arrays.asList( remoteAddress ) );
 
-        LoggedPrintStream lpsOut = mailAppointmentInteraction("hi");
-        
-        ArrayNode logs = LoggedPrintStream.getLogs();
-        
+        LoggedPrintStream lpsOut = mailAppointmentInteraction( "hi" );
+
+        //        ArrayNode logs = LoggedPrintStream.getLogs();
+
         assertTrue( lpsOut.getOutput().toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "Are you available today?\n[ Yup | Nope  ]" ) );
+        assertTrue( lpsOut.getOutput()
+            .toString()
+            .contains( "Are you available today?\n[ Yup | Nope  ]" ) );
         assertTrue( lpsOut.getOutput().toString().contains( "info@dialog-handler.appspotchat.com" ) );
         assertTrue( lpsOut.getOutput().toString().contains( "sshetty@ask-cs.com" ) );
     }

@@ -13,6 +13,7 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.KeyServerLib;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.agent.annotation.Access;
 import com.almende.eve.agent.annotation.AccessType;
@@ -113,7 +114,7 @@ public class DialogAgent extends Agent {
             @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
         {
             Map<String, String> addressNameMap = new HashMap<String, String>();
-            addressNameMap.keySet().addAll( addressList );
+            ServerUtils.putCollectionAsKey( addressNameMap, addressList, "" );
             return outboundCallWithMap( addressNameMap, senderName, url, adapterType, adapterID, pubKey, privKey );
         }
         
@@ -151,6 +152,18 @@ public class DialogAgent extends Agent {
                 if ( adapterType.toUpperCase().equals( "XMPP" ) )
                 {
                     return "{'sessionKey':'" + new XMPPServlet().startDialog( addressMap, url, senderName, config ) + "'}";
+                }
+                else if ( adapterType.toUpperCase().equals( "BROADSOFT" ) )
+                {
+                    //fetch the first address in the map
+                    if( !addressMap.keySet().isEmpty() )
+                    {
+                        return "{'sessionKey':'" + VoiceXMLRESTProxy.dial( addressMap, url, senderName, config ) + "'}";
+                    }
+                    else 
+                    {
+                        throw new Exception( "Address should not be empty to setup a call" );
+                    }
                 }
                 else if ( adapterType.toUpperCase().equals( "MAIL" ) )
                 {

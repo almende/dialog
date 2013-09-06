@@ -5,6 +5,7 @@ import java.io.StringWriter;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -61,6 +62,16 @@ public class VoiceXMLRESTProxy {
 		}
 	}
 	
+	/**
+	 * @Deprecated. Use broadcast calling mechanism instead. <br>
+	 * {@link VoiceXMLRESTProxy#dial(Map, String, String, AdapterConfig) dial} method
+	 * 
+	 * @param address
+	 * @param url
+	 * @param config
+	 * @return
+	 */
+	@Deprecated
 	public static String dial(String address, String url, AdapterConfig config){
 
 		address = formatNumber(address).replaceFirst("\\+31", "0")+"@outbound";
@@ -94,6 +105,48 @@ public class VoiceXMLRESTProxy {
 		
 		return sessionKey;
 	}
+	
+        public static String dial( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
+        {
+            String adapterType = "broadsoft";
+            String sessionKey = adapterType + "|" + config.getMyAddress() + "|" + "[";
+            int count = 0;
+            for ( String address : addressNameMap.keySet() )
+            {
+                String formattedAddress = formatNumber( address ).replaceFirst( "\\+31", "0" ) + "@outbound";
+                sessionKey = count != 0 ? sessionKey + "," + formattedAddress : sessionKey + formattedAddress;
+                Session session = Session.getSession( sessionKey );
+                if ( session == null )
+                {
+                    log.severe( "VoiceXMLRESTProxy couldn't start new outbound Dialog, adapterConfig not found? "
+                        + sessionKey );
+                    return "";
+                }
+                session.killed=false;
+                session.setStartUrl(url);
+                session.setDirection("outbound");
+                session.setRemoteAddress(address);
+                session.setType(adapterType);
+                session.setTrackingToken(UUID.randomUUID().toString());
+                session.storeSession();
+    
+                Question question = Question.fromURL(url,address,config.getMyAddress());
+                StringStore.storeString("InitialQuestion_"+sessionKey, question.toJSON());
+                
+                DDRWrapper.log(url,session.getTrackingToken(),session,"Dial",config);
+    
+                Broadsoft bs = new Broadsoft( config );
+                bs.startSubscription();
+    
+                String extSession = null;
+                extSession = bs.startCall( formattedAddress );
+                session.setExternalSession( extSession );
+                session.storeSession();
+                count++;
+            }
+            return sessionKey + "]";
+        }
+	
 	public static ArrayList<String> getActiveCalls(AdapterConfig config) {
 		Broadsoft bs = new Broadsoft(config);
 		return bs.getActiveCalls();

@@ -41,9 +41,9 @@ abstract public class TextServlet extends HttpServlet {
 	protected static final String DEMODIALOG = "/charlotte/";
 	
         /**
-         * @deprecated use {@link #broadcastMessage(String,String,String,
-                                    String, String, Map<String, String>, AdapterConfig) 
-            broadcastMessage method} instead.  
+         * @deprecated use {@link TextServlet#broadcastMessage(String,String,String,
+                                    String, String, Map, AdapterConfig) 
+            broadcastMessage} instead.  
          */
         @Deprecated
 	protected abstract int sendMessage(String message, String subject, String from, String fromName, 
@@ -129,7 +129,7 @@ abstract public class TextServlet extends HttpServlet {
 	}
 	
 	/**
-	 * @deprecated use {@link #startDialog( Map<String,String>,String,String,AdapterConfig) startDialog method} instead.  
+	 * @deprecated use {@link TextServlet#startDialog( Map, String, String, AdapterConfig) startDialog} instead.  
 	 */
 	@Deprecated
 	public String startDialog(String address, String url, AdapterConfig config) throws Exception {

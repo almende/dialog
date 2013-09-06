@@ -1,9 +1,10 @@
-
 package com.almende.dialog.util;
 
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServletRequest;
@@ -103,5 +104,17 @@ public class ServerUtils
             url = url + "?";
         }
         return url + queryKey + "=" + queryValue;
+    }
+    
+    /**
+     * associates the same value corresponding to keys listed in keyCollection
+     */
+    public static <T extends Object> Map<T, T> putCollectionAsKey( Map<T, T> mapToBePopulated, Collection<T> keyCollection, T value )
+    {
+        for ( T key : keyCollection )
+        {
+            mapToBePopulated.put( key, value );
+        }
+        return mapToBePopulated;
     }
 }

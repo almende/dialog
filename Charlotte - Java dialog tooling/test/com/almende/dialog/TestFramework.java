@@ -38,7 +38,7 @@ import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import com.meterware.servletunit.ServletRunner;
 import com.meterware.servletunit.ServletUnitClient;
-import com.sun.research.ws.wadl.HTTPMethods;
+import com.thetransactioncompany.cors.HTTPMethod;
 
 public class TestFramework
 {
@@ -65,7 +65,7 @@ public class TestFramework
         helper.tearDown();
     }
     
-    public static String fetchResponse( HTTPMethods httpMethods, String url, String payload )
+    public static String fetchResponse( HTTPMethod httpMethods, String url, String payload )
     {
         ServletUnitClient newClient = servletRunner.get().newClient();
         WebRequest request = null;

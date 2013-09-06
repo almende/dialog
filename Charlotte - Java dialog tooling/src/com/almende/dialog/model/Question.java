@@ -20,7 +20,7 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
-import com.sun.research.ws.wadl.HTTPMethods;
+import com.thetransactioncompany.cors.HTTPMethod;
 
 import flexjson.JSON;
 import flexjson.JSONSerializer;
@@ -79,7 +79,7 @@ public class Question implements QuestionIntf {
                 {
                     url = ServerUtils.getURLWithQueryParams( url, "responder", URLEncoder.encode(remoteID, "UTF-8") );
                     url = ServerUtils.getURLWithQueryParams( url, "requester", URLEncoder.encode(fromID, "UTF-8") );
-                    json = TestFramework.fetchResponse( HTTPMethods.GET, url, null );
+                    json = TestFramework.fetchResponse( HTTPMethod.GET, url, null );
                 }
                 catch ( UnsupportedEncodingException e )
                 {
@@ -222,7 +222,7 @@ public class Question implements QuestionIntf {
 			}
 			else
 			{
-			    newQuestionJSON = TestFramework.fetchResponse( HTTPMethods.POST, answer.getCallback(), post );
+			    newQuestionJSON = TestFramework.fetchResponse( HTTPMethod.POST, answer.getCallback(), post );
 			}
 			
 			log.info("Received new question (answer): "+ newQuestionJSON);

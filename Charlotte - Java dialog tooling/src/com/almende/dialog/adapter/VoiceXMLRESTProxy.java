@@ -114,7 +114,7 @@ public class VoiceXMLRESTProxy {
             for ( String address : addressNameMap.keySet() )
             {
                 String formattedAddress = formatNumber( address ).replaceFirst( "\\+31", "0" ) + "@outbound";
-                sessionKey = count != 0 ? sessionKey + "," + formattedAddress : sessionKey + formattedAddress;
+                sessionKey = count != 0 ? sessionKey + "," + formattedAddress : sessionKey + address;
                 Session session = Session.getSession( sessionKey );
                 if ( session == null )
                 {

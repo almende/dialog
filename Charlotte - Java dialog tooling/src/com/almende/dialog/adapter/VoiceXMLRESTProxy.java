@@ -109,12 +109,13 @@ public class VoiceXMLRESTProxy {
         public static String dial( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
         {
             String adapterType = "broadsoft";
-            String sessionKey = adapterType + "|" + config.getMyAddress() + "|" + "[";
-            int count = 0;
+            String sessionKeys = "";
+            String sessionPrefix = adapterType+"|"+config.getMyAddress()+"|" ;
+            
             for ( String address : addressNameMap.keySet() )
             {
                 String formattedAddress = formatNumber( address ).replaceFirst( "\\+31", "0" ) + "@outbound";
-                sessionKey = count != 0 ? sessionKey + "," + formattedAddress : sessionKey + address;
+                String sessionKey = sessionPrefix + formattedAddress;
                 Session session = Session.getSession( sessionKey );
                 if ( session == null )
                 {
@@ -131,7 +132,9 @@ public class VoiceXMLRESTProxy {
                 session.storeSession();
     
                 Question question = Question.fromURL(url,address,config.getMyAddress());
-                StringStore.storeString("InitialQuestion_"+sessionKey, question.toJSON());
+                String questionJson = question.toJSON();
+                log.info( String.format( "Question %s stored in String Store with SessionKey: %s", questionJson, "InitialQuestion_"+sessionKey ) );
+                StringStore.storeString("InitialQuestion_"+sessionKey, questionJson);
                 
                 DDRWrapper.log(url,session.getTrackingToken(),session,"Dial",config);
     
@@ -142,9 +145,9 @@ public class VoiceXMLRESTProxy {
                 extSession = bs.startCall( formattedAddress );
                 session.setExternalSession( extSession );
                 session.storeSession();
-                count++;
+                sessionKeys += sessionKey + System.getProperty("line.separator"); 
             }
-            return sessionKey + "]";
+            return sessionKeys;
         }
 	
 	public static ArrayList<String> getActiveCalls(AdapterConfig config) {
@@ -227,8 +230,18 @@ public class VoiceXMLRESTProxy {
 			session.setType(adapterType);
 			session.setPubKey(config.getPublicKey());
 			session.setTrackingToken(UUID.randomUUID().toString());
-		} else {
+		} 
+		else 
+		{
+		    if(session != null)
+		    {
 			url=session.getStartUrl();
+		    }
+		    else 
+		    {
+		        log.severe( String.format( "Session %s not found", sessionKey ) );
+		        return null;
+                    }
 		}
 		
 		String json = StringStore.getString("InitialQuestion_"+sessionKey);
@@ -251,7 +264,6 @@ public class VoiceXMLRESTProxy {
 	@Produces("application/voicexml+xml")
 	public Response answer(@QueryParam("question_id") String question_id, @QueryParam("answer_id") String answer_id, @QueryParam("answer_input") String answer_input, @QueryParam("sessionKey") String sessionKey, @Context UriInfo ui){
 		this.host=ui.getBaseUri().toString().replace(":80", "");
-		log.info("Received answer: "+answer_input);
 		String reply="<vxml><exit/></vxml>";
 		Session session = Session.getSession(sessionKey);
 		if (session!=null) {

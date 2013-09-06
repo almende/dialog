@@ -26,6 +26,7 @@ public class Question implements QuestionIntf {
 	private static final long serialVersionUID = -9069211642074173182L;
 	private static final Logger log = Logger
 			.getLogger("DialogHandler");
+	protected static final com.almende.dialog.Logger dialogLog =  new com.almende.dialog.Logger();
 	static final ObjectMapper om =ParallelInit.getObjectMapper();
 	
 	QuestionIntf question;
@@ -39,15 +40,15 @@ public class Question implements QuestionIntf {
 
 	// Factory functions:
 	@JSON(include = false)
-	public static Question fromURL(String url) {
-		return fromURL(url,"");
+	public static Question fromURL(String url, String adapterID) {
+		return fromURL(url, adapterID,"");
 	}
 	@JSON(include = false)
-	public static Question fromURL(String url,String remoteID)  {
-		return fromURL(url, remoteID, "");
+	public static Question fromURL(String url, String adapterID,String remoteID)  {
+		return fromURL(url, adapterID, remoteID, "");
 	}
 	@JSON(include = false)
-	public static Question fromURL(String url,String remoteID,String fromID)  {
+	public static Question fromURL(String url, String adapterID,String remoteID,String fromID)  {
             log.info( String.format( "Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID, fromID  ));
             
                 Client client = ParallelInit.getClient();
@@ -56,22 +57,27 @@ public class Question implements QuestionIntf {
 		String json = "";
 		try {
 			webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
+			dialogLog.info(adapterID,"Loading new question from: "+webResource.toString());
 			log.info("Getting question url: "+webResource.toString());
 			json = webResource.type("text/plain").get(String.class);
 			
 			log.info("Received new question (fromURL): "+json);
+			dialogLog.info(adapterID,"Received new question: "+json);
 		} catch (ClientHandlerException e) {
 			log.severe(e.toString());
+			dialogLog.severe(adapterID,"ERROR loading question: "+e.toString());
 		} catch (UniformInterfaceException e) {
 			log.severe(e.toString());
+			dialogLog.severe(adapterID,"ERROR loading question: "+e.toString());
 		} catch (UnsupportedEncodingException e) {
 			log.severe(e.toString());
+			dialogLog.severe(adapterID,"ERROR loading question: "+e.toString());
 		}
-		return fromJSON(json);
+		return fromJSON(json, adapterID);
 	}
 
 	@JSON(include = false)
-	public static Question fromJSON(String json) {
+	public static Question fromJSON(String json, String adapterID) {
 		Question question = null;
 		if(json!=null) {
 			try {
@@ -83,9 +89,10 @@ public class Question implements QuestionIntf {
 				//		Question.class).deserialize(json);
 			} catch (Exception e) {
 				log.severe(e.toString());
+				dialogLog.severe(adapterID,"ERROR parsing question: "+e.getLocalizedMessage());
 			}
 		}
-		log.info( "question from JSON: %s" + question );
+		//log.info( "question from JSON: %s" + question );
 		return question;
 	}
 
@@ -115,7 +122,7 @@ public class Question implements QuestionIntf {
 	}
 
 	@JSON(include = false)
-	public Question answer(String responder, String answer_id, String answer_input) {
+	public Question answer(String responder, String adapterID, String answer_id, String answer_input) {
 		Client client = ParallelInit.getClient();
 		boolean answered=false;
 		Answer answer = null;
@@ -200,14 +207,17 @@ public class Question implements QuestionIntf {
 					String.class, post);
 			
 			log.info("Received new question (answer): "+s);
-
+			dialogLog.info(adapterID, "Received new question (answer): "+s);
+			
 			newQ = om.readValue(s, Question.class);
 			newQ.setPreferred_language(preferred_language);
 		} catch (ClientHandlerException ioe) {
+			dialogLog.severe(adapterID, "Unable to load question: "+ioe.getMessage());
 			log.severe(ioe.toString());
 			ioe.printStackTrace();
 			newQ = this.event("exception", "Unable to load question", responder);
 		} catch (Exception e) {
+			dialogLog.severe(adapterID, "Unable to parse question json: "+e.getMessage());
 			log.severe(e.toString());
 			newQ = this.event("exception", "Unable to parse question json", responder);
 		}

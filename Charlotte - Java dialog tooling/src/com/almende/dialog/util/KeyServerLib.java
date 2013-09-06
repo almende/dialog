@@ -15,11 +15,16 @@ public class KeyServerLib {
 
 	static final Logger log = Logger.getLogger(AdapterConfig.class.getName());
 	
+	public static ArrayNode getAllowedAdapterList(String pubKey, String privKey) {
+		return getAllowedAdapterList(pubKey, privKey, null);
+	}
+	
 	public static ArrayNode getAllowedAdapterList(String pubKey, String privKey, String adapterType) {
 		
 		ObjectMapper om = ParallelInit.getObjectMapper();
+		ArrayNode list = om.createArrayNode(); 
 		if(Settings.KEYSERVER==null)
-			return om.createArrayNode();
+			return list;
 		
 		String path="/rest/keys/checkkey/"+pubKey+"/"+privKey+"/outbound";
 		
@@ -31,15 +36,23 @@ public class KeyServerLib {
 		} catch(Exception ex) {
 			log.warning(ex.getMessage());
 			log.warning("No response from keyserver so no validation");
-			return om.createArrayNode();
-		}		
+			return list;
+		}
 		
 		try {
 			JsonNode result = om.readValue(res, JsonNode.class);
 			if(!result.get("valid").asBoolean())
 				return null;
+			if(adapterType==null) {
+				list = (ArrayNode) result.get("adapters");
+			} else {
+				for(JsonNode adapter : (ArrayNode) result.get("adapters")){
+					if(adapter.get("adapterType").asText().equalsIgnoreCase(adapterType))
+						list.add(adapter);
+				}
+			}
 			
-			return (ArrayNode) result.get("adapters");
+			return list;
 			
 		} catch(Exception ex) {
 			log.warning("Unable to parse result");

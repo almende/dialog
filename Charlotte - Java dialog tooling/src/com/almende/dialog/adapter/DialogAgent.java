@@ -33,14 +33,14 @@ public class DialogAgent extends Agent {
 	}
 	
 	@Access(AccessType.UNAVAILABLE)
-	public Question getQuestion(String url, String id, String json){
+	/*public Question getQuestion(String url, String id, String json){
 		Question question=null;
 		if (id != null) question = Question.fromJSON(StringStore.getString(id));
 		if (json != null) question = Question.fromJSON(json);
 		if (question == null && url != null) question = Question.fromURL(url);
 		question.generateIds();
 		return question;
-	}
+	}*/
 	
 	public ArrayList<String> getActiveCalls(@Name("adapterID") String adapterID) {
 		
@@ -260,7 +260,7 @@ public class DialogAgent extends Agent {
 		}
 	}
 	
-	public String startDialog(@Name("question_url") @Required(false) String url,
+	/*public String startDialog(@Name("question_url") @Required(false) String url,
 							  @Name("myid") @Required(false) String id, 
 							  @Name("question_json") @Required(false) String json,
 							  @Name("expanded_texts") @Required(false) String expanded_texts){
@@ -296,7 +296,7 @@ public class DialogAgent extends Agent {
         	}
 		}
 		return reply;
-	}
+	}*/
 	
 	@Override
 	public String getDescription() {

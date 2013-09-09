@@ -75,25 +75,25 @@ abstract public class TextServlet extends HttpServlet {
 	}
 	
 	/**
-         * info for generating a Return when a user enters
-         * an escape command as input. E.g. /reset
-         * @author Shravan
-         */
-        private class EscapeInputCommand
+     * info for generating a Return when a user enters
+     * an escape command as input. E.g. /reset
+     * @author Shravan
+     */
+    private class EscapeInputCommand
+    {
+        boolean skip;
+        String body;
+        String preferred_language;
+        String reply;
+        
+        @Override
+        public String toString()
         {
-            boolean skip;
-            String body;
-            String preferred_language;
-            String reply;
-            
-            @Override
-            public String toString()
-            {
-                return String.format( "Skip: %s body: %s preferred_lang: %s reply %s", skip, body, preferred_language, reply );
-            }
+            return String.format( "Skip: %s body: %s preferred_lang: %s reply %s", skip, body, preferred_language, reply );
         }
-	
-	public Return formQuestion(Question question,String address) {
+    }
+
+	public Return formQuestion(Question question, String adapterID,String address) {
 		String reply = "";
 		
 		String preferred_language = "nl"; // TODO: Change to null??
@@ -118,9 +118,9 @@ abstract public class TextServlet extends HttpServlet {
 				reply = reply.substring(0, reply.length() - 1) + " ]";
 				break; //Jump from forloop
 			} else if (question.getType().equalsIgnoreCase("comment")) {
-				question = question.answer(null, null, null);//Always returns null! So no need, but maybe in future?
+				question = question.answer(null, adapterID, null, null);//Always returns null! So no need, but maybe in future?
 			} else 	if (question.getType().equalsIgnoreCase("referral")) {
-				question = Question.fromURL(question.getUrl(),address);
+				question = Question.fromURL(question.getUrl(), adapterID ,address);
 			} else {
 				break; //Jump from forloop (open questions, etc.)
 			}
@@ -150,14 +150,14 @@ abstract public class TextServlet extends HttpServlet {
 		
 		url = encodeURLParams(url);
 		
-		Question question = Question.fromURL(url, address);
+		Question question = Question.fromURL(url, config.getConfigId(), address);
 		String preferred_language = StringStore
 				.getString(address + "_language");
 		if (preferred_language == null){
 			preferred_language = config.getPreferred_language();
 		}
 		question.setPreferred_language(preferred_language);
-		Return res = formQuestion(question,address);
+		Return res = formQuestion(question, config.getConfigId(),address);
 		String fromName = getNickname(res.question);
 		if(res.question!=null) {
 			StringStore.storeString("question_"+address+"_"+localaddress, res.question.toJSON());
@@ -175,57 +175,57 @@ abstract public class TextServlet extends HttpServlet {
 	 * updated startDialog with Broadcast functionality
 	 * @throws Exception
 	 */
-        public String startDialog( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config ) throws Exception
+    public String startDialog( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config ) throws Exception
+    {
+        if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
         {
-            if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
-            {
-                for ( String address : addressNameMap.keySet() )
-                {
-                    address = formatNumber( address ).replaceFirst( "\\+31", "0" );
-                }
-            }
-            String localaddress = config.getMyAddress();
-            String sessionKey = getAdapterType() + "|" + localaddress + "|" + new ObjectMapper().writeValueAsString( addressNameMap.keySet() );
-            Session session = Session.getSession( sessionKey, config.getKeyword() );
-            if ( session == null )
-            {
-                log.severe( "XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
-                    + sessionKey );
-                return "";
-            }
-            session.setPubKey( config.getPublicKey() );
-            session.setDirection( "outbound" );
-            session.storeSession();
-    
-            url = encodeURLParams( url );
-    
-            Return res = null;
-            Question question = null;
             for ( String address : addressNameMap.keySet() )
             {
-                question = Question.fromURL( url, address );
-                String preferred_language = StringStore.getString( address + "_language" );
-                if ( preferred_language == null )
-                {
-                    preferred_language = config.getPreferred_language();
-                }
-                question.setPreferred_language( preferred_language );
-                res = formQuestion( question, address );
-                if ( res.question != null )
-                {
-                    StringStore.storeString( "question_" + address + "_" + localaddress, res.question.toJSON() );
-                }
-                DDRWrapper.log( question, session, "Start", config );
+                address = formatNumber( address ).replaceFirst( "\\+31", "0" );
             }
-            String fromName = getNickname( res.question );
-            log.info( String.format( "fromName: %s senderName %s", fromName, senderName ) );
-            int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, senderName, addressNameMap, config );
-            for ( int i = 0; i < count; i++ )
-            {
-                DDRWrapper.log( question, session, "Send", config );
-            }
-            return sessionKey;
         }
+        String localaddress = config.getMyAddress();
+        String sessionKey = getAdapterType() + "|" + localaddress + "|" + new ObjectMapper().writeValueAsString( addressNameMap.keySet() );
+        Session session = Session.getSession( sessionKey, config.getKeyword() );
+        if ( session == null )
+        {
+            log.severe( "XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
+                + sessionKey );
+            return "";
+        }
+        session.setPubKey( config.getPublicKey() );
+        session.setDirection( "outbound" );
+        session.storeSession();
+
+        url = encodeURLParams( url );
+
+        Return res = null;
+        Question question = null;
+        for ( String address : addressNameMap.keySet() )
+        {
+            question = Question.fromURL( url, config.getConfigId(), address );
+            String preferred_language = StringStore.getString( address + "_language" );
+            if ( preferred_language == null )
+            {
+                preferred_language = config.getPreferred_language();
+            }
+            question.setPreferred_language( preferred_language );
+            res = formQuestion( question, config.getConfigId(), address );
+            if ( res.question != null )
+            {
+                StringStore.storeString( "question_" + address + "_" + localaddress, res.question.toJSON() );
+            }
+            DDRWrapper.log( question, session, "Start", config );
+        }
+        String fromName = getNickname( res.question );
+        log.info( String.format( "fromName: %s senderName %s", fromName, senderName ) );
+        int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, senderName, addressNameMap, config );
+        for ( int i = 0; i < count; i++ )
+        {
+            DDRWrapper.log( question, session, "Send", config );
+        }
+        return sessionKey;
+    }
 	
 	public static void killSession(Session session){
 		StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
@@ -356,23 +356,23 @@ abstract public class TextServlet extends HttpServlet {
 			if (json == null || json.equals("")) {
 				body=null; // Remove the body, because it is to start the question
 				if (config.getInitialAgentURL().equals("")){
-					question = Question.fromURL(this.host+DEMODIALOG,address,localaddress);
+					question = Question.fromURL(this.host+DEMODIALOG, config.getConfigId(),address,localaddress);
 				} else {
-					question = Question.fromURL(config.getInitialAgentURL(),address,localaddress);
+					question = Question.fromURL(config.getInitialAgentURL(), config.getConfigId(),address,localaddress);
 				}
 				session.setDirection("inbound");
 				DDRWrapper.log(question,session,"Start",config);
 				start = true;
 			} else {
-				question = Question.fromJSON(json);
+				question = Question.fromJSON(json, config.getConfigId());
 			}
 			
 			if (question != null) {
 				question.setPreferred_language(preferred_language);
 				// Do not answer a question, when it's the first and the type is comment or referral anyway.
 				if(!(start && (question.getType().equalsIgnoreCase("comment") || question.getType().equalsIgnoreCase("referral"))))
-					question = question.answer(address, null, body);
-				Return replystr = formQuestion(question,address);
+				question = question.answer(address, config.getConfigId(), null, body);
+				Return replystr = formQuestion(question, config.getConfigId(),address);
 				escapeInput.reply = replystr.reply;
 				question = replystr.question;
 				fromName = getNickname(question);

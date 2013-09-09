@@ -10,9 +10,11 @@
   <var name="inConn" expr="''" />
   <var name="outConn" expr="''" />
   <var name="dialogID" expr="''"/>
+  <var name="holdDialogID" expr="''"/>
   <var name="dialURL" expr="''" />
   <var name="results" expr="''" />
   <var name="vxmlScript" expr="'/vxml/new'" />
+  <var name="holdVxmlScript" expr="'/transfer.vxml'" />
   <var name="currentState" expr="'initial'" />
   
   <eventprocessor statevariable="currentState" >
@@ -64,6 +66,8 @@
             dialURL = "sip:"+strings[1]+"@asb-02.voipit.nl";
         </script>
         <assign name="currentState" expr="'originatingcall'" />
+        <unjoin id1="inConn" id2="dialogID" />
+        <dialogstart src="holdVxmlScript" connectionid="inConn" dialogid="holdDialogID"/>
         <createcall dest="dialURL" connectionid="outConn" timeout="event$.connecttimeout"/>
       </if>
     </transition>
@@ -72,14 +76,14 @@
     <transition state="originatingcall" event="connection.failed">
 	    <assign name="currentState" expr="'connestablished'" />
 	    <assign name="results" expr="'event$.result'"/>
-	    <send name="'dialog.transfer.complete'"
+      <dialogterminate dialogid="holdDialogID"/>
+      <send name="'dialog.transfer.complete'"
 	      target="dialogID"
 	      targettype="'dialog'"
 	      namelist="results" />
 	  </transition>
 	
 	  <transition state="originatingcall" event="connection.connected">
-	    <unjoin id1="inConn" id2="dialogID" />
 	    <join id1="inConn" id2="outConn" duplex="'full'"/>
 	    <send name="'dialog.transfer.connected'"
 	            target="dialogID"

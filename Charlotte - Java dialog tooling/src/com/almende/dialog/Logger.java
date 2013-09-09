@@ -61,11 +61,13 @@ public class Logger {
 		
 		if(endTime!=null) {
 			cmd.addFilter("timestamp", FilterOperator.LESS_THAN_OR_EQUAL, endTime);
-		}
-		
+		}		
+		if(offset==null)
+			offset=0;
 		if(limit==null)
 			limit=50;
-		
+
+		cmd.startFrom(offset);
 		cmd.fetchMaximum(limit);
 		cmd.addSort("timestamp", SortDirection.DESCENDING);
 		

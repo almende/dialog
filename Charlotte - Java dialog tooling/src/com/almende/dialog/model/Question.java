@@ -57,8 +57,7 @@ public class Question implements QuestionIntf {
             if( !ServerUtils.isInUnitTestingEnvironment() )
             {
                 Client client = ParallelInit.getClient();
-		WebResource webResource = client.resource(url);
-	
+                WebResource webResource = client.resource(url);
 		try {
 			webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
 			log.info("Getting question url: "+webResource.toString());
@@ -69,7 +68,8 @@ public class Question implements QuestionIntf {
 			log.severe(e.toString());
 		} catch (UniformInterfaceException e) {
 			log.severe(e.toString());
-		} catch (UnsupportedEncodingException e) {
+		} 
+			catch (UnsupportedEncodingException e) {
 			log.severe(e.toString());
 		}
             }

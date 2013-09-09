@@ -17,7 +17,14 @@ public class TestServlet extends HttpServlet
 {
     private static final long serialVersionUID = 1L;
     public static final String TEXT_SERVLET_PATH = "http://localhost:9000/unitTestServlet";
-
+    public static final String APPOINTMENT_MAIN_QUESTION = "Are you available today?";
+    public static final String APPOINTMENT_YES_ANSWER = "Yup";
+    public static final String APPOINTMENT_NO_ANSWER = "Nope";
+    public static final String APPOINTMENT_FREE_ANSWER = "Free";
+    public static final String APPOINTMENT_SECOND_QUESION = "How long are you available? (in mins)";
+    public static final String APPOINTMENT_REJECT_RESPONSE = "Thanks for responding to the invitation!";
+    public static final String APPOINTMENT_ACCEPTANCE_RESPONSE = "Thanks for accepting the invitation!";
+    
     @Override
     protected void doGet( HttpServletRequest req, HttpServletResponse resp )
     throws ServletException, IOException
@@ -52,10 +59,10 @@ public class TestServlet extends HttpServlet
         Question question = new Question();
         question.setQuestion_id( "1" );
         question.setType( "closed" );
-        question.setQuestion_text( "text://Are you available today?" );
+        question.setQuestion_text( "text://" + APPOINTMENT_MAIN_QUESTION );
         
-        Answer yesAnswer = new Answer( "text://Yup", "http://localhost:9000/unitTestServlet?appointment=Yes" );
-        Answer noAnswer = new Answer( "text://Nope", "http://localhost:9000/unitTestServlet?appointment=Nope" );
+        Answer yesAnswer = new Answer( "text://" + APPOINTMENT_YES_ANSWER, "http://localhost:9000/unitTestServlet?appointment=" + APPOINTMENT_YES_ANSWER );
+        Answer noAnswer = new Answer( "text://" + APPOINTMENT_NO_ANSWER, "http://localhost:9000/unitTestServlet?appointment=" + APPOINTMENT_NO_ANSWER );
         
         //set the answers in the question
         question.setAnswers( new ArrayList<Answer>( Arrays.asList( yesAnswer, noAnswer ) ));
@@ -68,9 +75,9 @@ public class TestServlet extends HttpServlet
         Question question = new Question();
         question.setQuestion_id( "1" );
         question.setType( "open" );
-        question.setQuestion_text( "text://How long are you available? (in mins)" );
+        question.setQuestion_text( "text://"+ APPOINTMENT_SECOND_QUESION );
         
-        Answer openAnswer = new Answer( "text://", "http://localhost:9000/unitTestServlet?appointment=free" );
+        Answer openAnswer = new Answer( "text://", "http://localhost:9000/unitTestServlet?appointment="+ APPOINTMENT_FREE_ANSWER );
         
         //set the answers in the question
         question.setAnswers( new ArrayList<Answer>(Arrays.asList( openAnswer )));
@@ -83,7 +90,7 @@ public class TestServlet extends HttpServlet
         Question question = new Question();
         question.setQuestion_id( "1" );
         question.setType( "comment" );
-        question.setQuestion_text( "text://Thanks for responding to the invitation!" );
+        question.setQuestion_text( "text://" + APPOINTMENT_REJECT_RESPONSE );
         question.generateIds();
         return question.toJSON();
     }
@@ -93,7 +100,7 @@ public class TestServlet extends HttpServlet
         Question question = new Question();
         question.setQuestion_id( "1" );
         question.setType( "comment" );
-        question.setQuestion_text( "text://Thanks for accepting the invitation!" );
+        question.setQuestion_text( "text://"+ APPOINTMENT_ACCEPTANCE_RESPONSE );
         question.generateIds();
         return question.toJSON();
     }
@@ -109,15 +116,15 @@ public class TestServlet extends HttpServlet
         {
             result = getJsonAppointmentQuestion();
         }
-        else if ( appointmentTag.equals( "Yes" ) )
+        else if ( appointmentTag.equals( APPOINTMENT_YES_ANSWER ) )
         {
             result = getJsonAppointmentYesQuestion();
         }
-        else if ( appointmentTag.equals( "Nope" ) )
+        else if ( appointmentTag.equals( APPOINTMENT_NO_ANSWER ) )
         {
             result = getJsonAppointmentNoQuestion();
         }
-        else if ( appointmentTag.equals( "free" ) )
+        else if ( appointmentTag.equals( APPOINTMENT_FREE_ANSWER ) )
         {
             result = getJsonAppointmentFreeQuestion();
         }

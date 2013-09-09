@@ -31,9 +31,4 @@ public class LoggedPrintStream extends PrintStream
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         return new LoggedPrintStream( sb, byteArrayOutputStream, toLog );
     }
-
-    public OutputStream getOutput()
-    {
-        return outputStream;
-    }
 }

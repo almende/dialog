@@ -56,10 +56,10 @@ public class XMPPServletTest extends TestFramework
 
         LoggedPrintStream lpsOut = xmppAppointmentInteraction("hi");
         
-        assertTrue( lpsOut.getOutput().toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "Are you available today?\n[ Yup | Nope  ]" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "sshetty@ask-cs.com" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "Sending an XMPP Message:" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "Are you available today?\n[ Yup | Nope  ]" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "info@dialog-handler.appspotchat.com" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "sshetty@ask-cs.com" ) );
     }
     
     /**
@@ -75,10 +75,10 @@ public class XMPPServletTest extends TestFramework
         
         //respond with a "Yup" message. which is a valid answer
         LoggedPrintStream lpsOut = xmppAppointmentInteraction( "Yup" );
-        assertTrue( lpsOut.getOutput().toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "How long are you available? (in mins)" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "sshetty@ask-cs.com" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "Sending an XMPP Message:" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "How long are you available? (in mins)" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "info@dialog-handler.appspotchat.com" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "sshetty@ask-cs.com" ) );
     }
     
     /**
@@ -94,10 +94,10 @@ public class XMPPServletTest extends TestFramework
         
         //respond with a "Yup" message. which is a valid answer
         LoggedPrintStream lpsOut = xmppAppointmentInteraction( "Nope" );
-        assertTrue( lpsOut.getOutput().toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "Thanks for responding to the invitation!" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "sshetty@ask-cs.com" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "Sending an XMPP Message:" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "Thanks for responding to the invitation!" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "info@dialog-handler.appspotchat.com" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "sshetty@ask-cs.com" ) );
     }
     
     /**
@@ -113,10 +113,10 @@ public class XMPPServletTest extends TestFramework
         
         //respond with a "Yup" message. which is a valid answer
         LoggedPrintStream lpsOut = xmppAppointmentInteraction( "30" );
-        assertTrue( lpsOut.getOutput().toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "Thanks for accepting the invitation!" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "sshetty@ask-cs.com" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "Sending an XMPP Message:" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "Thanks for accepting the invitation!" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "info@dialog-handler.appspotchat.com" ) );
+        assertTrue( lpsOut.outputStream.toString().contains( "sshetty@ask-cs.com" ) );
     }
 
     /**

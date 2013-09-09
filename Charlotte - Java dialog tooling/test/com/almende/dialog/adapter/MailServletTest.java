@@ -1,5 +1,6 @@
 package com.almende.dialog.adapter;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Method;
@@ -88,7 +89,6 @@ public class MailServletTest extends TestFramework
      * @throws Exception 
      */
     @Test
-    @Ignore
     public void ReceiveAppointmentNewSessionMessageTest() throws Exception
     {
         String initialAgentURL = TestServlet.TEXT_SERVLET_PATH + "?appointment=start";
@@ -99,15 +99,106 @@ public class MailServletTest extends TestFramework
         getOrCreateSession( adapterConfig, Arrays.asList( remoteAddress ) );
 
         LoggedPrintStream lpsOut = mailAppointmentInteraction( "hi" );
+        String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
+        assertEquals( "Email sent:", lpsOutArray[0] );
+        assertEquals( "From: null<"+ localAddressMail +">", lpsOutArray[1] );
+        assertEquals( "To: null<"+ remoteAddress +">", lpsOutArray[2] );
+        assertEquals( "Subject: RE: null", lpsOutArray[3] );
+        assertEquals( "Body: " + TestServlet.APPOINTMENT_MAIN_QUESTION, lpsOutArray[4] );
+        assertEquals( String.format( "[ %s | %s  ]", TestServlet.APPOINTMENT_YES_ANSWER, TestServlet.APPOINTMENT_NO_ANSWER ), lpsOutArray[5].trim() );
+    }
+    
+    /**
+     * use an existing session and send yes to it
+     * @throws Exception 
+     */
+    @Test
+    public void AcceptAppointmentExistingSessionMessageTest() 
+    throws Exception
+    {
+        //use existing session to recreate a scenario where the first question is alrady asked
+        ReceiveAppointmentNewSessionMessageTest();
+        
+        //send Yup to the Appointment question
+        LoggedPrintStream lpsOut = mailAppointmentInteraction( TestServlet.APPOINTMENT_YES_ANSWER );
+        
+        String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
+        assertEquals( "Email sent:", lpsOutArray[0] );
+        assertEquals( "From: null<"+ localAddressMail +">", lpsOutArray[1] );
+        assertEquals( "To: null<"+ remoteAddress +">", lpsOutArray[2] );
+        assertEquals( "Subject: RE: null", lpsOutArray[3] );
+        assertEquals( "Body: " + TestServlet.APPOINTMENT_SECOND_QUESION, lpsOutArray[4].trim() );
+    }
+    
+    /**
+     * use an existing session and send yes to it
+     * @throws Exception 
+     */
+    @Test
+    public void AnswerSecondAppointmentQuestionMessageTest() 
+    throws Exception
+    {
+        //use existing session to recreate a scenario where the second question is alrady asked
+        AcceptAppointmentExistingSessionMessageTest();
+        
+        //send Yup to the Appointment question
+        LoggedPrintStream lpsOut = mailAppointmentInteraction( "120" ); //send free for 120 mins
+        
+        String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
+        assertEquals( "Email sent:", lpsOutArray[0] );
+        assertEquals( "From: <"+ localAddressMail +">", lpsOutArray[1].trim() );
+        assertEquals( "To: null<"+ remoteAddress +">", lpsOutArray[2] );
+        assertEquals( "Subject: RE: null", lpsOutArray[3] );
+        assertEquals( "Body: " + TestServlet.APPOINTMENT_ACCEPTANCE_RESPONSE, lpsOutArray[4].trim() );
+    }
+    
+    /**
+     * use an existing session and send no to it
+     * @throws Exception 
+     */
+    @Test
+    public void RejectAppointmentExistingSessionMessageTest() 
+    throws Exception
+    {
+        //use existing session to recreate a scenario where the first question is alrady asked
+        ReceiveAppointmentNewSessionMessageTest();
+        
+        //send Yup to the Appointment question
+        LoggedPrintStream lpsOut = mailAppointmentInteraction( TestServlet.APPOINTMENT_NO_ANSWER );
+        
+        String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
+        assertEquals( "Email sent:", lpsOutArray[0] );
+        assertEquals( "From: <"+ localAddressMail +">", lpsOutArray[1] );
+        assertEquals( "To: null<"+ remoteAddress +">", lpsOutArray[2] );
+        assertEquals( "Subject: RE: null", lpsOutArray[3] );
+        assertEquals( "Body: " + TestServlet.APPOINTMENT_REJECT_RESPONSE, lpsOutArray[4].trim() );
+    }
 
-        //        ArrayNode logs = LoggedPrintStream.getLogs();
-
-        assertTrue( lpsOut.getOutput().toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.getOutput()
-            .toString()
-            .contains( "Are you available today?\n[ Yup | Nope  ]" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.getOutput().toString().contains( "sshetty@ask-cs.com" ) );
+    /**
+     * this is a test to test if the old message block is trimmed off 
+     * when an email is sent using the reply button.
+     * @throws Exception 
+     */
+    @Test
+    @Ignore
+    public void TripOldMessageByReplyRecieveProcessMessageTest() 
+    throws Exception
+    {
+        //use existing session to recreate a scenario where the first question is alrady asked
+        ReceiveAppointmentNewSessionMessageTest();
+        
+        //reply Yup to the Appointment question
+        //adding some just text as part of the previous email
+        String reply = TestServlet.APPOINTMENT_YES_ANSWER + " \n \n \n2013/9/6 <" + localAddressMail +"> \n \n> U heeft een ongeldig aantal gegeven. " +
+        		"Geef een getal tussen 1 en 100 000. \n> \n \n \n \n--  \nKind regards, \nShravan Shetty "; 
+        LoggedPrintStream lpsOut = mailAppointmentInteraction( reply );
+        
+        String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
+        assertEquals( "Email sent:", lpsOutArray[0] );
+        assertEquals( "From: null<"+ localAddressMail +">", lpsOutArray[1] );
+        assertEquals( "To: null<"+ remoteAddress +">", lpsOutArray[2] );
+        assertEquals( "Subject: RE: null", lpsOutArray[3] );
+        assertEquals( "Body: " + TestServlet.APPOINTMENT_SECOND_QUESION, lpsOutArray[4].trim() );
     }
     
     /**
@@ -118,7 +209,7 @@ public class MailServletTest extends TestFramework
     {
         MimeMessage mimeMessage = new MimeMessage( Session.getDefaultInstance( new Properties(), null) );
         mimeMessage.setFrom( new InternetAddress( remoteAddress ) );
-        MimeMultipart mimeMultipart = getTestMimeMultipart( remoteAddress, localAddressMail, "/help", null );
+        MimeMultipart mimeMultipart = getTestMimeMultipart( remoteAddress, localAddressMail, message, null );
         mimeMessage.setContent( mimeMultipart );
         
         //fetch and invoke the receieveMessage method

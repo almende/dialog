@@ -1,6 +1,5 @@
 package com.almende.dialog.adapter;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.util.Map;
@@ -52,17 +51,12 @@ public class MailServlet extends TextServlet {
 		return receiveMessage( message, recipient );
 	}
 
-        /**
-         * @param msg
-         * @param message
-         * @param recipient
-         * @return
-         * @throws MessagingException
-         * @throws Exception
-         * @throws IOException
+        /** method separated from the original @link{MailServlet#receiveMessage(HttpServletRequest, HttpServletResponse)}
+         * so that it can be tested without any data mock-ups.
+         * @since  3/09/2013
          */
         private TextMessage receiveMessage( MimeMessage message, String recipient )
-        throws MessagingException, Exception, IOException
+        throws Exception
         {
             TextMessage msg = new TextMessage();
             msg.setSubject("RE: "+message.getSubject());
@@ -98,13 +92,47 @@ public class MailServlet extends TextServlet {
                     mp = new MimeMultipart();
                     mp.addBodyPart( new MimeBodyPart(new InternetHeaders(), message.getContent().toString().getBytes()) ); 
                 }
-    		if(mp.getCount()>0) {
-    			msg.setBody(mp.getBodyPart(0).getContent().toString());
-    			log.info("Receive mail: "+msg.getBody());
-    		}
-    		
+                if ( mp.getCount() > 0 )
+                {
+                    //trim old messages when a message is revieved via the reply button
+//                    String body = trimOldReplies( mp.getBodyPart( 0 ).getContent().toString(), msg.getLocalAddress() );
+                    msg.setBody( mp.getBodyPart( 0 ).getContent().toString() );
+                    log.info( "Receive mail: " + msg.getBody() );
+                }
     		return msg;
         }
+
+//        private String trimOldReplies( String body, String localAddress )
+//        {
+//            String result = "";
+//            ArrayList<String> nonNullMessageLines = new ArrayList<String>();
+//            String[] bodyLines = body.split( "\n" );
+//            for ( String bodyLine : bodyLines )
+//            {
+//                if(!bodyLine.trim().isEmpty())
+//                {
+//                    nonNullMessageLines.add( bodyLine.trim() );
+//                }
+//            }
+//            boolean foundReplyHeader = false;
+//            //parse the nonNullMessage lines
+//            for ( String nonNullMessageLine : nonNullMessageLines )
+//            {
+//                if(foundReplyHeader && nonNullMessageLine.contains( ">" ))
+//                {
+//                    break;
+//                }
+//                else if( !nonNullMessageLine.contains( "<"+localAddress+">" ))
+//                {
+//                    result += nonNullMessageLine;
+//                }
+//                else
+//                {
+//                    foundReplyHeader = true;
+//                }
+//            }
+//            return result;
+//        }
 
         @Deprecated
         /**
@@ -125,6 +153,14 @@ public class MailServlet extends TextServlet {
             msg.setText(message);
             Transport.send(msg);
             
+            String logString = String.format( "Email sent:\n" + "From: %s<%s>\n" + "To: %s<%s>\n" + "Subject: %s\n" + "Body: %s", 
+                                              fromName, from, toName, to, subject, message );
+            /**
+             * do not remove this println lines. Some ugly tests @MailServletTest.mailAppointmentInteraction} work on these
+             * @author Shravan
+             */
+            System.out.println( logString );
+            log.info( logString );
             log.info("Send reply to mail post: "+(new Date().getTime()));
 
         } catch (AddressException e) {

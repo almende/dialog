@@ -33,11 +33,11 @@ public class MailServletTest extends TestFramework
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig( "MAIL", "agent1@ask-cs.com", localAddressMail, "" );
         //create session
-        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddress ) );
+        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddressEmail ) );
         
         MimeMessage mimeMessage = new MimeMessage( Session.getDefaultInstance( new Properties(), null) );
-        mimeMessage.setFrom( new InternetAddress( remoteAddress ) );
-        MimeMultipart mimeMultipart = getTestMimeMultipart( remoteAddress, localAddressMail, "dummyData", null );
+        mimeMessage.setFrom( new InternetAddress( remoteAddressEmail ) );
+        MimeMultipart mimeMultipart = getTestMimeMultipart( remoteAddressEmail, localAddressMail, "dummyData", null );
         mimeMessage.setContent( mimeMultipart );
         
         //fetch and invoke the receieveMessage method
@@ -63,11 +63,11 @@ public class MailServletTest extends TestFramework
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig( "MAIL", "agent1@ask-cs.com", localAddressMail, "" );
         //create session
-        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddress ) );
+        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddressEmail ) );
 
         MimeMessage mimeMessage = new MimeMessage( Session.getDefaultInstance( new Properties(), null) );
-        mimeMessage.setFrom( new InternetAddress( remoteAddress ) );
-        MimeMultipart mimeMultipart = getTestMimeMultipart( remoteAddress, localAddressMail, "/help", null );
+        mimeMessage.setFrom( new InternetAddress( remoteAddressEmail ) );
+        MimeMultipart mimeMultipart = getTestMimeMultipart( remoteAddressEmail, localAddressMail, "/help", null );
         mimeMessage.setContent( mimeMultipart );
         
         //fetch and invoke the receieveMessage method
@@ -96,13 +96,13 @@ public class MailServletTest extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig( "MAIL", "agent1@ask-cs.com",
                                                            localAddressMail, initialAgentURL );
         //create session
-        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddress ) );
+        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddressEmail ) );
 
         LoggedPrintStream lpsOut = mailAppointmentInteraction( "hi" );
         String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
         assertEquals( "Email sent:", lpsOutArray[0] );
         assertEquals( "From: null<"+ localAddressMail +">", lpsOutArray[1] );
-        assertEquals( "To: null<"+ remoteAddress +">", lpsOutArray[2] );
+        assertEquals( "To: null<"+ remoteAddressEmail +">", lpsOutArray[2] );
         assertEquals( "Subject: RE: null", lpsOutArray[3] );
         assertEquals( "Body: " + TestServlet.APPOINTMENT_MAIN_QUESTION, lpsOutArray[4] );
         assertEquals( String.format( "[ %s | %s  ]", TestServlet.APPOINTMENT_YES_ANSWER, TestServlet.APPOINTMENT_NO_ANSWER ), lpsOutArray[5].trim() );
@@ -125,7 +125,7 @@ public class MailServletTest extends TestFramework
         String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
         assertEquals( "Email sent:", lpsOutArray[0] );
         assertEquals( "From: null<"+ localAddressMail +">", lpsOutArray[1] );
-        assertEquals( "To: null<"+ remoteAddress +">", lpsOutArray[2] );
+        assertEquals( "To: null<"+ remoteAddressEmail +">", lpsOutArray[2] );
         assertEquals( "Subject: RE: null", lpsOutArray[3] );
         assertEquals( "Body: " + TestServlet.APPOINTMENT_SECOND_QUESION, lpsOutArray[4].trim() );
     }
@@ -147,7 +147,7 @@ public class MailServletTest extends TestFramework
         String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
         assertEquals( "Email sent:", lpsOutArray[0] );
         assertEquals( "From: <"+ localAddressMail +">", lpsOutArray[1].trim() );
-        assertEquals( "To: null<"+ remoteAddress +">", lpsOutArray[2] );
+        assertEquals( "To: null<"+ remoteAddressEmail +">", lpsOutArray[2] );
         assertEquals( "Subject: RE: null", lpsOutArray[3] );
         assertEquals( "Body: " + TestServlet.APPOINTMENT_ACCEPTANCE_RESPONSE, lpsOutArray[4].trim() );
     }
@@ -169,7 +169,7 @@ public class MailServletTest extends TestFramework
         String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
         assertEquals( "Email sent:", lpsOutArray[0] );
         assertEquals( "From: <"+ localAddressMail +">", lpsOutArray[1] );
-        assertEquals( "To: null<"+ remoteAddress +">", lpsOutArray[2] );
+        assertEquals( "To: null<"+ remoteAddressEmail +">", lpsOutArray[2] );
         assertEquals( "Subject: RE: null", lpsOutArray[3] );
         assertEquals( "Body: " + TestServlet.APPOINTMENT_REJECT_RESPONSE, lpsOutArray[4].trim() );
     }
@@ -196,7 +196,7 @@ public class MailServletTest extends TestFramework
         String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
         assertEquals( "Email sent:", lpsOutArray[0] );
         assertEquals( "From: null<"+ localAddressMail +">", lpsOutArray[1] );
-        assertEquals( "To: null<"+ remoteAddress +">", lpsOutArray[2] );
+        assertEquals( "To: null<"+ remoteAddressEmail +">", lpsOutArray[2] );
         assertEquals( "Subject: RE: null", lpsOutArray[3] );
         assertEquals( "Body: " + TestServlet.APPOINTMENT_SECOND_QUESION, lpsOutArray[4].trim() );
     }
@@ -208,8 +208,8 @@ public class MailServletTest extends TestFramework
     private LoggedPrintStream mailAppointmentInteraction(String message) throws Exception
     {
         MimeMessage mimeMessage = new MimeMessage( Session.getDefaultInstance( new Properties(), null) );
-        mimeMessage.setFrom( new InternetAddress( remoteAddress ) );
-        MimeMultipart mimeMultipart = getTestMimeMultipart( remoteAddress, localAddressMail, message, null );
+        mimeMessage.setFrom( new InternetAddress( remoteAddressEmail ) );
+        MimeMultipart mimeMultipart = getTestMimeMultipart( remoteAddressEmail, localAddressMail, message, null );
         mimeMessage.setContent( mimeMultipart );
         
         //fetch and invoke the receieveMessage method

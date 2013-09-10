@@ -30,8 +30,14 @@ public class TestServlet extends HttpServlet
     throws ServletException, IOException
     {
         String result = "";
-        String appointmentTag = req.getParameter( "appointment" );
-        result = getAppointmentQuestion( appointmentTag );
+        if(req.getParameter( "appointment" ) != null)
+        {
+            result = getAppointmentQuestion( req.getParameter( "appointment" ) );
+        }
+        else
+        {
+            result = getJsonSimpleCommentQuestion( req.getParameter( "simpleComment" ) );
+        }
         resp.getWriter().write( result );
         resp.setHeader( "Content-Type", MediaType.APPLICATION_JSON );
     }
@@ -52,6 +58,15 @@ public class TestServlet extends HttpServlet
     throws ServletException, IOException
     {
         super.doPut( req, resp );
+    }
+    
+    public static String getJsonSimpleCommentQuestion(String questionText)
+    {
+        Question question = new Question();
+        question.setQuestion_id( "1" );
+        question.setType( "comment" );
+        question.setQuestion_text( "text://" + questionText );
+        return question.toJSON();
     }
 
     public static String getJsonAppointmentQuestion()

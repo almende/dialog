@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+10-09-2013, version 0.3.4
+- Catch the events Server Failure and Request Failure and retry to start a call.
+
 09-09-2013, version 0.3.3
 - Added wait sound when a call is redirected.
 

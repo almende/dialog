@@ -43,6 +43,8 @@ public class VoiceXMLRESTProxy {
 	private static final int LOOP_DETECTION=10;
 	private static final String DTMFGRAMMAR="/vxml/dtmf2hash";
 	
+	private static final int MAX_RETRIES=1;
+	
 	protected String TIMEOUT_URL="/vxml/timeout";
 	protected String EXCEPTION_URL="/vxml/exception";
 	
@@ -160,6 +162,12 @@ public class VoiceXMLRESTProxy {
 		AdapterConfig config = AdapterConfig.findAdapterConfig(adapterType, localID);
 		String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
 		Session session = Session.getSession(sessionKey);
+		
+		// Remove retry counter because call is succesfull
+		if(direction.equalsIgnoreCase("outbound")) {
+			StringStore.dropString(sessionKey+"_retry");
+			log.info("Removed retry!");
+		}
 		
 		String url="";
 		if (direction.equals("inbound")){
@@ -336,6 +344,7 @@ public class VoiceXMLRESTProxy {
 				Node remoteParty = null;
 				@SuppressWarnings("unused")
 				Node extTrackingId = null;
+				Node releaseCause = null;
 				
 				for(int i=0;i<call.getChildNodes().getLength();i++) {
 					Node node = call.getChildNodes().item(i);
@@ -347,6 +356,8 @@ public class VoiceXMLRESTProxy {
 						remoteParty=node;
 					} else if(node.getNodeName().equals("extTrackingId")) {
 						extTrackingId=node;
+					} else if(node.getNodeName().equals("releaseCause")) {
+						releaseCause=node;
 					}
 				}				
 				
@@ -378,6 +389,12 @@ public class VoiceXMLRESTProxy {
 								address = formatNumber(address).replaceFirst("\\+31", "0");
 							}
 							
+							String adapterType="broadsoft";
+							String sessionKey = adapterType+"|"+config.getMyAddress()+"|"+address;
+							String ses = StringStore.getString(sessionKey);
+							
+							log.info("Session key: "+sessionKey);
+							
 							String direction="inbound";
 							if(personality.getTextContent().equals("Originator") && !address.contains("outbound")) {
 								//address += "@outbound";
@@ -390,13 +407,44 @@ public class VoiceXMLRESTProxy {
 								log.info("CTD hangup detected?????");
 								direction="outbound";
 								
-								//TODO: check if request failed
+								//TODO: move this to internal mechanism to check if call is started!
+								if(releaseCause.getTextContent().equals("Server Failure")) {
+									log.severe("Need to restart the call!!!! ReleaseCause: "+releaseCause.getTextContent());
+									
+									String retryKey = sessionKey+"_retry";
+									int retry = (StringStore.getString(retryKey)==null?0:Integer.parseInt(StringStore.getString(retryKey)));
+									if(retry<MAX_RETRIES) {
+										
+										Broadsoft bs = new Broadsoft(config);
+										String extSession = bs.startCall(address);
+										log.info("Restarted call extSession: "+extSession);
+										retry++;
+										StringStore.storeString(sessionKey+"_rety", retry+"");
+									} else {
+										// TODO: Send mail to support!!!
+										
+										log.severe("Retries failed!!!");
+										StringStore.dropString(retryKey);
+									}
+								} else if(releaseCause.getTextContent().equals("Request Failure")) {
+									log.severe("Restart call?? ReleaseCause: "+releaseCause.getTextContent());
+									
+									String retryKey = sessionKey+"_retry";
+									int retry = (StringStore.getString(retryKey)==null?0:Integer.parseInt(StringStore.getString(retryKey)));
+									if(retry<MAX_RETRIES) {
+										Broadsoft bs = new Broadsoft(config);
+										String extSession = bs.startCall(address);
+										log.info("Restarted call extSession: "+extSession);
+										retry++;
+										StringStore.storeString(retryKey, retry+"");
+									} else {
+										// TODO: Send mail to support!!!
+										
+										log.severe("Retries failed!!!");
+										StringStore.dropString(retryKey);
+									}
+								}
 							}
-							String adapterType="broadsoft";
-							String sessionKey = adapterType+"|"+config.getMyAddress()+"|"+address;
-							String ses = StringStore.getString(sessionKey);
-							
-							log.info("Session key: "+sessionKey);
 							
 							if(ses!=null && direction!="transfer") {
 								log.info("SESSSION FOUND!! SEND HANGUP!!!");

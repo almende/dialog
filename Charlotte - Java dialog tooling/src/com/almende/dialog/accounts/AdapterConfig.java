@@ -71,15 +71,22 @@ public class AdapterConfig {
 			newConfig.status = "OPEN";
 
 			newConfig = om.readerForUpdating(newConfig).readValue(json);
-			if (adapterExists(newConfig.getAdapterType(),
-					newConfig.getMyAddress(), newConfig.getKeyword()))
+			if (adapterExists(newConfig.getAdapterType(), newConfig.getMyAddress(), newConfig.getKeyword()))
+			{
 				return Response.status(Status.CONFLICT).build();
+			}
 			if(configId == null)
 			{
 			    newConfig.configId = new UUID().toString();
 			}
-			newConfig.setMyAddress( newConfig.getMyAddress() != null ? newConfig.getMyAddress().toLowerCase() 
-			                                                                     : null );
+			
+			//change the casing to lower in case adatertype if email or xmpp
+			if(newConfig.getAdapterType().toUpperCase().equals( "MAIL" ) || 
+			    newConfig.getAdapterType().toUpperCase().equals( "XMPP" ))
+			{
+			    newConfig.setMyAddress( newConfig.getMyAddress() != null ? newConfig.getMyAddress().toLowerCase() 
+			                                                               : null );
+			}
 			datastore.store(newConfig);
 			
 			if(newConfig.getAdapterType().equals("broadsoft")) {

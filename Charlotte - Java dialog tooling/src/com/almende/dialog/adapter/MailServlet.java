@@ -19,6 +19,7 @@ import javax.mail.internet.MimeMultipart;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.google.appengine.api.utils.SystemProperty;
@@ -156,10 +157,9 @@ public class MailServlet extends TextServlet {
             String logString = String.format( "Email sent:\n" + "From: %s<%s>\n" + "To: %s<%s>\n" + "Subject: %s\n" + "Body: %s", 
                                               fromName, from, toName, to, subject, message );
             /**
-             * do not remove this println lines. Some ugly tests @MailServletTest.mailAppointmentInteraction} work on these
-             * @author Shravan
+             * perform some ugly tests @MailServletTest.mailAppointmentInteraction} by logging
              */
-            System.out.println( logString );
+            TestFramework.log( logString );
             log.info( logString );
             log.info("Send reply to mail post: "+(new Date().getTime()));
 

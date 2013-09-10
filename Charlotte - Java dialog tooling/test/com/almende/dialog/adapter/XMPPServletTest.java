@@ -26,7 +26,7 @@ public class XMPPServletTest extends TestFramework
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig( "XMPP", "agent1@ask-cs.com", localAddressChat, "" );
         //create session
-        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddress ) );
+        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddressEmail ) );
         
         Method fetchMethodByReflection = fetchMethodByReflection( "receiveMessage", XMPPServlet.class, Message.class );
         XMPPServlet xmppServlet = new XMPPServlet();
@@ -52,7 +52,7 @@ public class XMPPServletTest extends TestFramework
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig( "XMPP", "agent1@ask-cs.com", localAddressChat, initialAgentURL );
         //create session
-        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddress ) );
+        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddressEmail ) );
 
         LoggedPrintStream lpsOut = xmppAppointmentInteraction("hi");
         

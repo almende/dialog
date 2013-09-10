@@ -189,8 +189,8 @@ abstract public class TextServlet extends HttpServlet {
             Session session = Session.getSession( sessionKey, config.getKeyword() );
             if ( session == null )
             {
-                log.severe( "XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
-                    + sessionKey );
+                log.severe( "TextServlet couldn't start new outbound Dialog, adapterConfig not found? "
+                            + sessionKey );
                 return "";
             }
             session.setPubKey( config.getPublicKey() );
@@ -219,12 +219,14 @@ abstract public class TextServlet extends HttpServlet {
             }
             String fromName = getNickname( res.question );
             log.info( String.format( "fromName: %s senderName %s", fromName, senderName ) );
+            //assign senderName with localAdress, if senderName is missing.
+            senderName = senderName != null && !senderName.isEmpty() ? senderName : localaddress;
             int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, senderName, addressNameMap, config );
             for ( int i = 0; i < count; i++ )
             {
                 DDRWrapper.log( question, session, "Send", config );
             }
-            return sessionKey;
+            return count != 1 ? "Error generating XML" : sessionKey;
         }
 	
 	public static void killSession(Session session){

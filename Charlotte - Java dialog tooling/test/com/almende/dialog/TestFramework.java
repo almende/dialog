@@ -16,9 +16,12 @@ import javax.mail.internet.InternetHeaders;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMultipart;
 import javax.ws.rs.core.MediaType;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.junit.After;
 import org.junit.Before;
+import org.w3c.dom.Document;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
@@ -40,12 +43,18 @@ import com.meterware.servletunit.ServletRunner;
 import com.meterware.servletunit.ServletUnitClient;
 import com.thetransactioncompany.cors.HTTPMethod;
 
+/**
+ * Test framework to be inherited by all test classes
+ * @author Shravan
+ */
 public class TestFramework
 {
     private final LocalServiceTestHelper helper = new LocalServiceTestHelper( new LocalDatastoreServiceTestConfig() );
-    protected static final String localAddressMail = "info@dialog-handler.appspotmail.com";
-    protected static final String localAddressChat = "info@dialog-handler.appspotchat.com";
-    protected static final String remoteAddress = "sshetty@ask-cs.com";
+    protected static final String localAddressMail      = "info@dialog-handler.appspotmail.com";
+    protected static final String localAddressChat      = "info@dialog-handler.appspotchat.com";
+    protected static final String remoteAddressEmail         = "sshetty@ask-cs.com";
+    protected static final String localAddressSMS       = "0854851000";
+    protected static final String remoteAddressVoice    = "01234546789";
     
     public static ThreadLocal<ServletRunner> servletRunner = new ThreadLocal<ServletRunner>();
     
@@ -150,7 +159,7 @@ public class TestFramework
     {
         MessageBuilder builder = new MessageBuilder();
         builder.withMessageType( MessageType.CHAT );
-        MimeMultipart multipart = getTestMimeMultipart( remoteAddress, localAddressChat, body, null);
+        MimeMultipart multipart = getTestMimeMultipart( remoteAddressEmail, localAddressChat, body, null);
         int parts = multipart.getCount();
         for ( int i = 0; i < parts; i++ )
         {
@@ -247,5 +256,18 @@ public class TestFramework
         ServletRunner servletRunner = new ServletRunner();
         servletRunner.registerServlet( "unitTestServlet", TestServlet.class.getName() );
         return servletRunner;
+    }
+
+    public static void log( String stringToBeLogged )
+    {
+        System.out.println(stringToBeLogged.toString());
+    }
+    
+    public static Document getXMLDocumentBuilder(String xmlContent) throws Exception
+    {
+        DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
+        DocumentBuilder newDocumentBuilder = newInstance.newDocumentBuilder();
+        Document parse = newDocumentBuilder.parse( new ByteArrayInputStream(xmlContent.getBytes("UTF-8")) );
+        return parse;
     }
 }

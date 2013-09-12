@@ -9,9 +9,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
@@ -230,44 +228,6 @@ public class DialogAgent extends Agent {
 			throw new Exception("Invalid adapter found");
 		}
 	}
-	
-	/*public String startDialog(@Name("question_url") @Required(false) String url,
-							  @Name("myid") @Required(false) String id, 
-							  @Name("question_json") @Required(false) String json,
-							  @Name("expanded_texts") @Required(false) String expanded_texts){
-		String reply = "";
-		Question question = getQuestion(url,id,json);
-		if (expanded_texts == null) expanded_texts = "false";
-		if (question != null) reply = question.toJSON(new Boolean(expanded_texts));
-		if (id != null){
-			if (question == null){
-        		StringStore.dropString(id);
-        	} else {
-        		StringStore.storeString(id, reply);
-        	}
-		}
-		return reply;
-	}
-	public String answer(@Name("question_url") @Required(false) String url,
-						 @Name("myid") @Required(false) String id,
-						 @Name("question_json") @Required(false) String json,
-						 @Name("answer_input") @Required(false) String answer_input,
-						 @Name("answer_id") @Required(false) String answer_id,
-						 @Name("expanded_texts") @Required(false) String expanded_texts){
-		String reply = "";
-		Question question = getQuestion(url,id,json);
-		if (question != null) question = question.answer("",answer_id, answer_input);
-		if (expanded_texts == null) expanded_texts = "false";
-		if (question != null) reply = question.toJSON(new Boolean(expanded_texts));
-		if (id != null){
-			if (question == null){
-        		StringStore.dropString(id);
-        	} else {
-        		StringStore.storeString(id, reply);
-        	}
-		}
-		return reply;
-	}*/
 	
 	@Override
 	public String getDescription() {

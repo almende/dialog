@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -28,7 +27,6 @@ import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.model.Answer;
-import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
@@ -241,15 +239,12 @@ public class VoiceXMLRESTProxy {
 		} 
 		else 
 		{
-		    if(session != null)
-		    {
-			url=session.getStartUrl();
-		    }
-		    else 
-		    {
-		        log.severe( String.format( "Session %s not found", sessionKey ) );
-		        return null;
-                    }
+            if (session != null) {
+                url = session.getStartUrl();
+            } else {
+                log.severe(String.format("Session %s not found", sessionKey));
+                return null;
+            }
 		}
 		
 		String json = StringStore.getString("InitialQuestion_"+sessionKey);
@@ -411,8 +406,7 @@ public class VoiceXMLRESTProxy {
 				Node personality = null;
 				Node callState = null;
 				Node remoteParty = null;
-				@SuppressWarnings("unused")
-				Node extTrackingId = null;
+
 				Node releaseCause = null;
 				
 				for(int i=0;i<call.getChildNodes().getLength();i++) {
@@ -423,8 +417,6 @@ public class VoiceXMLRESTProxy {
 						callState=node;
 					} else if(node.getNodeName().equals("remoteParty")) {
 						remoteParty=node;
-					} else if(node.getNodeName().equals("extTrackingId")) {
-						extTrackingId=node;
 					} else if(node.getNodeName().equals("releaseCause")) {
 						releaseCause=node;
 					}
@@ -605,7 +597,7 @@ public class VoiceXMLRESTProxy {
 		String handleTimeoutURL = "/vxml/timeout";
 		String handleExceptionURL = "/vxml/exception";
 		
-		String redirectTimeoutProperty = getMediaProperty( question, MediumType.Broadsoft, MediaPropertyKey.RedirectTimeOut );
+		String redirectTimeoutProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
         //assign a default timeout if one is not specified
         String redirectTimeout = redirectTimeoutProperty != null ? redirectTimeoutProperty : "40s";
 		
@@ -677,7 +669,6 @@ public class VoiceXMLRESTProxy {
 		return sw.toString();	
 	}
 
-
 	private String renderClosedQuestion(Question question,ArrayList<String> prompts,String sessionKey){
 		ArrayList<Answer> answers=question.getAnswers();
 		
@@ -722,6 +713,7 @@ public class VoiceXMLRESTProxy {
 		}
 		return sw.toString();
 	}
+	
 	private String renderOpenQuestion(Question question,ArrayList<String> prompts,String sessionKey){
 
 		StringWriter sw = new StringWriter();
@@ -731,139 +723,127 @@ public class VoiceXMLRESTProxy {
 			outputter.startTag("vxml");
 				outputter.attribute("version", "2.1");
 				outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
-				//outputter.attribute("xml:lang", "en-US"); //To prevent "unrecognized input" prompt
-				outputter.startTag("var");
-					outputter.attribute("name","answer_input");
-				outputter.endTag();
-				outputter.startTag("var");
-					outputter.attribute("name","question_id");
-					outputter.attribute("expr", "'"+question.getQuestion_id()+"'");
-				outputter.endTag();
-				outputter.startTag("var");
-					outputter.attribute("name","sessionKey");
-					outputter.attribute("expr", "'"+sessionKey+"'");
-				outputter.endTag();
-				outputter.startTag("form");
-					outputter.startTag("field");
-						outputter.attribute("name", "answer");
-						outputter.startTag("grammar");
-							outputter.attribute("mode", "dtmf");
-							outputter.attribute("src", DTMFGRAMMAR);
-							outputter.attribute("type", "application/srgs+xml");
-						outputter.endTag();
-						for (String prompt: prompts){
-							outputter.startTag("prompt");
-								outputter.startTag("audio");
-									outputter.attribute("src", prompt);
-								outputter.endTag();
-							outputter.endTag();
-						}
-						outputter.startTag("noinput");
-							outputter.startTag("reprompt");
-							outputter.endTag();
-						outputter.endTag();
-					
-						outputter.startTag("filled");
-							outputter.startTag("assign");
-								outputter.attribute("name", "answer_input");
-								outputter.attribute("expr", "answer$.utterance.replace(' ','','g')");
-							outputter.endTag();
-							outputter.startTag("submit");
-								outputter.attribute("next", getAnswerUrl());
-								outputter.attribute("namelist","answer_input question_id sessionKey");
-							outputter.endTag();
-							outputter.startTag("clear");
-								outputter.attribute("namelist", "answer_input answer");
-							outputter.endTag();
-						outputter.endTag();
-					outputter.endTag();
-				outputter.endTag();
-			outputter.endTag();
-			outputter.endDocument();	
-		} catch (Exception e) {
-			log.severe("Exception in creating open question XML: "+ e.toString());
-		}		
-		return sw.toString();
-	}
-	private String renderOpenQuestionAudio(Question question,ArrayList<String> prompts,String sessionKey){
-		//String handleTimeoutURL = "/vxml/timeout";
-		
-		String storedAudiofile = this.host+"upload/"+UUID.randomUUID().toString()+".wav";
-		
-		Client client = ParallelInit.getClient();
-		WebResource webResource = client.resource(storedAudiofile+"?url");
-		String uploadURL = "";
-		try {
-			uploadURL = webResource.type("application/json").get(String.class);
-		} catch(Exception e){
-		}
-		
-		uploadURL = uploadURL.replace(this.host, "/");
 
-		StringWriter sw = new StringWriter();
-		try {
-			XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
-			outputter.declaration();
-			outputter.startTag("vxml");
-				outputter.attribute("version", "2.1");
-				outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
-				outputter.attribute("xml:lang", "nl-NL"); //To prevent "unrecognized input" prompt
-				
-				outputter.startTag("form");
-					outputter.attribute("id", "ComposeMessage");
-					outputter.startTag("record");
-						outputter.attribute("name", "file");
-						outputter.attribute("beep", "true");
-						outputter.attribute("maxtime", "15s");
-						outputter.attribute("dtmfterm", "true");
-						//outputter.attribute("finalsilence", "3s");
-						for (String prompt : prompts){
-							outputter.startTag("prompt");
-								outputter.attribute("timeout", "5s");
-								outputter.startTag("audio");
-									outputter.attribute("src", prompt);
-								outputter.endTag();
-							outputter.endTag();
-						}
-						outputter.startTag("noinput");
-							for (String prompt : prompts){
-								outputter.startTag("prompt");
-									outputter.startTag("audio");
-										outputter.attribute("src", prompt);
-									outputter.endTag();
-								outputter.endTag();
-							}
-							/*outputter.startTag("goto");
-								outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
-							outputter.endTag();*/
-						outputter.endTag();
-					outputter.endTag();
-					
-					outputter.startTag("subdialog");
-						outputter.attribute("name", "saveWav");
-						outputter.attribute("src", uploadURL);
-						outputter.attribute("namelist", "file");
-						outputter.attribute("method", "post");
-						outputter.attribute("enctype", "multipart/form-data");
-						outputter.startTag("filled");
-							outputter.startTag("if");
-								outputter.attribute("cond", "saveWav.response='SUCCESS'");
-								outputter.startTag("goto");
-									outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answer_input="+URLEncoder.encode(storedAudiofile, "UTF-8"));
-								outputter.endTag();
-							outputter.startTag("else");
-							outputter.endTag();
-								for (String prompt : prompts){
-									outputter.startTag("prompt");
-										outputter.startTag("audio");
-											outputter.attribute("src", prompt);
-										outputter.endTag();
-									outputter.endTag();
-								}
-							outputter.endTag();
-						outputter.endTag();
-					outputter.endTag();
-				outputter.endTag();
+				// Check if media property type equals audio
+				// if so record audio message, if not record dtmf input
+				String typeProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TYPE );
+				if(typeProperty!=null && typeProperty.equalsIgnoreCase("audio")) {
+				    
+				    // Fetch the upload url
+				    String storedAudiofile = this.host+"upload/"+UUID.randomUUID().toString()+".wav";
+			        Client client = ParallelInit.getClient();
+			        WebResource webResource = client.resource(storedAudiofile+"?url");
+			        String uploadURL = "";
+			        try {
+			            uploadURL = webResource.type("application/json").get(String.class);
+			        } catch(Exception e){
+			        }
+			        uploadURL = uploadURL.replace(this.host, "/");
+			        
+				    outputter.startTag("form");
+                        outputter.attribute("id", "ComposeMessage");
+                        outputter.startTag("record");
+                            outputter.attribute("name", "file");
+                            outputter.attribute("beep", "true");
+                            outputter.attribute("maxtime", "15s");
+                            outputter.attribute("dtmfterm", "true");
+                            //outputter.attribute("finalsilence", "3s");
+                            for (String prompt : prompts){
+                                outputter.startTag("prompt");
+                                    outputter.attribute("timeout", "5s");
+                                    outputter.startTag("audio");
+                                        outputter.attribute("src", prompt);
+                                    outputter.endTag();
+                                outputter.endTag();
+                            }
+                            outputter.startTag("noinput");
+                                for (String prompt : prompts){
+                                    outputter.startTag("prompt");
+                                        outputter.startTag("audio");
+                                            outputter.attribute("src", prompt);
+                                        outputter.endTag();
+                                    outputter.endTag();
+                                }
+                                /*outputter.startTag("goto");
+                                    outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+                                outputter.endTag();*/
+                            outputter.endTag();
+                        outputter.endTag();
+                        
+                        outputter.startTag("subdialog");
+                            outputter.attribute("name", "saveWav");
+                            outputter.attribute("src", uploadURL);
+                            outputter.attribute("namelist", "file");
+                            outputter.attribute("method", "post");
+                            outputter.attribute("enctype", "multipart/form-data");
+                            outputter.startTag("filled");
+                                outputter.startTag("if");
+                                    outputter.attribute("cond", "saveWav.response='SUCCESS'");
+                                    outputter.startTag("goto");
+                                        outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answer_input="+URLEncoder.encode(storedAudiofile, "UTF-8"));
+                                    outputter.endTag();
+                                outputter.startTag("else");
+                                outputter.endTag();
+                                    for (String prompt : prompts){
+                                        outputter.startTag("prompt");
+                                            outputter.startTag("audio");
+                                                outputter.attribute("src", prompt);
+                                            outputter.endTag();
+                                        outputter.endTag();
+                                    }
+                                outputter.endTag();
+                            outputter.endTag();
+                        outputter.endTag();
+                    outputter.endTag();
+				} else {
+				    
+    				outputter.startTag("var");
+    					outputter.attribute("name","answer_input");
+    				outputter.endTag();
+    				outputter.startTag("var");
+    					outputter.attribute("name","question_id");
+    					outputter.attribute("expr", "'"+question.getQuestion_id()+"'");
+    				outputter.endTag();
+    				outputter.startTag("var");
+    					outputter.attribute("name","sessionKey");
+    					outputter.attribute("expr", "'"+sessionKey+"'");
+    				outputter.endTag();
+    				outputter.startTag("form");
+    					outputter.startTag("field");
+    						outputter.attribute("name", "answer");
+    						outputter.startTag("grammar");
+    							outputter.attribute("mode", "dtmf");
+    							outputter.attribute("src", DTMFGRAMMAR);
+    							outputter.attribute("type", "application/srgs+xml");
+    						outputter.endTag();
+    						for (String prompt: prompts){
+    							outputter.startTag("prompt");
+    								outputter.startTag("audio");
+    									outputter.attribute("src", prompt);
+    								outputter.endTag();
+    							outputter.endTag();
+    						}
+    						outputter.startTag("noinput");
+    							outputter.startTag("reprompt");
+    							outputter.endTag();
+    						outputter.endTag();
+    					
+    						outputter.startTag("filled");
+    							outputter.startTag("assign");
+    								outputter.attribute("name", "answer_input");
+    								outputter.attribute("expr", "answer$.utterance.replace(' ','','g')");
+    							outputter.endTag();
+    							outputter.startTag("submit");
+    								outputter.attribute("next", getAnswerUrl());
+    								outputter.attribute("namelist","answer_input question_id sessionKey");
+    							outputter.endTag();
+    							outputter.startTag("clear");
+    								outputter.attribute("namelist", "answer_input answer");
+    							outputter.endTag();
+    						outputter.endTag();
+    					outputter.endTag();
+    				outputter.endTag();
+				}
 			outputter.endTag();
 			outputter.endDocument();	
 		} catch (Exception e) {
@@ -899,10 +879,6 @@ public class VoiceXMLRESTProxy {
             {
                 result = renderOpenQuestion( question, res.prompts, sessionKey );
             }
-            else if ( question.getType().equalsIgnoreCase( "openaudio" ) )
-            {
-                result = renderOpenQuestionAudio( question, res.prompts, sessionKey );
-            }
             else if ( question.getType().equalsIgnoreCase( "referral" ) )
             {
                 if ( question.getUrl().startsWith( "tel:" ) )
@@ -926,21 +902,6 @@ public class VoiceXMLRESTProxy {
 		log.info("Sending xml: "+result);
 		return Response.ok(result).build();
 	}
-
-    private String getMediaProperty( Question question, MediumType mediumType, MediaPropertyKey key )
-    {
-        Collection<MediaProperty> media_Properties = question.getMedia_Properties();
-        if(media_Properties!=null) {
-		    for ( MediaProperty mediaProperties : media_Properties )
-		    {
-		        if ( mediaProperties.getMedium() == mediumType )
-		        {
-		            return mediaProperties.getProperties().get( key );
-		        }
-		    }
-        }
-        return null;
-    }
 
 	protected String getAnswerUrl() {
 		return "/vxml/answer";

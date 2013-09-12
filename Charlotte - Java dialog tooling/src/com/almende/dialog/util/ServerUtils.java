@@ -5,7 +5,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -18,8 +17,6 @@ import com.google.appengine.api.utils.SystemProperty.Environment.Value;
 
 public class ServerUtils
 {
-    private static final Logger log = Logger.getLogger( ServerUtils.class.getName() );
-    
     public static <T> T deserialize( String jsonString, Class<T> DeserializeClass )
     throws Exception
     {

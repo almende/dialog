@@ -30,6 +30,7 @@ import com.google.appengine.api.log.LogQuery;
 import com.google.appengine.api.log.LogService;
 import com.google.appengine.api.log.RequestLogs;
 
+@SuppressWarnings("deprecation")
 @Path("/ddr")
 public class DDR implements Serializable  {
 	

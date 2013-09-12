@@ -6,9 +6,12 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import com.almende.dialog.TestFramework;
+import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
+import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.impl.Q_fields;
 import com.almende.dialog.model.intf.QuestionIntf;
 import com.almende.dialog.util.QuestionTextTransformer;
@@ -35,7 +38,7 @@ public class Question implements QuestionIntf {
 	QuestionIntf question;
 	private String preferred_language = "nl";
 
-    private Collection<MediaProperty> media_Properties;
+    private Collection<MediaProperty> media_properties;
 
 	public Question() {
 		this.question = new Q_fields(); // Default to simple in-memory class
@@ -418,19 +421,45 @@ public class Question implements QuestionIntf {
 		this.question.setTrackingToken(token);
 	}
 
-    public Collection<MediaProperty> getMedia_Properties()
+    public Collection<MediaProperty> getMedia_properties()
     {
-        return media_Properties;
+        return media_properties;
+    }
+    
+    @JSON(include = false)
+    public Map<MediaPropertyKey, String> getMediaPropertyByType( MediumType type ) {
+
+        if(this.media_properties!=null) {
+            for ( MediaProperty mediaProperties : this.media_properties )
+            {
+                if ( mediaProperties.getMedium().equals(type) )
+                {
+                    return mediaProperties.getProperties();
+                }
+            }
+        }
+        return null;
+    }
+    
+    public String getMediaPropertyValue( MediumType type, MediaPropertyKey key) {
+
+        Map<MediaPropertyKey, String> properties = getMediaPropertyByType(type);
+        if(properties!=null) {
+            if(properties.containsKey(key)) {
+                return properties.get( key );
+            }
+        }
+        return null;
     }
 
-    public void setMedia_Properties( Collection<MediaProperty> media_Properties )
+    public void setMedia_Properties( Collection<MediaProperty> media_properties )
     {
-        this.media_Properties = media_Properties;
+        this.media_properties = media_properties;
     }
 
     public void addMedia_Properties( MediaProperty mediaProperty )
     {
-        media_Properties = media_Properties == null ? new ArrayList<MediaProperty>() : media_Properties;
-        media_Properties.add( mediaProperty );
+        media_properties = media_properties == null ? new ArrayList<MediaProperty>() : media_properties;
+        media_properties.add( mediaProperty );
     }
 }

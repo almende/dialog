@@ -4,29 +4,38 @@ package com.almende.dialog.model;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 
 public class MediaProperty
 {
     public enum MediaPropertyKey
     {
-        RedirectTimeOut( "timeout" ), AnswerInput( "answer_input" ), Length( "length" );
-
-        @SuppressWarnings("unused")
-        private String name;
-
-        private MediaPropertyKey( String name )
-        {
-            this.name = name;
+        TIMEOUT, ANSWER_INPUT, LENGTH, TYPE;
+        
+        @JsonCreator
+        public static MediaPropertyKey fromJson(String name) {
+            return valueOf(name.toUpperCase());
         }
     }
 
     public enum MediumType
     {
-        Broadsoft, GTalk, Skype, SMS;
+        BROADSOFT, GTALK, SKYPE, SMS;
+        
+        @JsonCreator
+        public static MediumType fromJson(String name) {
+            return valueOf(name.toUpperCase());
+        }
     }
     
     private MediumType medium;
-    private Map<MediaPropertyKey, String> hints;
+    private Map<MediaPropertyKey, String> properties;
+    
+    public MediaProperty() {
+        properties = new HashMap<MediaPropertyKey, String>();
+    }
+    
 
     public MediumType getMedium()
     {
@@ -40,12 +49,11 @@ public class MediaProperty
 
     public Map<MediaPropertyKey, String> getProperties()
     {
-        return hints;
+        return properties;
     }
 
     public void addProperty( MediaPropertyKey key, String value )
     {
-        hints = hints != null ? hints : new HashMap<MediaPropertyKey, String>();
-        hints.put( key, value );
+        properties.put( key, value );
     }
 }

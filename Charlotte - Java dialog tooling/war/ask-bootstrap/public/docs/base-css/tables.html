@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Ask.Bootstrap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ask Bootstrap: a compilation of frameworks with handy scripts and styles, ready for cooking a new project or web app immediately.">
+    <meta name="author" content="Compiled and maintained by Cengiz Ulusoy. Refer to 'copyrights' section for licences of the components used in this project.">
+
+    <!-- Le styles -->
+    <link href="/src/css/bootstrap.css" rel="stylesheet">
+    <link href="/src/css/responsive.css" rel="stylesheet">
+    
+    <link href="/docs/js/google/prettify/prettify.css" rel="stylesheet">
+    
+    <link href="/docs/css/docs.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="/src/img/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/src/img/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/src/img/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/src/img/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="/src/img/ico/apple-touch-icon-57-precomposed.png">
+    
+  </head>
+
+  <body data-spy="scroll" data-target=".bs-docs-sidebar">
+
+    <!-- Navbar
+    ================================================== -->
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="/docs/index.html">Ask.Bootstrap</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="">
+                <a href="/docs/index.html">Home</a>
+              </li>
+              <li class="">
+                <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+              </li>
+              <li class="active">
+                <a href="/docs/base-css/typography.html">Base CSS</a>
+              </li>
+              <li class="">
+                <a href="/docs/components/dropdowns.html">Components</a>
+              </li>
+              <li class="">
+                <a href="/docs/javascript/overview.html">JavaScript</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Subhead
+================================================== -->
+<header class="jumbotron subhead" id="overview">
+  <div class="container">
+    <h1>Base CSS</h1>
+    <p class="lead">Fundamental HTML elements styled and enhanced with extensible classes.</p>
+  </div>
+</header>
+
+
+  <div class="container">
+
+    <!-- Docs nav
+    ================================================== -->
+    <div class="row">
+      <div class="span3">
+        <ul class="nav nav-tabs nav-stacked">
+          <li><a href="/docs/base-css/typography.html"><i class="icon-chevron-right"></i> Typography</a></li>
+          <li><a href="/docs/base-css/code.html"><i class="icon-chevron-right"></i> Code</a></li>
+          <li class="active"><a href="/docs/base-css/tables.html"><i class="icon-chevron-right"></i> Tables</a></li>
+          <li><a href="/docs/base-css/forms.html"><i class="icon-chevron-right"></i> Forms</a></li>
+          <li><a href="/docs/base-css/buttons.html"><i class="icon-chevron-right"></i> Buttons</a></li>
+          <li><a href="/docs/base-css/images.html"><i class="icon-chevron-right"></i> Images</a></li>
+          <li><a href="/docs/base-css/icons.html"><i class="icon-chevron-right"></i> Icons by Glyphicons</a></li>
+          <li><a href="/docs/base-css/entypo.html"><i class="icon-chevron-right"></i> Icons by Entypo</a></li>
+        </ul>
+      </div>
+      <div class="span9">
+
+
+
+        <!-- Tables
+        ================================================== -->
+        <section id="tables">
+          <div class="page-header">
+            <h1>Tables</h1>
+          </div>
+
+          <h2>Default styles</h2>
+          <p>For basic styling&mdash;light padding and only horizontal dividers&mdash;add the base class <code>.table</code> to any <code>&lt;table&gt;</code>.</p>
+          <div class="bs-docs-example">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>First Name</th>
+                  <th>Last Name</th>
+                  <th>Username</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>Mark</td>
+                  <td>Otto</td>
+                  <td>@mdo</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>Jacob</td>
+                  <td>Thornton</td>
+                  <td>@fat</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td>Larry</td>
+                  <td>the Bird</td>
+                  <td>@twitter</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+<pre class="prettyprint linenums">
+&lt;table class="table"&gt;
+  …
+&lt;/table&gt;
+</pre>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Optional classes</h2>
+          <p>Add any of the following classes to the <code>.table</code> base class.</p>
+
+          <h3><code>.table-striped</code></h3>
+          <p>Adds zebra-striping to any table row within the <code>&lt;tbody&gt;</code> via the <code>:nth-child</code> CSS selector (not available in IE7-IE8).</p>
+          <div class="bs-docs-example">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>First Name</th>
+                  <th>Last Name</th>
+                  <th>Username</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>Mark</td>
+                  <td>Otto</td>
+                  <td>@mdo</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>Jacob</td>
+                  <td>Thornton</td>
+                  <td>@fat</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td>Larry</td>
+                  <td>the Bird</td>
+                  <td>@twitter</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+<pre class="prettyprint linenums" style="margin-bottom: 18px;">
+&lt;table class="table table-striped"&gt;
+  …
+&lt;/table&gt;
+</pre>
+
+          <h3><code>.table-bordered</code></h3>
+          <p>Add borders and rounded corners to the table.</p>
+          <div class="bs-docs-example">
+            <table class="table table-bordered">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>First Name</th>
+                  <th>Last Name</th>
+                  <th>Username</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td rowspan="2">1</td>
+                  <td>Mark</td>
+                  <td>Otto</td>
+                  <td>@mdo</td>
+                </tr>
+                <tr>
+                  <td>Mark</td>
+                  <td>Otto</td>
+                  <td>@TwBootstrap</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>Jacob</td>
+                  <td>Thornton</td>
+                  <td>@fat</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td colspan="2">Larry the Bird</td>
+                  <td>@twitter</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+<pre class="prettyprint linenums">
+&lt;table class="table table-bordered"&gt;
+  …
+&lt;/table&gt;
+</pre>
+
+          <h3><code>.table-hover</code></h3>
+          <p>Enable a hover state on table rows within a <code>&lt;tbody&gt;</code>.</p>
+          <div class="bs-docs-example">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>First Name</th>
+                  <th>Last Name</th>
+                  <th>Username</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>Mark</td>
+                  <td>Otto</td>
+                  <td>@mdo</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>Jacob</td>
+                  <td>Thornton</td>
+                  <td>@fat</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td colspan="2">Larry the Bird</td>
+                  <td>@twitter</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+<pre class="prettyprint linenums" style="margin-bottom: 18px;">
+&lt;table class="table table-hover"&gt;
+  …
+&lt;/table&gt;
+</pre>
+
+          <h3><code>.table-condensed</code></h3>
+          <p>Makes tables more compact by cutting cell padding in half.</p>
+          <div class="bs-docs-example">
+            <table class="table table-condensed">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>First Name</th>
+                  <th>Last Name</th>
+                  <th>Username</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>Mark</td>
+                  <td>Otto</td>
+                  <td>@mdo</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>Jacob</td>
+                  <td>Thornton</td>
+                  <td>@fat</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td colspan="2">Larry the Bird</td>
+                  <td>@twitter</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+<pre class="prettyprint linenums" style="margin-bottom: 18px;">
+&lt;table class="table table-condensed"&gt;
+  …
+&lt;/table&gt;
+</pre>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Optional row classes</h2>
+          <p>Use contextual classes to color table rows.</p>
+          <table class="table table-bordered table-striped">
+            <colgroup>
+              <col class="span1">
+              <col class="span7">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <code>.success</code>
+                </td>
+                <td>Indicates a successful or positive action.</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>.error</code>
+                </td>
+                <td>Indicates a dangerous or potentially negative action.</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>.warning</code>
+                </td>
+                <td>Indicates a warning that might need attention.</td>
+              </tr>
+              <tr>
+                <td>
+                  <code>.info</code>
+                </td>
+                <td>Used as an alternative to the default styles.</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="bs-docs-example">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Product</th>
+                  <th>Payment Taken</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="success">
+                  <td>1</td>
+                  <td>TB - Monthly</td>
+                  <td>01/04/2012</td>
+                  <td>Approved</td>
+                </tr>
+                <tr class="error">
+                  <td>2</td>
+                  <td>TB - Monthly</td>
+                  <td>02/04/2012</td>
+                  <td>Declined</td>
+                </tr>
+                <tr class="warning">
+                  <td>3</td>
+                  <td>TB - Monthly</td>
+                  <td>03/04/2012</td>
+                  <td>Pending</td>
+                </tr>
+                <tr class="info">
+                  <td>4</td>
+                  <td>TB - Monthly</td>
+                  <td>04/04/2012</td>
+                  <td>Call in to confirm</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+<pre class="prettyprint linenums">
+...
+  &lt;tr class="success"&gt;
+    &lt;td&gt;1&lt;/td&gt;
+    &lt;td&gt;TB - Monthly&lt;/td&gt;
+    &lt;td&gt;01/04/2012&lt;/td&gt;
+    &lt;td&gt;Approved&lt;/td&gt;
+  &lt;/tr&gt;
+...
+</pre>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Supported table markup</h2>
+          <p>List of supported table HTML elements and how they should be used.</p>
+          <table class="table table-bordered table-striped">
+            <colgroup>
+              <col class="span1">
+              <col class="span7">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Tag</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <code>&lt;table&gt;</code>
+                </td>
+                <td>
+                  Wrapping element for displaying data in a tabular format
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>&lt;thead&gt;</code>
+                </td>
+                <td>
+                  Container element for table header rows (<code>&lt;tr&gt;</code>) to label table columns
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>&lt;tbody&gt;</code>
+                </td>
+                <td>
+                  Container element for table rows (<code>&lt;tr&gt;</code>) in the body of the table
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>&lt;tr&gt;</code>
+                </td>
+                <td>
+                  Container element for a set of table cells (<code>&lt;td&gt;</code> or <code>&lt;th&gt;</code>) that appears on a single row
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>&lt;td&gt;</code>
+                </td>
+                <td>
+                  Default table cell
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>&lt;th&gt;</code>
+                </td>
+                <td>
+                  Special table cell for column (or row, depending on scope and placement) labels<br>
+                  Must be used within a <code>&lt;thead&gt;</code>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code>&lt;caption&gt;</code>
+                </td>
+                <td>
+                  Description or summary of what the table holds, especially useful for screen readers
+                </td>
+              </tr>
+            </tbody>
+          </table>
+<pre class="prettyprint linenums">
+&lt;table&gt;
+  &lt;caption&gt;...&lt;/caption&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;...&lt;/th&gt;
+      &lt;th&gt;...&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;...&lt;/td&gt;
+      &lt;td&gt;...&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+</pre>
+
+        </section>
+
+
+
+      </div>
+    </div>
+
+  </div>
+
+
+
+    <!-- Footer
+    ================================================== -->
+    <footer class="footer">
+      <div class="container" style="font-size:12px;">
+        <p class="pull-right"><a href="#">Back to top</a><br><br></p>
+        
+        <p>Ask.Bootstrap (v 0.1.0) is a front-end framework combinations of mainly <a href="http://html5boilerplate.com/">HTML5 Boilerplate</a>, <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a> with other additional handy libraries.<br>
+        Project is maintained by <a href="http://www.twitter.com/cengizism" target="_blank">Cengiz Ulusoy</a> at <a href="http://www.ask-cs.nl/" target="_blank">Ask Community Systems</a>, Rotterdam.<br>
+        Please read <a href="/docs/index.html#copyrights">copyrights</a> section for more information about the creators of the frameworks and components used in this project.</p>
+        
+        <ul class="footer-links">
+          <li class="">
+            <a href="/docs/index.html">Home</a>
+          </li>
+          <li class="">
+            <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+          </li>
+          <li class="">
+            <a href="/docs/base-css/typography.html">Base CSS</a>
+          </li>
+          <li class="">
+            <a href="/docs/components/dropdowns.html">Components</a>
+          </li>
+          <li class="">
+            <a href="/docs/javascript/overview.html">JavaScript</a>
+          </li>
+        </ul>
+        
+      </div>
+    </footer>
+
+
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    
+    <script src="/src/js/libs/jquery/jquery.js"></script>
+    <script src="/src/js/libs/bootstrap/bootstrap.js"></script>
+    <script src="/src/js/libs/vendor/prefixfree.min.js"></script>
+    
+    <script src="/docs/js/google/prettify/prettify.js"></script>
+    
+    <script src="/docs/js/application.js"></script>
+
+  </body>
+</html>

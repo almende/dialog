@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Ask.Bootstrap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ask Bootstrap: a compilation of frameworks with handy scripts and styles, ready for cooking a new project or web app immediately.">
+    <meta name="author" content="Compiled and maintained by Cengiz Ulusoy. Refer to 'copyrights' section for licences of the components used in this project.">
+
+    <!-- Le styles -->
+    <link href="/src/css/bootstrap.css" rel="stylesheet">
+    <link href="/src/css/responsive.css" rel="stylesheet">
+    
+    <link href="/docs/js/google/prettify/prettify.css" rel="stylesheet">
+    
+    <link href="/docs/css/docs.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="/src/img/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/src/img/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/src/img/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/src/img/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="/src/img/ico/apple-touch-icon-57-precomposed.png">
+    
+  </head>
+
+  <body>
+
+    <!-- Navbar
+    ================================================== -->
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="/docs/index.html">Ask.Bootstrap</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="">
+                <a href="/docs/index.html">Home</a>
+              </li>
+              <li class="">
+                <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+              </li>
+              <li class="">
+                <a href="/docs/base-css/typography.html">Base CSS</a>
+              </li>
+              <li class="">
+                <a href="/docs/components/dropdowns.html">Components</a>
+              </li>
+              <li class="active">
+                <a href="/docs/javascript/overview.html">JavaScript</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Subhead
+================================================== -->
+<header class="jumbotron subhead">
+  <div class="container">
+    <h1>JavaScript</h1>
+    <p class="lead">Bring Bootstrap's components to life&mdash;now with 13 custom jQuery plugins.
+  </div>
+</header>
+
+  <div class="container">
+
+    <!-- Docs nav
+    ================================================== -->
+    <div class="row">
+      <div class="span3">
+        <ul class="nav nav-tabs nav-stacked">
+          <li><a href="/docs/javascript/overview.html"><i class="icon-chevron-right"></i> Overview</a></li>
+          <li><a href="/docs/javascript/transitions.html"><i class="icon-chevron-right"></i> Transitions</a></li>
+          <li><a href="/docs/javascript/modals.html"><i class="icon-chevron-right"></i> Modal</a></li>
+          <li><a href="/docs/javascript/dropdowns.html"><i class="icon-chevron-right"></i> Dropdown</a></li>
+          <li><a href="/docs/javascript/scrollspy.html"><i class="icon-chevron-right"></i> Scrollspy</a></li>
+          <li><a href="/docs/javascript/tabs.html"><i class="icon-chevron-right"></i> Tab</a></li>
+          <li><a href="/docs/javascript/tooltips.html"><i class="icon-chevron-right"></i> Tooltip</a></li>
+          <li><a href="/docs/javascript/popovers.html"><i class="icon-chevron-right"></i> Popover</a></li>
+          <li><a href="/docs/javascript/alerts.html"><i class="icon-chevron-right"></i> Alert</a></li>
+          <li><a href="/docs/javascript/buttons.html"><i class="icon-chevron-right"></i> Button</a></li>
+          <li><a href="/docs/javascript/collapse.html"><i class="icon-chevron-right"></i> Collapse</a></li>
+          <li><a href="/docs/javascript/carousel.html"><i class="icon-chevron-right"></i> Carousel</a></li>
+          <li><a href="/docs/javascript/typeahead.html"><i class="icon-chevron-right"></i> Typeahead</a></li>
+          <li><a href="/docs/javascript/affix.html"><i class="icon-chevron-right"></i> Affix</a></li>
+          <li class="active"><a href="/docs/javascript/tables.html"><i class="icon-chevron-right"></i> Tables</a></li>
+          <li><a href="/docs/javascript/daterange.html"><i class="icon-chevron-right"></i> Date Range</a></li>
+          <li><a href="/docs/javascript/chosen.html"><i class="icon-chevron-right"></i> Chosen</a></li>
+        </ul>
+      </div>
+      <div class="span9">
+
+
+          <!-- Affix
+          ================================================== -->
+          <section id="tables">
+            <div class="page-header">
+              <h1>Tablesorter <small>jquery.tablesorter.js</small></h1>
+            </div>
+            
+            <h2>Credits</h2>
+            <p>
+						  <strong>Author:</strong> <a class="external" href="http://tablesorter.com" target="_new">Christian Bach</a><br>
+							<strong>Version:</strong> 2.0.5 (<a href="../changelog">changelog</a>)<br>
+							<strong>Licence:</strong> 
+							Dual licensed (just pick!)under <a class="external" href="http://www.opensource.org/licenses/mit-license.php" target="_new">MIT</a>
+							or <a class="external" href="http://www.opensource.org/licenses/gpl-license.php" target="_new">GPL</a> licenses.
+						</p>
+
+            <hr class="bs-docs-separator">
+
+            <h2>Introduction</h2>
+            <p>
+							tablesorter is a <a class="external" href="http://jquery.com" target="_new">jQuery</a> plugin for turning a
+						  	standard HTML table with THEAD and TBODY tags into a sortable table without page refreshes.  
+						  	tablesorter can successfully parse and sort many types of data including linked data in a cell.  	  	
+							It has many useful features including:
+						</p>
+						<ul>
+				  		<li>Multi-column sorting</li>
+				  		<li>Parsers for sorting text, URIs, integers, currency, floats, IP addresses, dates (ISO, long and short formats), time.  <a href="example-parsers.html">Add your own easily</a></li>
+				  		<!--
+						<li>Support for ROWSPAN and COLSPAN on TH elements</li>
+						-->
+				  		<li>Support secondary "hidden" sorting (e.g., maintain alphabetical sort when sorting on other criteria)</li>
+				  		<li>Extensibility via <a href="example-widgets.html">widget system</a></li>
+				  		<li>Cross-browser: IE 6.0+, FF 2+, Safari 2.0+, Opera 9.0+</li>	
+						<li>Small code size</li>
+				
+				  	</ul>
+
+            <hr class="bs-docs-separator">
+
+            <h2>Usage</h2>
+
+            <h3>Demo</h3>
+            <table id="tablesorter-demo" class="tablesorter table table-hover table-striped">
+							<thead>
+								<tr>
+									<th>First Name</th>
+									<th>Last Name</th>
+									<th>Age</th>
+									<th>Total</th>
+									<th>Discount</th>
+									<th>Difference</th>
+									<th>Date</th>
+								</tr>
+							</thead>
+							<tbody>			
+							<tr class="odd">
+									<td>Bruce</td>
+									<td>Almighty</td>
+									<td>45</td>
+									<td>$153.19</td>
+									<td>44.7%</td>
+									<td>+77</td>
+									<td>Jan 18, 2001 9:12 AM</td>
+								</tr><tr class="even">
+									<td>Bruce</td>
+									<td>Evans</td>
+									<td>22</td>
+									<td>$13.19</td>
+									<td>11%</td>
+									<td>-100.9</td>
+									<td>Jan 18, 2007 9:12 AM</td>
+								</tr><tr class="odd">
+									<td>Bruce</td>
+									<td>Evans</td>
+									<td>22</td>
+									<td>$13.19</td>
+									<td>11%</td>
+									<td>0</td>
+									<td>Jan 18, 2007 9:12 AM</td>
+								</tr><tr class="even">
+									<td>Clark</td>
+									<td>Kent</td>
+									<td>18</td>
+									<td>$15.89</td>
+									<td>44%</td>
+									<td>-26</td>
+									<td>Jan 12, 2003 11:14 AM</td>
+								</tr><tr class="odd">
+									<td>John</td>
+									<td>Hood</td>
+									<td>33</td>
+									<td>$19.99</td>
+									<td>25%</td>
+									<td>+12</td>
+									<td>Dec 10, 2002 5:14 AM</td>
+								</tr><tr class="even">
+									<td>Peter</td>
+									<td>Parker</td>
+									<td>28</td>
+									<td>$9.99</td>
+									<td>20.9%</td>
+									<td>+12.1</td>
+									<td>Jul 6, 2006 8:14 AM</td>
+								</tr>
+							</tbody>
+						</table>
+	
+            <p><span class="label">TIP</span> Sort multiple columns simultaneously by holding down the shift key and clicking a second, third or even fourth column header!</p>
+            
+            <h3>Getting started</h3>
+            <p>To use the tablesorter plugin, include the jQuery library and the tablesorter plugin inside the <head> tag of your HTML document:</p>
+
+<pre class="prettyprint linenums">
+&lt;script type="text/javascript" src="/path/to/tablesorter.js"&gt;&lt;/script&gt; 
+</pre>
+						
+						<p>tablesorter works on standard HTML tables. You must include THEAD and TBODY tags:</p>
+
+<pre class="prettyprint linenums">
+&lt;table id="myTable" class="tablesorter"&gt; 
+&lt;thead&gt; 
+&lt;tr&gt; 
+    &lt;th&gt;Last Name&lt;/th&gt; 
+    &lt;th&gt;First Name&lt;/th&gt; 
+    &lt;th&gt;Email&lt;/th&gt; 
+    &lt;th&gt;Due&lt;/th&gt; 
+    &lt;th&gt;Web Site&lt;/th&gt; 
+&lt;/tr&gt; 
+&lt;/thead&gt; 
+&lt;tbody&gt; 
+&lt;tr&gt; 
+    &lt;td&gt;Smith&lt;/td&gt; 
+    &lt;td&gt;John&lt;/td&gt; 
+    &lt;td&gt;jsmith@gmail.com&lt;/td&gt; 
+    &lt;td&gt;$50.00&lt;/td&gt; 
+    &lt;td&gt;http://www.jsmith.com&lt;/td&gt; 
+&lt;/tr&gt; 
+&lt;tr&gt; 
+    &lt;td&gt;Bach&lt;/td&gt; 
+    &lt;td&gt;Frank&lt;/td&gt; 
+    &lt;td&gt;fbach@yahoo.com&lt;/td&gt; 
+    &lt;td&gt;$50.00&lt;/td&gt; 
+    &lt;td&gt;http://www.frank.com&lt;/td&gt; 
+&lt;/tr&gt; 
+&lt;tr&gt; 
+    &lt;td&gt;Doe&lt;/td&gt; 
+    &lt;td&gt;Jason&lt;/td&gt; 
+    &lt;td&gt;jdoe@hotmail.com&lt;/td&gt; 
+    &lt;td&gt;$100.00&lt;/td&gt; 
+    &lt;td&gt;http://www.jdoe.com&lt;/td&gt; 
+&lt;/tr&gt; 
+&lt;tr&gt; 
+    &lt;td&gt;Conway&lt;/td&gt; 
+    &lt;td&gt;Tim&lt;/td&gt; 
+    &lt;td&gt;tconway@earthlink.net&lt;/td&gt; 
+    &lt;td&gt;$50.00&lt;/td&gt; 
+    &lt;td&gt;http://www.timconway.com&lt;/td&gt; 
+&lt;/tr&gt; 
+&lt;/tbody&gt; 
+&lt;/table&gt;  
+</pre>
+						
+						<p>Start by telling tablesorter to sort your table when the document is loaded:</p>
+
+<pre class="prettyprint linenums">
+$(document).ready(function() 
+    { 
+        $("#myTable").tablesorter(); 
+    } 
+); 
+</pre>
+						
+						<p>Click on the headers and you'll see that your table is now sortable! You can also pass in configuration options when you initialize the table. This tells tablesorter to sort on the first and second column in ascending order.</p>
+
+<pre class="prettyprint linenums">
+$(document).ready(function() 
+    { 
+        $("#myTable").tablesorter( {sortList: [[0,0], [1,0]]} ); 
+    } 
+); 
+</pre>
+						
+						<p><span class="label">NOTE</span> tablesorter will auto-detect most data types including numbers, dates, ip-adresses for more information see Examples</p>
+
+            <hr class="bs-docs-separator">
+						
+						<h2>Configuration</h2>
+            
+            <p>tablesorter has many options you can pass in at initialization to achieve different effects:</p>
+            
+            <table class="table table-hover table-striped">
+    <thead>
+      <tr>
+        <th class="header headerSortDown">Property</th>
+        <th class="header">Type</th>
+        <th class="header">Default</th>
+        <th class="">Description</th>
+        <th class="">Link</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+      <!-- 
+      <tr>
+        <td>sortInitialOrder</td>
+        <td>String</td>
+        <td>asc</td>
+        <td>When clicking the header for the first time, the direction it sorts.  Valid arguments are "asc" for Ascending or "desc" for Descending.</td>
+        <td><a href="example-option-sort-order.html">Example</a></td>
+      </tr>
+      -->
+      
+	  
+    <tr>
+        <td>cancelSelection</td>
+        <td>Boolean</td>
+        <td>true</td>
+        <td>Indicates if tablesorter should disable selection of text in the table header (TH).  Makes header behave more like a button.</td>
+		<td></td>
+      </tr><tr>
+        <td>cssAsc</td>
+        <td>String</td>
+        <td>"headerSortUp"</td>
+        <td>The CSS style used to style the header when sorting ascending.  Example from the blue skin:
+<pre class="css">th.headerSortUp&nbsp;{&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="attrib">background-image</span>:&nbsp;<span class="value">url</span>(../img/small_asc.gif);&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="attrib">background-color</span>:&nbsp;<span class="color">#3399FF</span>;&nbsp;<br>}&nbsp;<br></pre>
+       </td>
+	   <td></td>
+      </tr><tr>
+        <td>cssDesc</td>
+        <td>String</td>
+        <td>"headerSortDown"</td>
+        <td>The CSS style used to style the header when sorting descending.  Example from the blue skin:
+<pre class="css">th.headerSortDown&nbsp;{&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="attrib">background-image</span>:&nbsp;<span class="value">url</span>(../img/small_desc.gif);&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="attrib">background-color</span>:&nbsp;<span class="color">#3399FF</span>;&nbsp;<br>}&nbsp;<br></pre>
+       </td>
+	   <td></td>
+      </tr><tr>
+        <td>cssHeader</td>
+        <td>String</td>
+        <td>"header"</td>
+        <td>The CSS style used to style the header in its unsorted state.  Example from the blue skin:
+<pre class="css">th.header&nbsp;{&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="attrib">background-image</span>:&nbsp;<span class="value">url</span>(../img/<span class="value">small</span>.gif);&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="attrib">cursor</span>:&nbsp;<span class="value">pointer</span>;&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="attrib">font-weight</span>:&nbsp;<span class="value">bold</span>;&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="attrib">background-repeat</span>:&nbsp;<span class="value">no-repeat</span>;&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="attrib">background-position</span>:&nbsp;<span class="value">center</span>&nbsp;<span class="value">left</span>;&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="attrib">padding-left</span>:&nbsp;<span class="number">20px</span>;&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="attrib">border-right</span>:&nbsp;<span class="number">1px</span>&nbsp;<span class="value">solid</span>&nbsp;<span class="color">#dad9c7</span>;&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="attrib">margin-left</span>:&nbsp;-<span class="number">1px</span>;&nbsp;<br>}&nbsp;<br></pre>        	
+        </td>
+		<td></td>
+      </tr><tr>
+        <td>debug</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td>
+        	Boolean flag indicating if tablesorter should display debuging information usefull for development.
+       </td>
+	   <td><a href="http://tablesorter.com/example-option-debug.html">Example</a></td>
+      </tr><tr>
+        <td>headers</td>
+        <td>Object</td>
+        <td>null</td>
+        <td>
+        	An object of instructions for per-column controls in the format: <code>headers: { 0: { option: setting }, ... }</code>  For example, to disable 
+        	sorting on the first two columns of a table: <code>headers: { 0: { sorter: false}, 1: {sorter: false} }</code>
+        </td>
+        <td><a href="http://tablesorter.com/example-options-headers.html">Example</a></td>
+      </tr><tr>
+        <td>sortForce</td>
+        <td>Array</td>
+        <td>null</td>
+        <td>Use to add an additional forced sort that will be appended to the dynamic selections by the user.  For example, can be used to sort people alphabetically after some other user-selected sort that results in rows with the same value like dates or money due.  It can help prevent data from appearing as though it has a random secondary sort.</td>
+        <td><a href="http://tablesorter.com/example-option-sort-force.html">Example</a></td>
+      </tr><tr>
+        <td>sortList</td>
+        <td>Array</td>
+        <td>null</td>
+        <td>An array of instructions for per-column sorting and direction in the format: <code>[[columnIndex, sortDirection], ... ]</code> where columnIndex is a zero-based index for your columns left-to-right and sortDirection is 0 for Ascending and 1 for Descending.  A valid argument that sorts ascending first by column 1 and then column 2 looks like: <code>[[0,0],[1,0]]</code></td>
+      	<td><a href="http://tablesorter.com/example-option-sort-list.html">Example</a></td>
+      </tr><tr>
+        <td>sortMultiSortKey</td>
+        <td>String</td>
+        <td>shiftKey</td>
+        <td>The key used to select more than one column for multi-column sorting.  Defaults to the shift key.  Other options might be ctrlKey, altKey. <br>Reference: <a class="external" href="http://developer.mozilla.org/en/docs/DOM:event#Properties" target="_new">http://developer.mozilla.org/en/docs/DOM:event#Properties</a></td>
+      
+      	<td><a href="http://tablesorter.com/example-option-sort-key.html">Example</a></td>
+      </tr><tr>
+        <td>textExtraction</td>
+        <td>String Or Function</td>
+        <td>simple</td>
+        <td>
+        	Defines which method is used to extract data from a table cell for sorting.  
+        	Built-in options include "simple" and "complex".  Use complex if you have data marked up 
+        	inside of a table cell like: <code>&lt;td&gt;&lt;strong&gt;&lt;em&gt;123 Main Street&lt;/em&gt;&lt;/strong&gt;&lt;/td&gt;</code>.  
+        	Complex can be slow in large tables so consider writing your own text extraction function "myTextExtraction" which you define like:
+<pre class="javascript"><span class="keywords">var</span>&nbsp;myTextExtraction&nbsp;=&nbsp;<span class="keywords">function</span>(node)&nbsp;&nbsp;<br>{&nbsp;&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="com">//&nbsp;extract&nbsp;data&nbsp;from&nbsp;markup&nbsp;and&nbsp;return&nbsp;it&nbsp;</span>&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywords">return</span>&nbsp;node.childNodes[<span class="numbers">0</span>].childNodes[<span class="numbers">0</span>].innerHTML;&nbsp;<br>}&nbsp;<br>$(<span class="global">document</span>).ready(<span class="keywords">function</span>()&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;{&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$(<span class="string">"#myTable"</span>).tableSorter(&nbsp;{textExtraction:&nbsp;myTextExtraction}&nbsp;);&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;<br>);&nbsp;<br></pre>  
+
+			tablesorter will pass a jQuery object containing the contents of the current cell for you to parse and return.  Thanks to Josh Nathanson for the examples.
+		</td>
+		<td><a href="http://tablesorter.com/example-option-text-extraction.html">Example</a></td>
+	  </tr><tr>
+        <td>widthFixed</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td>Indicates if tablesorter should apply fixed widths to the table columns.  This is useful for the Pager companion.  Requires the <a href="#Download-Addons">jQuery dimension plugin</a> to work.</td>
+        <td><a href="example-pager.html">Example</a></td>
+      </tr></tbody>
+  </table>
+					
+					
+					
+					
+					
+					        </section>
+
+
+
+      </div>
+    </div>
+
+  </div>
+
+
+
+    <!-- Footer
+    ================================================== -->
+    <footer class="footer">
+      <div class="container" style="font-size:12px;">
+        <p class="pull-right"><a href="#">Back to top</a><br><br></p>
+        
+        <p>Ask.Bootstrap (v 0.1.0) is a front-end framework combinations of mainly <a href="http://html5boilerplate.com/">HTML5 Boilerplate</a>, <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a> with other additional handy libraries.<br>
+        Project is maintained by <a href="http://www.twitter.com/cengizism" target="_blank">Cengiz Ulusoy</a> at <a href="http://www.ask-cs.nl/" target="_blank">Ask Community Systems</a>, Rotterdam.<br>
+        Please read <a href="/docs/index.html#copyrights">copyrights</a> section for more information about the creators of the frameworks and components used in this project.</p>
+        
+        <ul class="footer-links">
+          <li class="">
+            <a href="/docs/index.html">Home</a>
+          </li>
+          <li class="">
+            <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+          </li>
+          <li class="">
+            <a href="/docs/base-css/typography.html">Base CSS</a>
+          </li>
+          <li class="">
+            <a href="/docs/components/dropdowns.html">Components</a>
+          </li>
+          <li class="">
+            <a href="/docs/javascript/overview.html">JavaScript</a>
+          </li>
+        </ul>
+        
+      </div>
+    </footer>
+
+
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    
+    <script src="/src/js/libs/jquery/jquery.js"></script>
+    <script src="/src/js/libs/bootstrap/bootstrap.js"></script>
+    <script src="/src/js/libs/vendor/prefixfree.min.js"></script>
+    
+    <script src="/docs/js/google/prettify/prettify.js"></script>
+    
+    <script src="/src/js/libs/tablesorter/tablesorter.js"></script>
+    <script src="/src/js/libs/tablesorter/tablesorter.pager.js"></script>
+    
+    <script src="/src/js/main.js"></script>
+    
+    <script type="text/javascript">
+	    $('document').ready(function()
+	    {
+		    
+		    $("#tablesorter-demo").tablesorter(
+	    	{
+	    		widthFixed: true,
+	    		sortList: [[0,0]]
+	    	});
+	    	/*
+	    	.tablesorterPager(
+	    	{
+	    		container: $(".tablepager")
+	    	});
+	    	*/
+				
+	    })
+    </script>
+    
+    <script src="/docs/js/application.js"></script>
+
+  </body>
+</html>

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Ask.Bootstrap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ask Bootstrap: a compilation of frameworks with handy scripts and styles, ready for cooking a new project or web app immediately.">
+    <meta name="author" content="Compiled and maintained by Cengiz Ulusoy. Refer to 'copyrights' section for licences of the components used in this project.">
+
+    <!-- Le styles -->
+    <link href="/src/css/bootstrap.css" rel="stylesheet">
+    <link href="/src/css/responsive.css" rel="stylesheet">
+    
+    <link href="/docs/js/google/prettify/prettify.css" rel="stylesheet">
+    
+    <link href="/docs/css/docs.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="/src/img/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/src/img/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/src/img/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/src/img/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="/src/img/ico/apple-touch-icon-57-precomposed.png">
+    
+  </head>
+
+  <body>
+
+    <!-- Navbar
+    ================================================== -->
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="index.html">Ask.Bootstrap</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="">
+                <a href="/docs/index.html">Home</a>
+              </li>
+              <li class="">
+                <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+              </li>
+              <li class="">
+                <a href="/docs/base-css/typography.html">Base CSS</a>
+              </li>
+              <li class="active">
+                <a href="/docs/components/dropdowns.html">Components</a>
+              </li>
+              <li class="">
+                <a href="/docs/javascript/overview.html">JavaScript</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Subhead
+================================================== -->
+<header class="jumbotron subhead" id="overview">
+  <div class="container">
+    <h1>Components</h1>
+    <p class="lead">Dozens of reusable components built to provide navigation, alerts, popovers, and more.</p>
+  </div>
+</header>
+
+
+  <div class="container">
+
+    <!-- Docs nav
+    ================================================== -->
+    <div class="row">
+      <div class="span3">
+        <ul class="nav nav-tabs nav-stacked">
+          <li><a href="/docs/components/dropdowns.html"><i class="icon-chevron-right"></i> Dropdowns</a></li>
+          <li><a href="/docs/components/button_groups.html"><i class="icon-chevron-right"></i> Button groups</a></li>
+          <li><a href="/docs/components/button_dropdowns.html"><i class="icon-chevron-right"></i> Button dropdowns</a></li>
+          <li class="active"><a href="/docs/components/navs.html"><i class="icon-chevron-right"></i> Navs</a></li>
+          <li><a href="/docs/components/navbar.html"><i class="icon-chevron-right"></i> Navbar</a></li>
+          <li><a href="/docs/components/breadcrumbs.html"><i class="icon-chevron-right"></i> Breadcrumbs</a></li>
+          <li><a href="/docs/components/pagination.html"><i class="icon-chevron-right"></i> Pagination</a></li>
+          <li><a href="/docs/components/labels_badges.html"><i class="icon-chevron-right"></i> Labels and badges</a></li>
+          <li><a href="/docs/components/typography.html"><i class="icon-chevron-right"></i> Typography</a></li>
+          <li><a href="/docs/components/thumbnails.html"><i class="icon-chevron-right"></i> Thumbnails</a></li>
+          <li><a href="/docs/components/alerts.html"><i class="icon-chevron-right"></i> Alerts</a></li>
+          <li><a href="/docs/components/progress.html"><i class="icon-chevron-right"></i> Progress bars</a></li>
+          <li><a href="/docs/components/media.html"><i class="icon-chevron-right"></i> Media object</a></li>
+          <li><a href="/docs/components/misc.html"><i class="icon-chevron-right"></i> Misc</a></li>
+        </ul>
+      </div>
+      <div class="span9">
+
+
+
+        <!-- Nav, Tabs, & Pills
+        ================================================== -->
+        <section id="navs">
+          <div class="page-header">
+            <h1>Nav: tabs, pills, and lists</small></h1>
+          </div>
+
+          <h2>Lightweight defaults <small>Same markup, different classes</small></h2>
+          <p>All nav components here&mdash;tabs, pills, and lists&mdash;<strong>share the same base markup and styles</strong> through the <code>.nav</code> class.</p>
+
+          <h3>Basic tabs</h3>
+          <p>Take a regular <code>&lt;ul&gt;</code> of links and add <code>.nav-tabs</code>:</p>
+          <div class="bs-docs-example">
+            <ul class="nav nav-tabs">
+              <li class="active"><a href="#">Home</a></li>
+              <li><a href="#">Profile</a></li>
+              <li><a href="#">Messages</a></li>
+            </ul>
+          </div>
+<pre class="prettyprint linenums">
+&lt;ul class="nav nav-tabs"&gt;
+  &lt;li class="active"&gt;
+    &lt;a href="#"&gt;Home&lt;/a&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;a href="#"&gt;...&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href="#"&gt;...&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</pre>
+
+          <h3>Basic pills</h3>
+          <p>Take that same HTML, but use <code>.nav-pills</code> instead:</p>
+          <div class="bs-docs-example">
+            <ul class="nav nav-pills">
+              <li class="active"><a href="#">Home</a></li>
+              <li><a href="#">Profile</a></li>
+              <li><a href="#">Messages</a></li>
+            </ul>
+          </div>
+<pre class="prettyprint linenums">
+&lt;ul class="nav nav-pills"&gt;
+  &lt;li class="active"&gt;
+    &lt;a href="#"&gt;Home&lt;/a&gt;
+  &lt;/li&gt;
+  &lt;li&gt;&lt;a href="#"&gt;...&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href="#"&gt;...&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</pre>
+
+          <h3>Disabled state</h3>
+          <p>For any nav component (tabs, pills, or list), add <code>.disabled</code> for <strong>gray links and no hover effects</strong>. Links will remain clickable, however, unless you remove the <code>href</code> attribute. Alternatively, you could implement custom JavaScript to prevent those clicks.</p>
+          <div class="bs-docs-example">
+            <ul class="nav nav-pills">
+              <li><a href="#">Clickable link</a></li>
+              <li><a href="#">Clickable link</a></li>
+              <li class="disabled"><a href="#">Disabled link</a></li>
+            </ul>
+          </div>
+<pre class="prettyprint linenums">
+&lt;ul class="nav nav-pills"&gt;
+  ...
+  &lt;li class="disabled"&gt;&lt;a href="#"&gt;Home&lt;/a&gt;&lt;/li&gt;
+  ...
+&lt;/ul&gt;
+</pre>
+
+          <h3>Component alignment</h3>
+          <p>To align nav links, use the <code>.pull-left</code> or <code>.pull-right</code> utility classes. Both classes will add a CSS float in the specified direction.</p>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Stackable</h2>
+          <p>As tabs and pills are horizontal by default, just add a second class, <code>.nav-stacked</code>, to make them appear vertically stacked.</p>
+
+          <h3>Stacked tabs</h3>
+          <div class="bs-docs-example">
+            <ul class="nav nav-tabs nav-stacked">
+              <li class="active"><a href="#">Home</a></li>
+              <li><a href="#">Profile</a></li>
+              <li><a href="#">Messages</a></li>
+            </ul>
+          </div>
+<pre class="prettyprint linenums">
+&lt;ul class="nav nav-tabs nav-stacked"&gt;
+  ...
+&lt;/ul&gt;
+</pre>
+
+          <h3>Stacked pills</h3>
+          <div class="bs-docs-example">
+            <ul class="nav nav-pills nav-stacked">
+              <li class="active"><a href="#">Home</a></li>
+              <li><a href="#">Profile</a></li>
+              <li><a href="#">Messages</a></li>
+            </ul>
+          </div>
+<pre class="prettyprint linenums">
+&lt;ul class="nav nav-pills nav-stacked"&gt;
+  ...
+&lt;/ul&gt;
+</pre>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Dropdowns</h2>
+          <p>Add dropdown menus with a little extra HTML and the <a href="javascript.html#dropdowns">dropdowns JavaScript plugin</a>.</p>
+
+          <h3>Tabs with dropdowns</h3>
+          <div class="bs-docs-example">
+            <ul class="nav nav-tabs">
+              <li class="active"><a href="#">Home</a></li>
+              <li><a href="#">Help</a></li>
+              <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#">Dropdown <b class="caret"></b></a>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+<pre class="prettyprint linenums">
+&lt;ul class="nav nav-tabs"&gt;
+  &lt;li class="dropdown"&gt;
+    &lt;a class="dropdown-toggle"
+       data-toggle="dropdown"
+       href="#"&gt;
+        Dropdown
+        &lt;b class="caret"&gt;&lt;/b&gt;
+      &lt;/a&gt;
+    &lt;ul class="dropdown-menu"&gt;
+      &lt;!-- links --&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+</pre>
+
+          <h3>Pills with dropdowns</h3>
+          <div class="bs-docs-example">
+            <ul class="nav nav-pills">
+              <li class="active"><a href="#">Home</a></li>
+              <li><a href="#">Help</a></li>
+              <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#">Dropdown <b class="caret"></b></a>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+<pre class="prettyprint linenums">
+&lt;ul class="nav nav-pills"&gt;
+  &lt;li class="dropdown"&gt;
+    &lt;a class="dropdown-toggle"
+       data-toggle="dropdown"
+       href="#"&gt;
+        Dropdown
+        &lt;b class="caret"&gt;&lt;/b&gt;
+      &lt;/a&gt;
+    &lt;ul class="dropdown-menu"&gt;
+      &lt;!-- links --&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+</pre>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Nav lists</h2>
+          <p>A simple and easy way to build groups of nav links with optional headers. They're best used in sidebars like the Finder in OS X.</p>
+
+          <h3>Example nav list</h3>
+          <p>Take a list of links and add <code>class="nav nav-list"</code>:</p>
+          <div class="bs-docs-example">
+            <div class="well" style="max-width: 340px; padding: 8px 0;">
+              <ul class="nav nav-list">
+                <li class="nav-header">List header</li>
+                <li class="active"><a href="#">Home</a></li>
+                <li><a href="#">Library</a></li>
+                <li><a href="#">Applications</a></li>
+                <li class="nav-header">Another list header</li>
+                <li><a href="#">Profile</a></li>
+                <li><a href="#">Settings</a></li>
+                <li class="divider"></li>
+                <li><a href="#">Help</a></li>
+              </ul>
+            </div> <!-- /well -->
+          </div>
+<pre class="prettyprint linenums">
+&lt;ul class="nav nav-list"&gt;
+  &lt;li class="nav-header"&gt;List header&lt;/li&gt;
+  &lt;li class="active"&gt;&lt;a href="#"&gt;Home&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href="#"&gt;Library&lt;/a&gt;&lt;/li&gt;
+  ...
+&lt;/ul&gt;
+</pre>
+          <p>
+            <span class="label label-info">Note</span>
+            For nesting within a nav list, include <code>class="nav nav-list"</code> on any nested <code>&lt;ul&gt;</code>.
+          </p>
+
+          <h3>Horizontal dividers</h3>
+          <p>Add a horizontal divider by creating an empty list item with the class <code>.divider</code>, like so:</p>
+<pre class="prettyprint linenums">
+&lt;ul class="nav nav-list"&gt;
+  ...
+  &lt;li class="divider"&gt;&lt;/li&gt;
+  ...
+&lt;/ul&gt;
+</pre>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Tabbable nav</h2>
+          <p>Bring your tabs to life with a simple plugin to toggle between content via tabs. Bootstrap integrates tabbable tabs in four styles: top (default), right, bottom, and left.</p>
+
+          <h3>Tabbable example</h3>
+          <p>To make tabs tabbable, create a <code>.tab-pane</code> with unique ID for every tab and wrap them in <code>.tab-content</code>.</p>
+          <div class="bs-docs-example">
+          
+            <div class="tabbable">
+              <ul class="nav nav-tabs">
+                <li class="active"><a href="#tab1" data-toggle="tab">Section 1</a></li>
+                <li><a href="#tab2" data-toggle="tab">Section 2</a></li>
+                <li><a href="#tab3" data-toggle="tab">Section 3</a></li>
+              </ul>
+              <div class="tab-content">
+                <div class="tab-pane active" id="tab1">
+                  <p>I'm in Section 1.</p>
+                </div>
+                <div class="tab-pane" id="tab2">
+                  <p>Howdy, I'm in Section 2.</p>
+                </div>
+                <div class="tab-pane" id="tab3">
+                  <p>What up girl, this is Section 3.</p>
+                </div>
+              </div>
+              
+            </div> <!-- /tabbable -->
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="tabbable"&gt; &lt;!-- Only required for left/right tabs --&gt;
+  &lt;ul class="nav nav-tabs"&gt;
+    &lt;li class="active"&gt;&lt;a href="#tab1" data-toggle="tab"&gt;Section 1&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a href="#tab2" data-toggle="tab"&gt;Section 2&lt;/a&gt;&lt;/li&gt;
+  &lt;/ul&gt;
+  &lt;div class="tab-content"&gt;
+    &lt;div class="tab-pane active" id="tab1"&gt;
+      &lt;p&gt;I'm in Section 1.&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div class="tab-pane" id="tab2"&gt;
+      &lt;p&gt;Howdy, I'm in Section 2.&lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+</pre>
+
+          <h4>Fade in tabs</h4>
+          <p>To make tabs fade in, add <code>.fade</code> to each <code>.tab-pane</code>.</p>
+
+          <h4>Requires jQuery plugin</h4>
+          <p>All tabbable tabs are powered by our lightweight jQuery plugin. Read more about how to bring tabbable tabs to life <a href="javascript.html#tabs">on the JavaScript docs page</a>.</p>
+
+          <h3>Tabbable in any direction</h3>
+
+          <h4>Tabs on the bottom</h4>
+          <p>Flip the order of the HTML and add a class to put tabs on the bottom.</p>
+          <div class="bs-docs-example">
+            <div class="tabbable tabs-below">
+              <div class="tab-content">
+                <div class="tab-pane active" id="A">
+                  <p>I'm in Section A.</p>
+                </div>
+                <div class="tab-pane" id="B">
+                  <p>Howdy, I'm in Section B.</p>
+                </div>
+                <div class="tab-pane" id="C">
+                  <p>What up girl, this is Section C.</p>
+                </div>
+              </div>
+              <ul class="nav nav-tabs">
+                <li class="active"><a href="#A" data-toggle="tab">Section 1</a></li>
+                <li><a href="#B" data-toggle="tab">Section 2</a></li>
+                <li><a href="#C" data-toggle="tab">Section 3</a></li>
+              </ul>
+            </div> <!-- /tabbable -->
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="tabbable tabs-below"&gt;
+  &lt;div class="tab-content"&gt;
+    ...
+  &lt;/div&gt;
+  &lt;ul class="nav nav-tabs"&gt;
+    ...
+  &lt;/ul&gt;
+&lt;/div&gt;
+</pre>
+
+          <h4>Tabs on the left</h4>
+          <p>Swap the class to put tabs on the left.</p>
+          <div class="bs-docs-example">
+            <div class="tabbable tabs-left">
+              <ul class="nav nav-tabs">
+                <li class="active"><a href="#lA" data-toggle="tab">Section 1</a></li>
+                <li><a href="#lB" data-toggle="tab">Section 2</a></li>
+                <li><a href="#lC" data-toggle="tab">Section 3</a></li>
+              </ul>
+              <div class="tab-content">
+                <div class="tab-pane active" id="lA">
+                  <p>I'm in Section A.</p>
+                </div>
+                <div class="tab-pane" id="lB">
+                  <p>Howdy, I'm in Section B.</p>
+                </div>
+                <div class="tab-pane" id="lC">
+                  <p>What up girl, this is Section C.</p>
+                </div>
+              </div>
+            </div> <!-- /tabbable -->
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="tabbable tabs-left"&gt;
+  &lt;ul class="nav nav-tabs"&gt;
+    ...
+  &lt;/ul&gt;
+  &lt;div class="tab-content"&gt;
+    ...
+  &lt;/div&gt;
+&lt;/div&gt;
+</pre>
+
+          <h4>Tabs on the right</h4>
+          <p>Swap the class to put tabs on the right.</p>
+          <div class="bs-docs-example">
+            <div class="tabbable tabs-right">
+              <ul class="nav nav-tabs">
+                <li class="active"><a href="#rA" data-toggle="tab">Section 1</a></li>
+                <li><a href="#rB" data-toggle="tab">Section 2</a></li>
+                <li><a href="#rC" data-toggle="tab">Section 3</a></li>
+              </ul>
+              <div class="tab-content">
+                <div class="tab-pane active" id="rA">
+                  <p>I'm in Section A.</p>
+                </div>
+                <div class="tab-pane" id="rB">
+                  <p>Howdy, I'm in Section B.</p>
+                </div>
+                <div class="tab-pane" id="rC">
+                  <p>What up girl, this is Section C.</p>
+                </div>
+              </div>
+            </div> <!-- /tabbable -->
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="tabbable tabs-right"&gt;
+  &lt;ul class="nav nav-tabs"&gt;
+    ...
+  &lt;/ul&gt;
+  &lt;div class="tab-content"&gt;
+    ...
+  &lt;/div&gt;
+&lt;/div&gt;
+</pre>
+
+        </section>
+
+
+
+      </div>
+    </div>
+
+  </div>
+
+
+
+    <!-- Footer
+    ================================================== -->
+    <footer class="footer">
+      <div class="container" style="font-size:12px;">
+        <p class="pull-right"><a href="#">Back to top</a><br><br></p>
+        
+        <p>Ask.Bootstrap (v 0.1.0) is a front-end framework combinations of mainly <a href="http://html5boilerplate.com/">HTML5 Boilerplate</a>, <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a> with other additional handy libraries.<br>
+        Project is maintained by <a href="http://www.twitter.com/cengizism" target="_blank">Cengiz Ulusoy</a> at <a href="http://www.ask-cs.nl/" target="_blank">Ask Community Systems</a>, Rotterdam.<br>
+        Please read <a href="/docs/index.html#copyrights">copyrights</a> section for more information about the creators of the frameworks and components used in this project.</p>
+        
+        <ul class="footer-links">
+          <li class="">
+            <a href="/docs/index.html">Home</a>
+          </li>
+          <li class="">
+            <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+          </li>
+          <li class="">
+            <a href="/docs/base-css/typography.html">Base CSS</a>
+          </li>
+          <li class="">
+            <a href="/docs/components/dropdowns.html">Components</a>
+          </li>
+          <li class="">
+            <a href="/docs/javascript/overview.html">JavaScript</a>
+          </li>
+        </ul>
+        
+      </div>
+    </footer>
+
+
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    
+    <script src="/src/js/libs/jquery/jquery.js"></script>
+    <script src="/src/js/libs/bootstrap/bootstrap.js"></script>
+    <script src="/src/js/libs/vendor/prefixfree.min.js"></script>
+    
+    <script src="/docs/js/google/prettify/prettify.js"></script>
+    
+    <script src="/docs/js/application.js"></script>
+    
+    <script type="text/javascript">
+	    $('document').ready(function()
+	    {
+		    $('.tabs-left .tab-content').css({ minHeight: $('.tabs-left .nav-tabs').height() - 41 });
+		    $('.tabs-right .tab-content').css({ minHeight: $('.tabs-right .nav-tabs').height() - 41 });
+	    })
+    </script>
+
+  </body>
+</html>

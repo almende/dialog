@@ -48,10 +48,10 @@ public class Logger {
 				Log.class);
 		
 		if(adapters!=null) {
-			for(String id : adapters) {
-				cmd.addFilter("adapterID", EQUAL, id);
-			}
+			cmd.addFilter("adapterID", FilterOperator.IN, adapters);
 		}
+		
+		
 
 		if (level != null)
 			cmd.addFilter("level", EQUAL, level);

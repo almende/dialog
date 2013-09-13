@@ -162,6 +162,7 @@
 <!-- Placed at the end of the document so the pages load faster -->
 <script src="ask-bootstrap/public/src/js/libs/jquery/jquery.js"></script>
 <script src="ask-bootstrap/public/src/js/bootstrap-datepicker.js"></script>
+<script src="ask-bootstrap/public/src/js/libs/vendor/date.js"></script>
 <script>
     $(document).ready(function() {
         $('#dp1').datepicker();
@@ -191,7 +192,7 @@
             }
             if($.trim(stringEndDate) != '' )
             {
-                queryData += '&end=' + Date.parse(stringEndDate);
+                queryData += '&end=' + Date.parse(stringEndDate).add(1).days().getTime();
             }
             if($('#limit').val()!= 'null')
             {

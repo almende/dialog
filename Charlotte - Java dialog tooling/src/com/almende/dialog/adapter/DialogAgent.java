@@ -32,16 +32,6 @@ public class DialogAgent extends Agent {
 		ParallelInit.startThreads();
 	}
 	
-	@Access(AccessType.UNAVAILABLE)
-	/*public Question getQuestion(String url, String id, String json){
-		Question question=null;
-		if (id != null) question = Question.fromJSON(StringStore.getString(id));
-		if (json != null) question = Question.fromJSON(json);
-		if (question == null && url != null) question = Question.fromURL(url);
-		question.generateIds();
-		return question;
-	}*/
-	
 	public ArrayList<String> getActiveCalls(@Name("adapterID") String adapterID) {
 		
 		try {
@@ -105,95 +95,95 @@ public class DialogAgent extends Agent {
 	 * @param addressList list of addresses
 	 * @throws Exception
 	 */
-        public String outboundCallWithList( @Name( "addressList" ) Collection<String> addressList,
-            @Name("senderName") @Required( false ) String senderName, @Name( "url" ) String url, 
-            @Name( "adapterType" ) @Required( false ) String adapterType,
-            @Name( "adapterID" ) @Required( false ) String adapterID,
-            @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
-        {
-            Map<String, String> addressNameMap = new HashMap<String, String>();
-            ServerUtils.putCollectionAsKey( addressNameMap, addressList, "" );
-            return outboundCallWithMap( addressNameMap, senderName, url, adapterType, adapterID, pubKey, privKey );
-        }
-        
-        /**
-         * updated the outboundCall functionality to support broadcast functionality.
-         * @param addressMap Key: address and Value: name
-         * @throws Exception
-         */
-        public String outboundCallWithMap( @Name( "addressMap" ) Map<String, String> addressMap,
-            @Name("senderName") @Required( false ) String senderName, @Name( "url" ) String url, 
-            @Name( "adapterType" ) @Required( false ) String adapterType,
-            @Name( "adapterID" ) @Required( false ) String adapterID,
-            @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
-        {
-            if ( adapterType != null && !adapterType.equals( "" ) && adapterID != null
-                && !adapterID.equals( "" ) )
-            {
-                throw new Exception( "Choose adapterType or adapterID not both" );
-            }
-            log.setLevel( Level.INFO );
-            ArrayNode adapterList = null;
-            log.info( String.format( "pub: %s pri %s adapterType %s", pubKey, privKey, adapterType ) );
-            adapterList = KeyServerLib.getAllowedAdapterList( pubKey, privKey, adapterType );
+    public String outboundCallWithList( @Name( "addressList" ) Collection<String> addressList,
+        @Name("senderName") @Required( false ) String senderName, @Name( "url" ) String url, 
+        @Name( "adapterType" ) @Required( false ) String adapterType,
+        @Name( "adapterID" ) @Required( false ) String adapterID,
+        @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
+    {
+        Map<String, String> addressNameMap = new HashMap<String, String>();
+        ServerUtils.putCollectionAsKey( addressNameMap, addressList, "" );
+        return outboundCallWithMap( addressNameMap, senderName, url, adapterType, adapterID, pubKey, privKey );
+    }
     
-            if ( adapterList == null )
-                throw new Exception( "Invalid key provided" );
-            //try {
-            log.info( "Trying to find config" );
-            AdapterConfig config = AdapterConfig.findAdapterConfigFromList( adapterID, adapterType,
-                                                                            adapterList );
-            if ( config != null )
+    /**
+     * updated the outboundCall functionality to support broadcast functionality.
+     * @param addressMap Key: address and Value: name
+     * @throws Exception
+     */
+    public String outboundCallWithMap( @Name( "addressMap" ) Map<String, String> addressMap,
+        @Name("senderName") @Required( false ) String senderName, @Name( "url" ) String url, 
+        @Name( "adapterType" ) @Required( false ) String adapterType,
+        @Name( "adapterID" ) @Required( false ) String adapterID,
+        @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
+    {
+        if ( adapterType != null && !adapterType.equals( "" ) && adapterID != null
+            && !adapterID.equals( "" ) )
+        {
+            throw new Exception( "Choose adapterType or adapterID not both" );
+        }
+        log.setLevel( Level.INFO );
+        ArrayNode adapterList = null;
+        log.info( String.format( "pub: %s pri %s adapterType %s", pubKey, privKey, adapterType ) );
+        adapterList = KeyServerLib.getAllowedAdapterList( pubKey, privKey, adapterType );
+
+        if ( adapterList == null )
+            throw new Exception( "Invalid key provided" );
+        //try {
+        log.info( "Trying to find config" );
+        AdapterConfig config = AdapterConfig.findAdapterConfigFromList( adapterID, adapterType,
+                                                                        adapterList );
+        if ( config != null )
+        {
+            log.info( "Config found: " + config.getConfigId() );
+            adapterType = config.getAdapterType();
+            if ( adapterType.toUpperCase().equals( "XMPP" ) )
             {
-                log.info( "Config found: " + config.getConfigId() );
-                adapterType = config.getAdapterType();
-                if ( adapterType.toUpperCase().equals( "XMPP" ) )
+                return "{'sessionKey':'" + new XMPPServlet().startDialog( addressMap, url, senderName, config ) + "'}";
+            }
+            else if ( adapterType.toUpperCase().equals( "BROADSOFT" ) )
+            {
+                //fetch the first address in the map
+                if( !addressMap.keySet().isEmpty() )
                 {
-                    return "{'sessionKey':'" + new XMPPServlet().startDialog( addressMap, url, senderName, config ) + "'}";
+                    return "{'sessionKey':'" + VoiceXMLRESTProxy.dial( addressMap, url, senderName, config ) + "'}";
                 }
-                else if ( adapterType.toUpperCase().equals( "BROADSOFT" ) )
+                else 
                 {
-                    //fetch the first address in the map
-                    if( !addressMap.keySet().isEmpty() )
-                    {
-                        return "{'sessionKey':'" + VoiceXMLRESTProxy.dial( addressMap, url, senderName, config ) + "'}";
-                    }
-                    else 
-                    {
-                        throw new Exception( "Address should not be empty to setup a call" );
-                    }
+                    throw new Exception( "Address should not be empty to setup a call" );
                 }
-                else if ( adapterType.toUpperCase().equals( "MAIL" ) )
-                {
-                    return "{'sessionKey':'" + new MailServlet().startDialog( addressMap, url, senderName, config )
-                        + "'}";
-                }
-                else if ( adapterType.toUpperCase().equals( "SMS" ) )
-                {
-                    return "{'sessionKey':'"
-                        + new AskSmsServlet().startDialog( addressMap, url, senderName, config ) + "'}";
-                }
-                else if ( adapterType.toUpperCase().equals( "CM" ) )
-                {
-                    return "{'sessionKey':'"
-                        + new CMSmsServlet().startDialog( addressMap, url, senderName, config ) + "'}";
-                }
-                else if ( adapterType.toUpperCase().equals( "TWITTER" ) )
-                {
-                    return "{'sessionKey':'"
-                        + new TwitterServlet().startDialog( addressMap, url, senderName, config ) + "'}";
-                }
-                else
-                {
-                    throw new Exception(
-                        "Unknown type given: either broadsoft or xmpp or phone or mail" );
-                }
+            }
+            else if ( adapterType.toUpperCase().equals( "MAIL" ) )
+            {
+                return "{'sessionKey':'" + new MailServlet().startDialog( addressMap, url, senderName, config )
+                    + "'}";
+            }
+            else if ( adapterType.toUpperCase().equals( "SMS" ) )
+            {
+                return "{'sessionKey':'"
+                    + new AskSmsServlet().startDialog( addressMap, url, senderName, config ) + "'}";
+            }
+            else if ( adapterType.toUpperCase().equals( "CM" ) )
+            {
+                return "{'sessionKey':'"
+                    + new CMSmsServlet().startDialog( addressMap, url, senderName, config ) + "'}";
+            }
+            else if ( adapterType.toUpperCase().equals( "TWITTER" ) )
+            {
+                return "{'sessionKey':'"
+                    + new TwitterServlet().startDialog( addressMap, url, senderName, config ) + "'}";
             }
             else
             {
-                throw new Exception( "Invalid adapter found" );
+                throw new Exception(
+                    "Unknown type given: either broadsoft or xmpp or phone or mail" );
             }
         }
+        else
+        {
+            throw new Exception( "Invalid adapter found" );
+        }
+    }
 	
 	public String changeAgent(@Name("url") String url,
 						   @Name("adapterType") @Required(false) String adapterType, 

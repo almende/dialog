@@ -54,6 +54,7 @@ public class TestFramework
     protected static final String localAddressChat      = "info@dialog-handler.appspotchat.com";
     protected static final String remoteAddressEmail         = "sshetty@ask-cs.com";
     protected static final String localAddressSMS       = "0854851000";
+    protected static final String localAddressBroadsoft = "0854881000";
     protected static final String remoteAddressVoice    = "01234546789";
     
     public static ThreadLocal<ServletRunner> servletRunner = new ThreadLocal<ServletRunner>();
@@ -103,12 +104,28 @@ public class TestFramework
         return result;
     }
     
+    public String createSessionKey(AdapterConfig adapterConfig, String responder) {
+        return adapterConfig.getAdapterType() + "|" + adapterConfig.getMyAddress() + "|" + responder;
+    }
+    
+    public Session getOrCreateSession(AdapterConfig adapterConfig, String responder) 
+    throws Exception
+    {
+        String sessionKey = createSessionKey(adapterConfig, responder);
+        Session session = Session.getSession( sessionKey, adapterConfig.getKeyword() );
+        return session;
+    }
+    
     public Session getOrCreateSession(AdapterConfig adapterConfig, Collection<String> responders) 
     throws Exception
     {
         String sessionKey = adapterConfig.getAdapterType() + "|" + adapterConfig.getMyAddress() + "|" + new ObjectMapper().writeValueAsString( responders );
         Session session = Session.getSession( sessionKey, adapterConfig.getKeyword() );
         return session;
+    }
+    
+    public AdapterConfig createBroadsoftAdapter() throws Exception {
+        return createAdapterConfig("BROADSOFT", "agent1@ask-cs.com", localAddressBroadsoft, "");
     }
     
     public static AdapterConfig createAdapterConfig( String adapterType, String publicKey, String myAddress, String initiatAgentURL) 

@@ -106,49 +106,49 @@ public class VoiceXMLRESTProxy {
 		return sessionKey;
 	}
 	
-        public static String dial( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
+    public static String dial( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
+    {
+        String adapterType = "broadsoft";
+        String sessionKeys = "";
+        String sessionPrefix = adapterType+"|"+config.getMyAddress()+"|" ;
+        
+        for ( String address : addressNameMap.keySet() )
         {
-            String adapterType = "broadsoft";
-            String sessionKeys = "";
-            String sessionPrefix = adapterType+"|"+config.getMyAddress()+"|" ;
-            
-            for ( String address : addressNameMap.keySet() )
+            String formattedAddress = formatNumber( address ).replaceFirst( "\\+31", "0" ) + "@outbound";
+            String sessionKey = sessionPrefix + formattedAddress;
+            Session session = Session.getSession( sessionKey );
+            if ( session == null )
             {
-                String formattedAddress = formatNumber( address ).replaceFirst( "\\+31", "0" ) + "@outbound";
-                String sessionKey = sessionPrefix + formattedAddress;
-                Session session = Session.getSession( sessionKey );
-                if ( session == null )
-                {
-                    log.severe( "VoiceXMLRESTProxy couldn't start new outbound Dialog, adapterConfig not found? "
-                        + sessionKey );
-                    return "";
-                }
-                session.killed=false;
-                session.setStartUrl(url);
-                session.setDirection("outbound");
-                session.setRemoteAddress(address);
-                session.setType(adapterType);
-                session.setTrackingToken(UUID.randomUUID().toString());
-                session.storeSession();
-    
-                Question question = Question.fromURL(url,address,config.getMyAddress());
-                String questionJson = question.toJSON();
-                log.info( String.format( "Question %s stored in String Store with SessionKey: %s", questionJson, "InitialQuestion_"+sessionKey ) );
-                StringStore.storeString("InitialQuestion_"+sessionKey, questionJson);
-                
-                DDRWrapper.log(url,session.getTrackingToken(),session,"Dial",config);
-    
-                Broadsoft bs = new Broadsoft( config );
-                bs.startSubscription();
-    
-                String extSession = null;
-                extSession = bs.startCall( formattedAddress );
-                session.setExternalSession( extSession );
-                session.storeSession();
-                sessionKeys += sessionKey + System.getProperty("line.separator"); 
+                log.severe( "VoiceXMLRESTProxy couldn't start new outbound Dialog, adapterConfig not found? "
+                    + sessionKey );
+                return "";
             }
-            return sessionKeys;
+            session.killed=false;
+            session.setStartUrl(url);
+            session.setDirection("outbound");
+            session.setRemoteAddress(address);
+            session.setType(adapterType);
+            session.setTrackingToken(UUID.randomUUID().toString());
+            session.storeSession();
+
+            Question question = Question.fromURL(url,address,config.getMyAddress());
+            String questionJson = question.toJSON();
+            log.info( String.format( "Question %s stored in String Store with SessionKey: %s", questionJson, "InitialQuestion_"+sessionKey ) );
+            StringStore.storeString("InitialQuestion_"+sessionKey, questionJson);
+            
+            DDRWrapper.log(url,session.getTrackingToken(),session,"Dial",config);
+
+            Broadsoft bs = new Broadsoft( config );
+            bs.startSubscription();
+
+            String extSession = null;
+            extSession = bs.startCall( formattedAddress );
+            session.setExternalSession( extSession );
+            session.storeSession();
+            sessionKeys += sessionKey + System.getProperty("line.separator"); 
         }
+        return sessionKeys;
+    }
 	
 	public static ArrayList<String> getActiveCalls(AdapterConfig config) {
 		Broadsoft bs = new Broadsoft(config);
@@ -547,7 +547,7 @@ public class VoiceXMLRESTProxy {
 		return Response.ok(reply).build();
 	}
 		
-	private class Return {
+	public class Return {
 		ArrayList<String> prompts;
 		Question question;
 
@@ -714,7 +714,7 @@ public class VoiceXMLRESTProxy {
 		return sw.toString();
 	}
 	
-	private String renderOpenQuestion(Question question,ArrayList<String> prompts,String sessionKey){
+	protected String renderOpenQuestion(Question question,ArrayList<String> prompts,String sessionKey){
 
 		StringWriter sw = new StringWriter();
 		try {

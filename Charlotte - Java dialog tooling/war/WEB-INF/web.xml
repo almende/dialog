@@ -167,8 +167,9 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<welcome-file-list>
-		<welcome-file>index.html</welcome-file>
+		<welcome-file>ask-bootstrap/public/index.html</welcome-file>
 	</welcome-file-list>
+	
     <mime-mapping>
         <extension>ccxml</extension>
         <mime-type>application/ccxml+xml</mime-type>

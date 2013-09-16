@@ -31,9 +31,9 @@ public class MailServletTest extends TestFramework
     public void MailServletReceiveDummyMessageTest() throws Exception
     {
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", "agent1@ask-cs.com", localAddressMail, "" );
+        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY, localAddressMail, "" );
         //create session
-        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddressEmail ) );
+        getOrCreateSession( adapterConfig, remoteAddressEmail );
         
         MimeMessage mimeMessage = new MimeMessage( Session.getDefaultInstance( new Properties(), null) );
         mimeMessage.setFrom( new InternetAddress( remoteAddressEmail ) );
@@ -61,9 +61,9 @@ public class MailServletTest extends TestFramework
     public void MailServletReceiveHelpMessageTest() throws Exception
     {
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", "agent1@ask-cs.com", localAddressMail, "" );
+        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY, localAddressMail, "" );
         //create session
-        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddressEmail ) );
+        getOrCreateSession( adapterConfig, remoteAddressEmail );
 
         MimeMessage mimeMessage = new MimeMessage( Session.getDefaultInstance( new Properties(), null) );
         mimeMessage.setFrom( new InternetAddress( remoteAddressEmail ) );
@@ -93,10 +93,10 @@ public class MailServletTest extends TestFramework
     {
         String initialAgentURL = TestServlet.TEXT_SERVLET_PATH + "?appointment=start";
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", "agent1@ask-cs.com",
+        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY,
                                                            localAddressMail, initialAgentURL );
         //create session
-        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddressEmail ) );
+        getOrCreateSession( adapterConfig, remoteAddressEmail );
 
         LoggedPrintStream lpsOut = mailAppointmentInteraction( "hi" );
         String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );

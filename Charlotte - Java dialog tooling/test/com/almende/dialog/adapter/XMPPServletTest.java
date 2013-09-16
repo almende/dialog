@@ -3,7 +3,6 @@ package com.almende.dialog.adapter;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Method;
-import java.util.Arrays;
 
 import org.junit.Test;
 
@@ -24,9 +23,9 @@ public class XMPPServletTest extends TestFramework
     public void ReceiveHelpMessageTest() throws Exception
     {
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "XMPP", "agent1@ask-cs.com", localAddressChat, "" );
+        AdapterConfig adapterConfig = createAdapterConfig( "XMPP", TEST_PUBLIC_KEY, localAddressChat, "" );
         //create session
-        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddressEmail ) );
+        getOrCreateSession( adapterConfig, remoteAddressEmail );
         
         Method fetchMethodByReflection = fetchMethodByReflection( "receiveMessage", XMPPServlet.class, Message.class );
         XMPPServlet xmppServlet = new XMPPServlet();
@@ -50,9 +49,9 @@ public class XMPPServletTest extends TestFramework
     {
         String initialAgentURL = TestServlet.TEXT_SERVLET_PATH + "?appointment=start";
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "XMPP", "agent1@ask-cs.com", localAddressChat, initialAgentURL );
+        AdapterConfig adapterConfig = createAdapterConfig( "XMPP", TEST_PUBLIC_KEY, localAddressChat, initialAgentURL );
         //create session
-        getOrCreateSession( adapterConfig, Arrays.asList( remoteAddressEmail ) );
+        getOrCreateSession( adapterConfig, remoteAddressEmail );
 
         LoggedPrintStream lpsOut = xmppAppointmentInteraction("hi");
         

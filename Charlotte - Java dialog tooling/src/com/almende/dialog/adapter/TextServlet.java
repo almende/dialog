@@ -1,19 +1,5 @@
 package com.almende.dialog.adapter;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URL;
-import java.nio.CharBuffer;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.logging.Logger;
-
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -23,8 +9,8 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.RequestUtil;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.taskqueue.TaskOptions;
@@ -33,6 +19,19 @@ import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
+
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
+import java.nio.CharBuffer;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.logging.Logger;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
@@ -85,7 +84,7 @@ abstract public class TextServlet extends HttpServlet {
         String body;
         String preferred_language;
         String reply;
-        
+
         @Override
         public String toString()
         {
@@ -185,24 +184,29 @@ abstract public class TextServlet extends HttpServlet {
             }
         }
         String localaddress = config.getMyAddress();
-        String sessionKey = getAdapterType() + "|" + localaddress + "|" + new ObjectMapper().writeValueAsString( addressNameMap.keySet() );
-        Session session = Session.getSession( sessionKey, config.getKeyword() );
-        if ( session == null )
-        {
-            log.severe( "XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
-                + sessionKey );
-            return "";
-        }
-        session.setPubKey( config.getPublicKey() );
-        session.setDirection( "outbound" );
-        session.storeSession();
-
         url = encodeURLParams( url );
 
         Return res = null;
         Question question = null;
+        Session session = null;
+        String sessionKeyMap = getAdapterType() + "|" + localaddress + "|" + ServerUtils.serialize(addressNameMap.keySet());
+
         for ( String address : addressNameMap.keySet() )
         {
+            //store the session first
+            String sessionKey = getAdapterType() + "|" + localaddress + "|" + address;
+            session = Session.getSession( sessionKey, config.getKeyword() );
+            if ( session == null )
+            {
+                log.severe( "XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
+                        + sessionKey );
+                return "";
+            }
+            session.setPubKey( config.getPublicKey() );
+            session.setDirection( "outbound" );
+            session.storeSession();
+
+            //fetch question
             question = Question.fromURL( url, config.getConfigId(), address );
             String preferred_language = StringStore.getString( address + "_language" );
             if ( preferred_language == null )
@@ -226,7 +230,7 @@ abstract public class TextServlet extends HttpServlet {
         {
         	DDRWrapper.log( question, session, "Send", config );
         }
-        return count != 1 ? "Error generating XML" : sessionKey;
+        return count != 1 ? "Error generating XML" : sessionKeyMap;
     }
 	
 	public static void killSession(Session session){

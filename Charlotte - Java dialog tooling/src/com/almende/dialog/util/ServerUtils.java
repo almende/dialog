@@ -1,29 +1,29 @@
 package com.almende.dialog.util;
 
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
-
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.appengine.api.utils.SystemProperty;
 import com.google.appengine.api.utils.SystemProperty.Environment.Value;
 
+import javax.servlet.http.HttpServletRequest;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Map;
+
 
 public class ServerUtils
 {
+    private static ObjectMapper oMapper = new ObjectMapper();
     public static <T> T deserialize( String jsonString, Class<T> DeserializeClass )
     throws Exception
     {
         T deserializedEntity = null;
         if ( jsonString != null && !jsonString.isEmpty() )
         {
-            deserializedEntity = new ObjectMapper().readValue( jsonString, DeserializeClass );
+            deserializedEntity = oMapper.readValue(jsonString, DeserializeClass);
         }
         return deserializedEntity;
     }
@@ -35,16 +35,13 @@ public class ServerUtils
 
     public static <T> T deserialize( String jsonString, TypeReference<T> type ) throws Exception
     {
-        T deserializedEntity = new ObjectMapper().readValue( jsonString, type );
-        return deserializedEntity;
+        return oMapper.readValue( jsonString, type );
     }
 
     public static String serialize( Object objectToBeSerialized ) throws Exception
     {
-        ObjectMapper oMapper = new ObjectMapper();
         oMapper.setSerializationInclusion( Include.NON_NULL );
-        String result = null;
-        result = oMapper.writeValueAsString( objectToBeSerialized );
+        String result = oMapper.writeValueAsString( objectToBeSerialized );
         return result;
     }
     
@@ -57,7 +54,7 @@ public class ServerUtils
     {
         StringBuffer sb = new StringBuffer();
         BufferedReader reader = httpServletRequest.getReader();
-        String line = null;
+        String line;
         while ( (line = reader.readLine()) != null )
         {
             sb.append( line );

@@ -1,20 +1,19 @@
 package com.almende.dialog.adapter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.util.HashMap;
-import java.util.Map;
-
+import com.almende.dialog.LoggedPrintStream;
+import com.almende.dialog.TestFramework;
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.test.TestServlet;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import com.almende.dialog.LoggedPrintStream;
-import com.almende.dialog.TestFramework;
-import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.test.TestServlet;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class CMServletTest extends TestFramework
 {
@@ -26,7 +25,7 @@ public class CMServletTest extends TestFramework
         String remoteAddressVoice2 = "4561237890";
         String senderName = "TestUser";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "CM", "agent1@ask-cs.com", "", "" );
+        AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, "", "" );
 
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( remoteAddressVoice, "testUser1" );
@@ -53,7 +52,7 @@ public class CMServletTest extends TestFramework
     {
         String senderName = "TestUser";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "CM", "agent1@ask-cs.com", "", "" );
+        AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, "", "" );
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put( remoteAddressVoice, null );
@@ -80,7 +79,7 @@ public class CMServletTest extends TestFramework
     {
         String myAddress = "ASK";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "CM", "agent1@ask-cs.com", myAddress, "" );
+        AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, myAddress, "" );
         
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put( remoteAddressVoice, null );
@@ -108,12 +107,12 @@ public class CMServletTest extends TestFramework
         if(addressNameMap.size() > 1)
         {
             dialogAgent.outboundCallWithMap( addressNameMap, senderName, TestServlet.TEXT_SERVLET_PATH + "?simpleComment="+ simpleQuestion, 
-                                         null, adapterConfig.getConfigId(), "agent1@ask-cs.com", "" );
+                                         null, adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "" );
         }
         else
         {
             dialogAgent.outboundCall( addressNameMap.keySet().iterator().next(), senderName, TestServlet.TEXT_SERVLET_PATH + "?simpleComment="+ simpleQuestion, 
-                                      null, adapterConfig.getConfigId(), "agent1@ask-cs.com", "" );
+                                      null, adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "" );
         }
         System.out.flush();
         System.setOut( lpsOut.underlying );

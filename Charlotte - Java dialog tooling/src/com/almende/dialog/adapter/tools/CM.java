@@ -173,7 +173,7 @@ public class CM {
         }
         catch ( Exception ex )
         {
-            log.severe( "Exception in creating question XML: " + ex.toString() );
+            log.severe( "Exception in creating question XML: " + ex.toString()+" xml: "+sw.toString() );
             return null;
         }
         

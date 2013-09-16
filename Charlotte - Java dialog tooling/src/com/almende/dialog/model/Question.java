@@ -57,6 +57,8 @@ public class Question implements QuestionIntf {
 	public static Question fromURL(String url,String adapterID,String remoteID,String fromID)  {
             
 	    log.info( String.format( "Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID, fromID  ));
+	    if(remoteID==null)
+	        remoteID="";
         String json = "";            
         if( !ServerUtils.isInUnitTestingEnvironment() )
         {

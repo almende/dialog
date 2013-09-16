@@ -11,6 +11,7 @@ import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.taskqueue.TaskOptions;
@@ -23,6 +24,7 @@ import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URI;
@@ -185,11 +187,28 @@ abstract public class TextServlet extends HttpServlet {
         }
         String localaddress = config.getMyAddress();
         url = encodeURLParams( url );
+        ObjectMapper om = ParallelInit.getObjectMapper();
 
         Return res = null;
         Question question = null;
         Session session = null;
-        String sessionKeyMap = getAdapterType() + "|" + localaddress + "|" + ServerUtils.serialize(addressNameMap.keySet());
+        //String sessionKeyMap = getAdapterType() + "|" + localaddress + "|" + ServerUtils.serialize(addressNameMap.keySet());
+        HashMap<String, String> sessionKeyMap = new HashMap<>();
+        
+        // If it is a broadcast don't provide the remote address because it is deceiving. 
+        String loadAddress = null;
+        if(addressNameMap.size()==1)
+            loadAddress = addressNameMap.keySet().iterator().next();
+        
+        //fetch question
+        question = Question.fromURL( url, config.getConfigId(),  loadAddress);
+        String preferred_language = StringStore.getString( loadAddress + "_language" );
+        if ( preferred_language == null )
+        {
+            preferred_language = config.getPreferred_language();
+        }
+        question.setPreferred_language( preferred_language );
+        res = formQuestion( question, config.getConfigId(), loadAddress );        
 
         for ( String address : addressNameMap.keySet() )
         {
@@ -205,16 +224,10 @@ abstract public class TextServlet extends HttpServlet {
             session.setPubKey( config.getPublicKey() );
             session.setDirection( "outbound" );
             session.storeSession();
-
-            //fetch question
-            question = Question.fromURL( url, config.getConfigId(), address );
-            String preferred_language = StringStore.getString( address + "_language" );
-            if ( preferred_language == null )
-            {
-                preferred_language = config.getPreferred_language();
-            }
-            question.setPreferred_language( preferred_language );
-            res = formQuestion( question, config.getConfigId(), address );
+            
+            // Add key to the map (for the return)
+            sessionKeyMap.put(address, sessionKey);
+            
             if ( res.question != null )
             {
                 StringStore.storeString( "question_" + address + "_" + localaddress, res.question.toJSON() );
@@ -230,7 +243,7 @@ abstract public class TextServlet extends HttpServlet {
         {
         	DDRWrapper.log( question, session, "Send", config );
         }
-        return count != 1 ? "Error generating XML" : sessionKeyMap;
+        return count != 1 ? "Error generating XML" : om.writeValueAsString(sessionKeyMap);
     }
 	
 	public static void killSession(Session session){
@@ -325,29 +338,29 @@ abstract public class TextServlet extends HttpServlet {
 			session.setAdapterID(config.getConfigId());
 		}
 		
-                String json = "";
-                String preferred_language = StringStore.getString( address + "_language" );
-        
-                EscapeInputCommand escapeInput = new EscapeInputCommand();
-                escapeInput.skip = false;
-                escapeInput.body = body;
-                escapeInput.preferred_language = preferred_language;
-                escapeInput.reply = "I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
-        
-                if ( KeyServerLib.checkCredits( config.getPublicKey() ) )
-                {
-                    //check if any escape input command is received
-                    if ( escapeInput.body.toLowerCase().trim().charAt( 0 ) == '/' )
-                    {
-                        count = processEscapeInputCommand( msg, fromName, config, escapeInput );
-                        log.info( escapeInput.toString() );
-                    }
-                }
-                else
-                {
-                    escapeInput.reply = "Not enough credits to return an answer";
-                    escapeInput.skip = true;
-                }
+        String json = "";
+        String preferred_language = StringStore.getString( address + "_language" );
+
+        EscapeInputCommand escapeInput = new EscapeInputCommand();
+        escapeInput.skip = false;
+        escapeInput.body = body;
+        escapeInput.preferred_language = preferred_language;
+        escapeInput.reply = "I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
+
+        if ( KeyServerLib.checkCredits( config.getPublicKey() ) )
+        {
+            //check if any escape input command is received
+            if ( escapeInput.body.toLowerCase().trim().charAt( 0 ) == '/' )
+            {
+                count = processEscapeInputCommand( msg, fromName, config, escapeInput );
+                log.info( escapeInput.toString() );
+            }
+        }
+        else
+        {
+            escapeInput.reply = "Not enough credits to return an answer";
+            escapeInput.skip = true;
+        }
                 
 		if (!escapeInput.skip) 
 		{
@@ -376,13 +389,15 @@ abstract public class TextServlet extends HttpServlet {
 			if (question != null) {
 				question.setPreferred_language(preferred_language);
 				// Do not answer a question, when it's the first and the type is comment or referral anyway.
-				if(!(start && (question.getType().equalsIgnoreCase("comment") || question.getType().equalsIgnoreCase("referral"))))
-				question = question.answer(address, config.getConfigId(), null, body);
+				if(!(start && (question.getType().equalsIgnoreCase("comment") || question.getType().equalsIgnoreCase("referral")))) {
+				    question = question.answer(address, config.getConfigId(), null, body);
+				}
 				Return replystr = formQuestion(question, config.getConfigId(),address);
 				escapeInput.reply = replystr.reply;
 				question = replystr.question;
 				fromName = getNickname(question);
-				
+				if(fromName==null || fromName.equals(""))
+				    fromName = localaddress;
 				if (question == null) {
 					StringStore.dropString("question_"+address+"_"+localaddress);
 					session.drop();
@@ -481,7 +496,7 @@ abstract public class TextServlet extends HttpServlet {
 	
 	private String getNickname(Question question) {
 		
-		String nickname="";
+		String nickname=null;
 		if(question!=null) {
 			HashMap<String, String> id = question.getExpandedRequester();
 			nickname = id.get("nickname");

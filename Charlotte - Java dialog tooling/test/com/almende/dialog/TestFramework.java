@@ -1,33 +1,9 @@
 package com.almende.dialog;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-
-import javax.mail.BodyPart;
-import javax.mail.MessagingException;
-import javax.mail.internet.ContentDisposition;
-import javax.mail.internet.ContentType;
-import javax.mail.internet.InternetHeaders;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMultipart;
-import javax.ws.rs.core.MediaType;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
-import org.junit.After;
-import org.junit.Before;
-import org.w3c.dom.Document;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.test.TestServlet;
 import com.almende.dialog.util.ServerUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.appengine.api.xmpp.JID;
 import com.google.appengine.api.xmpp.Message;
 import com.google.appengine.api.xmpp.MessageBuilder;
@@ -42,6 +18,23 @@ import com.meterware.httpunit.WebResponse;
 import com.meterware.servletunit.ServletRunner;
 import com.meterware.servletunit.ServletUnitClient;
 import com.thetransactioncompany.cors.HTTPMethod;
+import org.junit.After;
+import org.junit.Before;
+import org.w3c.dom.Document;
+
+import javax.mail.BodyPart;
+import javax.mail.MessagingException;
+import javax.mail.internet.*;
+import javax.ws.rs.core.MediaType;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * Test framework to be inherited by all test classes
@@ -53,9 +46,9 @@ public class TestFramework
     protected static final String localAddressMail      = "info@dialog-handler.appspotmail.com";
     protected static final String localAddressChat      = "info@dialog-handler.appspotchat.com";
     protected static final String remoteAddressEmail         = "sshetty@ask-cs.com";
-    protected static final String localAddressSMS       = "0854851000";
     protected static final String localAddressBroadsoft = "0854881000";
     protected static final String remoteAddressVoice    = "01234546789";
+    protected static final String TEST_PUBLIC_KEY    = "agent1@ask-cs.com";
     
     public static ThreadLocal<ServletRunner> servletRunner = new ThreadLocal<ServletRunner>();
     
@@ -116,16 +109,8 @@ public class TestFramework
         return session;
     }
     
-    public Session getOrCreateSession(AdapterConfig adapterConfig, Collection<String> responders) 
-    throws Exception
-    {
-        String sessionKey = adapterConfig.getAdapterType() + "|" + adapterConfig.getMyAddress() + "|" + new ObjectMapper().writeValueAsString( responders );
-        Session session = Session.getSession( sessionKey, adapterConfig.getKeyword() );
-        return session;
-    }
-    
     public AdapterConfig createBroadsoftAdapter() throws Exception {
-        return createAdapterConfig("BROADSOFT", "agent1@ask-cs.com", localAddressBroadsoft, "");
+        return createAdapterConfig("BROADSOFT", TEST_PUBLIC_KEY, localAddressBroadsoft, "");
     }
     
     public static AdapterConfig createAdapterConfig( String adapterType, String publicKey, String myAddress, String initiatAgentURL) 

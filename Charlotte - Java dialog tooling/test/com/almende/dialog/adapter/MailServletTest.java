@@ -101,7 +101,7 @@ public class MailServletTest extends TestFramework
         LoggedPrintStream lpsOut = mailAppointmentInteraction( "hi" );
         String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
         assertEquals( "Email sent:", lpsOutArray[0] );
-        assertEquals( "From: null<"+ localAddressMail +">", lpsOutArray[1] );
+        assertEquals( "From: <"+ localAddressMail +">", lpsOutArray[1] );
         assertEquals( "To: null<"+ remoteAddressEmail +">", lpsOutArray[2] );
         assertEquals( "Subject: RE: null", lpsOutArray[3] );
         assertEquals( "Body: " + TestServlet.APPOINTMENT_MAIN_QUESTION, lpsOutArray[4] );
@@ -124,7 +124,7 @@ public class MailServletTest extends TestFramework
         
         String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
         assertEquals( "Email sent:", lpsOutArray[0] );
-        assertEquals( "From: null<"+ localAddressMail +">", lpsOutArray[1] );
+        assertEquals( "From: <"+ localAddressMail +">", lpsOutArray[1] );
         assertEquals( "To: null<"+ remoteAddressEmail +">", lpsOutArray[2] );
         assertEquals( "Subject: RE: null", lpsOutArray[3] );
         assertEquals( "Body: " + TestServlet.APPOINTMENT_SECOND_QUESION, lpsOutArray[4].trim() );

@@ -83,23 +83,23 @@ public class MailServlet extends TextServlet {
     			msg.setRecipientName(sender.getPersonal());
     		}
     		
-                Multipart mp = null;
-                if(message.getContent() instanceof Multipart)
-                {
-                    mp = (Multipart) message.getContent();
-                }
-                else 
-                {
-                    mp = new MimeMultipart();
-                    mp.addBodyPart( new MimeBodyPart(new InternetHeaders(), message.getContent().toString().getBytes()) ); 
-                }
-                if ( mp.getCount() > 0 )
-                {
-                    //trim old messages when a message is revieved via the reply button
+            Multipart mp = null;
+            if(message.getContent() instanceof Multipart)
+            {
+                mp = (Multipart) message.getContent();
+            }
+            else 
+            {
+                mp = new MimeMultipart();
+                mp.addBodyPart( new MimeBodyPart(new InternetHeaders(), message.getContent().toString().getBytes()) ); 
+            }
+            if ( mp.getCount() > 0 )
+            {
+                //trim old messages when a message is revieved via the reply button
 //                    String body = trimOldReplies( mp.getBodyPart( 0 ).getContent().toString(), msg.getLocalAddress() );
-                    msg.setBody( mp.getBodyPart( 0 ).getContent().toString() );
-                    log.info( "Receive mail: " + msg.getBody() );
-                }
+                msg.setBody( mp.getBodyPart( 0 ).getContent().toString() );
+                log.info( "Receive mail: " + msg.getBody() );
+            }
     		return msg;
         }
 
@@ -147,15 +147,21 @@ public class MailServlet extends TextServlet {
 
 		try {
             Message msg = new MimeMessage(session);
-            msg.setFrom(new InternetAddress(from, fromName));
+            msg.setFrom(new InternetAddress(from));
+            if(fromName!=null)
+                msg.setFrom(new InternetAddress(from, fromName));
             msg.addRecipient(Message.RecipientType.TO,
                              new InternetAddress(to, toName));
             msg.setSubject(subject);
             msg.setText(message);
             Transport.send(msg);
             
-            String logString = String.format( "Email sent:\n" + "From: %s<%s>\n" + "To: %s<%s>\n" + "Subject: %s\n" + "Body: %s", 
+            String logString = String.format( "Email sent:\n" + "From: <%s>\n" + "To: %s<%s>\n" + "Subject: %s\n" + "Body: %s", 
+                    from, toName, to, subject, message );
+            if(fromName!=null) {
+                logString = String.format( "Email sent:\n" + "From: %s<%s>\n" + "To: %s<%s>\n" + "Subject: %s\n" + "Body: %s", 
                                               fromName, from, toName, to, subject, message );
+            }
             /**
              * perform some ugly tests @MailServletTest.mailAppointmentInteraction} by logging
              */
@@ -174,42 +180,44 @@ public class MailServlet extends TextServlet {
 		return 1;		
 	}
 	
-        @Override
-        protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
-            Map<String, String> addressNameMap, AdapterConfig config )
-        throws Exception
+    @Override
+    protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
+        Map<String, String> addressNameMap, AdapterConfig config )
+    throws Exception
+    {
+        javax.mail.Session session = javax.mail.Session.getDefaultInstance( new Properties(), null );
+        try
         {
-            javax.mail.Session session = javax.mail.Session.getDefaultInstance( new Properties(), null );
-            try
-            {
-                Message msg = new MimeMessage( session );
+            Message msg = new MimeMessage( session );
+            msg.setFrom( new InternetAddress( from ) );
+            if(senderName!=null)
                 msg.setFrom( new InternetAddress( from, senderName ) );
-                for ( String address : addressNameMap.keySet() )
-                {
-                    String toName = addressNameMap.get( address );
-                    msg.addRecipient( Message.RecipientType.TO, new InternetAddress( address, toName ) );
-                }
-                msg.setSubject( subject );
-                msg.setText( message );
-                Transport.send( msg );
-    
-                log.info( "Send reply to mail post: " + ( new Date().getTime() ) );
-            }
-            catch ( AddressException e )
+            for ( String address : addressNameMap.keySet() )
             {
-                log.warning( "Failed to send message, because wrong address: "
-                    + e.getLocalizedMessage() );
+                String toName = addressNameMap.get( address );
+                msg.addRecipient( Message.RecipientType.TO, new InternetAddress( address, toName ) );
             }
-            catch ( MessagingException e )
-            {
-                log.warning( "Failed to send message, because message: " + e.getLocalizedMessage() );
-            }
-            catch ( UnsupportedEncodingException e )
-            {
-                log.warning( "Failed to send message, because encoding: " + e.getLocalizedMessage() );
-            }
-            return 1;
+            msg.setSubject( subject );
+            msg.setText( message );
+            Transport.send( msg );
+
+            log.info( "Send reply to mail post: " + ( new Date().getTime() ) );
         }
+        catch ( AddressException e )
+        {
+            log.warning( "Failed to send message, because wrong address: "
+                + e.getLocalizedMessage() );
+        }
+        catch ( MessagingException e )
+        {
+            log.warning( "Failed to send message, because message: " + e.getLocalizedMessage() );
+        }
+        catch ( UnsupportedEncodingException e )
+        {
+            log.warning( "Failed to send message, because encoding: " + e.getLocalizedMessage() );
+        }
+        return 1;
+    }
 
 	@Override
 	protected String getServletPath() {

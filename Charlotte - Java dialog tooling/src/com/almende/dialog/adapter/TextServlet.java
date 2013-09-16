@@ -9,7 +9,6 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.RequestUtil;
-import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.appengine.api.taskqueue.Queue;
@@ -396,8 +395,7 @@ abstract public class TextServlet extends HttpServlet {
 				escapeInput.reply = replystr.reply;
 				question = replystr.question;
 				fromName = getNickname(question);
-				if(fromName==null || fromName.equals(""))
-				    fromName = localaddress;
+
 				if (question == null) {
 					StringStore.dropString("question_"+address+"_"+localaddress);
 					session.drop();

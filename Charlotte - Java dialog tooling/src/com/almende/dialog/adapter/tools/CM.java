@@ -52,6 +52,9 @@ public class CM {
         {
             dcs = MESSAGE_TYPE_GSM7;
         }
+        
+        if(fromName==null)
+            fromName = from;
 
         // TODO: Check message for special chars, if so change dcs.		
         HashMap<String, String> addressNameMap = new HashMap<String, String>();

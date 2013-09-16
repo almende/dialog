@@ -1,14 +1,5 @@
 package com.almende.dialog;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Response;
-
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -16,10 +7,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.sun.jersey.api.client.ClientResponse.Status;
 
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Response;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+
 @Path("log")
 public class LogWrapper {
 	
-	public LogWrapper(){};
+	public LogWrapper(){}
 
 	@GET
 	@Produces("application/json")
@@ -47,7 +48,7 @@ public class LogWrapper {
 			return Response.status(Status.BAD_REQUEST).entity("This account has no adapters").build();
 		
 		Logger logger = new Logger();
-		List<Log> logs = logger.find(adapterIDs, level, adapterType, endTime, offset, limit);
+		List<Log> logs = logger.find(adapterIDs, getMinSeverityLogLevelFor( level ), adapterType, endTime, offset, limit);
 		ObjectMapper om = ParallelInit.getObjectMapper();
 		String result = "";
 		try {
@@ -57,5 +58,26 @@ public class LogWrapper {
 		}
 		
 		return Response.ok(result).build();
+	}
+	
+	private Collection<LogLevel> getMinSeverityLogLevelFor(LogLevel logLevel)
+	{
+	    Collection<LogLevel> result = new ArrayList<LogLevel>();
+	    switch ( logLevel )
+        {
+            case DEBUG:
+                result = Arrays.asList( LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARNING, LogLevel.SEVERE );
+                break;
+            case INFO:
+                result = Arrays.asList( LogLevel.INFO, LogLevel.WARNING, LogLevel.SEVERE );
+                break;
+            case WARNING:
+                result = Arrays.asList( LogLevel.WARNING, LogLevel.SEVERE );
+                break;
+            case SEVERE:
+                result = Arrays.asList( LogLevel.SEVERE );
+                break;
+        }
+	    return result;
 	}
 }

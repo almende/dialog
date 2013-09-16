@@ -1,15 +1,16 @@
 package com.almende.dialog;
 
-import static com.google.appengine.api.datastore.Query.FilterOperator.EQUAL;
-
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
 import com.google.appengine.api.datastore.Query.FilterOperator;
 import com.google.appengine.api.datastore.Query.SortDirection;
 import com.google.code.twig.FindCommand.RootFindCommand;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+
+import static com.google.appengine.api.datastore.Query.FilterOperator.EQUAL;
 
 public class Logger {
 	private AnnotationObjectDatastore datastore = null;
@@ -42,7 +43,7 @@ public class Logger {
 		datastore.store(new Log(level, adapterID, adapterType, message));
 	}
 	
-	public List<Log> find(List<String> adapters, LogLevel level, String adapterType, Long endTime, Integer offset, Integer limit) {
+	public List<Log> find(List<String> adapters, Collection<LogLevel> levels, String adapterType, Long endTime, Integer offset, Integer limit) {
 
 		RootFindCommand<Log> cmd = datastore.find().type(
 				Log.class);
@@ -50,11 +51,9 @@ public class Logger {
 		if(adapters!=null) {
 			cmd.addFilter("adapterID", FilterOperator.IN, adapters);
 		}
-		
-		
 
-		if (level != null)
-			cmd.addFilter("level", EQUAL, level);
+		if (levels != null)
+			cmd.addFilter("level", FilterOperator.IN, levels);
 		
 		if (adapterType != null)
 			cmd.addFilter("adapterType", EQUAL, adapterType);

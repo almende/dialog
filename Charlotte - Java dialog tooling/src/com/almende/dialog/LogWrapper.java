@@ -12,10 +12,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 @Path("log")
 public class LogWrapper {
@@ -34,21 +31,30 @@ public class LogWrapper {
 		
 		if(privateKey==null || privateKey.isEmpty())
 			return Response.status(Status.BAD_REQUEST).entity("Missing private key").build();
-		
-		if(publicKey==null || publicKey.isEmpty())
+
+        if(publicKey==null || publicKey.isEmpty())
 			return Response.status(Status.BAD_REQUEST).entity("Missing public key").build();
 		
 		ArrayNode list = KeyServerLib.getAllowedAdapterList(publicKey, privateKey);
-		ArrayList<String> adapterIDs = new ArrayList<String>();
-		for(JsonNode adapter : list) {
-			adapterIDs.add(adapter.get("id").asText());
-		}
+		Collection<String> adapterIDs = new HashSet<String>();
+        if ( list != null )
+        {
+            for ( JsonNode adapter : list )
+            {
+                adapterIDs.add( adapter.get( "id" ).asText() );
+            }
+        }
 		
 		if(adapterIDs.size()==0)
 			return Response.status(Status.BAD_REQUEST).entity("This account has no adapters").build();
 		
 		Logger logger = new Logger();
-		List<Log> logs = logger.find(adapterIDs, getMinSeverityLogLevelFor( level ), adapterType, endTime, offset, limit);
+		List<Log> logs = logger.find( adapterIDs, getMinSeverityLogLevelFor( level ), adapterType, endTime, offset, limit);
+//        //TODO: for testing only. remove when live
+//        if(logs == null || logs.isEmpty())
+//        {
+//            logs = logger.find( null, getMinSeverityLogLevelFor( level ), adapterType, endTime, offset, limit);
+//        }
 		ObjectMapper om = ParallelInit.getObjectMapper();
 		String result = "";
 		try {
@@ -62,21 +68,25 @@ public class LogWrapper {
 	
 	private Collection<LogLevel> getMinSeverityLogLevelFor(LogLevel logLevel)
 	{
-	    Collection<LogLevel> result = new ArrayList<LogLevel>();
-	    switch ( logLevel )
+        Collection<LogLevel> result = null;
+        if (logLevel != null)
         {
-            case DEBUG:
-                result = Arrays.asList( LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARNING, LogLevel.SEVERE );
-                break;
-            case INFO:
-                result = Arrays.asList( LogLevel.INFO, LogLevel.WARNING, LogLevel.SEVERE );
-                break;
-            case WARNING:
-                result = Arrays.asList( LogLevel.WARNING, LogLevel.SEVERE );
-                break;
-            case SEVERE:
-                result = Arrays.asList( LogLevel.SEVERE );
-                break;
+            result = new ArrayList<LogLevel>();
+            switch ( logLevel )
+            {
+                case DEBUG:
+                    result = Arrays.asList( LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARNING, LogLevel.SEVERE );
+                    break;
+                case INFO:
+                    result = Arrays.asList( LogLevel.INFO, LogLevel.WARNING, LogLevel.SEVERE );
+                    break;
+                case WARNING:
+                    result = Arrays.asList( LogLevel.WARNING, LogLevel.SEVERE );
+                    break;
+                case SEVERE:
+                    result = Arrays.asList( LogLevel.SEVERE );
+                    break;
+            }
         }
 	    return result;
 	}

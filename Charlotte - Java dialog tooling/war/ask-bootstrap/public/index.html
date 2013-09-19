@@ -143,6 +143,7 @@
                                             <option value="10">10</option>
                                             <option value="50" selected>50</option>
                                             <option value="100">100</option>
+                                            <option value="250">250</option>
                                         </select>
                                     </div>
 
@@ -296,7 +297,7 @@
                 queryData += '&level=' + $('#logLevel').val();
             }
             if ($.trim(stringEndDate) != '') {
-                queryData += '&end=' + Date.parse(stringEndDate);
+                queryData += '&end=' + ((parseInt(Date.parse(stringEndDate))) + (1000 * 60 * 60 * 24));
             }
             if ($('#limit').val() != 'null') {
                 queryData += '&limit=' + $('#limit').val();
@@ -333,16 +334,16 @@
                         var log = response[logCounter];
                         var logLabel = '';
                         if (log['level'] == 'INFO') {
-                            logLabel = '<label style="color: #069317">' + log['level'] + '</label>';
+                            logLabel = '<label style="color: #069317;font-weight:bolder">' + log['level'] + '</label>';
                         }
                         else if (log['level'] == 'DEBUG') {
-                            logLabel = '<label style="color: #0f14b3">' + log['level'] + '</label>';
+                            logLabel = '<label style="color: #0f14b3;font-weight:bolder">' + log['level'] + '</label>';
                         }
                         else if (log['level'] == 'WARNING') {
-                            logLabel = '<label style="color: #a3a014">' + log['level'] + '</label>';
+                            logLabel = '<label style="color: #a3a014;font-weight:bolder">' + log['level'] + '</label>';
                         }
                         else if (log['level'] == 'SEVERE') {
-                            logLabel = '<label style="color: #db0a1e">' + log['level'] + '</label>';
+                            logLabel = '<label style="color: #db0a1e;font-weight:bolder">' + log['level'] + '</label>';
                         }
                         rowData = rowData + '<tr>' +
                                 '<td>' + logLabel + '</td> ' +

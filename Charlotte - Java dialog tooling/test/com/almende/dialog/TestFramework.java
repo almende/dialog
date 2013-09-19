@@ -35,6 +35,7 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Properties;
 
 /**
  * Test framework to be inherited by all test classes
@@ -49,9 +50,12 @@ public class TestFramework
     protected static final String localAddressBroadsoft = "0854881000";
     protected static final String remoteAddressVoice    = "01234546789";
     protected static final String TEST_PUBLIC_KEY    = "agent1@ask-cs.com";
+    protected static final String TEST_PRIVATE_KEY = "test`_private_key";
     
     public static ThreadLocal<ServletRunner> servletRunner = new ThreadLocal<ServletRunner>();
-    
+    protected static ThreadLocal<Object> logObject = new ThreadLocal<Object>();
+    protected static ThreadLocal<String> responseQuestionString = new ThreadLocal<String>();
+
     @Before
     public void setup()
     {
@@ -65,7 +69,7 @@ public class TestFramework
     @After
     public void tearDown()
     {
-        helper.tearDown();
+        helper.tearDown() ;
     }
     
     public static String fetchResponse( HTTPMethod httpMethods, String url, String payload )
@@ -157,11 +161,11 @@ public class TestFramework
         return methodToBeFetched.invoke( targetObject, argObjects.toArray( new Object[argObjects.size()] ));
     }
     
-    public static Message getTestXMPPMessage(String body) throws Exception
+    public static Message getTestXMPPMessage(String localAddress, String remoteAddress, String body) throws Exception
     {
         MessageBuilder builder = new MessageBuilder();
         builder.withMessageType( MessageType.CHAT );
-        MimeMultipart multipart = getTestMimeMultipart( remoteAddressEmail, localAddressChat, body, null);
+        MimeMultipart multipart = getTestMimeMultipart( remoteAddress, localAddress, body, null);
         int parts = multipart.getCount();
         for ( int i = 0; i < parts; i++ )
         {
@@ -259,11 +263,6 @@ public class TestFramework
         servletRunner.registerServlet( "unitTestServlet", TestServlet.class.getName() );
         return servletRunner;
     }
-
-    public static void log( String stringToBeLogged )
-    {
-        System.out.println(stringToBeLogged.toString());
-    }
     
     public static Document getXMLDocumentBuilder(String xmlContent) throws Exception
     {
@@ -271,5 +270,26 @@ public class TestFramework
         DocumentBuilder newDocumentBuilder = newInstance.newDocumentBuilder();
         Document parse = newDocumentBuilder.parse( new ByteArrayInputStream(xmlContent.getBytes("UTF-8")) );
         return parse;
+    }
+
+    public static void log(Object log)
+    {
+        logObject.set(log);
+    }
+
+    public static void storeResponseQuestionInThread(String questionText)
+    {
+        responseQuestionString.set(questionText);
+    }
+
+    protected javax.mail.Message getMessageFromDetails(String remoteAddress, String localAddress, String messageText)
+            throws Exception
+    {
+        MimeMessage mimeMessage = new MimeMessage( javax.mail.Session.getDefaultInstance(new Properties(), null) );
+        mimeMessage.setFrom( new InternetAddress( localAddress ) );
+        mimeMessage.setSubject("");
+        mimeMessage.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(remoteAddress));
+        mimeMessage.setText(messageText);
+        return mimeMessage;
     }
 }

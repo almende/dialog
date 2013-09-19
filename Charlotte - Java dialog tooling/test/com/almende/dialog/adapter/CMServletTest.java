@@ -1,6 +1,5 @@
 package com.almende.dialog.adapter;
 
-import com.almende.dialog.LoggedPrintStream;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.test.TestServlet;
@@ -79,7 +78,7 @@ public class CMServletTest extends TestFramework
     {
         String myAddress = "ASK";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, myAddress, "" );
+        AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, myAddress, TEST_PRIVATE_KEY );
         
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put( remoteAddressVoice, null );
@@ -98,11 +97,6 @@ public class CMServletTest extends TestFramework
 
     private NodeList outBoundSMSCallXMLTest( Map<String, String> addressNameMap, AdapterConfig adapterConfig, String simpleQuestion, String senderName) throws Exception
     {
-        //catch log output
-        //collect log information to test processMessage locally
-        LoggedPrintStream lpsOut = LoggedPrintStream.create(System.out);
-        System.setOut( lpsOut );
-        
         DialogAgent dialogAgent = new DialogAgent();
         if(addressNameMap.size() > 1)
         {
@@ -114,11 +108,9 @@ public class CMServletTest extends TestFramework
             dialogAgent.outboundCall( addressNameMap.keySet().iterator().next(), senderName, TestServlet.TEXT_SERVLET_PATH + "?simpleComment="+ simpleQuestion, 
                                       null, adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "" );
         }
-        System.out.flush();
-        System.setOut( lpsOut.underlying );
         
         //fetch the xml generated
-        Document builder = getXMLDocumentBuilder( lpsOut.outputStream.toString() );
+        Document builder = getXMLDocumentBuilder( logObject.get().toString() );
         NodeList messageNodeList = builder.getElementsByTagName( "MESSAGES" );
         assertTrue( messageNodeList.getLength() != 0 );
         return messageNodeList;

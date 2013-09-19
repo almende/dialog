@@ -1,28 +1,19 @@
 package com.almende.dialog.adapter;
 
+import com.almende.dialog.TestFramework;
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.util.ServerUtils;
+import com.google.appengine.api.utils.SystemProperty;
+
+import javax.mail.*;
+import javax.mail.internet.*;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
 import java.util.Map;
 import java.util.Properties;
-
-import javax.mail.Address;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.Multipart;
-import javax.mail.Transport;
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.InternetHeaders;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import com.almende.dialog.TestFramework;
-import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.agent.tools.TextMessage;
-import com.google.appengine.api.utils.SystemProperty;
 
 
 public class MailServlet extends TextServlet {
@@ -156,16 +147,12 @@ public class MailServlet extends TextServlet {
             msg.setText(message);
             Transport.send(msg);
             
-            String logString = String.format( "Email sent:\n" + "From: <%s>\n" + "To: %s<%s>\n" + "Subject: %s\n" + "Body: %s", 
-                    from, toName, to, subject, message );
-            if(fromName!=null) {
-                logString = String.format( "Email sent:\n" + "From: %s<%s>\n" + "To: %s<%s>\n" + "Subject: %s\n" + "Body: %s", 
+            String logString = String.format( "Email sent:\n" + "From: %s<%s>\n" + "To: %s<%s>\n" + "Subject: %s\n" + "Body: %s",
                                               fromName, from, toName, to, subject, message );
+            if(ServerUtils.isInUnitTestingEnvironment())
+            {
+                TestFramework.log( msg );
             }
-            /**
-             * perform some ugly tests @MailServletTest.mailAppointmentInteraction} by logging
-             */
-            TestFramework.log( logString );
             log.info( logString );
             log.info("Send reply to mail post: "+(new Date().getTime()));
 

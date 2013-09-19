@@ -1,17 +1,16 @@
 package com.almende.dialog.adapter;
 
-import static org.junit.Assert.assertTrue;
-
-import java.lang.reflect.Method;
-
-import org.junit.Test;
-
-import com.almende.dialog.LoggedPrintStream;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.test.TestServlet;
 import com.google.appengine.api.xmpp.Message;
+import org.junit.Test;
+
+import java.lang.reflect.Method;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class XMPPServletTest extends TestFramework
 {
@@ -30,7 +29,7 @@ public class XMPPServletTest extends TestFramework
         Method fetchMethodByReflection = fetchMethodByReflection( "receiveMessage", XMPPServlet.class, Message.class );
         XMPPServlet xmppServlet = new XMPPServlet();
         
-        Message xmppMessage = getTestXMPPMessage("test body");
+        Message xmppMessage = getTestXMPPMessage(localAddressChat, remoteAddressEmail, "test body");
         TextMessage textMessage = (TextMessage) invokeMethodByReflection( fetchMethodByReflection, xmppServlet, xmppMessage );
         
         //fetch the processMessage function
@@ -53,14 +52,10 @@ public class XMPPServletTest extends TestFramework
         //create session
         getOrCreateSession( adapterConfig, remoteAddressEmail );
 
-        LoggedPrintStream lpsOut = xmppAppointmentInteraction("hi");
-        
-        assertTrue( lpsOut.outputStream.toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.outputStream.toString().contains( "Are you available today?\n[ Yup | Nope  ]" ) );
-        assertTrue( lpsOut.outputStream.toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.outputStream.toString().contains( "sshetty@ask-cs.com" ) );
+        TextMessage textMessage = xmppAppointmentInteraction("hi");
+        assertOutgoingTextMessage(textMessage);
     }
-    
+
     /**
      * test if a "Yup" TextMessage is generated and processed properly by XMPP servlet
      *  as an existing session
@@ -73,11 +68,8 @@ public class XMPPServletTest extends TestFramework
         ReceiveAppointmentNewSessionMessageTest();
         
         //respond with a "Yup" message. which is a valid answer
-        LoggedPrintStream lpsOut = xmppAppointmentInteraction( "Yup" );
-        assertTrue( lpsOut.outputStream.toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.outputStream.toString().contains( "How long are you available? (in mins)" ) );
-        assertTrue( lpsOut.outputStream.toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.outputStream.toString().contains( "sshetty@ask-cs.com" ) );
+        TextMessage textMessage = xmppAppointmentInteraction("Yup");
+        assertOutgoingTextMessage(textMessage);
     }
     
     /**
@@ -91,12 +83,9 @@ public class XMPPServletTest extends TestFramework
         //initiate session with a new message
         ReceiveAppointmentNewSessionMessageTest();
         
-        //respond with a "Yup" message. which is a valid answer
-        LoggedPrintStream lpsOut = xmppAppointmentInteraction( "Nope" );
-        assertTrue( lpsOut.outputStream.toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.outputStream.toString().contains( "Thanks for responding to the invitation!" ) );
-        assertTrue( lpsOut.outputStream.toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.outputStream.toString().contains( "sshetty@ask-cs.com" ) );
+        //respond with a "Nope" message. which is a valid answer
+        TextMessage textMessage = xmppAppointmentInteraction("Nope");
+        assertOutgoingTextMessage(textMessage);
     }
     
     /**
@@ -110,39 +99,47 @@ public class XMPPServletTest extends TestFramework
         //initiate teh session with a new message and yes messsage
         ReceiveAppointmentExistingSessionYesMessageTest();
         
-        //respond with a "Yup" message. which is a valid answer
-        LoggedPrintStream lpsOut = xmppAppointmentInteraction( "30" );
-        assertTrue( lpsOut.outputStream.toString().contains( "Sending an XMPP Message:" ) );
-        assertTrue( lpsOut.outputStream.toString().contains( "Thanks for accepting the invitation!" ) );
-        assertTrue( lpsOut.outputStream.toString().contains( "info@dialog-handler.appspotchat.com" ) );
-        assertTrue( lpsOut.outputStream.toString().contains( "sshetty@ask-cs.com" ) );
+        //respond with a "30" message. which is a valid answer
+        TextMessage textMessage = xmppAppointmentInteraction("30");
+        assertOutgoingTextMessage(textMessage);
     }
 
     /**
      * @return
      * @throws Exception
      */
-    private LoggedPrintStream xmppAppointmentInteraction(String message) throws Exception
+    private TextMessage xmppAppointmentInteraction(String message) throws Exception
     {
         Method fetchMethodByReflection = fetchMethodByReflection( "receiveMessage", XMPPServlet.class, Message.class );
         XMPPServlet xmppServlet = new XMPPServlet();
         
-        Message xmppMessage = getTestXMPPMessage(message);
+        Message xmppMessage = getTestXMPPMessage(localAddressChat, remoteAddressEmail, message);
         TextMessage textMessage = (TextMessage) invokeMethodByReflection( fetchMethodByReflection, xmppServlet, xmppMessage );
         
         //fetch the processMessage function
         Method processMessage = fetchMethodByReflection( "processMessage", TextServlet.class,  TextMessage.class);
 
-        //collect log information to test processMessage locally
-        LoggedPrintStream lpsOut = LoggedPrintStream.create(System.out);
-        System.setOut( lpsOut );
-        
         int count = (Integer) invokeMethodByReflection( processMessage, xmppServlet, textMessage );
         
-        System.out.flush();
-        System.setOut( lpsOut.underlying );
-        
         assertTrue( count == 1 );
-        return lpsOut;
+        return textMessage;
+    }
+
+    private void assertOutgoingTextMessage(TextMessage textMessage)
+            throws Exception
+    {
+        Message xmppMessage = getTestXMPPMessage(textMessage.getAddress(), textMessage.getLocalAddress(), responseQuestionString.get());
+
+        Message messageLogged = (Message) logObject.get();
+        assertEquals(xmppMessage.getFromJid().getId(), messageLogged.getFromJid().getId());
+        assertEquals(xmppMessage.getMessageType(), messageLogged.getMessageType());
+        assertEquals(xmppMessage.getBody(), messageLogged.getBody());
+        assertEquals(xmppMessage.getStanza(), messageLogged.getStanza());
+        assertEquals(xmppMessage.getRecipientJids().length, messageLogged.getRecipientJids().length);
+        for (int recipientCount = 0; recipientCount < xmppMessage.getRecipientJids().length ; recipientCount++)
+        {
+            assertEquals(xmppMessage.getRecipientJids()[recipientCount].getId(),
+                    messageLogged.getRecipientJids()[recipientCount].getId());
+        }
     }
 }

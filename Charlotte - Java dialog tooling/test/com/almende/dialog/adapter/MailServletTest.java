@@ -1,25 +1,22 @@
 package com.almende.dialog.adapter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Properties;
+import com.almende.dialog.TestFramework;
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.test.TestServlet;
+import org.junit.Ignore;
+import org.junit.Test;
 
 import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Properties;
 
-import org.junit.Ignore;
-import org.junit.Test;
-
-import com.almende.dialog.LoggedPrintStream;
-import com.almende.dialog.TestFramework;
-import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.test.TestServlet;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class MailServletTest extends TestFramework
 {
@@ -97,15 +94,8 @@ public class MailServletTest extends TestFramework
                                                            localAddressMail, initialAgentURL );
         //create session
         getOrCreateSession( adapterConfig, remoteAddressEmail );
-
-        LoggedPrintStream lpsOut = mailAppointmentInteraction( "hi" );
-        String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
-        assertEquals( "Email sent:", lpsOutArray[0] );
-        assertEquals( "From: <"+ localAddressMail +">", lpsOutArray[1] );
-        assertEquals( "To: null<"+ remoteAddressEmail +">", lpsOutArray[2] );
-        assertEquals( "Subject: RE: null", lpsOutArray[3] );
-        assertEquals( "Body: " + TestServlet.APPOINTMENT_MAIN_QUESTION, lpsOutArray[4] );
-        assertEquals( String.format( "[ %s | %s  ]", TestServlet.APPOINTMENT_YES_ANSWER, TestServlet.APPOINTMENT_NO_ANSWER ), lpsOutArray[5].trim() );
+        TextMessage textMessage = mailAppointmentInteraction("hi");
+        assertOutgoingTextMessage(textMessage);
     }
     
     /**
@@ -120,14 +110,9 @@ public class MailServletTest extends TestFramework
         ReceiveAppointmentNewSessionMessageTest();
         
         //send Yup to the Appointment question
-        LoggedPrintStream lpsOut = mailAppointmentInteraction( TestServlet.APPOINTMENT_YES_ANSWER );
-        
-        String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
-        assertEquals( "Email sent:", lpsOutArray[0] );
-        assertEquals( "From: <"+ localAddressMail +">", lpsOutArray[1] );
-        assertEquals( "To: null<"+ remoteAddressEmail +">", lpsOutArray[2] );
-        assertEquals( "Subject: RE: null", lpsOutArray[3] );
-        assertEquals( "Body: " + TestServlet.APPOINTMENT_SECOND_QUESION, lpsOutArray[4].trim() );
+        TextMessage textMessage = mailAppointmentInteraction(TestServlet.APPOINTMENT_YES_ANSWER);
+
+        assertOutgoingTextMessage(textMessage);
     }
     
     /**
@@ -142,16 +127,11 @@ public class MailServletTest extends TestFramework
         AcceptAppointmentExistingSessionMessageTest();
         
         //send Yup to the Appointment question
-        LoggedPrintStream lpsOut = mailAppointmentInteraction( "120" ); //send free for 120 mins
-        
-        String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
-        assertEquals( "Email sent:", lpsOutArray[0] );
-        assertEquals( "From: <"+ localAddressMail +">", lpsOutArray[1].trim() );
-        assertEquals( "To: null<"+ remoteAddressEmail +">", lpsOutArray[2] );
-        assertEquals( "Subject: RE: null", lpsOutArray[3] );
-        assertEquals( "Body: " + TestServlet.APPOINTMENT_ACCEPTANCE_RESPONSE, lpsOutArray[4].trim() );
+        TextMessage textMessage = mailAppointmentInteraction("120");//send free for 120 mins
+
+        assertOutgoingTextMessage(textMessage);
     }
-    
+
     /**
      * use an existing session and send no to it
      * @throws Exception 
@@ -164,14 +144,8 @@ public class MailServletTest extends TestFramework
         ReceiveAppointmentNewSessionMessageTest();
         
         //send Yup to the Appointment question
-        LoggedPrintStream lpsOut = mailAppointmentInteraction( TestServlet.APPOINTMENT_NO_ANSWER );
-        
-        String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
-        assertEquals( "Email sent:", lpsOutArray[0] );
-        assertEquals( "From: <"+ localAddressMail +">", lpsOutArray[1] );
-        assertEquals( "To: null<"+ remoteAddressEmail +">", lpsOutArray[2] );
-        assertEquals( "Subject: RE: null", lpsOutArray[3] );
-        assertEquals( "Body: " + TestServlet.APPOINTMENT_REJECT_RESPONSE, lpsOutArray[4].trim() );
+        TextMessage textMessage = mailAppointmentInteraction(TestServlet.APPOINTMENT_NO_ANSWER);
+        assertOutgoingTextMessage(textMessage);
     }
 
     /**
@@ -191,21 +165,14 @@ public class MailServletTest extends TestFramework
         //adding some just text as part of the previous email
         String reply = TestServlet.APPOINTMENT_YES_ANSWER + " \n \n \n2013/9/6 <" + localAddressMail +"> \n \n> U heeft een ongeldig aantal gegeven. " +
         		"Geef een getal tussen 1 en 100 000. \n> \n \n \n \n--  \nKind regards, \nShravan Shetty "; 
-        LoggedPrintStream lpsOut = mailAppointmentInteraction( reply );
-        
-        String[] lpsOutArray = lpsOut.outputStream.toString().split( "\n" );
-        assertEquals( "Email sent:", lpsOutArray[0] );
-        assertEquals( "From: null<"+ localAddressMail +">", lpsOutArray[1] );
-        assertEquals( "To: null<"+ remoteAddressEmail +">", lpsOutArray[2] );
-        assertEquals( "Subject: RE: null", lpsOutArray[3] );
-        assertEquals( "Body: " + TestServlet.APPOINTMENT_SECOND_QUESION, lpsOutArray[4].trim() );
+        mailAppointmentInteraction( reply );
     }
     
     /**
      * @return
      * @throws Exception
      */
-    private LoggedPrintStream mailAppointmentInteraction(String message) throws Exception
+    private TextMessage mailAppointmentInteraction(String message) throws Exception
     {
         MimeMessage mimeMessage = new MimeMessage( Session.getDefaultInstance( new Properties(), null) );
         mimeMessage.setFrom( new InternetAddress( remoteAddressEmail ) );
@@ -222,15 +189,21 @@ public class MailServletTest extends TestFramework
         //fetch the processMessage function
         Method processMessage = fetchMethodByReflection( "processMessage", TextServlet.class,  TextMessage.class);
         
-        //collect log information to test processMessage locally
-        LoggedPrintStream lpsOut = LoggedPrintStream.create(System.out);
-        System.setOut( lpsOut );
-        
         int count = (Integer) invokeMethodByReflection( processMessage, mailServlet, textMessage );
         
-        System.out.flush();
-        System.setOut( lpsOut.underlying );
         assertTrue( count == 1 );
-        return lpsOut;
+        return textMessage;
+    }
+
+    private void assertOutgoingTextMessage(TextMessage textMessage) throws Exception
+    {
+        javax.mail.Message messageFromDetails = getMessageFromDetails(textMessage.getAddress(), textMessage.getLocalAddress(), responseQuestionString.get());
+
+        assertTrue(logObject.get() instanceof javax.mail.Message);
+        javax.mail.Message messageLogged = (javax.mail.Message) logObject.get();
+        assertEquals(messageFromDetails.getFrom(), messageLogged.getFrom());
+        assertEquals(messageFromDetails.getAllRecipients(), messageLogged.getAllRecipients());
+        assertEquals(messageFromDetails.getSubject(), messageLogged.getSubject().replaceAll("RE:|null","").trim());
+        assertEquals(messageFromDetails.getContent().toString(), messageLogged.getContent().toString());
     }
 }

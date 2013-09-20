@@ -129,6 +129,9 @@ public class VoiceXMLRESTProxy {
             session.setRemoteAddress(address);
             session.setType(adapterType);
             session.setTrackingToken(UUID.randomUUID().toString());
+            
+            if(session.getAdapterID()==null)
+                session.setAdapterID(config.getConfigId());
             session.storeSession();
 
             Question question = Question.fromURL(url,address,config.getMyAddress());
@@ -236,6 +239,7 @@ public class VoiceXMLRESTProxy {
 			session.setType(adapterType);
 			session.setPubKey(config.getPublicKey());
 			session.setTrackingToken(UUID.randomUUID().toString());
+			session.setAdapterID(config.getConfigId());
 		} 
 		else 
 		{
@@ -575,7 +579,7 @@ public class VoiceXMLRESTProxy {
 				}
 				break; //Jump from forloop
 			} else if (question.getType().equalsIgnoreCase("comment")) {
-				//question = question.answer(null, null, null);
+				//question = question.answer(null, adapterID, null, null);
 				break;
 			} else 	if (question.getType().equalsIgnoreCase("referral")) {
 				if(!question.getUrl().startsWith("tel:")) {
@@ -583,7 +587,8 @@ public class VoiceXMLRESTProxy {
 					//question = question.answer(null, null, null);
 //					break;
 				} else {
-					//break;
+				    // Break out because we are going to reconnect
+					break;
 				}			
 			} else {
 				break; //Jump from forloop (open questions, etc.)

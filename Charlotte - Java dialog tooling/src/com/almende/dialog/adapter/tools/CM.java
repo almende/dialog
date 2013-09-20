@@ -1,18 +1,17 @@
 package com.almende.dialog.adapter.tools;
 
-import java.io.StringWriter;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.Logger;
-
-import org.znerd.xmlenc.XMLOutputter;
-
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
+import org.znerd.xmlenc.XMLOutputter;
+
+import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
 
 public class CM {
 
@@ -81,9 +80,9 @@ public class CM {
     }
     
     public int broadcastMessage( String message, String subject, String from, String fromName,
-        Map<String, String> emailNameMap, AdapterConfig config ) throws Exception
+        Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
     {
-        String dcs = "";
+        String dcs;
         if ( !isGSMSeven( message ) )
         {
             dcs = MESSAGE_TYPE_UTF8;
@@ -93,7 +92,7 @@ public class CM {
             dcs = MESSAGE_TYPE_GSM7;
         }
         //create an CM XML request based on the parameters
-        StringWriter sw = createXMLRequest( message, from, emailNameMap, dcs );
+        StringWriter sw = createXMLRequest( message, from, addressNameMap, dcs );
 
         //add an interceptor so that send Messages is not enabled for unit tests
         if ( !ServerUtils.isInUnitTestingEnvironment() )
@@ -179,9 +178,13 @@ public class CM {
             log.severe( "Exception in creating question XML: " + ex.toString()+" xml: "+sw.toString() );
             return null;
         }
-        
+
+        log.info("XML created: "+ sw.toString());
         //perform some unit by logging the XML generated
-        TestFramework.log(sw.toString());
+        if(ServerUtils.isInUnitTestingEnvironment())
+        {
+            TestFramework.log(sw.toString());
+        }
         return sw;
     }
 	

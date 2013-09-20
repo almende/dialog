@@ -86,23 +86,13 @@
             <div class="container">
                 <div class="row">
                     <div class="span5">
-                        <label id="pubKeyLabel" style="min-width: 80px;" class="span1">Public Key:</label>
+                        <label id="pubKeyLabel" style="min-width: 80px;" class="span1">Public Key*</label>
                         <input id="pubKey" type="text" placeholder="Public Key" style="min-width: 300px;" class="span3">
                     </div>
                     <div class="span5">
-                        <label id="priKeyLabel" style="min-width: 80px;" class="span1">Private Key:</label>
+                        <label id="priKeyLabel" style="min-width: 80px;" class="span1">Private Key*</label>
                         <input id="priKey" type="text" placeholder="Private Key" style="min-width: 300px;"
                                class="span3">
-                    </div>
-                </div>
-                <div class="row" style="padding-bottom: 5px;">
-                    <div class="offset1">
-                        <button class="btn btn-primary" id="search" type="button"><i class="icon-white icon-search"></i>
-                            Search
-                        </button>
-                        <button class="btn btn-inverse" id="reset" type="reset"><i class="icon-white icon-repeat"></i>
-                            Reset
-                        </button>
                     </div>
                 </div>
                 <div class="span9">
@@ -111,7 +101,7 @@
                             <div class="accordion-heading">
                                 <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2"
                                    href="#collapseOne">
-                                    >> Options
+                                    >> Filters
                                 </a>
                             </div>
                             <div id="collapseOne" class="accordion-body collapse ">
@@ -164,6 +154,16 @@
                     </div>
                     <div align="center" style="text-align: center; visibility: hidden" id="lookUpMessage">
                     </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="offset4">
+                    <button class="btn btn-primary" id="search" type="button"><i class="icon-white icon-search"></i>
+                        Search
+                    </button>
+                    <button class="btn btn-inverse" id="reset" type="reset"><i class="icon-white icon-repeat"></i>
+                        Reset
+                    </button>
                 </div>
             </div>
         </form>

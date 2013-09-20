@@ -1,6 +1,7 @@
 package com.almende.dialog;
 
 import com.almende.dialog.util.KeyServerLib;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,11 +45,20 @@ public class LogWrapper {
                 adapterIDs.add( adapter.get( "id" ).asText() );
             }
         }
-		
-		if(adapterIDs.size()==0)
-			return Response.status(Status.BAD_REQUEST).entity("This account has no adapters").build();
+
+        if(ServerUtils.isInDeployedAppspotEnvironment())
+        {
+		    if(adapterIDs.size()==0)
+			    return Response.status(Status.BAD_REQUEST).entity("This account has no adapters").build();
+        }
+        else
+        {
+            adapterIDs = null;
+        }
 		
 		Logger logger = new Logger();
+        //TODO: remote this when logs  have adapterType in them. As of now everything is null
+        adapterType = null;
 		List<Log> logs = logger.find( adapterIDs, getMinSeverityLogLevelFor( level ), adapterType, endTime, offset, limit);
 //        //TODO: for testing only. remove when live
 //        if(logs == null || logs.isEmpty())

@@ -21,7 +21,7 @@ public class CMServletTest extends TestFramework
     @Test
     public void outBoundBroadcastCallSenderNameNotNullTest() throws Exception
     {
-        String remoteAddressVoice2 = "4561237890";
+        String remoteAddressVoice2 = "+31614753658";
         String senderName = "TestUser";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, "", "" );
@@ -29,21 +29,9 @@ public class CMServletTest extends TestFramework
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( remoteAddressVoice, "testUser1" );
         addressNameMap.put( remoteAddressVoice2, "testUser2" );
-        
-        NodeList messageNodeList = outBoundSMSCallXMLTest( addressNameMap, adapterConfig, simpleQuestion, senderName );
-        
-        for ( int nodeCounter = 2; nodeCounter < messageNodeList.item( 0 ).getChildNodes().getLength(); nodeCounter++ )
-        {
-            Node messageNode = messageNodeList.item( 0 ).getChildNodes().item( nodeCounter );
-            assertEquals( "MSG", messageNode.getNodeName() );
-            
-            assertEquals( "FROM", messageNode.getChildNodes().item( 1 ).getNodeName() );
-            assertEquals( senderName, messageNode.getChildNodes().item( 1 ).getChildNodes().item(0 ).getNodeValue() );
-            assertEquals( "BODY", messageNode.getChildNodes().item( 2 ).getNodeName() );
-            assertEquals( simpleQuestion, messageNode.getChildNodes().item( 2 ).getChildNodes().item(0 ).getNodeValue() );
-            assertEquals( "TO", messageNode.getChildNodes().item( 3 ).getNodeName() );
-            assertEquals( addressNameMap.keySet().toArray()[nodeCounter - 2], messageNode.getChildNodes().item( 3 ).getChildNodes().item(0 ).getNodeValue() );
-        }
+
+        outBoundSMSCallXMLTest(addressNameMap, adapterConfig, simpleQuestion, senderName);
+        assertXMLGeneratedFromOutBoundCall(addressNameMap, adapterConfig, simpleQuestion, senderName);
     }
     
     @Test
@@ -55,17 +43,8 @@ public class CMServletTest extends TestFramework
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put( remoteAddressVoice, null );
-        NodeList messageNodeList = outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, senderName );
-        
-        //assert the xml generated
-        Node messageNode = messageNodeList.item( 0 ).getChildNodes().item( 2 );
-        assertEquals( "MSG", messageNode.getNodeName() );
-        assertEquals( "FROM", messageNode.getChildNodes().item( 1 ).getNodeName() );
-        assertEquals( senderName, messageNode.getChildNodes().item( 1 ).getChildNodes().item(0 ).getNodeValue() );
-        assertEquals( "BODY", messageNode.getChildNodes().item( 2 ).getNodeName() );
-        assertEquals( simpleQuestion, messageNode.getChildNodes().item( 2 ).getChildNodes().item(0 ).getNodeValue() );
-        assertEquals( "TO", messageNode.getChildNodes().item( 3 ).getNodeName() );
-        assertEquals( remoteAddressVoice, messageNode.getChildNodes().item( 3 ).getChildNodes().item(0 ).getNodeValue() );
+        outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, senderName );
+        assertXMLGeneratedFromOutBoundCall(addressMap, adapterConfig, simpleQuestion, senderName);
     }
 
     /**
@@ -82,20 +61,31 @@ public class CMServletTest extends TestFramework
         
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put( remoteAddressVoice, null );
-        NodeList messageNodeList = outBoundSMSCallXMLTest( addressMap, adapterConfig, simpleQuestion, null );
-        
-        //assert the xml generated
-        Node messageNode = messageNodeList.item( 0 ).getChildNodes().item( 2 );
-        assertEquals( "MSG", messageNode.getNodeName() );
-        assertEquals( "FROM", messageNode.getChildNodes().item( 1 ).getNodeName() );
-        assertEquals( myAddress, messageNode.getChildNodes().item( 1 ).getChildNodes().item(0 ).getNodeValue() );
-        assertEquals( "BODY", messageNode.getChildNodes().item( 2 ).getNodeName() );
-        assertEquals( simpleQuestion, messageNode.getChildNodes().item( 2 ).getChildNodes().item(0 ).getNodeValue() );
-        assertEquals( "TO", messageNode.getChildNodes().item( 3 ).getNodeName() );
-        assertEquals( remoteAddressVoice, messageNode.getChildNodes().item( 3 ).getChildNodes().item(0 ).getNodeValue() );
+        outBoundSMSCallXMLTest( addressMap, adapterConfig, simpleQuestion, null );
+        assertXMLGeneratedFromOutBoundCall(addressMap, adapterConfig, simpleQuestion, myAddress);
     }
 
-    private NodeList outBoundSMSCallXMLTest( Map<String, String> addressNameMap, AdapterConfig adapterConfig, String simpleQuestion, String senderName) throws Exception
+    /**
+     * test if a "hi" TextMessage is generated and processed properly by XMPP servlet
+     *  as a new session
+     * @throws Exception
+     */
+//    @Test
+//    public void ReceiveAppointmentNewSessionMessageTest() throws Exception
+//    {
+//        String initialAgentURL = TestServlet.TEXT_SERVLET_PATH + "?appointment=start";
+//        //create mail adapter
+//        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY,
+//                localAddressMail, initialAgentURL );
+//        //create session
+//        getOrCreateSession( adapterConfig, remoteAddressEmail );
+//        TextMessage textMessage = mailAppointmentInteraction("hi");
+//        assertOutgoingTextMessage(textMessage);
+//    }
+
+    private void outBoundSMSCallXMLTest(Map<String, String> addressNameMap, AdapterConfig adapterConfig,
+                                            String simpleQuestion, String senderName)
+    throws Exception
     {
         DialogAgent dialogAgent = new DialogAgent();
         if(addressNameMap.size() > 1)
@@ -108,11 +98,51 @@ public class CMServletTest extends TestFramework
             dialogAgent.outboundCall( addressNameMap.keySet().iterator().next(), senderName, TestServlet.TEXT_SERVLET_PATH + "?simpleComment="+ simpleQuestion, 
                                       null, adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "" );
         }
-        
+    }
+
+    private void assertXMLGeneratedFromOutBoundCall(Map<String, String> addressNameMap, AdapterConfig adapterConfig, String simpleQuestion, String senderName) throws Exception {
         //fetch the xml generated
         Document builder = getXMLDocumentBuilder( logObject.get().toString() );
         NodeList messageNodeList = builder.getElementsByTagName( "MESSAGES" );
-        assertTrue( messageNodeList.getLength() != 0 );
-        return messageNodeList;
+        NodeList customerNodeList = builder.getElementsByTagName( "CUSTOMER" );
+        NodeList userNodeList = builder.getElementsByTagName( "USER" );
+        NodeList childMessageNodeList = builder.getElementsByTagName( "MSG" );
+        assertTrue( messageNodeList.getLength() == 1 );
+        assertTrue( customerNodeList.getLength() == 1 );
+        assertTrue( userNodeList.getLength() == 1 );
+        assertEquals(addressNameMap.size(), childMessageNodeList.getLength());
+        //fetch customerInfo from adapter
+        String[] customerInfo = adapterConfig.getAccessToken().split("\\|");
+        assertEquals(customerInfo[0], customerNodeList.item(0).getAttributes().getNamedItem("ID").getNodeValue());
+
+        assertEquals(customerInfo[1], userNodeList.item(0).getAttributes().getNamedItem("LOGIN").getNodeValue());
+
+        int addressCount = 0;
+        for(String address : addressNameMap.keySet())
+        {
+            Node msgNode = childMessageNodeList.item(addressCount);
+            NodeList childNodes = msgNode.getChildNodes();
+            for (int childNodeCount = 0; childNodeCount < childNodes.getLength(); childNodeCount++)
+            {
+                Node childNode = childNodes.item(childNodeCount);
+                if(childNode.getNodeName().equals("CONCATENATIONTYPE"))
+                {
+                    assertEquals("TEXT", childNode.getFirstChild().getNodeValue());
+                }
+                else if(childNode.getNodeName().equals("FROM"))
+                {
+                    assertEquals(senderName, childNode.getFirstChild().getNodeValue());
+                }
+                else if(childNode.getNodeName().equals("BODY"))
+                {
+                    assertEquals(simpleQuestion, childNode.getFirstChild().getNodeValue());
+                }
+                else if(childNode.getNodeName().equals("TO"))
+                {
+                    assertEquals(address.replaceFirst("\\+31", "0"), childNode.getFirstChild().getNodeValue());
+                }
+            }
+            addressCount++;
+        }
     }
 }

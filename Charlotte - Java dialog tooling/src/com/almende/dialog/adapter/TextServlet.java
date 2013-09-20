@@ -40,13 +40,13 @@ abstract public class TextServlet extends HttpServlet {
 	protected static final int LOOP_DETECTION=10;
 	protected static final String DEMODIALOG = "/charlotte/";
 	
-        /**
-         * @deprecated use {@link TextServlet#broadcastMessage(String,String,String,
-                                    String, String, Map, AdapterConfig) 
-            broadcastMessage} instead.  
-         */
-        @Deprecated
-	protected abstract int sendMessage(String message, String subject, String from, String fromName, 
+    /**
+     * @deprecated use {@link TextServlet#broadcastMessage(String,String,String,
+                                String, String, Map, AdapterConfig)
+        broadcastMessage} instead.
+     */
+    @Deprecated
+	protected abstract int sendMessage(String message, String subject, String from, String fromName,
 										String to, String toName, AdapterConfig config) throws Exception;
     
 	/**
@@ -175,13 +175,16 @@ abstract public class TextServlet extends HttpServlet {
 	 * updated startDialog with Broadcast functionality
 	 * @throws Exception
 	 */
-    public String startDialog( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config ) throws Exception
+    public String startDialog( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
+    throws Exception
     {
+        Map<String, String> formattedAddressNameMap = new HashMap<String, String>();
         if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
         {
             for ( String address : addressNameMap.keySet() )
             {
-                address = formatNumber( address ).replaceFirst( "\\+31", "0" );
+                String formattedAddress = formatNumber(address).replaceFirst("\\+31", "0");
+                formattedAddressNameMap.put(formattedAddress, addressNameMap.get(address));
             }
         }
         String localaddress = config.getMyAddress();
@@ -192,12 +195,12 @@ abstract public class TextServlet extends HttpServlet {
         Question question = null;
         Session session = null;
         //String sessionKeyMap = getAdapterType() + "|" + localaddress + "|" + ServerUtils.serialize(addressNameMap.keySet());
-        HashMap<String, String> sessionKeyMap = new HashMap<>();
+        HashMap<String, String> sessionKeyMap = new HashMap<String, String>();
         
         // If it is a broadcast don't provide the remote address because it is deceiving. 
         String loadAddress = null;
-        if(addressNameMap.size()==1)
-            loadAddress = addressNameMap.keySet().iterator().next();
+        if(formattedAddressNameMap.size()==1)
+            loadAddress = formattedAddressNameMap.keySet().iterator().next();
         
         //fetch question
         question = Question.fromURL( url, config.getConfigId(),  loadAddress);
@@ -209,7 +212,7 @@ abstract public class TextServlet extends HttpServlet {
         question.setPreferred_language( preferred_language );
         res = formQuestion( question, config.getConfigId(), loadAddress );        
 
-        for ( String address : addressNameMap.keySet() )
+        for ( String address : formattedAddressNameMap.keySet() )
         {
             //store the session first
             String sessionKey = getAdapterType() + "|" + localaddress + "|" + address;
@@ -237,7 +240,7 @@ abstract public class TextServlet extends HttpServlet {
         log.info( String.format( "fromName: %s senderName %s", fromName, senderName ) );
         //assign senderName with localAdress, if senderName is missing.
         senderName = senderName != null && !senderName.isEmpty() ? senderName : localaddress;
-        int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, senderName, addressNameMap, config );
+        int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, senderName, formattedAddressNameMap, config );
         for ( int i = 0; i < count; i++ )
         {
         	DDRWrapper.log( question, session, "Send", config );
@@ -363,10 +366,10 @@ abstract public class TextServlet extends HttpServlet {
                 
 		if (!escapeInput.skip) 
 		{
-		        if ( escapeInput.preferred_language == null )
-	                {
-	                    escapeInput.preferred_language = "nl";
-	                }
+            if ( escapeInput.preferred_language == null )
+            {
+                escapeInput.preferred_language = "nl";
+            }
 						
 			Question question = null;
 			boolean start = false;

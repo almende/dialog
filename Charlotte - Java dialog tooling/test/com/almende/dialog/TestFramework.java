@@ -48,7 +48,7 @@ public class TestFramework
     protected static final String localAddressChat      = "info@dialog-handler.appspotchat.com";
     protected static final String remoteAddressEmail         = "sshetty@ask-cs.com";
     protected static final String localAddressBroadsoft = "0854881000";
-    protected static final String remoteAddressVoice    = "01234546789";
+    protected static final String remoteAddressVoice    = "+311234546789";
     protected static final String TEST_PUBLIC_KEY    = "agent1@ask-cs.com";
     protected static final String TEST_PRIVATE_KEY = "test`_private_key";
     

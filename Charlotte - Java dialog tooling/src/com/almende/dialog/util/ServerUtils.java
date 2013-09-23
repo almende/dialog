@@ -1,6 +1,7 @@
 package com.almende.dialog.util;
 
 
+import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,7 +17,7 @@ import java.util.Map;
 
 public class ServerUtils
 {
-    private static ObjectMapper oMapper = new ObjectMapper();
+    private static ObjectMapper oMapper = ParallelInit.getObjectMapper();
     public static <T> T deserialize( String jsonString, Class<T> DeserializeClass )
     throws Exception
     {

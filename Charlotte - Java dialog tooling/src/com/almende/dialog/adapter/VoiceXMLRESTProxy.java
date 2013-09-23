@@ -1,28 +1,5 @@
 package com.almende.dialog.adapter;
 
-import java.io.ByteArrayInputStream;
-import java.io.StringWriter;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.UUID;
-import java.util.logging.Logger;
-
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.znerd.xmlenc.XMLOutputter;
-
 import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Broadsoft;
@@ -39,6 +16,24 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.znerd.xmlenc.XMLOutputter;
+
+import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.ByteArrayInputStream;
+import java.io.StringWriter;
+import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.logging.Logger;
 
 @Path("/vxml/")
 public class VoiceXMLRESTProxy {
@@ -105,13 +100,18 @@ public class VoiceXMLRESTProxy {
 		
 		return sessionKey;
 	}
-	
-    public static String dial( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
+
+    /**
+     * initiates a call to all the numbers in the addressNameMap and returns a
+     * Map of <adress, SessionKey>
+     * @return
+     */
+    public static HashMap<String, String> dial( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
     {
         String adapterType = "broadsoft";
-        String sessionKeys = "";
         String sessionPrefix = adapterType+"|"+config.getMyAddress()+"|" ;
-        
+        HashMap<String, String> resultSessionMap = new HashMap<String, String>();
+
         for ( String address : addressNameMap.keySet() )
         {
             String formattedAddress = formatNumber( address ).replaceFirst( "\\+31", "0" ) + "@outbound";
@@ -121,7 +121,7 @@ public class VoiceXMLRESTProxy {
             {
                 log.severe( "VoiceXMLRESTProxy couldn't start new outbound Dialog, adapterConfig not found? "
                     + sessionKey );
-                return "";
+                return null;
             }
             session.killed=false;
             session.setStartUrl(url);
@@ -148,9 +148,9 @@ public class VoiceXMLRESTProxy {
             extSession = bs.startCall( formattedAddress );
             session.setExternalSession( extSession );
             session.storeSession();
-            sessionKeys += sessionKey + System.getProperty("line.separator"); 
+            resultSessionMap.put(address, sessionKey);
         }
-        return sessionKeys;
+        return resultSessionMap;
     }
 	
 	public static ArrayList<String> getActiveCalls(AdapterConfig config) {

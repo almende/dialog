@@ -175,7 +175,7 @@ abstract public class TextServlet extends HttpServlet {
 	 * updated startDialog with Broadcast functionality
 	 * @throws Exception
 	 */
-    public String startDialog( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
+    public HashMap<String, String> startDialog( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
     throws Exception
     {
         Map<String, String> formattedAddressNameMap = new HashMap<String, String>();
@@ -194,7 +194,6 @@ abstract public class TextServlet extends HttpServlet {
         Return res = null;
         Question question = null;
         Session session = null;
-        //String sessionKeyMap = getAdapterType() + "|" + localaddress + "|" + ServerUtils.serialize(addressNameMap.keySet());
         HashMap<String, String> sessionKeyMap = new HashMap<String, String>();
         
         // If it is a broadcast don't provide the remote address because it is deceiving. 
@@ -221,7 +220,7 @@ abstract public class TextServlet extends HttpServlet {
             {
                 log.severe( "XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
                         + sessionKey );
-                return "";
+                return null;
             }
             session.setPubKey( config.getPublicKey() );
             session.setDirection( "outbound" );
@@ -245,7 +244,12 @@ abstract public class TextServlet extends HttpServlet {
         {
         	DDRWrapper.log( question, session, "Send", config );
         }
-        return count != 1 ? "Error generating XML" : om.writeValueAsString(sessionKeyMap);
+        if(count < 1)
+        {
+            log.severe("Error generating XML");
+
+        }
+        return sessionKeyMap;
     }
 	
 	public static void killSession(Session session){

@@ -1,14 +1,17 @@
 package com.almende.dialog.adapter.tools;
 
-import java.io.StringWriter;
-import java.util.logging.Logger;
-
-import org.znerd.xmlenc.XMLOutputter;
-
+import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
+import org.znerd.xmlenc.XMLOutputter;
+
+import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
 
 public class CM {
 
@@ -34,88 +37,151 @@ public class CM {
 		this.password = password;
 	}
 	
-	public int sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName, AdapterConfig config) throws Exception {
+    public int sendMessage( String message, String subject, String from, String fromName,
+        String to, String toName, AdapterConfig config ) throws Exception
+    {
+        String dcs = MESSAGE_TYPE_GSM7;
 
-		String type="TEXT";
-		String dcs=MESSAGE_TYPE_GSM7;
+        message = new String( message.getBytes(), "UTF-8" );
+        if ( !isGSMSeven( message ) )
+        {
+            dcs = MESSAGE_TYPE_UTF8;
+        }
+        else
+        {
+            dcs = MESSAGE_TYPE_GSM7;
+        }
+        
+        if(fromName==null)
+            fromName = from;
 
-		message = new String(message.getBytes(), "UTF-8");
-		if(!isGSMSeven(message)) {
-			dcs=MESSAGE_TYPE_UTF8;
-		} else {
-			dcs=MESSAGE_TYPE_GSM7;
-		}
-		
-		// TODO: Check message for special chars, if so change dcs.		
-		StringWriter sw = new StringWriter();
-		try {
-			XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
-			outputter.declaration();
-			outputter.startTag("MESSAGES");
-				outputter.startTag("CUSTOMER");
-					outputter.attribute("ID", userID);
-				outputter.endTag();
-				
-				outputter.startTag("USER");
-					outputter.attribute("LOGIN", userName);
-					outputter.attribute("PASSWORD", password);
-				outputter.endTag();
-				
-				// TODO: Create delivery reference
-				
-				outputter.startTag("MSG");
-				outputter.startTag("CONCATENATIONTYPE");
-					outputter.cdata(type);
-				outputter.endTag();
-				
-				outputter.startTag("FROM");
-					outputter.cdata(from);
-				outputter.endTag();
-				
-				outputter.startTag("BODY");
-					outputter.attribute("TYPE", type);
-					outputter.cdata(message);
-				outputter.endTag();
-				
-				outputter.startTag("TO");
-					outputter.cdata(to);
-				outputter.endTag();
-		
-				outputter.startTag("DCS");
-					outputter.cdata(dcs);
-				outputter.endTag();
-				
-				outputter.startTag("MINIMUMNUMBEROFMESSAGEPARTS");
-					outputter.cdata(MIN_MESSAGE_PARTS);
-				outputter.endTag();
-				
-				outputter.startTag("MAXIMUMNUMBEROFMESSAGEPARTS");
-					outputter.cdata(MAX_MESSAGE_PARTS);
-				outputter.endTag();
-				
-				outputter.endTag(); //MSG
-			outputter.endTag(); //MESSAGES
-			outputter.endDocument();
-		} catch (Exception e) {
-			log.severe("Exception in creating question XML: "+ e.toString());
-			return 0;
-		}
+        // TODO: Check message for special chars, if so change dcs.		
+        HashMap<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put( to, toName );
+        StringWriter sw = createXMLRequest( message, fromName, addressNameMap, dcs );
 
-		Client client = ParallelInit.getClient();
+        if ( !ServerUtils.isInUnitTestingEnvironment() && sw != null )
+        {
+            Client client = ParallelInit.getClient();
+            WebResource webResource = client.resource( url );
+            String result = webResource.type( "text/plain" ).post( String.class, sw.toString() );
+            if ( !result.equals( "" ) )
+            {
+                log.severe( "No result from CM!" );
+                log.severe( "Send from: " + from + " to: " + to );
+                throw new Exception( result );
+            }
+            log.info( "Result from CM: " + result );
+        }
+        return countMessageParts( message, dcs );
+    }
+    
+    public int broadcastMessage( String message, String subject, String from, String fromName,
+        Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+    {
+        String dcs;
+        if ( !isGSMSeven( message ) )
+        {
+            dcs = MESSAGE_TYPE_UTF8;
+        }
+        else
+        {
+            dcs = MESSAGE_TYPE_GSM7;
+        }
+        //create an CM XML request based on the parameters
+        StringWriter sw = createXMLRequest( message, from, addressNameMap, dcs );
 
-		WebResource webResource = client.resource(url);
-		String result = webResource.type("text/plain").post(String.class, sw.toString());
-		if(!result.equals("")) {
-			log.severe("No result from CM!");
-			log.severe("Send from: "+from+" to: "+to);
-			throw new Exception(result);
-		}
-		log.info("Result from CM: "+result);
-		
-		int count = countMessageParts(message, dcs);
-		return count;
-	}
+        //add an interceptor so that send Messages is not enabled for unit tests
+        if ( !ServerUtils.isInUnitTestingEnvironment() && sw!=null)
+        {
+            Client client = ParallelInit.getClient();
+            WebResource webResource = client.resource( url );
+            String result = webResource.type( "text/plain" ).post( String.class, sw.toString() );
+            if ( !result.equals( "" ) )
+                throw new Exception( result );
+            log.info( "Result from CM: " + result );
+        }
+        return countMessageParts( message, dcs );
+    }
+
+    /**
+     * create CM XML request. This is refactored from {@link CM#sendMessage} /
+     * {@link CM#broadcastMessage}
+     * 
+     * @since 9/9/2013 for v0.4.0
+     * @return
+     */
+    private StringWriter createXMLRequest( String message, String from, Map<String, String> emailNameMap, 
+        String dcs )
+    {
+        String type = "TEXT";
+        // TODO: Check message for special chars, if so change dcs.             
+        StringWriter sw = new StringWriter();
+        try
+        {
+            XMLOutputter outputter = new XMLOutputter( sw, "UTF-8" );
+            outputter.declaration();
+            outputter.startTag( "MESSAGES" );
+            outputter.startTag( "CUSTOMER" );
+            outputter.attribute( "ID", userID );
+            outputter.endTag();
+
+            outputter.startTag( "USER" );
+            outputter.attribute( "LOGIN", userName );
+            outputter.attribute( "PASSWORD", password );
+            outputter.endTag();
+
+            for ( String to : emailNameMap.keySet() )
+            {
+                outputter.startTag( "MSG" );
+                outputter.startTag( "CONCATENATIONTYPE" );
+                outputter.cdata( type );
+                outputter.endTag();
+
+                outputter.startTag( "FROM" );
+                outputter.cdata( from );
+                outputter.endTag();
+
+                outputter.startTag( "BODY" );
+                outputter.attribute( "TYPE", type );
+                outputter.cdata( message );
+                outputter.endTag();
+
+                outputter.startTag( "TO" );
+                outputter.cdata( to );
+                outputter.endTag();
+
+                outputter.startTag( "DCS" );
+                outputter.cdata( dcs );
+                outputter.endTag();
+
+                outputter.startTag( "MINIMUMNUMBEROFMESSAGEPARTS" );
+                outputter.cdata( MIN_MESSAGE_PARTS );
+                outputter.endTag();
+
+                outputter.startTag( "MAXIMUMNUMBEROFMESSAGEPARTS" );
+                outputter.cdata( MAX_MESSAGE_PARTS );
+                outputter.endTag();
+
+                outputter.endTag(); //MSG
+            }
+            outputter.endTag(); //MESSAGES
+            outputter.endDocument();
+        }
+        catch ( Exception ex )
+        {
+            log.severe( "Exception in creating question XML: " + ex.toString()+" xml: "+sw.toString() );
+            return null;
+        }
+
+        log.info("XML created: "+ sw.toString());
+        //perform some unit by logging the XML generated
+        if(ServerUtils.isInUnitTestingEnvironment())
+        {
+            TestFramework.log(sw.toString());
+        }
+        return sw;
+    }
 	
 	public boolean isGSMSeven(CharSequence str0) {
         if (str0 == null) {

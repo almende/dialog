@@ -73,7 +73,7 @@ public class YesNoAgent {
 	
 	@GET
 	@Produces("application/json")
-	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium, @QueryParam("responder") String responder, @QueryParam("requester") String requester){
+	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium, @QueryParam("remoteAddress") String responder, @QueryParam("requester") String requester){
 				
 		int questionNo=0;
 		if(requester.contains("live") || requester.contains("0107421217")){

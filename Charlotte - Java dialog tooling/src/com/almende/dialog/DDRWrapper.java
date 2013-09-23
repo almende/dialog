@@ -21,13 +21,19 @@ public class DDRWrapper {
 		node.put("timestamp", System.currentTimeMillis());
 		node.put("dateTime", formatter.format(System.currentTimeMillis()));
 		node.put("agent", url);
-		node.put("remoteAddress", session.getRemoteAddress());
-		node.put("direction", session.getDirection());
+		if(session != null)
+		{
+                    node.put( "remoteAddress", session.getRemoteAddress() );
+                    node.put( "direction", session.getDirection() );
+		}
 		node.put("type", type);
-		node.put("adapterType", config.getAdapterType());
-		node.put("adapterAddress", config.getMyAddress());
 		node.put("trackingToken", token);
-		node.put("pubKey", config.getPublicKey());
+		if(config != null )
+		{
+                    node.put( "adapterType", config.getAdapterType() );
+                    node.put( "adapterAddress", config.getMyAddress() );
+                    node.put( "pubKey", config.getPublicKey() );
+		}
 		try {
 			ddr.info(om.writeValueAsString(node));
 		} catch (Exception e) {

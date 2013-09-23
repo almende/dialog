@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Ask.Bootstrap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ask Bootstrap: a compilation of frameworks with handy scripts and styles, ready for cooking a new project or web app immediately.">
+    <meta name="author" content="Compiled and maintained by Cengiz Ulusoy. Refer to 'copyrights' section for licences of the components used in this project.">
+
+    <!-- Le styles -->
+    <link href="/src/css/bootstrap.css" rel="stylesheet">
+    <link href="/src/css/responsive.css" rel="stylesheet">
+    
+    <link href="/docs/js/google/prettify/prettify.css" rel="stylesheet">
+    
+    <link href="/docs/css/docs.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="/src/img/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/src/img/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/src/img/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/src/img/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="/src/img/ico/apple-touch-icon-57-precomposed.png">
+    
+  </head>
+
+  <body data-spy="scroll" data-target=".bs-docs-sidebar">
+
+    <!-- Navbar
+    ================================================== -->
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="/docs/index.html">Ask.Bootstrap</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="">
+                <a href="/docs/index.html">Home</a>
+              </li>
+              <li class="">
+                <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+              </li>
+              <li class="active">
+                <a href="/docs/base-css/typography.html">Base CSS</a>
+              </li>
+              <li class="">
+                <a href="/docs/components/dropdowns.html">Components</a>
+              </li>
+              <li class="">
+                <a href="/docs/javascript/overview.html">JavaScript</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Subhead
+================================================== -->
+<header class="jumbotron subhead" id="overview">
+  <div class="container">
+    <h1>Base CSS</h1>
+    <p class="lead">Fundamental HTML elements styled and enhanced with extensible classes.</p>
+  </div>
+</header>
+
+
+  <div class="container">
+
+    <!-- Docs nav
+    ================================================== -->
+    <div class="row">
+      <div class="span3">
+        <ul class="nav nav-tabs nav-stacked">
+          <li><a href="/docs/base-css/typography.html"><i class="icon-chevron-right"></i> Typography</a></li>
+          <li><a href="/docs/base-css/code.html"><i class="icon-chevron-right"></i> Code</a></li>
+          <li><a href="/docs/base-css/tables.html"><i class="icon-chevron-right"></i> Tables</a></li>
+          <li><a href="/docs/base-css/forms.html"><i class="icon-chevron-right"></i> Forms</a></li>
+          <li><a href="/docs/base-css/buttons.html"><i class="icon-chevron-right"></i> Buttons</a></li>
+          <li><a href="/docs/base-css/images.html"><i class="icon-chevron-right"></i> Images</a></li>
+          <li><a href="/docs/base-css/icons.html"><i class="icon-chevron-right"></i> Icons by Glyphicons</a></li>
+          <li class="active"><a href="/docs/base-css/entypo.html"><i class="icon-chevron-right"></i> Icons by Entypo</a></li>
+        </ul>
+      </div>
+      <div class="span9">
+
+
+
+        <!-- Icons
+        ================================================== -->
+        <section id="icons">
+          <div class="page-header">
+            <h1>Icons <small>by <a href="http://www.entypo.com" target="_blank">Entypo</a></small></h1>
+          </div>
+
+          <h2>The Entypo Pictogram Suite</h2>
+          <p>Entypo is a set of 250+ carefully crafted pictograms. The package contains an icon font — OpenType, TrueType and @font-face — EPS, PDF and PSD files. All released for free under the license CC BY-SA 3.0.</p>
+      
+      
+		      <ul class="entypo-icons entypo-regular">
+						<li title="phone">
+							<span class="pictogram">📞</span>
+							<p class="unicode">U+1F4DE</p>
+							<p class="html">&amp;#128222;</p>
+						</li>
+						<li title="mobile">
+							<span class="pictogram">📱</span>
+							<p class="unicode">U+1F4F1</p>
+							<p class="html">&amp;#128241;</p>
+						</li>
+						<li title="mouse">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E789</p>
+							<p class="html">&amp;#59273;</p>
+						</li>
+						<li title="address">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E723</p>
+							<p class="html">&amp;#59171;</p>
+						</li>
+						<li title="mail">
+							<span class="pictogram">✉</span>
+							<p class="unicode">U+2709</p>
+							<p class="html">&amp;#9993;</p>
+						</li>
+						<li title="paper-plane">
+							<span class="pictogram">🔿</span>
+							<p class="unicode">U+1F53F</p>
+							<p class="html">&amp;#128319;</p>
+						</li>
+						<li title="pencil">
+							<span class="pictogram">✎</span>
+							<p class="unicode">U+270E</p>
+							<p class="html">&amp;#9998;</p>
+						</li>
+						<li title="feather">
+							<span class="pictogram">✒</span>
+							<p class="unicode">U+2712</p>
+							<p class="html">&amp;#10002;</p>
+						</li>
+						<li title="attach">
+							<span class="pictogram">📎</span>
+							<p class="unicode">U+1F4CE</p>
+							<p class="html">&amp;#128206;</p>
+						</li>
+						<li title="inbox" class="last">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E777</p>
+							<p class="html">&amp;#59255;</p>
+						</li>
+						<li title="reply">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E712</p>
+							<p class="html">&amp;#59154;</p>
+						</li>
+						<li title="reply-all">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E713</p>
+							<p class="html">&amp;#59155;</p>
+						</li>
+						<li title="forward">
+							<span class="pictogram">➦</span>
+							<p class="unicode">U+27A6</p>
+							<p class="html">&amp;#10150;</p>
+						</li>
+						<li title="user">
+							<span class="pictogram">👤</span>
+							<p class="unicode">U+1F464</p>
+							<p class="html">&amp;#128100;</p>
+						</li>
+						<li title="users">
+							<span class="pictogram">👥</span>
+							<p class="unicode">U+1F465</p>
+							<p class="html">&amp;#128101;</p>
+						</li>
+						<li title="add-user">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E700</p>
+							<p class="html">&amp;#59136;</p>
+						</li>
+						<li title="vcard">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E722</p>
+							<p class="html">&amp;#59170;</p>
+						</li>
+						<li title="export">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E715</p>
+							<p class="html">&amp;#59157;</p>
+						</li>
+						<li title="location">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E724</p>
+							<p class="html">&amp;#59172;</p>
+						</li>
+						<li title="map" class="last">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E727</p>
+							<p class="html">&amp;#59175;</p>
+						</li>
+						<li title="compass">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E728</p>
+							<p class="html">&amp;#59176;</p>
+						</li>
+						<li title="direction">
+							<span class="pictogram">➢</span>
+							<p class="unicode">U+27A2</p>
+							<p class="html">&amp;#10146;</p>
+						</li>
+						<li title="hair-cross">
+							<span class="pictogram">🎯</span>
+							<p class="unicode">U+1F3AF</p>
+							<p class="html">&amp;#127919;</p>
+						</li>
+						<li title="share">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E73C</p>
+							<p class="html">&amp;#59196;</p>
+						</li>
+						<li title="shareable">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E73E</p>
+							<p class="html">&amp;#59198;</p>
+						</li>
+						<li title="heart">
+							<span class="pictogram">♥</span>
+							<p class="unicode">U+2665</p>
+							<p class="html">&amp;hearts;</p>
+						</li>
+						<li title="heart-empty">
+							<span class="pictogram">♡</span>
+							<p class="unicode">U+2661</p>
+							<p class="html">&amp;#9825;</p>
+						</li>
+						<li title="star">
+							<span class="pictogram">★</span>
+							<p class="unicode">U+2605</p>
+							<p class="html">&amp;#9733;</p>
+						</li>
+						<li title="star-empty">
+							<span class="pictogram">☆</span>
+							<p class="unicode">U+2606</p>
+							<p class="html">&amp;#9734;</p>
+						</li>
+						<li title="thumbs-up" class="last">
+							<span class="pictogram">👍</span>
+							<p class="unicode">U+1F44D</p>
+							<p class="html">&amp;#128077;</p>
+						</li>
+						<li title="thumbs-down">
+							<span class="pictogram">👎</span>
+							<p class="unicode">U+1F44E</p>
+							<p class="html">&amp;#128078;</p>
+						</li>
+						<li title="chat">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E720</p>
+							<p class="html">&amp;#59168;</p>
+						</li>
+						<li title="comment">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E718</p>
+							<p class="html">&amp;#59160;</p>
+						</li>
+						<li title="quote">
+							<span class="pictogram">❞</span>
+							<p class="unicode">U+275E</p>
+							<p class="html">&amp;#10078;</p>
+						</li>
+						<li title="home">
+							<span class="pictogram">⌂</span>
+							<p class="unicode">U+2302</p>
+							<p class="html">&amp;#8962;</p>
+						</li>
+						<li title="popup">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E74C</p>
+							<p class="html">&amp;#59212;</p>
+						</li>
+						<li title="search">
+							<span class="pictogram">🔍</span>
+							<p class="unicode">U+1F50D</p>
+							<p class="html">&amp;#128269;</p>
+						</li>
+						<li title="flashlight">
+							<span class="pictogram">🔦</span>
+							<p class="unicode">U+1F526</p>
+							<p class="html">&amp;#128294;</p>
+						</li>
+						<li title="print">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E716</p>
+							<p class="html">&amp;#59158;</p>
+						</li>
+						<li title="bell" class="last">
+							<span class="pictogram">🔔</span>
+							<p class="unicode">U+1F514</p>
+							<p class="html">&amp;#128276;</p>
+						</li>
+						<li title="link">
+							<span class="pictogram">🔗</span>
+							<p class="unicode">U+1F517</p>
+							<p class="html">&amp;#128279;</p>
+						</li>
+						<li title="flag">
+							<span class="pictogram">⚑</span>
+							<p class="unicode">U+2691</p>
+							<p class="html">&amp;#9873;</p>
+						</li>
+						<li title="cog">
+							<span class="pictogram">⚙</span>
+							<p class="unicode">U+2699</p>
+							<p class="html">&amp;#9881;</p>
+						</li>
+						<li title="tools">
+							<span class="pictogram">⚒</span>
+							<p class="unicode">U+2692</p>
+							<p class="html">&amp;#9874;</p>
+						</li>
+						<li title="trophy">
+							<span class="pictogram">🏆</span>
+							<p class="unicode">U+1F3C6</p>
+							<p class="html">&amp;#127942;</p>
+						</li>
+						<li title="tag">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E70C</p>
+							<p class="html">&amp;#59148;</p>
+						</li>
+						<li title="camera">
+							<span class="pictogram">📷</span>
+							<p class="unicode">U+1F4F7</p>
+							<p class="html">&amp;#128247;</p>
+						</li>
+						<li title="megaphone">
+							<span class="pictogram">📣</span>
+							<p class="unicode">U+1F4E3</p>
+							<p class="html">&amp;#128227;</p>
+						</li>
+						<li title="moon">
+							<span class="pictogram">☽</span>
+							<p class="unicode">U+263D</p>
+							<p class="html">&amp;#9789;</p>
+						</li>
+						<li title="palette" class="last">
+							<span class="pictogram">🎨</span>
+							<p class="unicode">U+1F3A8</p>
+							<p class="html">&amp;#127912;</p>
+						</li>
+						<li title="leaf">
+							<span class="pictogram">🍂</span>
+							<p class="unicode">U+1F342</p>
+							<p class="html">&amp;#127810;</p>
+						</li>
+						<li title="note">
+							<span class="pictogram">♪</span>
+							<p class="unicode">U+266A</p>
+							<p class="html">&amp;#9834;</p>
+						</li>
+						<li title="beamed-note">
+							<span class="pictogram">♫</span>
+							<p class="unicode">U+266B</p>
+							<p class="html">&amp;#9835;</p>
+						</li>
+						<li title="new">
+							<span class="pictogram">💥</span>
+							<p class="unicode">U+1F4A5</p>
+							<p class="html">&amp;#128165;</p>
+						</li>
+						<li title="graduation-cap">
+							<span class="pictogram">🎓</span>
+							<p class="unicode">U+1F393</p>
+							<p class="html">&amp;#127891;</p>
+						</li>
+						<li title="book">
+							<span class="pictogram">📕</span>
+							<p class="unicode">U+1F4D5</p>
+							<p class="html">&amp;#128213;</p>
+						</li>
+						<li title="newspaper">
+							<span class="pictogram">📰</span>
+							<p class="unicode">U+1F4F0</p>
+							<p class="html">&amp;#128240;</p>
+						</li>
+						<li title="bag">
+							<span class="pictogram">👜</span>
+							<p class="unicode">U+1F45C</p>
+							<p class="html">&amp;#128092;</p>
+						</li>
+						<li title="airplane">
+							<span class="pictogram">✈</span>
+							<p class="unicode">U+2708</p>
+							<p class="html">&amp;#9992;</p>
+						</li>
+						<li title="lifebuoy" class="last">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E788</p>
+							<p class="html">&amp;#59272;</p>
+						</li>
+						<li title="eye">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E70A</p>
+							<p class="html">&amp;#59146;</p>
+						</li>
+						<li title="clock">
+							<span class="pictogram"> 🕔 </span>
+							<p class="unicode">U+1F554</p>
+							<p class="html">&amp;#128340; </p>
+						</li>
+						<li title="mic">
+							<span class="pictogram">🎤</span>
+							<p class="unicode">U+1F3A4</p>
+							<p class="html">&amp;#127908;</p>
+						</li>
+						<li title="calendar">
+							<span class="pictogram">📅</span>
+							<p class="unicode">U+1F4C5</p>
+							<p class="html">&amp;#128197;</p>
+						</li>
+						<li title="flash">
+							<span class="pictogram">⚡</span>
+							<p class="unicode">U+26A1</p>
+							<p class="html">&amp;#9889;</p>
+						</li>
+						<li title="thunder-cloud">
+							<span class="pictogram">⛈</span>
+							<p class="unicode">U+26C8</p>
+							<p class="html">&amp;#9928;</p>
+						</li>
+						<li title="droplet">
+							<span class="pictogram">💧</span>
+							<p class="unicode">U+1F4A7</p>
+							<p class="html">&amp;#128167;</p>
+						</li>
+						<li title="cd">
+							<span class="pictogram">💿</span>
+							<p class="unicode">U+1F4BF</p>
+							<p class="html">&amp;#128191;</p>
+						</li>
+						<li title="briefcase">
+							<span class="pictogram">💼</span>
+							<p class="unicode">U+1F4BC</p>
+							<p class="html">&amp;#128188;</p>
+						</li>
+						<li title="air" class="last">
+							<span class="pictogram">💨</span>
+							<p class="unicode">U+1F4A8</p>
+							<p class="html">&amp;#128168;</p>
+						</li>
+						<li title="hourglass">
+							<span class="pictogram">⏳</span>
+							<p class="unicode">U+23F3</p>
+							<p class="html">&amp;#9203;</p>
+						</li>
+						<li title="gauge">
+							<span class="pictogram">🛇</span>
+							<p class="unicode">U+1F6C7</p>
+							<p class="html">&amp;#128711;</p>
+						</li>
+						<li title="language">
+							<span class="pictogram">🎔</span>
+							<p class="unicode">U+1F394</p>
+							<p class="html">&amp;#127892;</p>
+						</li>
+						<li title="network">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E776</p>
+							<p class="html">&amp;#59254;</p>
+						</li>
+						<li title="key">
+							<span class="pictogram">🔑</span>
+							<p class="unicode">U+1F511</p>
+							<p class="html">&amp;#128273;</p>
+						</li>
+						<li title="battery">
+							<span class="pictogram">🔋</span>
+							<p class="unicode">U+1F50B</p>
+							<p class="html">&amp;#128267;</p>
+						</li>
+						<li title="bucket">
+							<span class="pictogram">📾</span>
+							<p class="unicode">U+1F4FE</p>
+							<p class="html">&amp;#128254;</p>
+						</li>
+						<li title="magnet">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E7A1</p>
+							<p class="html">&amp;#59297;</p>
+						</li>
+						<li title="drive">
+							<span class="pictogram">📽</span>
+							<p class="unicode">U+1F4FD</p>
+							<p class="html">&amp;#128253;</p>
+						</li>
+						<li title="cup" class="last">
+							<span class="pictogram">☕</span>
+							<p class="unicode">U+2615</p>
+							<p class="html">&amp;#9749;</p>
+						</li>
+						<li title="rocket">
+							<span class="pictogram">🚀</span>
+							<p class="unicode">U+1F680</p>
+							<p class="html">&amp;#128640;</p>
+						</li>
+						<li title="brush">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E79A</p>
+							<p class="html">&amp;#59290;</p>
+						</li>
+						<li title="suitcase">
+							<span class="pictogram">🛆</span>
+							<p class="unicode">U+1F6C6</p>
+							<p class="html">&amp;#128710;</p>
+						</li>
+						<li title="traffic-cone">
+							<span class="pictogram">🛈</span>
+							<p class="unicode">U+1F6C8</p>
+							<p class="html">&amp;#128712;</p>
+						</li>
+						<li title="globe">
+							<span class="pictogram">🌎</span>
+							<p class="unicode">U+1F30E</p>
+							<p class="html">&amp;#127758;</p>
+						</li>
+						<li title="keyboard">
+							<span class="pictogram">⌨</span>
+							<p class="unicode">U+2328</p>
+							<p class="html">&amp;#9000;</p>
+						</li>
+						<li title="browser">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E74E</p>
+							<p class="html">&amp;#59214;</p>
+						</li>
+						<li title="publish">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E74D</p>
+							<p class="html">&amp;#59213;</p>
+						</li>
+						<li title="progress-3">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E76B</p>
+							<p class="html">&amp;#59243;</p>
+						</li>
+						<li title="progress-2" class="last">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E76A</p>
+							<p class="html">&amp;#59242;</p>
+						</li>
+						<li title="progress-1">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E769</p>
+							<p class="html">&amp;#59241;</p>
+						</li>
+						<li title="progress-0">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E768</p>
+							<p class="html">&amp;#59240;</p>
+						</li>
+						<li title="light-down">
+							<span class="pictogram">🔅</span>
+							<p class="unicode">U+1F505</p>
+							<p class="html">&amp;#128261;</p>
+						</li>
+						<li title="light-up">
+							<span class="pictogram">🔆</span>
+							<p class="unicode">U+1F506</p>
+							<p class="html">&amp;#128262;</p>
+						</li>
+						<li title="adjust">
+							<span class="pictogram">◑</span>
+							<p class="unicode">U+25D1</p>
+							<p class="html">&amp;#9681;</p>
+						</li>
+						<li title="code">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E714</p>
+							<p class="html">&amp;#59156;</p>
+						</li>
+						<li title="monitor">
+							<span class="pictogram">💻</span>
+							<p class="unicode">U+1F4BB</p>
+							<p class="html">&amp;#128187;</p>
+						</li>
+						<li title="infinity">
+							<span class="pictogram">∞</span>
+							<p class="unicode">U+221E</p>
+							<p class="html">&amp;infin;</p>
+						</li>
+						<li title="light-bulb">
+							<span class="pictogram">💡</span>
+							<p class="unicode">U+1F4A1</p>
+							<p class="html">&amp;#128161;</p>
+						</li>
+						<li title="credit-card" class="last">
+							<span class="pictogram">💳</span>
+							<p class="unicode">U+1F4B3</p>
+							<p class="html">&amp;#128179;</p>
+						</li>
+						<li title="database">
+							<span class="pictogram">📸</span>
+							<p class="unicode">U+1F4F8</p>
+							<p class="html">&amp;#128248;</p>
+						</li>
+						<li title="voicemail">
+							<span class="pictogram">✇</span>
+							<p class="unicode">U+2707</p>
+							<p class="html">&amp;#9991;</p>
+						</li>
+						<li title="clipboard">
+							<span class="pictogram">📋</span>
+							<p class="unicode">U+1F4CB</p>
+							<p class="html">&amp;#128203;</p>
+						</li>
+						<li title="cart">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E73D</p>
+							<p class="html">&amp;#59197;</p>
+						</li>
+						<li title="box">
+							<span class="pictogram">📦</span>
+							<p class="unicode">U+1F4E6</p>
+							<p class="html">&amp;#128230;</p>
+						</li>
+						<li title="ticket">
+							<span class="pictogram">🎫</span>
+							<p class="unicode">U+1F3AB</p>
+							<p class="html">&amp;#127915;</p>
+						</li>
+						<li title="rss">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E73A</p>
+							<p class="html">&amp;#59194;</p>
+						</li>
+						<li title="signal">
+							<span class="pictogram">📶</span>
+							<p class="unicode">U+1F4F6</p>
+							<p class="html">&amp;#128246;</p>
+						</li>
+						<li title="thermometer">
+							<span class="pictogram">📿</span>
+							<p class="unicode">U+1F4FF</p>
+							<p class="html">&amp;#128255;</p>
+						</li>
+						<li title="water" class="last">
+							<span class="pictogram">💦</span>
+							<p class="unicode">U+1F4A6</p>
+							<p class="html">&amp;#128166;</p>
+						</li>
+						<li title="sweden">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F601</p>
+							<p class="html">&amp;#62977;</p>
+						</li>
+						<li title="line-graph">
+							<span class="pictogram">📈</span>
+							<p class="unicode">U+1F4C8</p>
+							<p class="html">&amp;#128200;</p>
+						</li>
+						<li title="pie-chart">
+							<span class="pictogram">◴</span>
+							<p class="unicode">U+25F4</p>
+							<p class="html">&amp;#9716;</p>
+						</li>
+						<li title="bar-graph">
+							<span class="pictogram">📊</span>
+							<p class="unicode">U+1F4CA</p>
+							<p class="html">&amp;#128202;</p>
+						</li>
+						<li title="area-graph">
+							<span class="pictogram">🔾</span>
+							<p class="unicode">U+1F53E</p>
+							<p class="html">&amp;#128318;</p>
+						</li>
+						<li title="lock">
+							<span class="pictogram">🔒</span>
+							<p class="unicode">U+1F512</p>
+							<p class="html">&amp;#128274;</p>
+						</li>
+						<li title="lock-open">
+							<span class="pictogram">🔓</span>
+							<p class="unicode">U+1F513</p>
+							<p class="html">&amp;#128275;</p>
+						</li>
+						<li title="logout">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E741</p>
+							<p class="html">&amp;#59201;</p>
+						</li>
+						<li title="login">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E740</p>
+							<p class="html">&amp;#59200;</p>
+						</li>
+						<li title="check" class="last">
+							<span class="pictogram">✓</span>
+							<p class="unicode">U+2713</p>
+							<p class="html">&amp;#10003;</p>
+						</li>
+						<li title="cross">
+							<span class="pictogram">❌</span>
+							<p class="unicode">U+274C</p>
+							<p class="html">&amp;#10060;</p>
+						</li>
+						<li title="squared-minus">
+							<span class="pictogram">⊟</span>
+							<p class="unicode">U+229F</p>
+							<p class="html">&amp;#8863;</p>
+						</li>
+						<li title="squared-plus">
+							<span class="pictogram">⊞</span>
+							<p class="unicode">U+229E</p>
+							<p class="html">&amp;#8862;</p>
+						</li>
+						<li title="squared-cross">
+							<span class="pictogram">❎</span>
+							<p class="unicode"> U+274E </p>
+							<p class="html">&amp;#10062;</p>
+						</li>
+						<li title="circled-minus">
+							<span class="pictogram">⊖</span>
+							<p class="unicode">U+2296</p>
+							<p class="html">&amp;#8854;</p>
+						</li>
+						<li title="circled-plus">
+							<span class="pictogram">⊕</span>
+							<p class="unicode">U+2295</p>
+							<p class="html">&amp;oplus;</p>
+						</li>
+						<li title="circled-cross">
+							<span class="pictogram">✖</span>
+							<p class="unicode">U+2716</p>
+							<p class="html">&amp;#10006;</p>
+						</li>
+						<li title="minus">
+							<span class="pictogram">➖</span>
+							<p class="unicode">U+2796</p>
+							<p class="html">&amp;#10134;</p>
+						</li>
+						<li title="plus">
+							<span class="pictogram">➕</span>
+							<p class="unicode">U+2795</p>
+							<p class="html">&amp;#10133;</p>
+						</li>
+						<li title="erase" class="last">
+							<span class="pictogram">⌫</span>
+							<p class="unicode">U+232B</p>
+							<p class="html">&amp;#9003;</p>
+						</li>
+						<li title="block">
+							<span class="pictogram">🚫</span>
+							<p class="unicode">U+1F6AB</p>
+							<p class="html">&amp;#128683;</p>
+						</li>
+						<li title="info">
+							<span class="pictogram">ℹ</span>
+							<p class="unicode">U+2139</p>
+							<p class="html">&amp;#8505;</p>
+						</li>
+						<li title="circled-info">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E705</p>
+							<p class="html">&amp;#59141;</p>
+						</li>
+						<li title="help">
+							<span class="pictogram">❓</span>
+							<p class="unicode">U+2753</p>
+							<p class="html">&amp;#10067;</p>
+						</li>
+						<li title="circled-help">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E704</p>
+							<p class="html">&amp;#59140;</p>
+						</li>
+						<li title="warning">
+							<span class="pictogram">⚠</span>
+							<p class="unicode">U+26A0</p>
+							<p class="html">&amp;#9888;</p>
+						</li>
+						<li title="cycle">
+							<span class="pictogram">🔄</span>
+							<p class="unicode">U+1F504</p>
+							<p class="html">&amp;#128260;</p>
+						</li>
+						<li title="cw">
+							<span class="pictogram">⟳</span>
+							<p class="unicode">U+27F3</p>
+							<p class="html">&amp;#10227;</p>
+						</li>
+						<li title="ccw">
+							<span class="pictogram">⟲</span>
+							<p class="unicode">U+27F2</p>
+							<p class="html">&amp;#10226;</p>
+						</li>
+						<li title="shuffle" class="last">
+							<span class="pictogram">🔀</span>
+							<p class="unicode">U+1F500</p>
+							<p class="html">&amp;#128256;</p>
+						</li>
+						<li title="back">
+							<span class="pictogram">🔙</span>
+							<p class="unicode">U+1F519</p>
+							<p class="html">&amp;#128281;</p>
+						</li>
+						<li title="level-down">
+							<span class="pictogram">↳</span>
+							<p class="unicode">U+21B3</p>
+							<p class="html">&amp;#8627;</p>
+						</li>
+						<li title="retweet">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E717</p>
+							<p class="html">&amp;#59159;</p>
+						</li>
+						<li title="loop">
+							<span class="pictogram">🔁</span>
+							<p class="unicode">U+1F501</p>
+							<p class="html">&amp;#128257;</p>
+						</li>
+						<li title="back-in-time">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E771</p>
+							<p class="html">&amp;#59249;</p>
+						</li>
+						<li title="level-up">
+							<span class="pictogram">↰</span>
+							<p class="unicode">U+21B0</p>
+							<p class="html">&amp;#8624;</p>
+						</li>
+						<li title="switch">
+							<span class="pictogram">⇆</span>
+							<p class="unicode">U+21C6</p>
+							<p class="html">&amp;#8646;</p>
+						</li>
+						<li title="numbered-list">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E005</p>
+							<p class="html">&amp;#57349;</p>
+						</li>
+						<li title="add-to-list">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E003</p>
+							<p class="html">&amp;#57347;</p>
+						</li>
+						<li title="layout" class="last">
+							<span class="pictogram">⚏</span>
+							<p class="unicode">U+268F</p>
+							<p class="html">&amp;#9871;</p>
+						</li>
+						<li title="list">
+							<span class="pictogram">☰</span>
+							<p class="unicode">U+2630</p>
+							<p class="html">&amp;#9776;</p>
+						</li>
+						<li title="text-doc">
+							<span class="pictogram">📄</span>
+							<p class="unicode">U+1F4C4</p>
+							<p class="html">&amp;#128196;</p>
+						</li>
+						<li title="text-doc-inverted">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E731</p>
+							<p class="html">&amp;#59185;</p>
+						</li>
+						<li title="doc">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E730</p>
+							<p class="html">&amp;#59184;</p>
+						</li>
+						<li title="docs">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E736</p>
+							<p class="html">&amp;#59190;</p>
+						</li>
+						<li title="landscape-doc">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E737</p>
+							<p class="html">&amp;#59191;</p>
+						</li>
+						<li title="picture">
+							<span class="pictogram">🌄</span>
+							<p class="unicode">U+1F304</p>
+							<p class="html">&amp;#127748;</p>
+						</li>
+						<li title="video">
+							<span class="pictogram">🎬</span>
+							<p class="unicode">U+1F3AC</p>
+							<p class="html">&amp;#127916;</p>
+						</li>
+						<li title="music">
+							<span class="pictogram">🎵</span>
+							<p class="unicode">U+1F3B5</p>
+							<p class="html">&amp;#127925;</p>
+						</li>
+						<li title="folder" class="last">
+							<span class="pictogram">📁</span>
+							<p class="unicode">U+1F4C1</p>
+							<p class="html">&amp;#128193;</p>
+						</li>
+						<li title="archive">
+							<span class="pictogram">  </span>
+							<p class="unicode">U+E800</p>
+							<p class="html">&amp;#59392;</p>
+						</li>
+						<li title="trash">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E729</p>
+							<p class="html">&amp;#59177;</p>
+						</li>
+						<li title="upload">
+							<span class="pictogram">📤</span>
+							<p class="unicode">U+1F4E4</p>
+							<p class="html">&amp;#128228;</p>
+						</li>
+						<li title="download">
+							<span class="pictogram">📥</span>
+							<p class="unicode">U+1F4E5</p>
+							<p class="html">&amp;#128229;</p>
+						</li>
+						<li title="save">
+							<span class="pictogram">💾</span>
+							<p class="unicode">U+1F4BE</p>
+							<p class="html">&amp;#128190;</p>
+						</li>
+						<li title="install">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E778</p>
+							<p class="html">&amp;#59256;</p>
+						</li>
+						<li title="cloud">
+							<span class="pictogram">☁</span>
+							<p class="unicode">U+2601</p>
+							<p class="html">&amp;#9729;</p>
+						</li>
+						<li title="upload-cloud">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E711</p>
+							<p class="html">&amp;#59153;</p>
+						</li>
+						<li title="bookmark">
+							<span class="pictogram">🔖</span>
+							<p class="unicode">U+1F516</p>
+							<p class="html">&amp;#128278;</p>
+						</li>
+						<li title="bookmarks" class="last">
+							<span class="pictogram">📑</span>
+							<p class="unicode">U+1F4D1</p>
+							<p class="html">&amp;#128209;</p>
+						</li>
+						<li title="open-book">
+							<span class="pictogram">📖</span>
+							<p class="unicode">U+1F4D6</p>
+							<p class="html">&amp;#128214;</p>
+						</li>
+						<li title="play">
+							<span class="pictogram">▶</span>
+							<p class="unicode">U+25B6</p>
+							<p class="html">&amp;#9654;</p>
+						</li>
+						<li title="paus">
+							<span class="pictogram">‖</span>
+							<p class="unicode">U+2016</p>
+							<p class="html">&amp;#8214;</p>
+						</li>
+						<li title="record">
+							<span class="pictogram">●</span>
+							<p class="unicode">U+25CF</p>
+							<p class="html">&amp;#9679;</p>
+						</li>
+						<li title="stop">
+							<span class="pictogram">■</span>
+							<p class="unicode">U+25A0</p>
+							<p class="html">&amp;#9632;</p>
+						</li>
+						<li title="ff">
+							<span class="pictogram">⏩</span>
+							<p class="unicode">U+23E9</p>
+							<p class="html">&amp;#9193;</p>
+						</li>
+						<li title="fb">
+							<span class="pictogram">⏪</span>
+							<p class="unicode">U+23EA</p>
+							<p class="html">&amp;#9194;</p>
+						</li>
+						<li title="to-start">
+							<span class="pictogram">⏮</span>
+							<p class="unicode">U+23EE</p>
+							<p class="html">&amp;#9198;</p>
+						</li>
+						<li title="to-end">
+							<span class="pictogram">⏭</span>
+							<p class="unicode">U+23ED</p>
+							<p class="html">&amp;#9197;</p>
+						</li>
+						<li title="resize-full" class="last">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E744</p>
+							<p class="html">&amp;#59204;</p>
+						</li>
+						<li title="resize-small">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E746</p>
+							<p class="html">&amp;#59206;</p>
+						</li>
+						<li title="volume">
+							<span class="pictogram">⏷</span>
+							<p class="unicode">U+23F7</p>
+							<p class="html">&amp;#9207;</p>
+						</li>
+						<li title="sound">
+							<span class="pictogram">🔊</span>
+							<p class="unicode">U+1F50A</p>
+							<p class="html">&amp;#128266;</p>
+						</li>
+						<li title="mute">
+							<span class="pictogram">🔇</span>
+							<p class="unicode">U+1F507</p>
+							<p class="html">&amp;#128263;</p>
+						</li>
+						<li title="flow-cascade">
+							<span class="pictogram">🕨</span>
+							<p class="unicode">U+1F568</p>
+							<p class="html">&amp;#128360;</p>
+						</li>
+						<li title="flow-branch">
+							<span class="pictogram">🕩</span>
+							<p class="unicode">U+1F569</p>
+							<p class="html">&amp;#128361;</p>
+						</li>
+						<li title="flow-tree">
+							<span class="pictogram">🕪</span>
+							<p class="unicode">U+1F56A</p>
+							<p class="html">&amp;#128362;</p>
+						</li>
+						<li title="flow-line">
+							<span class="pictogram">🕫</span>
+							<p class="unicode">U+1F56B</p>
+							<p class="html">&amp;#128363;</p>
+						</li>
+						<li title="flow-parallel">
+							<span class="pictogram">🕬</span>
+							<p class="unicode">U+1F56C</p>
+							<p class="html">&amp;#128364;</p>
+						</li>
+						<li title="left-bold" class="last">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E4AD</p>
+							<p class="html">&amp;#58541;</p>
+						</li>
+						<li title="down-bold">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E4B0</p>
+							<p class="html">&amp;#58544;</p>
+						</li>
+						<li title="up-bold">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E4AF</p>
+							<p class="html">&amp;#58543;</p>
+						</li>
+						<li title="right-bold">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E4AE</p>
+							<p class="html">&amp;#58542;</p>
+						</li>
+						<li title="left">
+							<span class="pictogram">⬅</span>
+							<p class="unicode">U+2B05</p>
+							<p class="html">&amp;#11013;</p>
+						</li>
+						<li title="down">
+							<span class="pictogram">⬇</span>
+							<p class="unicode">U+2B07</p>
+							<p class="html">&amp;#11015;</p>
+						</li>
+						<li title="up">
+							<span class="pictogram">⬆</span>
+							<p class="unicode">U+2B06</p>
+							<p class="html">&amp;#11014;</p>
+						</li>
+						<li title="right">
+							<span class="pictogram">➡</span>
+							<p class="unicode">U+27A1</p>
+							<p class="html">&amp;#10145;</p>
+						</li>
+						<li title="circled-left">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E759</p>
+							<p class="html">&amp;#59225;</p>
+						</li>
+						<li title="circled-down">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E758</p>
+							<p class="html">&amp;#59224;</p>
+						</li>
+						<li title="circled-up" class="last">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E75B</p>
+							<p class="html">&amp;#59227;</p>
+						</li>
+						<li title="circled-right">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E75A</p>
+							<p class="html">&amp;#59226;</p>
+						</li>
+						<li title="triangle-left">
+							<span class="pictogram">◂</span>
+							<p class="unicode">U+25C2</p>
+							<p class="html">&amp;#9666;</p>
+						</li>
+						<li title="triangle-down">
+							<span class="pictogram">▾</span>
+							<p class="unicode">U+25BE</p>
+							<p class="html">&amp;#9662;</p>
+						</li>
+						<li title="triangle-up">
+							<span class="pictogram">▴</span>
+							<p class="unicode">U+25B4</p>
+							<p class="html">&amp;#9652;</p>
+						</li>
+						<li title="triangle-right">
+							<span class="pictogram">▸</span>
+							<p class="unicode">U+25B8</p>
+							<p class="html">&amp;#9656;</p>
+						</li>
+						<li title="chevron-left">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E75D</p>
+							<p class="html">&amp;#59229;</p>
+						</li>
+						<li title="chevron-down">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E75C</p>
+							<p class="html">&amp;#59228;</p>
+						</li>
+						<li title="chevron-up">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E75F</p>
+							<p class="html">&amp;#59231;</p>
+						</li>
+						<li title="chevron-right">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E75E</p>
+							<p class="html">&amp;#59230;</p>
+						</li>
+						<li title="chevron-small-left" class="last">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E761</p>
+							<p class="html">&amp;#59233;</p>
+						</li>
+						<li title="chevron-small-down">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E760</p>
+							<p class="html">&amp;#59232;</p>
+						</li>
+						<li title="chevron-small-up">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E763</p>
+							<p class="html">&amp;#59235;</p>
+						</li>
+						<li title="chevron-small-right">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E762</p>
+							<p class="html">&amp;#59234;</p>
+						</li>
+						<li title="chevron-thin-left">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E765</p>
+							<p class="html">&amp;#59237;</p>
+						</li>
+						<li title="chevron-thin-down">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E764</p>
+							<p class="html">&amp;#59236;</p>
+						</li>
+						<li title="chevron-thin-up">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E767</p>
+							<p class="html">&amp;#59239;</p>
+						</li>
+						<li title="chevron-thin-right">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E766</p>
+							<p class="html">&amp;#59238;</p>
+						</li>
+						<li title="left-thin">
+							<span class="pictogram">←</span>
+							<p class="unicode">U+2190</p>
+							<p class="html">&amp;larr;</p>
+						</li>
+						<li title="down-thin">
+							<span class="pictogram">↓</span>
+							<p class="unicode">U+2193</p>
+							<p class="html">&amp;darr;</p>
+						</li>
+						<li title="up-thin" class="last">
+							<span class="pictogram">↑</span>
+							<p class="unicode">U+2191</p>
+							<p class="html">&amp;uarr;</p>
+						</li>
+						<li title="right-thin">
+							<span class="pictogram">→</span>
+							<p class="unicode">U+2192</p>
+							<p class="html">&amp;rarr;</p>
+						</li>
+						<li title="arrow-combo">
+							<span class="pictogram"></span>
+							<p class="unicode">U+E74F</p>
+							<p class="html">&amp;#59215;</p>
+						</li>
+						<li title="three-dots">
+							<span class="pictogram">⏶</span>
+							<p class="unicode">U+23F6</p>
+							<p class="html">&amp;#9206;</p>
+						</li>
+						<li title="two-dots">
+							<span class="pictogram">⏵</span>
+							<p class="unicode">U+23F5</p>
+							<p class="html">&amp;#9205;</p>
+						</li>
+						<li title="dot">
+							<span class="pictogram">⏴</span>
+							<p class="unicode">U+23F4</p>
+							<p class="html">&amp;#9204;</p>
+						</li>
+						<li title="cc">
+							<span class="pictogram">🕅</span>
+							<p class="unicode">U+1F545</p>
+							<p class="html">&amp;#128325;</p>
+						</li>
+						<li title="cc-by">
+							<span class="pictogram">🕆</span>
+							<p class="unicode">U+1F546</p>
+							<p class="html">&amp;#128326;</p>
+						</li>
+						<li title="cc-nc">
+							<span class="pictogram">🕇</span>
+							<p class="unicode">U+1F547</p>
+							<p class="html">&amp;#128327;</p>
+						</li>
+						<li title="cc-nc-eu">
+							<span class="pictogram">🕈</span>
+							<p class="unicode">U+1F548</p>
+							<p class="html">&amp;#128328;</p>
+						</li>
+						<li title="cc-nc-jp" class="last">
+							<span class="pictogram">🕉</span>
+							<p class="unicode">U+1F549</p>
+							<p class="html">&amp;#128329;</p>
+						</li>
+						<li title="cc-sa">
+							<span class="pictogram">🕊</span>
+							<p class="unicode">U+1F54A</p>
+							<p class="html">&amp;#128330;</p>
+						</li>
+						<li title="cc-nd">
+							<span class="pictogram">🕋</span>
+							<p class="unicode">U+1F54B</p>
+							<p class="html">&amp;#128331;</p>
+						</li>
+						<li title="cc-pd">
+							<span class="pictogram">🕌</span>
+							<p class="unicode">U+1F54C</p>
+							<p class="html">&amp;#128332;</p>
+						</li>
+						<li title="cc-zero">
+							<span class="pictogram">🕍</span>
+							<p class="unicode">U+1F54D</p>
+							<p class="html">&amp;#128333;</p>
+						</li>
+						<li title="cc-share">
+							<span class="pictogram">🕎</span>
+							<p class="unicode">U+1F54E</p>
+							<p class="html">&amp;#128334;</p>
+						</li>
+						<li title="cc-remix">
+							<span class="pictogram">🕏</span>
+							<p class="unicode">U+1F54F</p>
+							<p class="html">&amp;#128335;</p>
+						</li>
+						<li title="db-logo">
+							<span class="pictogram">🗹</span>
+							<p class="unicode">U+1F5F9</p>
+							<p class="html">&amp;#128505;</p>
+						</li>
+						<li title="db-shape">
+							<span class="pictogram">🗺</span>
+							<p class="unicode">U+1F5FA</p>
+							<p class="html">&amp;#128506;</p>
+						</li>
+					</ul>
+					
+          <h2 style="clear: both; text-align: center; padding-top: 30px;">The Entypo Social Icons</h2>
+					
+					<ul class="entypo-icons entypo-social">
+						<li title="github">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F300</p>
+							<p class="html">&amp;#62208;</p>
+						</li>
+						<li title="c-github">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F301</p>
+							<p class="html">&amp;#62209;</p>
+						</li>
+						<li title="flickr">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F303</p>
+							<p class="html">&amp;#62211;</p>
+						</li>
+						<li title="c-flickr">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F304</p>
+							<p class="html">&amp;#62212;</p>
+						</li>
+						<li title="vimeo">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F306</p>
+							<p class="html">&amp;#62214;</p>
+						</li>
+						<li title="c-vimeo">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F307</p>
+							<p class="html">&amp;#62215;</p>
+						</li>
+						<li title="twitter">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F309</p>
+							<p class="html">&amp;#62217;</p>
+						</li>
+						<li title="c-twitter">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F30A</p>
+							<p class="html">&amp;#62218;</p>
+						</li>
+						<li title="facebook">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F30C</p>
+							<p class="html">&amp;#62220;</p>
+						</li>
+						<li title="c-facebook" class="last">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F30D</p>
+							<p class="html">&amp;#62221;</p>
+						</li>
+						<li title="s-facebook">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F30E</p>
+							<p class="html">&amp;#62222;</p>
+						</li>
+						<li title="google+">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F30F</p>
+							<p class="html">&amp;#62223;</p>
+						</li>
+						<li title="c-google+">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F310</p>
+							<p class="html">&amp;#62224;</p>
+						</li>
+						<li title="pinterest">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F312</p>
+							<p class="html">&amp;#62226;</p>
+						</li>
+						<li title="c-pinterest">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F313</p>
+							<p class="html">&amp;#62227;</p>
+						</li>
+						<li title="tumblr">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F315</p>
+							<p class="html">&amp;#62229;</p>
+						</li>
+						<li title="c-tumblr">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F316</p>
+							<p class="html">&amp;#62230;</p>
+						</li>
+						<li title="linkedin">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F318</p>
+							<p class="html">&amp;#62232;</p>
+						</li>
+						<li title="c-linkedin">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F319</p>
+							<p class="html">&amp;#62233;</p>
+						</li>
+						<li title="dribbble" class="last">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F31B</p>
+							<p class="html">&amp;#62235;</p>
+						</li>
+						<li title="c-dribbble">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F31C</p>
+							<p class="html">&amp;#62236;</p>
+						</li>
+						<li title="stumbleupon">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F31E</p>
+							<p class="html">&amp;#62238;</p>
+						</li>
+						<li title="c-stumbleupon">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F31F</p>
+							<p class="html">&amp;#62239;</p>
+						</li>
+						<li title="lastfm">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F321</p>
+							<p class="html">&amp;#62241;</p>
+						</li>
+						<li title="c-lastfm">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F322</p>
+							<p class="html">&amp;#62242;</p>
+						</li>
+						<li title="rdio">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F324</p>
+							<p class="html">&amp;#62244;</p>
+						</li>
+						<li title="c-rdio">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F325</p>
+							<p class="html">&amp;#62245;</p>
+						</li>
+						<li title="spotify">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F327</p>
+							<p class="html">&amp;#62247;</p>
+						</li>
+						<li title="c-spotify">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F328</p>
+							<p class="html">&amp;#62248;</p>
+						</li>
+						<li title="qq" class="last">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F32A</p>
+							<p class="html">&amp;#62250;</p>
+						</li>
+						<li title="instagram">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F32D</p>
+							<p class="html">&amp;#62253;</p>
+						</li>
+						<li title="dropbox">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F330</p>
+							<p class="html">&amp;#62256;</p>
+						</li>
+						<li title="evernote">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F333</p>
+							<p class="html">&amp;#62259;</p>
+						</li>
+						<li title="flattr">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F336</p>
+							<p class="html">&amp;#62262;</p>
+						</li>
+						<li title="skype">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F339</p>
+							<p class="html">&amp;#62265;</p>
+						</li>
+						<li title="c-skype">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F33A</p>
+							<p class="html">&amp;#62266;</p>
+						</li>
+						<li title="renren">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F33C</p>
+							<p class="html">&amp;#62268;</p>
+						</li>
+						<li title="sina-weibo">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F33F</p>
+							<p class="html">&amp;#62271;</p>
+						</li>
+						<li title="paypal">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F342</p>
+							<p class="html">&amp;#62274;</p>
+						</li>
+						<li title="picasa" class="last">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F345</p>
+							<p class="html">&amp;#62277;</p>
+						</li>
+						<li title="soundcloud">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F348</p>
+							<p class="html">&amp;#62280;</p>
+						</li>
+						<li title="mixi">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F34B</p>
+							<p class="html">&amp;#62283;</p>
+						</li>
+						<li title="behance">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F34E</p>
+							<p class="html">&amp;#62286;</p>
+						</li>
+						<li title="google-circles">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F351</p>
+							<p class="html">&amp;#62289;</p>
+						</li>
+						<li title="vk">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F354</p>
+							<p class="html">&amp;#62292;</p>
+						</li>
+						<li title="smashing">
+							<span class="pictogram"></span>
+							<p class="unicode">U+F357</p>
+							<p class="html">&amp;#62295;</p>
+						</li>			
+					</ul>
+			
+					<div style="clear: both; margin-bottom: 30px;"></div>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>How to use</h2>
+          <p>All icons require an <code>&lt;span&gt;</code> tag with class name 'entypo' and HTML value of the character in the span tag. To use, place the following code just about anywhere:</p>
+<pre class="prettyprint linenums">
+&lt;span class="entypo"&gt;&#128276;&lt;/span&gt;
+</pre>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Icon examples</h2>
+          <p>Use them in buttons, button groups for a toolbar, navigation, or prepended form inputs.</p>
+
+          <h4>Buttons</h4>
+
+          <h5>Button group in a button toolbar</h5>
+          <div class="bs-docs-example">
+            <div class="btn-toolbar">
+              <div class="btn-group">
+                <a class="btn" href="#"><span class="entypo">&#9993;</span></a>
+                <a class="btn" href="#"><span class="entypo">&#128319;</span></a>
+                <a class="btn" href="#"><span class="entypo">&#9998;</span></a>
+              </div>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="btn-toolbar"&gt;
+  &lt;div class="btn-group"&gt;
+
+    &lt;a class="btn" href="#"&gt;&lt;span class="entypo">&#9993;&lt;/span&gt;&lt;/a&gt;
+    &lt;a class="btn" href="#"&gt;&lt;span class="entypo">&#128319;&lt;/span&gt;&lt;/a&gt;
+    &lt;a class="btn" href="#"&gt;&lt;span class="entypo">&#9998;&lt;/span&gt;&lt;/a&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+</pre>
+
+<!--
+          <h5>Dropdown in a button group</h5>
+          <div class="bs-docs-example">
+            <div class="btn-group">
+              <a class="btn btn-primary" href="#"><i class="icon-user icon-white"></i> User</a>
+              <a class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#"><span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="#"><i class="icon-pencil"></i> Edit</a></li>
+                <li><a href="#"><i class="icon-trash"></i> Delete</a></li>
+                <li><a href="#"><i class="icon-ban-circle"></i> Ban</a></li>
+                <li class="divider"></li>
+                <li><a href="#"><i class="i"></i> Make admin</a></li>
+              </ul>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="btn-group"&gt;
+  &lt;a class="btn btn-primary" href="#"&gt;&lt;i class="icon-user icon-white"&gt;&lt;/i&gt; User&lt;/a&gt;
+  &lt;a class="btn btn-primary dropdown-toggle" data-toggle="dropdown" href="#"&gt;&lt;span class="caret"&gt;&lt;/span&gt;&lt;/a&gt;
+  &lt;ul class="dropdown-menu"&gt;
+    &lt;li&gt;&lt;a href="#"&gt;&lt;i class="icon-pencil"&gt;&lt;/i&gt; Edit&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a href="#"&gt;&lt;i class="icon-trash"&gt;&lt;/i&gt; Delete&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a href="#"&gt;&lt;i class="icon-ban-circle"&gt;&lt;/i&gt; Ban&lt;/a&gt;&lt;/li&gt;
+    &lt;li class="divider"&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a href="#"&gt;&lt;i class="i"&gt;&lt;/i&gt; Make admin&lt;/a&gt;&lt;/li&gt;
+  &lt;/ul&gt;
+&lt;/div&gt;
+</pre>
+
+          <h5>Small button</h5>
+          <div class="bs-docs-example">
+            <a class="btn btn-small" href="#"><i class="icon-star"></i></a>
+          </div>
+<pre class="prettyprint linenums">
+&lt;a class="btn btn-small" href="#"&gt;&lt;i class="icon-star"&gt;&lt;/i&gt;&lt;/a&gt;
+</pre>
+
+
+          <h4>Navigation</h4>
+          <div class="bs-docs-example">
+            <div class="well" style="padding: 8px 0; margin-bottom: 0;">
+              <ul class="nav nav-list">
+                <li class="active"><a href="#"><i class="icon-home icon-white"></i> Home</a></li>
+                <li><a href="#"><i class="icon-book"></i> Library</a></li>
+                <li><a href="#"><i class="icon-pencil"></i> Applications</a></li>
+                <li><a href="#"><i class="i"></i> Misc</a></li>
+              </ul>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;ul class="nav nav-list"&gt;
+  &lt;li class="active"&gt;&lt;a href="#"&gt;&lt;i class="icon-home icon-white"&gt;&lt;/i&gt; Home&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href="#"&gt;&lt;i class="icon-book"&gt;&lt;/i&gt; Library&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href="#"&gt;&lt;i class="icon-pencil"&gt;&lt;/i&gt; Applications&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href="#"&gt;&lt;i class="i"&gt;&lt;/i&gt; Misc&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</pre>
+
+          <h4>Form fields</h4>
+          <form class="bs-docs-example form-horizontal">
+            <div class="control-group">
+              <label class="control-label" for="inputIcon">Email address</label>
+              <div class="controls">
+                <div class="input-prepend">
+                  <span class="add-on"><i class="icon-envelope"></i></span><input class="span2" id="inputIcon" type="text">
+                </div>
+              </div>
+            </div>
+          </form>
+<pre class="prettyprint linenums">
+&lt;div class="control-group"&gt;
+  &lt;label class="control-label" for="inputIcon"&gt;Email address&lt;/label&gt;
+  &lt;div class="controls"&gt;
+    &lt;div class="input-prepend"&gt;
+      &lt;span class="add-on"&gt;&lt;i class="icon-envelope"&gt;&lt;/i&gt;&lt;/span&gt;
+      &lt;input class="span2" id="inputIcon" type="text"&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+</pre>
+-->
+
+        </section>
+
+
+
+      </div>
+    </div>
+
+  </div>
+
+
+
+    <!-- Footer
+    ================================================== -->
+    <footer class="footer">
+      <div class="container" style="font-size:12px;">
+        <p class="pull-right"><a href="#">Back to top</a><br><br></p>
+        
+        <p>Ask.Bootstrap (v 0.1.0) is a front-end framework combinations of mainly <a href="http://html5boilerplate.com/">HTML5 Boilerplate</a>, <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a> with other additional handy libraries.<br>
+        Project is maintained by <a href="http://www.twitter.com/cengizism" target="_blank">Cengiz Ulusoy</a> at <a href="http://www.ask-cs.nl/" target="_blank">Ask Community Systems</a>, Rotterdam.<br>
+        Please read <a href="/docs/index.html#copyrights">copyrights</a> section for more information about the creators of the frameworks and components used in this project.</p>
+        
+        <ul class="footer-links">
+          <li class="">
+            <a href="/docs/index.html">Home</a>
+          </li>
+          <li class="">
+            <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+          </li>
+          <li class="">
+            <a href="/docs/base-css/typography.html">Base CSS</a>
+          </li>
+          <li class="">
+            <a href="/docs/components/dropdowns.html">Components</a>
+          </li>
+          <li class="">
+            <a href="/docs/javascript/overview.html">JavaScript</a>
+          </li>
+        </ul>
+        
+      </div>
+    </footer>
+
+
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    
+    <script src="/src/js/libs/jquery/jquery.js"></script>
+    <script src="/src/js/libs/bootstrap/bootstrap.js"></script>
+    <script src="/src/js/libs/vendor/prefixfree.min.js"></script>
+    
+    <script src="/docs/js/google/prettify/prettify.js"></script>
+    
+    <script src="/docs/js/application.js"></script>
+
+  </body>
+</html>

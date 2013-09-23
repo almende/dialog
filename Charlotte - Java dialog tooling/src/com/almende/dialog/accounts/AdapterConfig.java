@@ -68,14 +68,25 @@ public class AdapterConfig {
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 		try {
 			AdapterConfig newConfig = new AdapterConfig();
-			newConfig.configId = new UUID().toString();
 			newConfig.status = "OPEN";
 
 			newConfig = om.readerForUpdating(newConfig).readValue(json);
-			if (adapterExists(newConfig.getAdapterType(),
-					newConfig.getMyAddress(), newConfig.getKeyword()))
+			if (adapterExists(newConfig.getAdapterType(), newConfig.getMyAddress(), newConfig.getKeyword()))
+			{
 				return Response.status(Status.CONFLICT).build();
-
+			}
+			if(configId == null)
+			{
+			    newConfig.configId = new UUID().toString();
+			}
+			
+			//change the casing to lower in case adatertype if email or xmpp
+			if(newConfig.getAdapterType().toUpperCase().equals( "MAIL" ) || 
+			    newConfig.getAdapterType().toUpperCase().equals( "XMPP" ))
+			{
+			    newConfig.setMyAddress( newConfig.getMyAddress() != null ? newConfig.getMyAddress().toLowerCase() 
+			                                                               : null );
+			}
 			datastore.store(newConfig);
 			
 			if(newConfig.getAdapterType().equals("broadsoft")) {
@@ -186,6 +197,18 @@ public class AdapterConfig {
 		
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 		AdapterConfig config = datastore.load(AdapterConfig.class, adapterID);
+		
+                try
+                {
+                    log.info( String.format( "config %s for adapterId: %s with adapters %s",
+                                             om.writeValueAsString( config ), om.writeValueAsString( adapterID),
+                                             adapters.toString() ) );
+                }
+                catch ( Exception e )
+                {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
 		
 		// Check if config id from database is owned by agent
 		if(config!=null) {

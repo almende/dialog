@@ -107,10 +107,20 @@ public class VoiceXMLRESTProxy {
      * @return
      */
     public static HashMap<String, String> dial( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
+    throws Exception
     {
         String adapterType = "broadsoft";
         String sessionPrefix = adapterType+"|"+config.getMyAddress()+"|" ;
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
+
+        // If it is a broadcast don't provide the remote address because it is deceiving.
+        String loadAddress = null;
+        if(addressNameMap.size()==1)
+            loadAddress = addressNameMap.keySet().iterator().next();
+
+        //fetch the question
+        Question question = Question.fromURL(url, config.getConfigId(), loadAddress);
+        String questionJson = question.toJSON();
 
         for ( String address : addressNameMap.keySet() )
         {
@@ -134,18 +144,13 @@ public class VoiceXMLRESTProxy {
                 session.setAdapterID(config.getConfigId());
             session.storeSession();
 
-            Question question = Question.fromURL(url,address,config.getMyAddress());
-            String questionJson = question.toJSON();
-            log.info( String.format( "Question %s stored in String Store with SessionKey: %s", questionJson, "InitialQuestion_"+sessionKey ) );
-            StringStore.storeString("InitialQuestion_"+sessionKey, questionJson);
-            
+            StringStore.storeString("InitialQuestion_"+ sessionKey, questionJson);
             DDRWrapper.log(url,session.getTrackingToken(),session,"Dial",config);
 
             Broadsoft bs = new Broadsoft( config );
             bs.startSubscription();
 
-            String extSession = null;
-            extSession = bs.startCall( formattedAddress );
+            String extSession = bs.startCall( formattedAddress );
             session.setExternalSession( extSession );
             session.storeSession();
             resultSessionMap.put(address, sessionKey);

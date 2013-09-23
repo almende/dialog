@@ -10,7 +10,6 @@ import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.util.ParallelInit;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.taskqueue.TaskOptions;
@@ -23,12 +22,12 @@ import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
 import java.nio.CharBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -189,33 +188,30 @@ abstract public class TextServlet extends HttpServlet {
         }
         String localaddress = config.getMyAddress();
         url = encodeURLParams( url );
-        ObjectMapper om = ParallelInit.getObjectMapper();
 
-        Return res = null;
-        Question question = null;
-        Session session = null;
         HashMap<String, String> sessionKeyMap = new HashMap<String, String>();
-        
+        ArrayList<Session> sessions = new ArrayList<Session>();
+
         // If it is a broadcast don't provide the remote address because it is deceiving. 
         String loadAddress = null;
         if(formattedAddressNameMap.size()==1)
             loadAddress = formattedAddressNameMap.keySet().iterator().next();
         
         //fetch question
-        question = Question.fromURL( url, config.getConfigId(),  loadAddress);
+        Question question = Question.fromURL( url, config.getConfigId(),  loadAddress);
         String preferred_language = StringStore.getString( loadAddress + "_language" );
         if ( preferred_language == null )
         {
             preferred_language = config.getPreferred_language();
         }
         question.setPreferred_language( preferred_language );
-        res = formQuestion( question, config.getConfigId(), loadAddress );        
+        Return res = formQuestion( question, config.getConfigId(), loadAddress );
 
         for ( String address : formattedAddressNameMap.keySet() )
         {
             //store the session first
             String sessionKey = getAdapterType() + "|" + localaddress + "|" + address;
-            session = Session.getSession( sessionKey, config.getKeyword() );
+            Session session = Session.getSession( sessionKey, config.getKeyword() );
             if ( session == null )
             {
                 log.severe( "XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
@@ -228,6 +224,7 @@ abstract public class TextServlet extends HttpServlet {
             
             // Add key to the map (for the return)
             sessionKeyMap.put(address, sessionKey);
+            sessions.add(session);
             
             if ( res.question != null )
             {
@@ -240,9 +237,13 @@ abstract public class TextServlet extends HttpServlet {
         //assign senderName with localAdress, if senderName is missing.
         senderName = senderName != null && !senderName.isEmpty() ? senderName : localaddress;
         int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, senderName, formattedAddressNameMap, config );
-        for ( int i = 0; i < count; i++ )
+
+        for(Session session : sessions)
         {
-        	DDRWrapper.log( question, session, "Send", config );
+            for ( int i = 0; i < count; i++ )
+            {
+                DDRWrapper.log( question, session, "Send", config );
+            }
         }
         if(count < 1)
         {
@@ -258,7 +259,8 @@ abstract public class TextServlet extends HttpServlet {
 	
 	@Override
 	public void service(HttpServletRequest req, HttpServletResponse res)
-			throws IOException {
+    throws IOException
+    {
 		this.host = RequestUtil.getHost(req);
 //		log.warning("Starting to handle xmpp post: "+startTime+"/"+(new Date().getTime()));
 		boolean loading = ParallelInit.startThreads();
@@ -288,11 +290,20 @@ abstract public class TextServlet extends HttpServlet {
 			log.severe("Failed to parse received message: "+ex.getLocalizedMessage());
 			return;
 		}
-		
-		processMessage(msg);
-	}
+
+        try
+        {
+            processMessage(msg);
+        }
+        catch (Exception e)
+        {
+            log.severe(e.getLocalizedMessage());
+            e.printStackTrace();
+        }
+    }
 	
-	protected int processMessage(TextMessage msg) {
+	protected int processMessage(TextMessage msg) throws  Exception
+    {
 		
 		String localaddress = msg.getLocalAddress();
 		String address = msg.getAddress();
@@ -310,15 +321,12 @@ abstract public class TextServlet extends HttpServlet {
 		if (session == null){
 			log.info("No session so retrieving config");
 			config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
-			try {
-				count = sendMessage( getNoConfigMessage(), subject, localaddress, fromName, address, toName, config);
-				// Create new session to store the send in the ddr.
-				session = new Session();
-				session.setDirection("inbound");
-				session.setRemoteAddress(address);
-				session.setTrackingToken(UUID.randomUUID().toString());
-			} catch(Exception ex) {
-			}
+            count = sendMessage( getNoConfigMessage(), subject, localaddress, fromName, address, toName, config);
+            // Create new session to store the send in the ddr.
+            session = new Session();
+            session.setDirection("inbound");
+            session.setRemoteAddress(address);
+            session.setTrackingToken(UUID.randomUUID().toString());
 			for(int i=0;i<count;i++) { 
 				DDRWrapper.log(null,  null, session, "Send", config);
 			}
@@ -427,73 +435,69 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		return count;
 	}
-	
-	/**
-         * processses any escape command entered by the user
-         * @return
-         */
-        private int processEscapeInputCommand( TextMessage msg, String fromName, AdapterConfig config, EscapeInputCommand escapeInput )
+
+    /**
+     * processses any escape command entered by the user
+     * @return
+     */
+    private int processEscapeInputCommand( TextMessage msg, String fromName, AdapterConfig config, EscapeInputCommand escapeInput )
+    throws  Exception
+    {
+        log.info( String.format( "escape charecter seen.. input %s", escapeInput.body ) );
+        int result = 0;
+        String cmd = escapeInput.body.toLowerCase().substring( 1 );
+        if ( cmd.startsWith( "language=" ) )
         {
-            log.info( String.format( "escape charecter seen.. input %s", escapeInput.body ) );
-            int result = 0;
-            String cmd = escapeInput.body.toLowerCase().substring( 1 );
-            if ( cmd.startsWith( "language=" ) )
-            {
-                escapeInput.preferred_language = cmd.substring( 9 );
-                if ( escapeInput.preferred_language.indexOf( ' ' ) != -1 )
-                    escapeInput.preferred_language = escapeInput.preferred_language.substring( 0,
-                                                                                               escapeInput.preferred_language.indexOf( ' ' ) );
+            escapeInput.preferred_language = cmd.substring( 9 );
+            if ( escapeInput.preferred_language.indexOf( ' ' ) != -1 )
+                escapeInput.preferred_language = escapeInput.preferred_language.substring( 0,
+                                                                                           escapeInput.preferred_language.indexOf( ' ' ) );
 
-                StringStore.storeString( msg.getAddress() + "_language", escapeInput.preferred_language );
+            StringStore.storeString( msg.getAddress() + "_language", escapeInput.preferred_language );
 
-                escapeInput.reply = "Ok, switched preferred language to:" + escapeInput.preferred_language;
-                escapeInput.body = "";
-                try
-                {
-                    HashMap<String, String> addressNameMap = new HashMap<String, String>( 1 );
-                    addressNameMap.put( msg.getAddress(), msg.getRecipientName() );
-                     result = broadcastMessage( escapeInput.reply, msg.getSubject(), msg.getLocalAddress(), fromName, fromName, 
-                                                addressNameMap, config );
-                }
-                catch ( Exception ex )
-                {
-                }
-            }
-            else if ( cmd.startsWith( "reset" ) )
-            {
-                    StringStore.dropString( "question_" + msg.getAddress() + "_" + msg.getLocalAddress());
-            } 
+            escapeInput.reply = "Ok, switched preferred language to:" + escapeInput.preferred_language;
+            escapeInput.body = "";
 
-            else if ( cmd.startsWith( "help" ) )
-            {
-                String[] command = cmd.split( " " );
-                if ( command.length == 1 )
-                {
-                    escapeInput.reply = "The following commands are understood:\n" + "/help <command>\n"
-                        + "/reset \n" + "/language=<lang_code>\n";
-                }
-                else
-                {
-                    if ( command[1].equals( "reset" ) )
-                    {
-                        escapeInput.reply = "/reset will return you to Charlotte's initial question.";
-                    }
-
-                    if ( command[1].equals( "language" ) )
-                    {
-                        escapeInput.reply = "/language=<lang_code>, switches the preferred language to the provided lang_code. (e.g. /language=nl)";
-                    }
-
-                    if ( command[1].equals( "help" ) )
-                    {
-                        escapeInput.reply = "/help <command>, provides a help text about the provided command (e.g. /help reset)";
-                    }
-                }
-   
-                escapeInput.skip = true;
-            }
-            return result;
+            HashMap<String, String> addressNameMap = new HashMap<String, String>( 1 );
+            addressNameMap.put( msg.getAddress(), msg.getRecipientName() );
+             result = broadcastMessage( escapeInput.reply, msg.getSubject(), msg.getLocalAddress(), fromName, fromName,
+                                        addressNameMap, config );
         }
+        else if ( cmd.startsWith( "reset" ) )
+        {
+                StringStore.dropString( "question_" + msg.getAddress() + "_" + msg.getLocalAddress());
+        }
+
+        else if ( cmd.startsWith( "help" ) )
+        {
+            String[] command = cmd.split( " " );
+            if ( command.length == 1 )
+            {
+                escapeInput.reply = "The following commands are understood:\n" + "/help <command>\n"
+                    + "/reset \n" + "/language=<lang_code>\n";
+            }
+            else
+            {
+                if ( command[1].equals( "reset" ) )
+                {
+                    escapeInput.reply = "/reset will return you to Charlotte's initial question.";
+                }
+
+                if ( command[1].equals( "language" ) )
+                {
+                    escapeInput.reply = "/language=<lang_code>, switches the preferred language to the provided lang_code. (e.g. /language=nl)";
+                }
+
+                if ( command[1].equals( "help" ) )
+                {
+                    escapeInput.reply = "/help <command>, provides a help text about the provided command (e.g. /help reset)";
+                }
+            }
+
+            escapeInput.skip = true;
+        }
+        return result;
+    }
 	
 	protected String getNoConfigMessage() {
 		return "Sorry, I can't find the account associated with this chat address...";

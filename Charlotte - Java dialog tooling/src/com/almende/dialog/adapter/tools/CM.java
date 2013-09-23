@@ -60,8 +60,7 @@ public class CM {
         addressNameMap.put( to, toName );
         StringWriter sw = createXMLRequest( message, fromName, addressNameMap, dcs );
 
-        int count = 0;
-        if ( sw != null )
+        if ( !ServerUtils.isInUnitTestingEnvironment() && sw != null )
         {
             Client client = ParallelInit.getClient();
             WebResource webResource = client.resource( url );
@@ -73,10 +72,8 @@ public class CM {
                 throw new Exception( result );
             }
             log.info( "Result from CM: " + result );
-
-            count = countMessageParts( message, dcs );
         }
-        return count;
+        return countMessageParts( message, dcs );
     }
     
     public int broadcastMessage( String message, String subject, String from, String fromName,
@@ -95,7 +92,7 @@ public class CM {
         StringWriter sw = createXMLRequest( message, from, addressNameMap, dcs );
 
         //add an interceptor so that send Messages is not enabled for unit tests
-        if ( !ServerUtils.isInUnitTestingEnvironment() )
+        if ( !ServerUtils.isInUnitTestingEnvironment() && sw!=null)
         {
             Client client = ParallelInit.getClient();
             WebResource webResource = client.resource( url );
@@ -104,9 +101,7 @@ public class CM {
                 throw new Exception( result );
             log.info( "Result from CM: " + result );
         }
-
-        int count = countMessageParts( message, dcs );
-        return count;
+        return countMessageParts( message, dcs );
     }
 
     /**

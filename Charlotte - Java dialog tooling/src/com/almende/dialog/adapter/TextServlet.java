@@ -392,7 +392,7 @@ abstract public class TextServlet extends HttpServlet {
 				question.setPreferred_language(preferred_language);
 				// Do not answer a question, when it's the first and the type is comment or referral anyway.
 				if(!(start && (question.getType().equalsIgnoreCase("comment") || question.getType().equalsIgnoreCase("referral")))) {
-				    question = question.answer(address, config.getConfigId(), null, body);
+				    question = question.answer(address, config.getConfigId(), null, escapeInput.body);
 				}
 				Return replystr = formQuestion(question, config.getConfigId(),address);
 				escapeInput.reply = replystr.reply;

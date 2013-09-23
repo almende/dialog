@@ -1,20 +1,10 @@
 package com.almende.dialog.adapter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
-import com.almende.eve.agent.annotation.Access;
-import com.almende.eve.agent.annotation.AccessType;
 import com.almende.eve.json.annotation.Name;
 import com.almende.eve.json.annotation.Required;
 import com.almende.eve.json.jackson.JOM;
@@ -22,6 +12,10 @@ import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
+
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class DialogAgent extends Agent {
 	
@@ -161,7 +155,7 @@ public class DialogAgent extends Agent {
             else if ( adapterType.toUpperCase().equals( "SMS" ) )
             {
                 return "{'sessionKey':'"
-                    + new AskSmsServlet().startDialog( addressMap, url, senderName, config ) + "'}";
+                    + new MBSmsServlet().startDialog( addressMap, url, senderName, config ) + "'}";
             }
             else if ( adapterType.toUpperCase().equals( "CM" ) )
             {

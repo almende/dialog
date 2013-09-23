@@ -2,12 +2,14 @@ package com.almende.dialog.adapter;
 
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.test.TestServlet;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -66,22 +68,113 @@ public class CMServletTest extends TestFramework
     }
 
     /**
-     * test if a "hi" TextMessage is generated and processed properly by XMPP servlet
+     * test if a "hi" TextMessage is generated and processed properly by SMS servlet
      *  as a new session
      * @throws Exception
      */
-//    @Test
-//    public void ReceiveAppointmentNewSessionMessageTest() throws Exception
-//    {
-//        String initialAgentURL = TestServlet.TEXT_SERVLET_PATH + "?appointment=start";
-//        //create mail adapter
-//        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY,
-//                localAddressMail, initialAgentURL );
-//        //create session
-//        getOrCreateSession( adapterConfig, remoteAddressEmail );
-//        TextMessage textMessage = mailAppointmentInteraction("hi");
-//        assertOutgoingTextMessage(textMessage);
-//    }
+    @Test
+    public void ReceiveAppointmentNewSessionMessageTest() throws Exception
+    {
+        String initialAgentURL = TestServlet.TEXT_SERVLET_PATH + "?appointment=start";
+        //create mail adapter
+        AdapterConfig adapterConfig = createAdapterConfig( "SMS", TEST_PUBLIC_KEY, localAddressBroadsoft, initialAgentURL );
+        //create session
+        getOrCreateSession(adapterConfig, remoteAddressVoice);
+        TextMessage textMessage = smsAppointmentInteraction("hi");
+        HashMap<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put(textMessage.getAddress(), textMessage.getRecipientName());
+        String expectedQuestion = TestServlet.getResponseQuestionWithOptionsInString( TestServlet.getJsonAppointmentQuestion() );
+        assertXMLGeneratedFromOutBoundCall(addressNameMap, adapterConfig, expectedQuestion, textMessage.getLocalAddress());
+    }
+
+    /**
+     * test if a "Yup" TextMessage is generated and processed properly by SMS servlet
+     *  as a new session
+     * @throws Exception
+     */
+    @Test
+    public void ReceiveAppointmentExistingSessionYesMessageTest() throws Exception
+    {
+        //initiate session with a new message
+        ReceiveAppointmentNewSessionMessageTest();
+
+        //respond with a "yes" message
+        TextMessage textMessage = smsAppointmentInteraction("Yup");
+        HashMap<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put(textMessage.getAddress(), textMessage.getRecipientName());
+        String expectedQuestion = TestServlet.getResponseQuestionWithOptionsInString( TestServlet.getJsonAppointmentYesQuestion() );
+
+        //fetch already created adapter
+        AdapterConfig adapterConfig = AdapterConfig.findAdapters("SMS", localAddressBroadsoft, null).iterator().next();
+        assertXMLGeneratedFromOutBoundCall(addressNameMap, adapterConfig, expectedQuestion, textMessage.getLocalAddress());
+    }
+
+    /**
+     * test if a "Nope" TextMessage is generated and processed properly by SMS servlet
+     *  as a new session
+     * @throws Exception
+     */
+    @Test
+    public void ReceiveAppointmentExistingSessionNoMessageTest() throws Exception
+    {
+        //initiate session with a new message
+        ReceiveAppointmentNewSessionMessageTest();
+
+        //respond with a "yes" message
+        TextMessage textMessage = smsAppointmentInteraction("Nope");
+        HashMap<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put(textMessage.getAddress(), textMessage.getRecipientName());
+        String expectedQuestion = TestServlet.getResponseQuestionWithOptionsInString( TestServlet.getJsonAppointmentNoQuestion() );
+
+        //fetch already created adapter
+        AdapterConfig adapterConfig = AdapterConfig.findAdapters("SMS", localAddressBroadsoft, null).iterator().next();
+        assertXMLGeneratedFromOutBoundCall(addressNameMap, adapterConfig, expectedQuestion, textMessage.getLocalAddress());
+    }
+
+    /**
+     * test if an open question is asked by the SMS servlet when a "Yup" is answerd
+     *  as a new session
+     * @throws Exception
+     */
+    @Test
+    public void ReceiveAppointmentExistingSessionFreeMessageTest() throws Exception
+    {
+        //initiate session with a new message
+        ReceiveAppointmentExistingSessionYesMessageTest();
+
+        //respond with a "yes" message
+        TextMessage textMessage = smsAppointmentInteraction("30");
+        HashMap<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put(textMessage.getAddress(), textMessage.getRecipientName());
+        String expectedQuestion = TestServlet.getResponseQuestionWithOptionsInString( TestServlet.getJsonAppointmentFreeQuestion() );
+
+        //fetch already created adapter
+        AdapterConfig adapterConfig = AdapterConfig.findAdapters("SMS", localAddressBroadsoft, null).iterator().next();
+        assertXMLGeneratedFromOutBoundCall(addressNameMap, adapterConfig, expectedQuestion, textMessage.getLocalAddress());
+    }
+
+    /**
+     * @return
+     * @throws Exception
+     */
+    private TextMessage smsAppointmentInteraction(String message) throws Exception
+    {
+        HashMap<String, String> data = new HashMap<String, String>();
+        data.put("receiver", localAddressBroadsoft);
+        data.put("sender", remoteAddressVoice);
+        data.put("message", message);
+        //fetch and invoke the receieveMessage method
+        MBSmsServlet smsServlet = new MBSmsServlet();
+        Method fetchMethodByReflection = fetchMethodByReflection( "receiveMessage", MBSmsServlet.class, HashMap.class );
+        TextMessage textMessage = (TextMessage) invokeMethodByReflection( fetchMethodByReflection, smsServlet, data);
+
+        //fetch the processMessage function
+        Method processMessage = fetchMethodByReflection( "processMessage", TextServlet.class,  TextMessage.class);
+
+        int count = (Integer) invokeMethodByReflection( processMessage, smsServlet, textMessage );
+        assertTrue( count == 1 );
+        return textMessage;
+    }
 
     private void outBoundSMSCallXMLTest(Map<String, String> addressNameMap, AdapterConfig adapterConfig,
                                             String simpleQuestion, String senderName)

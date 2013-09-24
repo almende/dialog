@@ -1,6 +1,19 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+24-09-2013, version 0.4.0
+- Introduce two new functions to do broadcasting over a certain medium. outboundCallWithList to broadcast
+  to list of numbers and outboundCallWithMap to do a broadcast but also use a different sendername.
+- Add the processing of media properties. So support different functionalities on a specific medium. Currently
+  introduced are per question type:
+  	OPEN:
+  		type -> audio/dtmf (defaulf dtmf)
+  	REFERRAL:
+  		timeout -> xs (default 40s) (timeout before it should stop the referal)
+- Logging for external developers. Everything a question is loaded and parsed it will be logged. External developers
+  are able to load them through the GUI with there keys.
+- Introduce unit tests.
+
 10-09-2013, version 0.3.4
 - Catch the events Server Failure and Request Failure and retry to start a call.
 

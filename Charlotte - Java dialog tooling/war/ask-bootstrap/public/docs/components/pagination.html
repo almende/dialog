@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Ask.Bootstrap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ask Bootstrap: a compilation of frameworks with handy scripts and styles, ready for cooking a new project or web app immediately.">
+    <meta name="author" content="Compiled and maintained by Cengiz Ulusoy. Refer to 'copyrights' section for licences of the components used in this project.">
+
+    <!-- Le styles -->
+    <link href="/src/css/bootstrap.css" rel="stylesheet">
+    <link href="/src/css/responsive.css" rel="stylesheet">
+    
+    <link href="/docs/js/google/prettify/prettify.css" rel="stylesheet">
+    
+    <link href="/docs/css/docs.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="/src/img/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/src/img/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/src/img/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/src/img/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="/src/img/ico/apple-touch-icon-57-precomposed.png">
+    
+  </head>
+
+  <body>
+
+    <!-- Navbar
+    ================================================== -->
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="index.html">Ask.Bootstrap</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="">
+                <a href="/docs/index.html">Home</a>
+              </li>
+              <li class="">
+                <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+              </li>
+              <li class="">
+                <a href="/docs/base-css/typography.html">Base CSS</a>
+              </li>
+              <li class="active">
+                <a href="/docs/components/dropdowns.html">Components</a>
+              </li>
+              <li class="">
+                <a href="/docs/javascript/overview.html">JavaScript</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Subhead
+================================================== -->
+<header class="jumbotron subhead" id="overview">
+  <div class="container">
+    <h1>Components</h1>
+    <p class="lead">Dozens of reusable components built to provide navigation, alerts, popovers, and more.</p>
+  </div>
+</header>
+
+
+  <div class="container">
+
+    <!-- Docs nav
+    ================================================== -->
+    <div class="row">
+      <div class="span3">
+        <ul class="nav nav-tabs nav-stacked">
+          <li><a href="/docs/components/dropdowns.html"><i class="icon-chevron-right"></i> Dropdowns</a></li>
+          <li><a href="/docs/components/button_groups.html"><i class="icon-chevron-right"></i> Button groups</a></li>
+          <li><a href="/docs/components/button_dropdowns.html"><i class="icon-chevron-right"></i> Button dropdowns</a></li>
+          <li><a href="/docs/components/navs.html"><i class="icon-chevron-right"></i> Navs</a></li>
+          <li><a href="/docs/components/navbar.html"><i class="icon-chevron-right"></i> Navbar</a></li>
+          <li><a href="/docs/components/breadcrumbs.html"><i class="icon-chevron-right"></i> Breadcrumbs</a></li>
+          <li class="active"><a href="/docs/components/pagination.html"><i class="icon-chevron-right"></i> Pagination</a></li>
+          <li><a href="/docs/components/labels_badges.html"><i class="icon-chevron-right"></i> Labels and badges</a></li>
+          <li><a href="/docs/components/typography.html"><i class="icon-chevron-right"></i> Typography</a></li>
+          <li><a href="/docs/components/thumbnails.html"><i class="icon-chevron-right"></i> Thumbnails</a></li>
+          <li><a href="/docs/components/alerts.html"><i class="icon-chevron-right"></i> Alerts</a></li>
+          <li><a href="/docs/components/progress.html"><i class="icon-chevron-right"></i> Progress bars</a></li>
+          <li><a href="/docs/components/media.html"><i class="icon-chevron-right"></i> Media object</a></li>
+          <li><a href="/docs/components/misc.html"><i class="icon-chevron-right"></i> Misc</a></li>
+        </ul>
+      </div>
+      <div class="span9">
+
+        <!-- Pagination
+        ================================================== -->
+        <section id="pagination">
+          <div class="page-header">
+            <h1>Pagination <small>Two options for paging through content</small></h1>
+          </div>
+
+          <h2>Standard pagination</h2>
+          <p>Simple pagination inspired by Rdio, great for apps and search results. The large block is hard to miss, easily scalable, and provides large click areas.</p>
+          <div class="bs-docs-example">
+            <div class="pagination">
+              <ul>
+                <li><a href="#">&laquo;</a></li>
+                <li><a href="#">1</a></li>
+                <li><a href="#">2</a></li>
+                <li><a href="#">3</a></li>
+                <li><a href="#">4</a></li>
+                <li><a href="#">5</a></li>
+                <li><a href="#">&raquo;</a></li>
+              </ul>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="pagination"&gt;
+  &lt;ul&gt;
+    &lt;li&gt;&lt;a href="#"&gt;Prev&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a href="#"&gt;1&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a href="#"&gt;2&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a href="#"&gt;3&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a href="#"&gt;4&lt;/a&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;a href="#"&gt;Next&lt;/a&gt;&lt;/li&gt;
+  &lt;/ul&gt;
+&lt;/div&gt;
+</pre>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Options</h2>
+
+          <h3>Disabled and active states</h3>
+          <p>Links are customizable for different circumstances. Use <code>.disabled</code> for unclickable links and <code>.active</code> to indicate the current page.</p>
+          <div class="bs-docs-example">
+            <div class="pagination pagination-centered">
+              <ul>
+                <li class="disabled"><a href="#">&laquo;</a></li>
+                <li class="active"><a href="#">1</a></li>
+                <li><a href="#">2</a></li>
+                <li><a href="#">3</a></li>
+                <li><a href="#">4</a></li>
+                <li><a href="#">5</a></li>
+                <li><a href="#">&raquo;</a></li>
+             </ul>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="pagination"&gt;
+  &lt;ul&gt;
+    &lt;li class="disabled"&gt;&lt;a href="#"&gt;Prev&lt;/a&gt;&lt;/li&gt;
+    &lt;li class="active"&gt;&lt;a href="#"&gt;1&lt;/a&gt;&lt;/li&gt;
+    ...
+  &lt;/ul&gt;
+&lt;/div&gt;
+</pre>
+          <p>You can optionally swap out active or disabled anchors for spans to remove click functionality while retaining intended styles.</p>
+<pre class="prettyprint linenums">
+&lt;div class="pagination"&gt;
+  &lt;ul&gt;
+    &lt;li class="disabled"&gt;&lt;span&gt;Prev&lt;/span&gt;&lt;/li&gt;
+    &lt;li class="active"&gt;&lt;span&gt;1&lt;/span&gt;&lt;/li&gt;
+    ...
+  &lt;/ul&gt;
+&lt;/div&gt;
+</pre>
+
+          <h3>Sizes</h3>
+          <p>Fancy larger or smaller pagination? Add <code>.pagination-large</code>, <code>.pagination-small</code>, or <code>.pagination-mini</code> for additional sizes.</p>
+          <div class="bs-docs-example">
+            <div class="pagination pagination-large">
+              <ul>
+                <li><a href="#">&laquo;</a></li>
+                <li><a href="#">1</a></li>
+                <li><a href="#">2</a></li>
+                <li><a href="#">3</a></li>
+                <li><a href="#">4</a></li>
+                <li><a href="#">5</a></li>
+                <li><a href="#">&raquo;</a></li>
+              </ul>
+            </div>
+            <div class="pagination">
+              <ul>
+                <li><a href="#">&laquo;</a></li>
+                <li><a href="#">1</a></li>
+                <li><a href="#">2</a></li>
+                <li><a href="#">3</a></li>
+                <li><a href="#">4</a></li>
+                <li><a href="#">5</a></li>
+                <li><a href="#">&raquo;</a></li>
+             </ul>
+            </div>
+            <div class="pagination pagination-small">
+              <ul>
+                <li><a href="#">&laquo;</a></li>
+                <li><a href="#">1</a></li>
+                <li><a href="#">2</a></li>
+                <li><a href="#">3</a></li>
+                <li><a href="#">4</a></li>
+                <li><a href="#">5</a></li>
+                <li><a href="#">&raquo;</a></li>
+              </ul>
+            </div>
+            <div class="pagination pagination-mini">
+              <ul>
+                <li><a href="#">&laquo;</a></li>
+                <li><a href="#">1</a></li>
+                <li><a href="#">2</a></li>
+                <li><a href="#">3</a></li>
+                <li><a href="#">4</a></li>
+                <li><a href="#">5</a></li>
+                <li><a href="#">&raquo;</a></li>
+              </ul>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="pagination pagination-large"&gt;
+  &lt;ul&gt;
+    ...
+  &lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class="pagination"&gt;
+  &lt;ul&gt;
+    ...
+  &lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class="pagination pagination-small"&gt;
+  &lt;ul&gt;
+    ...
+  &lt;/ul&gt;
+&lt;/div&gt;
+&lt;div class="pagination pagination-mini"&gt;
+  &lt;ul&gt;
+    ...
+  &lt;/ul&gt;
+&lt;/div&gt;
+</pre>
+
+          <h3>Alignment</h3>
+          <p>Add one of two optional classes to change the alignment of pagination links: <code>.pagination-centered</code> and <code>.pagination-right</code>.</p>
+          <div class="bs-docs-example">
+            <div class="pagination pagination-centered">
+              <ul>
+                <li><a href="#">&laquo;</a></li>
+                <li><a href="#">1</a></li>
+                <li><a href="#">2</a></li>
+                <li><a href="#">3</a></li>
+                <li><a href="#">4</a></li>
+                <li><a href="#">5</a></li>
+                <li><a href="#">&raquo;</a></li>
+             </ul>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="pagination pagination-centered"&gt;
+  ...
+&lt;/div&gt;
+</pre>
+          <div class="bs-docs-example">
+            <div class="pagination pagination-right">
+              <ul>
+                <li><a href="#">&laquo;</a></li>
+                <li><a href="#">1</a></li>
+                <li><a href="#">2</a></li>
+                <li><a href="#">3</a></li>
+                <li><a href="#">4</a></li>
+                <li><a href="#">5</a></li>
+                <li><a href="#">&raquo;</a></li>
+              </ul>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="pagination pagination-right"&gt;
+  ...
+&lt;/div&gt;
+</pre>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Pager</h2>
+          <p>Quick previous and next links for simple pagination implementations with light markup and styles. It's great for simple sites like blogs or magazines.</p>
+
+          <h3>Default example</h3>
+          <p>By default, the pager centers links.</p>
+          <div class="bs-docs-example">
+            <ul class="pager">
+              <li><a href="#">Previous</a></li>
+              <li><a href="#">Next</a></li>
+            </ul>
+          </div>
+<pre class="prettyprint linenums">
+&lt;ul class="pager"&gt;
+  &lt;li&gt;&lt;a href="#"&gt;Previous&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href="#"&gt;Next&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</pre>
+
+          <h3>Aligned links</h3>
+          <p>Alternatively, you can align each link to the sides:</p>
+          <div class="bs-docs-example">
+            <ul class="pager">
+              <li class="previous"><a href="#">&larr; Older</a></li>
+              <li class="next"><a href="#">Newer &rarr;</a></li>
+            </ul>
+          </div>
+<pre class="prettyprint linenums">
+&lt;ul class="pager"&gt;
+  &lt;li class="previous"&gt;
+    &lt;a href="#"&gt;&amp;larr; Older&lt;/a&gt;
+  &lt;/li&gt;
+  &lt;li class="next"&gt;
+    &lt;a href="#"&gt;Newer &amp;rarr;&lt;/a&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+</pre>
+
+          <h3>Optional disabled state</h3>
+          <p>Pager links also use the general <code>.disabled</code> utility class from the pagination.</p>
+          <div class="bs-docs-example">
+            <ul class="pager">
+              <li class="previous disabled"><a href="#">&larr; Older</a></li>
+              <li class="next"><a href="#">Newer &rarr;</a></li>
+            </ul>
+          </div>
+<pre class="prettyprint linenums">
+&lt;ul class="pager"&gt;
+  &lt;li class="previous disabled"&gt;
+    &lt;a href="#"&gt;&amp;larr; Older&lt;/a&gt;
+  &lt;/li&gt;
+  ...
+&lt;/ul&gt;
+</pre>
+
+        </section>
+        
+
+      </div>
+    </div>
+
+  </div>
+
+
+
+    <!-- Footer
+    ================================================== -->
+    <footer class="footer">
+      <div class="container" style="font-size:12px;">
+        <p class="pull-right"><a href="#">Back to top</a><br><br></p>
+        
+        <p>Ask.Bootstrap (v 0.1.0) is a front-end framework combinations of mainly <a href="http://html5boilerplate.com/">HTML5 Boilerplate</a>, <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a> with other additional handy libraries.<br>
+        Project is maintained by <a href="http://www.twitter.com/cengizism" target="_blank">Cengiz Ulusoy</a> at <a href="http://www.ask-cs.nl/" target="_blank">Ask Community Systems</a>, Rotterdam.<br>
+        Please read <a href="/docs/index.html#copyrights">copyrights</a> section for more information about the creators of the frameworks and components used in this project.</p>
+        
+        <ul class="footer-links">
+          <li class="">
+            <a href="/docs/index.html">Home</a>
+          </li>
+          <li class="">
+            <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+          </li>
+          <li class="">
+            <a href="/docs/base-css/typography.html">Base CSS</a>
+          </li>
+          <li class="">
+            <a href="/docs/components/dropdowns.html">Components</a>
+          </li>
+          <li class="">
+            <a href="/docs/javascript/overview.html">JavaScript</a>
+          </li>
+        </ul>
+        
+      </div>
+    </footer>
+
+
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    
+    <script src="/src/js/libs/jquery/jquery.js"></script>
+    <script src="/src/js/libs/bootstrap/bootstrap.js"></script>
+    <script src="/src/js/libs/vendor/prefixfree.min.js"></script>
+    
+    <script src="/docs/js/google/prettify/prettify.js"></script>
+    
+    <script src="/docs/js/application.js"></script>
+
+  </body>
+</html>

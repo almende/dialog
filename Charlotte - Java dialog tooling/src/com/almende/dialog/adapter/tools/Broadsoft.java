@@ -21,7 +21,8 @@ import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 
 public class Broadsoft {
 	
-	private static final Logger log = Logger.getLogger(Broadsoft.class.getName()); 
+	private static final Logger log = Logger.getLogger(Broadsoft.class.getName());
+	protected static final com.almende.dialog.Logger dialogLog = new com.almende.dialog.Logger();
 	
 	public static final String XSI_URL="http://xsp.voipit.nl";
 	public static final String XSI_ACTIONS="/com.broadsoft.xsi-actions/v2.0/user/";
@@ -52,10 +53,12 @@ public class Broadsoft {
 			String result = webResource.queryParam("address", URLEncoder.encode(address, "UTF-8")).type("text/plain").post(String.class);
 			
 			log.info("Result from BroadSoft: "+result);
+			dialogLog.info(config.getConfigId(), "Start outbound call to: "+address);
 			
 			return getCallId(result);
 		} catch (Exception e) {
 			log.severe("Problems dialing out:"+e.getMessage());
+			dialogLog.severe(config.getConfigId(), "Failed to start call to: "+address+" Error: "+e.getMessage());
 		}
 		
 		return null;

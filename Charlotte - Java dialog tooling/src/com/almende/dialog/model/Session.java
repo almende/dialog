@@ -60,7 +60,7 @@ public class Session implements SessionIntf {
 		try {
 			return om.readValue(json, Session.class);
 		} catch (Exception e){
-			log.severe("Session fromJSON: failed to parse Session JSON!");
+			log.severe("Session fromJSON: failed to parse Session JSON!: "+ json );
 		}
 		return null;
 	}

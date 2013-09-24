@@ -156,10 +156,20 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 		<servlet-name>upload</servlet-name>
 		<url-pattern>/upload/*</url-pattern>
 	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>unitTestServlet</servlet-name>
+		<servlet-class>com.almende.dialog.test.TestServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>unitTestServlet</servlet-name>
+		<url-pattern>/unitTestServlet/*</url-pattern>
+	</servlet-mapping>
 	
 	<welcome-file-list>
-		<welcome-file>index.html</welcome-file>
+		<welcome-file>ask-bootstrap/public/index.html</welcome-file>
 	</welcome-file-list>
+	
     <mime-mapping>
         <extension>ccxml</extension>
         <mime-type>application/ccxml+xml</mime-type>

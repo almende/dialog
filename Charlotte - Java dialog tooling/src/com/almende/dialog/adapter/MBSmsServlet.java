@@ -1,17 +1,18 @@
 package com.almende.dialog.adapter;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.net.URLDecoder;
-import java.util.HashMap;
-import java.util.logging.Logger;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.agent.tools.TextMessage;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
 
 public class MBSmsServlet extends TextServlet {
 
@@ -33,30 +34,51 @@ public class MBSmsServlet extends TextServlet {
 		CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
 		return cm.sendMessage(message, subject, from, fromName, to, toName, config);
 	}
+	
+        @Override
+        protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
+            Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+        {
+            String[] tokens = config.getAccessToken().split( "\\|" );
+            CM cm = new CM( tokens[0], tokens[1], config.getAccessTokenSecret() );
+            return cm.broadcastMessage( message, subject, from, senderName, addressNameMap, config );
+        }
 
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp)
-			throws Exception {
-		
+    throws Exception
+    {
 		HashMap<String, String> data = getPostData(req);
-		
-		TextMessage msg=null;
-			
-		String localAddress = URLDecoder.decode(data.get("receiver"),"UTF-8").replaceFirst("31", "0");
-		String address = formatNumber(URLDecoder.decode(data.get("sender"),"UTF-8").replaceFirst("31", "0"));
-		msg = new TextMessage(USE_KEYWORDS);
-		msg.setLocalAddress(localAddress);
-		msg.setAddress(address);
-		try {
-			msg.setBody(URLDecoder.decode(data.get("message"), "UTF-8"));
-		} catch(Exception ex) {
-			log.warning("Failed to parse phone number");
-		}
-		
-		return msg;
+        return receiveMessage(data);
 	}
 
-	@Override
+    /**
+     * this function is extracted from the {@link #receiveMessage(javax.servlet.http.HttpServletRequest,
+     * javax.servlet.http.HttpServletResponse)} method so that it can be unit tested
+     * @param data
+     * @return
+     * @author Shravan
+     * @since 0.4.0
+     * @throws UnsupportedEncodingException
+     */
+    private TextMessage receiveMessage(HashMap<String, String> data) throws UnsupportedEncodingException {
+        TextMessage msg=null;
+
+        String localAddress = URLDecoder.decode(data.get("receiver"), "UTF-8").replaceFirst("31", "0");
+        String address = formatNumber(URLDecoder.decode(data.get("sender"),"UTF-8").replaceFirst("31", "0"));
+        msg = new TextMessage(USE_KEYWORDS);
+        msg.setLocalAddress(localAddress);
+        msg.setAddress(address);
+        try {
+            msg.setBody(URLDecoder.decode(data.get("message"), "UTF-8"));
+        } catch(Exception ex) {
+            log.warning("Failed to parse phone number");
+        }
+
+        return msg;
+    }
+
+    @Override
 	protected String getServletPath() {
 		return servletPath;
 	}

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Ask.Bootstrap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ask Bootstrap: a compilation of frameworks with handy scripts and styles, ready for cooking a new project or web app immediately.">
+    <meta name="author" content="Compiled and maintained by Cengiz Ulusoy. Refer to 'copyrights' section for licences of the components used in this project.">
+
+    <!-- Le styles -->
+    <link href="/src/css/bootstrap.css" rel="stylesheet">
+    <link href="/src/css/responsive.css" rel="stylesheet">
+    
+    <link href="/docs/js/google/prettify/prettify.css" rel="stylesheet">
+    
+    <link href="/docs/css/docs.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="/src/img/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/src/img/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/src/img/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/src/img/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="/src/img/ico/apple-touch-icon-57-precomposed.png">
+    
+  </head>
+
+  <body>
+
+    <!-- Navbar
+    ================================================== -->
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="index.html">Ask.Bootstrap</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="">
+                <a href="/docs/index.html">Home</a>
+              </li>
+              <li class="">
+                <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+              </li>
+              <li class="">
+                <a href="/docs/base-css/typography.html">Base CSS</a>
+              </li>
+              <li class="active">
+                <a href="/docs/components/dropdowns.html">Components</a>
+              </li>
+              <li class="">
+                <a href="/docs/javascript/overview.html">JavaScript</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Subhead
+================================================== -->
+<header class="jumbotron subhead" id="overview">
+  <div class="container">
+    <h1>Components</h1>
+    <p class="lead">Dozens of reusable components built to provide navigation, alerts, popovers, and more.</p>
+  </div>
+</header>
+
+
+  <div class="container">
+
+    <!-- Docs nav
+    ================================================== -->
+    <div class="row">
+      <div class="span3">
+        <ul class="nav nav-tabs nav-stacked">
+          <li><a href="/docs/components/dropdowns.html"><i class="icon-chevron-right"></i> Dropdowns</a></li>
+          <li><a href="/docs/components/button_groups.html"><i class="icon-chevron-right"></i> Button groups</a></li>
+          <li class="active"><a href="/docs/components/button_dropdowns.html"><i class="icon-chevron-right"></i> Button dropdowns</a></li>
+          <li><a href="/docs/components/navs.html"><i class="icon-chevron-right"></i> Navs</a></li>
+          <li><a href="/docs/components/navbar.html"><i class="icon-chevron-right"></i> Navbar</a></li>
+          <li><a href="/docs/components/breadcrumbs.html"><i class="icon-chevron-right"></i> Breadcrumbs</a></li>
+          <li><a href="/docs/components/pagination.html"><i class="icon-chevron-right"></i> Pagination</a></li>
+          <li><a href="/docs/components/labels_badges.html"><i class="icon-chevron-right"></i> Labels and badges</a></li>
+          <li><a href="/docs/components/typography.html"><i class="icon-chevron-right"></i> Typography</a></li>
+          <li><a href="/docs/components/thumbnails.html"><i class="icon-chevron-right"></i> Thumbnails</a></li>
+          <li><a href="/docs/components/alerts.html"><i class="icon-chevron-right"></i> Alerts</a></li>
+          <li><a href="/docs/components/progress.html"><i class="icon-chevron-right"></i> Progress bars</a></li>
+          <li><a href="/docs/components/media.html"><i class="icon-chevron-right"></i> Media object</a></li>
+          <li><a href="/docs/components/misc.html"><i class="icon-chevron-right"></i> Misc</a></li>
+        </ul>
+      </div>
+      <div class="span9">
+
+
+        <!-- Split button dropdowns
+        ================================================== -->
+        <section id="buttonDropdowns">
+          <div class="page-header">
+            <h1>Button dropdown menus</h1>
+          </div>
+
+
+          <h2>Overview and examples</h2>
+          <p>Use any button to trigger a dropdown menu by placing it within a <code>.btn-group</code> and providing the proper menu markup.</p>
+          <div class="bs-docs-example">
+            <div class="btn-toolbar" style="margin: 0;">
+              <div class="btn-group">
+                <button class="btn dropdown-toggle" data-toggle="dropdown">Action <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-primary dropdown-toggle" data-toggle="dropdown">Action <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-danger dropdown-toggle" data-toggle="dropdown">Danger <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-warning dropdown-toggle" data-toggle="dropdown">Warning <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-success dropdown-toggle" data-toggle="dropdown">Success <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-info dropdown-toggle" data-toggle="dropdown">Info <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-inverse dropdown-toggle" data-toggle="dropdown">Inverse <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+            </div><!-- /btn-toolbar -->
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="btn-group"&gt;
+  &lt;a class="btn dropdown-toggle" data-toggle="dropdown" href="#"&gt;
+    Action
+    &lt;span class="caret"&gt;&lt;/span&gt;
+  &lt;/a&gt;
+  &lt;ul class="dropdown-menu"&gt;
+    &lt;!-- dropdown menu links --&gt;
+  &lt;/ul&gt;
+&lt;/div&gt;
+</pre>
+
+          <h3>Works with all button sizes</h3>
+          <p>Button dropdowns work at any size:  <code>.btn-large</code>, <code>.btn-small</code>, or <code>.btn-mini</code>.</p>
+          <div class="bs-docs-example">
+            <div class="btn-toolbar" style="margin: 0;">
+              <div class="btn-group">
+                <button class="btn btn-large dropdown-toggle" data-toggle="dropdown">Large button <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-small dropdown-toggle" data-toggle="dropdown">Small button <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-mini dropdown-toggle" data-toggle="dropdown">Mini button <span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+            </div><!-- /btn-toolbar -->
+          </div>
+
+          <h3>Requires JavaScript</h3>
+          <p>Button dropdowns require the <a href="javascript.html#dropdowns">Bootstrap dropdown plugin</a> to function.</p>
+          <p>In some cases&mdash;like mobile&mdash;dropdown menus will extend outside the viewport. You need to resolve the alignment manually or with custom JavaScript.</p>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Split button dropdowns</h2>
+          <p>Building on the button group styles and markup, we can easily create a split button. Split buttons feature a standard action on the left and a dropdown toggle on the right with contextual links.</p>
+          <div class="bs-docs-example">
+            <div class="btn-toolbar" style="margin: 0;">
+              <div class="btn-group">
+                <button class="btn">Action</button>
+                <button class="btn dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-primary">Action</button>
+                <button class="btn btn-primary dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-danger">Danger</button>
+                <button class="btn btn-danger dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-warning">Warning</button>
+                <button class="btn btn-warning dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-success">Success</button>
+                <button class="btn btn-success dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-info">Info</button>
+                <button class="btn btn-info dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group">
+                <button class="btn btn-inverse">Inverse</button>
+                <button class="btn btn-inverse dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+            </div><!-- /btn-toolbar -->
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="btn-group"&gt;
+  &lt;button class="btn"&gt;Action&lt;/button&gt;
+  &lt;button class="btn dropdown-toggle" data-toggle="dropdown"&gt;
+    &lt;span class="caret"&gt;&lt;/span&gt;
+  &lt;/button&gt;
+  &lt;ul class="dropdown-menu"&gt;
+    &lt;!-- dropdown menu links --&gt;
+  &lt;/ul&gt;
+&lt;/div&gt;
+</pre>
+
+          <h3>Sizes</h3>
+          <p>Utilize the extra button classes <code>.btn-mini</code>, <code>.btn-small</code>, or <code>.btn-large</code> for sizing.</p>
+          <div class="bs-docs-example">
+            <div class="btn-toolbar">
+              <div class="btn-group">
+                <button class="btn btn-large">Large action</button>
+                <button class="btn btn-large dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+            </div><!-- /btn-toolbar -->
+            <div class="btn-toolbar">
+              <div class="btn-group">
+                <button class="btn btn-small">Small action</button>
+                <button class="btn btn-small dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+            </div><!-- /btn-toolbar -->
+            <div class="btn-toolbar">
+              <div class="btn-group">
+                <button class="btn btn-mini">Mini action</button>
+                <button class="btn btn-mini dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+            </div><!-- /btn-toolbar -->
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="btn-group"&gt;
+  &lt;button class="btn btn-mini"&gt;Action&lt;/button&gt;
+  &lt;button class="btn btn-mini dropdown-toggle" data-toggle="dropdown"&gt;
+    &lt;span class="caret"&gt;&lt;/span&gt;
+  &lt;/button&gt;
+  &lt;ul class="dropdown-menu"&gt;
+    &lt;!-- dropdown menu links --&gt;
+  &lt;/ul&gt;
+&lt;/div&gt;
+</pre>
+
+          <h3>Dropup menus</h3>
+          <p>Dropdown menus can also be toggled from the bottom up by adding a single class to the immediate parent of <code>.dropdown-menu</code>. It will flip the direction of the <code>.caret</code> and reposition the menu itself to move from the bottom up instead of top down.</p>
+          <div class="bs-docs-example">
+            <div class="btn-toolbar" style="margin: 0;">
+              <div class="btn-group dropup">
+                <button class="btn">Dropup</button>
+                <button class="btn dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                <ul class="dropdown-menu">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+              <div class="btn-group dropup">
+                <button class="btn primary">Right dropup</button>
+                <button class="btn primary dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                <ul class="dropdown-menu pull-right">
+                  <li><a href="#">Action</a></li>
+                  <li><a href="#">Another action</a></li>
+                  <li><a href="#">Something else here</a></li>
+                  <li class="divider"></li>
+                  <li><a href="#">Separated link</a></li>
+                </ul>
+              </div><!-- /btn-group -->
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="btn-group dropup"&gt;
+  &lt;button class="btn"&gt;Dropup&lt;/button&gt;
+  &lt;button class="btn dropdown-toggle" data-toggle="dropdown"&gt;
+    &lt;span class="caret"&gt;&lt;/span&gt;
+  &lt;/button&gt;
+  &lt;ul class="dropdown-menu"&gt;
+    &lt;!-- dropdown menu links --&gt;
+  &lt;/ul&gt;
+&lt;/div&gt;
+</pre>
+
+        </section>
+
+
+
+
+      </div>
+    </div>
+
+  </div>
+
+
+
+    <!-- Footer
+    ================================================== -->
+    <footer class="footer">
+      <div class="container" style="font-size:12px;">
+        <p class="pull-right"><a href="#">Back to top</a><br><br></p>
+        
+        <p>Ask.Bootstrap (v 0.1.0) is a front-end framework combinations of mainly <a href="http://html5boilerplate.com/">HTML5 Boilerplate</a>, <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a> with other additional handy libraries.<br>
+        Project is maintained by <a href="http://www.twitter.com/cengizism" target="_blank">Cengiz Ulusoy</a> at <a href="http://www.ask-cs.nl/" target="_blank">Ask Community Systems</a>, Rotterdam.<br>
+        Please read <a href="/docs/index.html#copyrights">copyrights</a> section for more information about the creators of the frameworks and components used in this project.</p>
+        
+        <ul class="footer-links">
+          <li class="">
+            <a href="/docs/index.html">Home</a>
+          </li>
+          <li class="">
+            <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+          </li>
+          <li class="">
+            <a href="/docs/base-css/typography.html">Base CSS</a>
+          </li>
+          <li class="">
+            <a href="/docs/components/dropdowns.html">Components</a>
+          </li>
+          <li class="">
+            <a href="/docs/javascript/overview.html">JavaScript</a>
+          </li>
+        </ul>
+        
+      </div>
+    </footer>
+
+
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    
+    <script src="/src/js/libs/jquery/jquery.js"></script>
+    <script src="/src/js/libs/bootstrap/bootstrap.js"></script>
+    <script src="/src/js/libs/vendor/prefixfree.min.js"></script>
+    
+    <script src="/docs/js/google/prettify/prettify.js"></script>
+    
+    <script src="/docs/js/application.js"></script>
+
+  </body>
+</html>

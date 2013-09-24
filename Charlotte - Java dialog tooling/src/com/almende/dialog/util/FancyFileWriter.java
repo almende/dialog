@@ -14,6 +14,7 @@ import com.google.appengine.api.files.FinalizationException;
 import com.google.appengine.api.files.GSFileOptions.GSFileOptionsBuilder;
 import com.google.appengine.api.files.LockException;
 
+@SuppressWarnings("deprecation")
 public class FancyFileWriter {
 	// Batch writes so that they're at least FILE_BUFFER_LIMIT bytes
 	private static final int FILE_BUFFER_LIMIT = 100000;

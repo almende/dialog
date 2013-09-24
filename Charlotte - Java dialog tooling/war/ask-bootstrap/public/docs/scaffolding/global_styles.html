@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Ask.Bootstrap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ask Bootstrap: a compilation of frameworks with handy scripts and styles, ready for cooking a new project or web app immediately.">
+    <meta name="author" content="Compiled and maintained by Cengiz Ulusoy. Refer to 'copyrights' section for licences of the components used in this project.">
+
+    <!-- Le styles -->
+    <link href="/src/css/bootstrap.css" rel="stylesheet">
+    <link href="/src/css/responsive.css" rel="stylesheet">
+    
+    <link href="/docs/js/google/prettify/prettify.css" rel="stylesheet">
+    
+    <link href="/docs/css/docs.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="/src/img/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/src/img/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/src/img/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/src/img/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="/src/img/ico/apple-touch-icon-57-precomposed.png">
+    
+  </head>
+
+  <body>
+
+    <!-- Navbar
+    ================================================== -->
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="/docs/index.html">Ask.Bootstrap</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="">
+                <a href="/docs/index.html">Home</a>
+              </li>
+              <li class="active">
+                <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+              </li>
+              <li class="">
+                <a href="/docs/base-css/typography.html">Base CSS</a>
+              </li>
+              <li class="">
+                <a href="/docs/components/dropdowns.html">Components</a>
+              </li>
+              <li class="">
+                <a href="/docs/javascript/overview.html">JavaScript</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Subhead
+================================================== -->
+<header class="jumbotron subhead" id="overview">
+  <div class="container">
+    <h1>Scaffolding</h1>
+    <p class="lead">Bootstrap is built on responsive 12-column grids, layouts, and components.</p>
+  </div>
+</header>
+
+  <div class="container">
+
+    <!-- Docs nav
+    ================================================== -->
+    <div class="row">
+    
+    
+      <div class="span3">
+        <ul class="nav nav-tabs nav-stacked">
+          <li class="active"><a href="/docs/scaffolding/global_styles.html"><i class="icon-chevron-right"></i> Global styles</a></li>
+          <li><a href="/docs/scaffolding/grid_system.html"><i class="icon-chevron-right"></i> Grid system</a></li>
+          <li><a href="/docs/scaffolding/fluid_grid_system.html"><i class="icon-chevron-right"></i> Fluid grid system</a></li>
+          <li><a href="/docs/scaffolding/layouts.html"><i class="icon-chevron-right"></i> Layouts</a></li>
+          <li><a href="/docs/scaffolding/responsive.html"><i class="icon-chevron-right"></i> Responsive design</a></li>
+        </ul>
+      </div>
+      
+      
+      <div class="span9">
+
+
+
+        <!-- Global Bootstrap settings
+        ================================================== -->
+        <section id="global">
+          <div class="page-header">
+            <h1>Global settings</h1>
+          </div>
+
+          <h3>Requires HTML5 doctype</h3>
+          <p>Bootstrap makes use of certain HTML elements and CSS properties that require the use of the HTML5 doctype. Include it at the beginning of all your projects.</p>
+<pre class="prettyprint linenums">
+&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+  ...
+&lt;/html&gt;
+</pre>
+
+          <h3>Typography and links</h3>
+          <p>Bootstrap sets basic global display, typography, and link styles. Specifically, we:</p>
+          <ul>
+            <li>Remove <code>margin</code> on the body</li>
+            <li>Set <code>background-color: white;</code> on the <code>body</code></li>
+            <li>Use the <code>@baseFontFamily</code>, <code>@baseFontSize</code>, and <code>@baseLineHeight</code> attributes as our typographic base</li>
+            <li>Set the global link color via <code>@linkColor</code> and apply link underlines only on <code>:hover</code></li>
+          </ul>
+          <p>These styles can be found within <strong>scaffolding.less</strong>.</p>
+
+          <h3>Reset via Normalize</h3>
+          <p>With Bootstrap 2, the old reset block has been dropped in favor of <a href="http://necolas.github.com/normalize.css/" target="_blank">Normalize.css</a>, a project by <a href="http://twitter.com/necolas" target="_blank">Nicolas Gallagher</a> that also powers the <a href="http://html5boilerplate.com" target="_blank">HTML5 Boilerplate</a>. While we use much of Normalize within our <strong>reset.less</strong>, we have removed some elements specifically for Bootstrap.</p>
+
+        </section>
+
+
+      </div>
+    </div>
+
+  </div>
+
+
+
+    <!-- Footer
+    ================================================== -->
+    <footer class="footer">
+      <div class="container" style="font-size:12px;">
+        <p class="pull-right"><a href="#">Back to top</a><br><br></p>
+        
+        <p>Ask.Bootstrap (v 0.1.0) is a front-end framework combinations of mainly <a href="http://html5boilerplate.com/">HTML5 Boilerplate</a>, <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a> with other additional handy libraries.<br>
+        Project is maintained by <a href="http://www.twitter.com/cengizism" target="_blank">Cengiz Ulusoy</a> at <a href="http://www.ask-cs.nl/" target="_blank">Ask Community Systems</a>, Rotterdam.<br>
+        Please read <a href="/docs/index.html#copyrights">copyrights</a> section for more information about the creators of the frameworks and components used in this project.</p>
+        
+        <ul class="footer-links">
+          <li class="">
+            <a href="/docs/index.html">Home</a>
+          </li>
+          <li class="">
+            <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+          </li>
+          <li class="">
+            <a href="/docs/base-css/typography.html">Base CSS</a>
+          </li>
+          <li class="">
+            <a href="/docs/components/dropdowns.html">Components</a>
+          </li>
+          <li class="">
+            <a href="/docs/javascript/overview.html">JavaScript</a>
+          </li>
+        </ul>
+        
+      </div>
+    </footer>
+
+
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    
+    <script src="/src/js/libs/jquery/jquery.js"></script>
+    <script src="/src/js/libs/bootstrap/bootstrap.js"></script>
+    <script src="/src/js/libs/vendor/prefixfree.min.js"></script>
+    
+    <script src="/docs/js/google/prettify/prettify.js"></script>
+    
+    <script src="/docs/js/application.js"></script>
+
+  </body>
+</html>

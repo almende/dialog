@@ -210,6 +210,21 @@ public class DialogAgent extends Agent {
 		}
 	}
 	
+	public String getOwnAdapters(@Name("adapterType") @Required(false) String adapterType, 
+                           @Name("publicKey") String pubKey,
+                           @Name("privateKey") String privKey) throws Exception {
+
+        log.setLevel(Level.INFO);
+        ArrayNode adapterList = null;
+        adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
+        
+        if(adapterList==null)
+            throw new Exception("Invalid key provided");
+        
+        List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterConfigFromList(adapterType, adapterList);
+        return ServerUtils.serialize(adapterConfigs);
+	}
+	
 	@Override
 	public String getDescription() {
 		return "Dialog handling agent";

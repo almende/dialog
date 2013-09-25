@@ -3,7 +3,9 @@ package com.almende.dialog.accounts;
 import static com.google.appengine.api.datastore.Query.FilterOperator.EQUAL;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.logging.Logger;
 
 import javax.ws.rs.Consumes;
@@ -228,6 +230,21 @@ public class AdapterConfig {
 		
 		return null;
 	}
+	
+	public static List<AdapterConfig> findAdapterConfigFromList(String type, ArrayNode adapters) throws JSONException {
+        
+	    
+        ArrayList<String> adapterIDs = new ArrayList<>();            
+        for(JsonNode adapter : adapters) {
+            if(type==null) {
+                adapterIDs.add(adapter.get("id").asText());
+            } else if(adapter.get("adapterType").asText().toUpperCase().equals(type.toUpperCase())) {
+                adapterIDs.add(adapter.get("id").asText());
+            }
+        }
+        
+        return findAdaptersByList(adapterIDs);
+    }
 
 	public static AdapterConfig findAdapterConfig(String adapterType,
 			String lookupKey) {
@@ -305,6 +322,25 @@ public class AdapterConfig {
 		}
 
 		return adapters;
+	}
+	
+	public static ArrayList<AdapterConfig> findAdaptersByList(Collection<String> adapterIDs) {
+	    
+	    AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+
+        RootFindCommand<AdapterConfig> cmd = datastore.find().type(
+                AdapterConfig.class);
+        
+        cmd.addFilter("configID", FilterOperator.IN, adapterIDs);
+	    
+	    Iterator<AdapterConfig> config = cmd.now();
+
+        ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+        while (config.hasNext()) {
+            adapters.add(config.next());
+        }
+
+        return adapters;
 	}
 
 	public static boolean adapterExists(String adapterType, String myAddress, String keyword) {

@@ -1,23 +1,5 @@
 package com.almende.dialog.accounts;
 
-import static com.google.appengine.api.datastore.Query.FilterOperator.EQUAL;
-
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.logging.Logger;
-
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.eaio.uuid.UUID;
@@ -30,8 +12,15 @@ import com.google.appengine.api.datastore.Query.FilterOperator;
 import com.google.code.twig.FindCommand.RootFindCommand;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
 import com.google.code.twig.annotation.Id;
-
 import flexjson.JSONException;
+
+import javax.ws.rs.*;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
+import java.util.*;
+import java.util.logging.Logger;
+
+import static com.google.appengine.api.datastore.Query.FilterOperator.EQUAL;
 
 @Path("/adapters")
 public class AdapterConfig {
@@ -75,7 +64,7 @@ public class AdapterConfig {
 			{
 				return Response.status(Status.CONFLICT).build();
 			}
-			if(configId == null)
+			if(newConfig.getConfigId() == null)
 			{
 			    newConfig.configId = new UUID().toString();
 			}
@@ -228,6 +217,20 @@ public class AdapterConfig {
 		
 		return null;
 	}
+	
+	public static List<AdapterConfig> findAdapterConfigFromList(String type, ArrayNode adapters) throws JSONException {
+        
+	    
+        ArrayList<String> adapterIDs = new ArrayList<String>();
+        for(JsonNode adapter : adapters) {
+            if(type==null) {
+                adapterIDs.add(adapter.get("id").asText());
+            } else if(adapter.get("adapterType").asText().toUpperCase().equals(type.toUpperCase())) {
+                adapterIDs.add(adapter.get("id").asText());
+            }
+        }
+        return findAdaptersByList(adapterIDs);
+    }
 
 	public static AdapterConfig findAdapterConfig(String adapterType,
 			String lookupKey) {
@@ -305,6 +308,23 @@ public class AdapterConfig {
 		}
 
 		return adapters;
+	}
+	
+	public static ArrayList<AdapterConfig> findAdaptersByList(Collection<String> adapterIDs)
+	{
+	    AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+	    Map<String, AdapterConfig> adaptersFromDS = datastore.loadAll(AdapterConfig.class, adapterIDs);
+	    Iterator<AdapterConfig> config = adaptersFromDS.values().iterator();
+        ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+        while (config.hasNext()) 
+        {
+            AdapterConfig nextConfig = config.next();
+            if(nextConfig != null)
+            {
+                adapters.add(nextConfig);
+            }
+        }
+        return adapters;
 	}
 
 	public static boolean adapterExists(String adapterType, String myAddress, String keyword) {

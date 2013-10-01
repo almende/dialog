@@ -221,7 +221,7 @@ public class VoiceXMLRESTProxy {
 	@GET
 	@Produces("application/voicexml")
 	public Response getNewDialog(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID, @Context UriInfo ui){
-		log.warning("call started:"+direction+":"+remoteID+":"+localID);		
+		log.info("call started:"+direction+":"+remoteID+":"+localID);
 		this.host=ui.getBaseUri().toString().replace(":80", "");
 		
 		String adapterType="broadsoft";
@@ -610,6 +610,11 @@ public class VoiceXMLRESTProxy {
 		String redirectTimeoutProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
         //assign a default timeout if one is not specified
         String redirectTimeout = redirectTimeoutProperty != null ? redirectTimeoutProperty : "40s";
+        if(!redirectTimeout.endsWith("s"))
+        {
+            log.warning("Redirect timeout must be end with 's'. E.g. 40s. Found: "+ redirectTimeout);
+            redirectTimeout += "s";
+        }
 		
 		StringWriter sw = new StringWriter();
 		try {
@@ -625,7 +630,6 @@ public class VoiceXMLRESTProxy {
 								outputter.attribute("dest", question.getUrl());
 								outputter.attribute("bridge","true");
 								outputter.attribute("connecttimeout",redirectTimeout);
-								
 								for (String prompt : prompts){
 									outputter.startTag("prompt");
 										outputter.startTag("audio");

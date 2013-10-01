@@ -76,7 +76,7 @@
     <transition state="originatingcall" event="connection.failed">
 	    <assign name="currentState" expr="'connestablished'" />
 	    <assign name="results" expr="'event$.result'"/>
-      <dialogterminate dialogid="holdDialogID"/>
+	    <join id1="inConn" id2="dialogID" />
       <send name="'dialog.transfer.complete'"
 	      target="dialogID"
 	      targettype="'dialog'"

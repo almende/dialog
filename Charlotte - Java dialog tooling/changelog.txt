@@ -1,6 +1,10 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+1-10-2013, version 0.4.1
+- Fixed issue with multiple redirection config in default.ccxml.
+- Fixed issue with fetching owned adapters in AdapterConfig.
+
 24-09-2013, version 0.4.0
 - Introduce two new functions to do broadcasting over a certain medium. outboundCallWithList to broadcast
   to list of numbers and outboundCallWithMap to do a broadcast but also use a different sendername.

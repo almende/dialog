@@ -387,7 +387,7 @@ abstract public class TextServlet extends HttpServlet {
 			boolean start = false;
 			json = StringStore.getString("question_"+address+"_"+localaddress);
 			if (json == null || json.equals("")) {
-				body=null; // Remove the body, because it is to start the question
+				escapeInput.body=null; // Remove the body, because it is to start the question
 				if (config.getInitialAgentURL().equals("")){
 					question = Question.fromURL(this.host+DEMODIALOG, config.getConfigId(),address,localaddress);
 				} else {

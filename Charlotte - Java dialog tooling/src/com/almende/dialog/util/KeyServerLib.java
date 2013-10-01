@@ -1,7 +1,5 @@
 package com.almende.dialog.util;
 
-import java.util.logging.Logger;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.util.ParallelInit;
@@ -10,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
+
+import java.util.logging.Logger;
 
 public class KeyServerLib {
 
@@ -22,21 +22,21 @@ public class KeyServerLib {
 	public static ArrayNode getAllowedAdapterList(String pubKey, String privKey, String adapterType) {
 		
 		ObjectMapper om = ParallelInit.getObjectMapper();
-		ArrayNode list = om.createArrayNode(); 
+		ArrayNode adapterList = om.createArrayNode();
 		if(Settings.KEYSERVER==null)
-			return list;
+			return adapterList;
 		
 		String path="/rest/keys/checkkey/"+pubKey+"/"+privKey+"/outbound";
-		
 		String res="";
-		try {
+
+        try {
 			Client client = ParallelInit.getClient();
 			WebResource webResource = client.resource(Settings.KEYSERVER+path);
 			res = webResource.get(String.class);
 		} catch(Exception ex) {
 			log.warning(ex.getMessage());
 			log.warning("No response from keyserver so no validation");
-			return list;
+			return adapterList;
 		}
 		
 		try {
@@ -44,15 +44,14 @@ public class KeyServerLib {
 			if(!result.get("valid").asBoolean())
 				return null;
 			if(adapterType==null) {
-				list = (ArrayNode) result.get("adapters");
+				adapterList = (ArrayNode) result.get("adapters");
 			} else {
 				for(JsonNode adapter : (ArrayNode) result.get("adapters")){
 					if(adapter.get("adapterType").asText().equalsIgnoreCase(adapterType))
-						list.add(adapter);
+						adapterList.add(adapter);
 				}
 			}
-			
-			return list;
+			return adapterList;
 			
 		} catch(Exception ex) {
 			log.warning("Unable to parse result");

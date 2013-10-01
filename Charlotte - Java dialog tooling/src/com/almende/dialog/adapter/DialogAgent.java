@@ -1,5 +1,6 @@
 package com.almende.dialog.adapter;
 
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.KeyServerLib;
@@ -210,6 +211,22 @@ public class DialogAgent extends Agent {
 		}
 	}
 	
+	public List<AdapterConfig> getOwnAdapters(@Name("adapterType") @Required(false) String adapterType,
+                           @Name("publicKey") String pubKey,
+                           @Name("privateKey") String privKey) throws Exception {
+
+        log.setLevel(Level.INFO);
+        ArrayNode adapterList = KeyServerLib.getAllowedAdapterList(pubKey, privKey, adapterType);
+        
+        if(adapterList==null)
+            throw new Exception("Invalid key provided");
+        if(adapterList.size() == 0)
+            throw new Exception( "No adapters found at portal: "+ Settings.KEYSERVER );
+        
+        List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterConfigFromList(adapterType, adapterList);
+        return adapterConfigs;
+	}
+	
 	@Override
 	public String getDescription() {
 		return "Dialog handling agent";
@@ -217,7 +234,7 @@ public class DialogAgent extends Agent {
 
 	@Override
 	public String getVersion() {
-		return "0.1";
+		return "0.4.1";
 	}
 
 }

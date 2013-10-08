@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+8-10-2013, hotfix_email
+- Fixed issue with outbound emails not getting sent.
+
 1-10-2013, version 0.4.1
 - Fixed issue with multiple redirection config in default.ccxml.
 - Fixed issue with fetching owned adapters in AdapterConfig.

@@ -46,7 +46,7 @@ public class XMPPServletTest extends TestFramework
     @Test
     public void ReceiveAppointmentNewSessionMessageTest() throws Exception
     {
-        String initialAgentURL = TestServlet.TEXT_SERVLET_PATH + "?appointment=start";
+        String initialAgentURL = TestServlet.TEST_SERVLET_PATH + "?appointment=start";
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig( "XMPP", TEST_PUBLIC_KEY, localAddressChat, initialAgentURL );
         //create session

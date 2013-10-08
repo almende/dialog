@@ -1,5 +1,20 @@
 package com.almende.dialog.adapter;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
+import java.nio.CharBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.logging.Logger;
+
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -18,20 +33,6 @@ import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
-
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URL;
-import java.nio.CharBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.logging.Logger;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
@@ -185,6 +186,10 @@ abstract public class TextServlet extends HttpServlet {
                 String formattedAddress = formatNumber(address).replaceFirst("\\+31", "0");
                 formattedAddressNameMap.put(formattedAddress, addressNameMap.get(address));
             }
+        }
+        else
+        {
+            formattedAddressNameMap = addressNameMap;
         }
         String localaddress = config.getMyAddress();
         url = encodeURLParams( url );

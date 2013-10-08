@@ -19,7 +19,7 @@ import java.util.Iterator;
 public class TestServlet extends HttpServlet
 {
     private static final long serialVersionUID = 1L;
-    public static final String TEXT_SERVLET_PATH = "http://localhost:9000/unitTestServlet";
+    public static final String TEST_SERVLET_PATH = "http://localhost:9000/unitTestServlet";
     public static final String APPOINTMENT_MAIN_QUESTION = "Are you available today?";
     public static final String APPOINTMENT_YES_ANSWER = "Yup";
     public static final String APPOINTMENT_NO_ANSWER = "Nope";
@@ -83,8 +83,8 @@ public class TestServlet extends HttpServlet
         question.setType( "closed" );
         question.setQuestion_text( "text://" + APPOINTMENT_MAIN_QUESTION );
         
-        Answer yesAnswer = new Answer( "text://" + APPOINTMENT_YES_ANSWER, TEXT_SERVLET_PATH + "?appointment=" + APPOINTMENT_YES_ANSWER );
-        Answer noAnswer = new Answer( "text://" + APPOINTMENT_NO_ANSWER, TEXT_SERVLET_PATH + "?appointment=" + APPOINTMENT_NO_ANSWER );
+        Answer yesAnswer = new Answer( "text://" + APPOINTMENT_YES_ANSWER, TEST_SERVLET_PATH + "?appointment=" + APPOINTMENT_YES_ANSWER );
+        Answer noAnswer = new Answer( "text://" + APPOINTMENT_NO_ANSWER, TEST_SERVLET_PATH + "?appointment=" + APPOINTMENT_NO_ANSWER );
         
         //set the answers in the question
         question.setAnswers( new ArrayList<Answer>( Arrays.asList( yesAnswer, noAnswer ) ));
@@ -99,7 +99,7 @@ public class TestServlet extends HttpServlet
         question.setType( "open" );
         question.setQuestion_text( "text://"+ APPOINTMENT_SECOND_QUESION );
         
-        Answer openAnswer = new Answer( "text://", TEXT_SERVLET_PATH + "?appointment="+ APPOINTMENT_FREE_ANSWER );
+        Answer openAnswer = new Answer( "text://", TEST_SERVLET_PATH + "?appointment="+ APPOINTMENT_FREE_ANSWER );
         
         //set the answers in the question
         question.setAnswers( new ArrayList<Answer>(Arrays.asList( openAnswer )));

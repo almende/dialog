@@ -12,7 +12,7 @@ public class TestServletTest extends TestFramework
     @Test
     public void fetchAppointmentQuestionUsingServletRunnerTest() throws Exception
     {
-        String response = fetchResponse( HTTPMethod.GET, TestServlet.TEXT_SERVLET_PATH + "?appointment=start", null );
+        String response = fetchResponse( HTTPMethod.GET, TestServlet.TEST_SERVLET_PATH + "?appointment=start", null );
         Question questionFromJson = Question.fromJSON( response, null );
         Assert.assertEquals( 2, questionFromJson.getAnswers().size() );
         Assert.assertEquals( "text://Are you available today?", questionFromJson.getQuestion_text() );

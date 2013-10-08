@@ -1,19 +1,30 @@
 package com.almende.dialog.adapter;
 
+import java.io.UnsupportedEncodingException;
+import java.util.Date;
+import java.util.Map;
+import java.util.Properties;
+
+import javax.mail.Address;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Multipart;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.InternetHeaders;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.util.ServerUtils;
 import com.google.appengine.api.utils.SystemProperty;
-
-import javax.mail.*;
-import javax.mail.internet.*;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.UnsupportedEncodingException;
-import java.util.Date;
-import java.util.Map;
-import java.util.Properties;
 
 
 public class MailServlet extends TextServlet {
@@ -163,22 +174,25 @@ public class MailServlet extends TextServlet {
         } catch (UnsupportedEncodingException e) {
         	log.warning("Failed to send message, because encoding: "+e.getLocalizedMessage());
 		}
-		
 		return 1;		
 	}
 	
     @Override
     protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
         Map<String, String> addressNameMap, AdapterConfig config )
-    throws Exception
     {
-        javax.mail.Session session = javax.mail.Session.getDefaultInstance( new Properties(), null );
+        Session session = Session.getDefaultInstance( new Properties(), null );
         try
         {
             Message msg = new MimeMessage( session );
-            msg.setFrom( new InternetAddress( from ) );
             if(senderName!=null)
+            {
                 msg.setFrom( new InternetAddress( from, senderName ) );
+            }
+            else
+            {
+                msg.setFrom( new InternetAddress( from ) );
+            }
             for ( String address : addressNameMap.keySet() )
             {
                 String toName = addressNameMap.get( address );
@@ -186,14 +200,13 @@ public class MailServlet extends TextServlet {
             }
             msg.setSubject( subject );
             msg.setText( message );
+            if(ServerUtils.isInUnitTestingEnvironment())
+            {
+                TestFramework.log( msg );
+            }
             Transport.send( msg );
 
             log.info( "Send reply to mail post: " + ( new Date().getTime() ) );
-        }
-        catch ( AddressException e )
-        {
-            log.warning( "Failed to send message, because wrong address: "
-                + e.getLocalizedMessage() );
         }
         catch ( MessagingException e )
         {

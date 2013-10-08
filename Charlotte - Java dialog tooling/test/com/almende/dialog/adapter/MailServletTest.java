@@ -1,25 +1,53 @@
 package com.almende.dialog.adapter;
 
-import com.almende.dialog.TestFramework;
-import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.test.TestServlet;
-import org.junit.Ignore;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Properties;
+
+import javax.mail.Message;
 import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Properties;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import com.almende.dialog.TestFramework;
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.test.TestServlet;
 
 public class MailServletTest extends TestFramework
 {
+    /**
+     * test if an outgoing Email is triggered by the MailServlet 
+     * @throws Exception 
+     */
+    @Test
+    public void sendDummyMessageTest() throws Exception
+    {
+        String testMessage = "testMessage";
+        //create mail adapter
+        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY, localAddressMail, "" );
+        //create session
+        getOrCreateSession( adapterConfig, remoteAddressEmail );
+        
+        //fetch and invoke the receieveMessage method
+        HashMap<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put( remoteAddressEmail, "Test" );
+        String url = "http://askfastmarket1.appspot.com/resource/question/"+ testMessage;
+        MailServlet mailServlet = new MailServlet();
+        mailServlet.startDialog( addressNameMap, url, "test", adapterConfig );
+        
+        Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, testMessage, "Message from DH" );
+        assertOutgoingTextMessage( message );
+    }
+    
     /**
      * test if a "dummy" TextMessage is generated and processed properly by MailServlet 
      * @throws Exception 
@@ -88,7 +116,7 @@ public class MailServletTest extends TestFramework
     @Test
     public void ReceiveAppointmentNewSessionMessageTest() throws Exception
     {
-        String initialAgentURL = TestServlet.TEXT_SERVLET_PATH + "?appointment=start";
+        String initialAgentURL = TestServlet.TEST_SERVLET_PATH + "?appointment=start";
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY,
                                                            localAddressMail, initialAgentURL );
@@ -197,7 +225,8 @@ public class MailServletTest extends TestFramework
 
     private void assertOutgoingTextMessage(TextMessage textMessage) throws Exception
     {
-        javax.mail.Message messageFromDetails = getMessageFromDetails(textMessage.getAddress(), textMessage.getLocalAddress(), responseQuestionString.get());
+        javax.mail.Message messageFromDetails = getMessageFromDetails(textMessage.getAddress(), textMessage.getLocalAddress(), 
+                                                                      responseQuestionString.get(), "");
 
         assertTrue(logObject.get() instanceof javax.mail.Message);
         javax.mail.Message messageLogged = (javax.mail.Message) logObject.get();
@@ -205,5 +234,15 @@ public class MailServletTest extends TestFramework
         assertEquals(messageFromDetails.getAllRecipients(), messageLogged.getAllRecipients());
         assertEquals(messageFromDetails.getSubject(), messageLogged.getSubject().replaceAll("RE:|null","").trim());
         assertEquals(messageFromDetails.getContent().toString(), messageLogged.getContent().toString());
+    }
+    
+    private void assertOutgoingTextMessage(Message message) throws Exception
+    {
+        assertTrue(logObject.get() instanceof javax.mail.Message);
+        javax.mail.Message messageLogged = (javax.mail.Message) logObject.get();
+        assertEquals(message.getFrom(), messageLogged.getFrom());
+        assertEquals(message.getAllRecipients(), messageLogged.getAllRecipients());
+        assertEquals(message.getSubject(), messageLogged.getSubject().replaceAll("RE:|null","").trim());
+        assertEquals(message.getContent().toString(), messageLogged.getContent().toString());
     }
 }

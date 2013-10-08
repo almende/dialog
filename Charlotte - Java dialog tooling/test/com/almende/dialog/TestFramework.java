@@ -1,9 +1,36 @@
 package com.almende.dialog;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Properties;
+
+import javax.mail.BodyPart;
+import javax.mail.MessagingException;
+import javax.mail.internet.ContentDisposition;
+import javax.mail.internet.ContentType;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.InternetHeaders;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
+import javax.ws.rs.core.MediaType;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.junit.After;
+import org.junit.Before;
+import org.w3c.dom.Document;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.test.TestServlet;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.util.ParallelInit;
 import com.google.appengine.api.xmpp.JID;
 import com.google.appengine.api.xmpp.Message;
 import com.google.appengine.api.xmpp.MessageBuilder;
@@ -17,25 +44,9 @@ import com.meterware.httpunit.WebRequest;
 import com.meterware.httpunit.WebResponse;
 import com.meterware.servletunit.ServletRunner;
 import com.meterware.servletunit.ServletUnitClient;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.WebResource;
 import com.thetransactioncompany.cors.HTTPMethod;
-import org.junit.After;
-import org.junit.Before;
-import org.w3c.dom.Document;
-
-import javax.mail.BodyPart;
-import javax.mail.MessagingException;
-import javax.mail.internet.*;
-import javax.ws.rs.core.MediaType;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Properties;
 
 /**
  * Test framework to be inherited by all test classes
@@ -50,7 +61,7 @@ public class TestFramework
     protected static final String localAddressBroadsoft = "0854881000";
     protected static final String remoteAddressVoice    = "1234546789";
     protected static final String TEST_PUBLIC_KEY    = "agent1@ask-cs.com";
-    protected static final String TEST_PRIVATE_KEY = "test`_private_key";
+    protected static final String TEST_PRIVATE_KEY = "test_private_key";
     
     public static ThreadLocal<ServletRunner> servletRunner = new ThreadLocal<ServletRunner>();
     protected static ThreadLocal<Object> logObject = new ThreadLocal<Object>();
@@ -74,29 +85,45 @@ public class TestFramework
     
     public static String fetchResponse( HTTPMethod httpMethods, String url, String payload )
     {
-        ServletUnitClient newClient = servletRunner.get().newClient();
-        WebRequest request = null;
         String result = "";
-        switch ( httpMethods )
+        if(url.startsWith( TestServlet.TEST_SERVLET_PATH ))
         {
-            case GET:
-                request = new GetMethodWebRequest( url );
-                break;
-            case POST:
-                request = new PostMethodWebRequest( url, payload != null ? new ByteArrayInputStream( payload.getBytes() ) : null, 
-                                                    MediaType.APPLICATION_JSON );
-                break;
-            default:
-                break;
+            ServletUnitClient newClient = servletRunner.get().newClient();
+            WebRequest request = null;
+            switch ( httpMethods )
+            {
+                case GET:
+                    request = new GetMethodWebRequest( url );
+                    break;
+                case POST:
+                    request = new PostMethodWebRequest( url, payload != null ? new ByteArrayInputStream( payload.getBytes() ) : null, 
+                                                        MediaType.APPLICATION_JSON );
+                    break;
+                default:
+                    break;
+            }
+            try
+            {
+                WebResponse response = newClient.getResponse( request );
+                result = response.getText();
+            }
+            catch ( Exception e )
+            {
+                e.printStackTrace();
+            }
         }
-        try
+        else 
         {
-            WebResponse response = newClient.getResponse( request );
-            result = response.getText();
-        }
-        catch ( Exception e )
-        {
-            e.printStackTrace();
+            Client client = ParallelInit.getClient();
+            WebResource webResource = client.resource(url);
+            try
+            {
+                result = webResource.type( "text/plain" ).get( String.class );
+            }
+            catch ( Exception e )
+            {
+                e.printStackTrace();
+            }
         }
         return result;
     }
@@ -282,12 +309,12 @@ public class TestFramework
         responseQuestionString.set(questionText);
     }
 
-    protected javax.mail.Message getMessageFromDetails(String remoteAddress, String localAddress, String messageText)
-            throws Exception
+    protected javax.mail.Message getMessageFromDetails(String remoteAddress, String localAddress, String messageText, 
+        String subject) throws Exception
     {
         MimeMessage mimeMessage = new MimeMessage( javax.mail.Session.getDefaultInstance(new Properties(), null) );
         mimeMessage.setFrom( new InternetAddress( localAddress ) );
-        mimeMessage.setSubject("");
+        mimeMessage.setSubject(subject);
         mimeMessage.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(remoteAddress));
         mimeMessage.setText(messageText);
         return mimeMessage;

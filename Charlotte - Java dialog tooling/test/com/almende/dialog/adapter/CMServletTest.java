@@ -75,7 +75,7 @@ public class CMServletTest extends TestFramework
     @Test
     public void ReceiveAppointmentNewSessionMessageTest() throws Exception
     {
-        String initialAgentURL = TestServlet.TEXT_SERVLET_PATH + "?appointment=start";
+        String initialAgentURL = TestServlet.TEST_SERVLET_PATH + "?appointment=start";
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig( "SMS", TEST_PUBLIC_KEY, localAddressBroadsoft, initialAgentURL );
         //create session
@@ -183,12 +183,12 @@ public class CMServletTest extends TestFramework
         DialogAgent dialogAgent = new DialogAgent();
         if(addressNameMap.size() > 1)
         {
-            dialogAgent.outboundCallWithMap( addressNameMap, senderName, TestServlet.TEXT_SERVLET_PATH + "?simpleComment="+ simpleQuestion, 
+            dialogAgent.outboundCallWithMap( addressNameMap, senderName, TestServlet.TEST_SERVLET_PATH + "?simpleComment="+ simpleQuestion, 
                                          null, adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "" );
         }
         else
         {
-            dialogAgent.outboundCall( addressNameMap.keySet().iterator().next(), senderName, TestServlet.TEXT_SERVLET_PATH + "?simpleComment="+ simpleQuestion, 
+            dialogAgent.outboundCall( addressNameMap.keySet().iterator().next(), senderName, TestServlet.TEST_SERVLET_PATH + "?simpleComment="+ simpleQuestion, 
                                       null, adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "" );
         }
     }

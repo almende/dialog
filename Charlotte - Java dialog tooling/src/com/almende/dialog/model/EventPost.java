@@ -9,10 +9,10 @@ public class EventPost implements Serializable {
 	private String responder;
 	private String question_id;
 	private String event;
-	private String message;
+	private Object message;
 	
 	public EventPost(){}
-	public EventPost(String responder, String question_id, String event, String message) {
+	public EventPost(String responder, String question_id, String event, Object message) {
 		this.responder = responder;
 		this.question_id = question_id;
 		this.event = event;
@@ -28,7 +28,7 @@ public class EventPost implements Serializable {
 	public String getEvent() {
 		return event;
 	}
-	public String getMessage() {
+	public Object getMessage() {
 		return message;
 	}
 	

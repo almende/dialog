@@ -1,5 +1,14 @@
 package com.almende.dialog.adapter;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
@@ -13,10 +22,6 @@ import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
-
-import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class DialogAgent extends Agent {
 	
@@ -85,20 +90,23 @@ public class DialogAgent extends Agent {
         return outboundCallWithList( Arrays.asList( address ), senderName, url, adapterType, adapterID, pubKey, privKey );
     }
 	
-	/**
-	 * updated the outboundCall functionality to support broadcast functionality
-	 * @param addressList list of addresses
-	 * @throws Exception
-	 */
-    public HashMap<String, String> outboundCallWithList( @Name( "addressList" ) Collection<String> addressList,
-        @Name("senderName") @Required( false ) String senderName, @Name( "url" ) String url, 
+    /**
+     * updated the outboundCall functionality to support broadcast functionality
+     * 
+     * @param addressList
+     *            list of addresses
+     * @throws Exception
+     */
+    public HashMap<String, String> outboundCallWithList(
+        @Name( "addressList" ) Collection<String> addressList,
+        @Name( "senderName" ) @Required( false ) String senderName, @Name( "url" ) String url,
         @Name( "adapterType" ) @Required( false ) String adapterType,
         @Name( "adapterID" ) @Required( false ) String adapterID,
         @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
     {
-        Map<String, String> addressNameMap = new HashMap<String, String>();
-        ServerUtils.putCollectionAsKey( addressNameMap, addressList, "" );
-        return outboundCallWithMap( addressNameMap, senderName, url, adapterType, adapterID, pubKey, privKey );
+        Map<String, String> addressNameMap = ServerUtils.putCollectionAsKey( addressList, "" );
+        return outboundCallWithMap( addressNameMap, senderName, url, adapterType, adapterID,
+                                    pubKey, privKey );
     }
     
     /**

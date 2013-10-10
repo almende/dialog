@@ -1,6 +1,16 @@
 package com.almende.dialog.util;
 
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
+
+import javax.servlet.http.HttpServletRequest;
+
+import com.almende.dialog.adapter.DialogAgent;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -8,16 +18,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.appengine.api.utils.SystemProperty;
 import com.google.appengine.api.utils.SystemProperty.Environment.Value;
 
-import javax.servlet.http.HttpServletRequest;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Map;
-
 
 public class ServerUtils
 {
+    private static final Logger log = Logger.getLogger(DialogAgent.class.getName());
     private static ObjectMapper oMapper = ParallelInit.getObjectMapper();
+    
     public static <T> T deserialize( String jsonString, Class<T> DeserializeClass )
     throws Exception
     {
@@ -42,7 +48,11 @@ public class ServerUtils
     public static String serialize( Object objectToBeSerialized ) throws Exception
     {
         oMapper.setSerializationInclusion( Include.NON_NULL );
-        String result = oMapper.writeValueAsString( objectToBeSerialized );
+        String result = null;
+        if(objectToBeSerialized != null )
+        {
+            result = oMapper.writeValueAsString( objectToBeSerialized );
+        }
         return result;
     }
     
@@ -104,8 +114,9 @@ public class ServerUtils
     /**
      * associates the same value corresponding to keys listed in keyCollection
      */
-    public static <T extends Object> Map<T, T> putCollectionAsKey( Map<T, T> mapToBePopulated, Collection<T> keyCollection, T value )
+    public static <T> Map<T, T> putCollectionAsKey( Collection<T> keyCollection, T value )
     {
+        Map<T, T> mapToBePopulated = new HashMap<T, T>();
         for ( T key : keyCollection )
         {
             mapToBePopulated.put( key, value );

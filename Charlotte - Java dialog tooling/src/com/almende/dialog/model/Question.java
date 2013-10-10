@@ -66,11 +66,8 @@ public class Question implements QuestionIntf {
             WebResource webResource = client.resource(url);
 			try {
 				webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
-				log.info("Getting question url: "+webResource.toString());
 				dialogLog.info(adapterID,"Loading new question from: "+webResource.toString());
 				json = webResource.type("text/plain").get(String.class);
-				
-				log.info("Received new question (fromURL): "+json);
 				dialogLog.info(adapterID,"Received new question: "+json);
 			} catch (ClientHandlerException e) {
 				log.severe(e.toString());
@@ -105,17 +102,13 @@ public class Question implements QuestionIntf {
 		if(json!=null) {
 			try {
 				question = om.readValue(json, Question.class);
-			
 				question.setQuestion_text( URLDecoder.decode( question.getQuestion_text(), "UTF-8" ) );
-				
-				//question = new JSONDeserializer<Question>().use(null,
-				//		Question.class).deserialize(json);
+			    log.info( "question from JSON: %s" + json );	
 			} catch (Exception e) {
 				log.severe(e.toString());
 				dialogLog.severe(adapterID,"ERROR parsing question: "+e.getLocalizedMessage());
 			}
 		}
-		log.info( "question from JSON: %s" + question );
 		return question;
 	}
 
@@ -254,7 +247,7 @@ public class Question implements QuestionIntf {
 		return newQ;
 	}
 	
-	public Question event(String eventType, String message, String responder) {
+	public Question event(String eventType, Object message, String responder) {
 		log.info("Received: "+eventType+" Message: "+message);
 		Client client = ParallelInit.getClient();
 		ArrayList<EventCallback> events = this.getEvent_callbacks();

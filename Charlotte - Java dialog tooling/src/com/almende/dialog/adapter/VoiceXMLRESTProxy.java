@@ -401,7 +401,9 @@ public class VoiceXMLRESTProxy {
             ObjectNode questionNode = ServerUtils.deserialize( json, ObjectNode.class );
             question = ServerUtils.deserialize( questionNode.get( "question" ).toString(), Question.class );
             remoteID = questionNode.get( "remoteCallerId" ).asText();
-            StringStore.dropString( direction + "_" + session.getRemoteAddress() + "_" + session.getLocalAddress() );
+            //not deleting the remoteCallerIdQuestionMap as hangup (personality: Originator callState: Released) 
+            //is received via the ccxml file  
+//            StringStore.dropString( direction + "_" + session.getRemoteAddress() + "_" + session.getLocalAddress() );
         }
         else
         {

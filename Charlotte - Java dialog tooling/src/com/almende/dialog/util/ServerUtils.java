@@ -10,6 +10,9 @@ import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+
 import com.almende.dialog.adapter.DialogAgent;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -21,6 +24,7 @@ import com.google.appengine.api.utils.SystemProperty.Environment.Value;
 
 public class ServerUtils
 {
+    private static final String serverTimezone = "Europe/Amsterdam";
     private static final Logger log = Logger.getLogger(DialogAgent.class.getName());
     private static ObjectMapper oMapper = ParallelInit.getObjectMapper();
     
@@ -35,9 +39,27 @@ public class ServerUtils
         return deserializedEntity;
     }
     
-    public static <T> T deserialize( String jsonString, boolean throwException, Class<T> DeserializeClass ) throws Exception
+    public static <T> T deserialize( String jsonString, boolean throwException, Class<T> DeserializeClass )
+    throws Exception
     {
-        return deserialize( jsonString, DeserializeClass );
+        T deserialized = null;
+        try
+        {
+            deserialized = deserialize( jsonString, DeserializeClass );
+        }
+        catch ( Exception e )
+        {
+            if ( throwException )
+            {
+                throw e;
+            }
+            else
+            {
+                log.warning( String.format( "Failed to deserialize %s to class: %s", jsonString,
+                    DeserializeClass.getSimpleName() ) );
+            }
+        }
+        return deserialized;
     }
 
     public static <T> T deserialize( String jsonString, TypeReference<T> type ) throws Exception
@@ -122,5 +144,20 @@ public class ServerUtils
             mapToBePopulated.put( key, value );
         }
         return mapToBePopulated;
+    }
+    
+    public static DateTime getServerCurrentTime()
+    {
+        return DateTime.now( getServerDateTimeZone() );
+    }
+    
+    public static DateTimeZone getServerDateTimeZone()
+    {
+        return DateTimeZone.forID( serverTimezone );
+    }
+
+    public static long getServerCurrentTimeInMillis()
+    {
+        return getServerCurrentTime().getMillis();
     }
 }

@@ -253,6 +253,9 @@ public class VoiceXMLRESTProxy {
 			session.setPubKey(config.getPublicKey());
 			session.setTrackingToken(UUID.randomUUID().toString());
 			session.setAdapterID(config.getConfigId());
+			
+			Broadsoft bs = new Broadsoft( config );
+			bs.startSubscription();
 		} 
 		else 
 		{
@@ -312,31 +315,39 @@ public class VoiceXMLRESTProxy {
 		return Response.ok(reply).build();
 	}
 	
-	@Path("timeout")
-	@GET
-	@Produces("application/voicexml+xml")
-	public Response timeout(@QueryParam("question_id") String question_id, @QueryParam("sessionKey") String sessionKey){
-		String reply="<vxml><exit/></vxml>";
-		String json = StringStore.getString(question_id);
-		if (json != null){
-			Session session = Session.getSession(sessionKey);
-			Question question = Question.fromJSON(json, session.getAdapterConfig().getConfigId());
-			String responder = StringStore.getString(question_id+"-remoteID");
-			if (session.killed){
-				return Response.status(Response.Status.BAD_REQUEST).build();
-			}
-			DDRWrapper.log(question,session,"Timeout");
-			
-			StringStore.dropString(question_id);
-			StringStore.dropString(question_id+"-remoteID");
-			StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
+    @Path( "timeout" )
+    @GET
+    @Produces( "application/voicexml+xml" )
+    public Response timeout( @QueryParam( "question_id" ) String question_id,
+        @QueryParam( "sessionKey" ) String sessionKey )
+    {
+        String reply = "<vxml><exit/></vxml>";
+        String json = StringStore.getString( question_id );
+        if ( json != null )
+        {
+            Session session = Session.getSession( sessionKey );
+            Question question = Question.fromJSON( json, session.getAdapterConfig().getConfigId() );
+            String responder = StringStore.getString( question_id + "-remoteID" );
+            if ( session.killed )
+            {
+                return Response.status( Response.Status.BAD_REQUEST ).build();
+            }
+            DDRWrapper.log( question, session, "Timeout" );
 
-			question = question.event("timeout", "No answer received", responder);
-			
-			return handleQuestion(question,session.getAdapterConfig().getConfigId(),responder,sessionKey);
-		}
-		return Response.ok(reply).build();
-	}
+            StringStore.dropString( question_id );
+            StringStore.dropString( question_id + "-remoteID" );
+            StringStore.dropString( "question_" + session.getRemoteAddress() + "_"
+                + session.getLocalAddress() );
+
+            String currentTimeInMillis = String.valueOf( ServerUtils.getServerCurrentTimeInMillis());
+            getTimeMap( currentTimeInMillis, currentTimeInMillis, currentTimeInMillis );
+            question = question.event( "timeout", "No answer received", null, responder );
+
+            return handleQuestion( question, session.getAdapterConfig().getConfigId(), responder,
+                                   sessionKey );
+        }
+        return Response.ok( reply ).build();
+    }
 	
 	@Path("exception")
 	@GET
@@ -357,7 +368,7 @@ public class VoiceXMLRESTProxy {
 			StringStore.dropString(question_id+"-remoteID");
 			StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
 
-			question = question.event("exception", "Wrong answer received", responder);
+			question = question.event("exception", "Wrong answer received", null, responder);
 			
 			return handleQuestion(question,session.getAdapterConfig().getConfigId(),responder,sessionKey);
 		}
@@ -370,7 +381,8 @@ public class VoiceXMLRESTProxy {
     public Response hangup( @QueryParam( "direction" ) String direction,
         @QueryParam( "remoteID" ) String remoteID, @QueryParam( "localID" ) String localID,
         @QueryParam( "startTime" ) String startTime, @QueryParam( "answerTime" ) String answerTime,
-        @QueryParam( "releaseTime" ) String releaseTime )
+        @QueryParam( "releaseTime" ) String releaseTime, @QueryParam( "notPickedUp" ) Boolean notPickedUp ) 
+        throws Exception
     {
 		log.info("call hangup with:"+direction+":"+remoteID+":"+localID);
 		
@@ -380,9 +392,26 @@ public class VoiceXMLRESTProxy {
 		Session session = Session.getSession(sessionKey);
 		
 		Question question = null;
-		String json = StringStore.getString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
-		if(json!=null) {
-			question = Question.fromJSON(json, session.getAdapterConfig().getConfigId());
+        log.info( String.format( "Session key: %s with remote: %s and local %s", session.getSession_id(),
+            session.getRemoteAddress(), session.getLocalAddress() ) );
+        String json = StringStore.getString( direction + "_" + session.getRemoteAddress() + "_"
+            + session.getLocalAddress() );
+        if ( json != null )
+        {
+            ObjectNode questionNode = ServerUtils.deserialize( json, ObjectNode.class );
+            question = ServerUtils.deserialize( questionNode.get( "question" ).toString(), Question.class );
+            remoteID = questionNode.get( "remoteCallerId" ).asText();
+            StringStore.dropString( direction + "_" + session.getRemoteAddress() + "_" + session.getLocalAddress() );
+        }
+        else
+        {
+            json = StringStore.getString( "question_" + session.getRemoteAddress() + "_"
+                + session.getLocalAddress() );
+            question = Question.fromJSON(json, session.getAdapterConfig().getConfigId());
+        }
+        
+		if(json!=null) 
+		{
 			String question_id = question.getQuestion_id();
 			StringStore.dropString(question_id);
 			StringStore.dropString(question_id+"-remoteID");
@@ -390,19 +419,20 @@ public class VoiceXMLRESTProxy {
 		} else {
 			question = Question.fromURL(session.getStartUrl(), session.getAdapterConfig().getConfigId(),remoteID,localID);
 		}
-        HashMap<String, String> timeMap = new HashMap<String, String>();
-        timeMap.put( "startTime", startTime );
-        timeMap.put( "answerTime", answerTime );
-        timeMap.put( "releaseTime", releaseTime );
-        
-		question.event("hangup", timeMap, remoteID);
+		
+        HashMap<String, Object> timeMap = getTimeMap( startTime, answerTime, releaseTime );
+        if ( notPickedUp != null )
+        {
+            timeMap.put( "notPickedUp", notPickedUp );
+        }
+		question.event("hangup", "Hangup", timeMap, remoteID);
 		DDRWrapper.log(question,session,"Hangup");
 		
 		handleQuestion(null, session.getAdapterConfig().getConfigId(),remoteID,sessionKey);
 		
 		return Response.ok("").build();
 	}
-	
+
 	/**
 	 * used to trigger answered event unlike {@link VoiceXMLRESTProxy#answer(String, String, String, String, UriInfo)}
 	 * @return
@@ -411,38 +441,23 @@ public class VoiceXMLRESTProxy {
     public Response answered( String direction, String remoteID, String localID, String startTime,
         String answerTime, String releaseTime ) throws Exception
     {
-        log.info( "call answered with:" + direction + ":" + remoteID + ":" + localID );
+        log.info( "call answered with:" + direction + "_" + remoteID + "_" + localID );
         String adapterType = "broadsoft";
-
-        String sessionKey = adapterType + "|" + localID + "|" + remoteID;
-        Session session = Session.getSession( sessionKey );
-
+        String sessionKey = adapterType+"|"+localID+"|"+remoteID;
+        Session session = Session.getSession(sessionKey);
+        
         Question question = null;
-        String json = StringStore.getString( direction + "_" + session.getRemoteAddress() + "_"
-            + session.getLocalAddress() );
-        ObjectNode questionNode = ServerUtils.deserialize( json, ObjectNode.class);
+        String json = StringStore.getString( direction + "_" + remoteID + "_" + localID );
+        ObjectNode questionNode = ServerUtils.deserialize( json, false, ObjectNode.class);
         log.info( "questionNode at answered: "+ questionNode.toString() );
         if ( questionNode != null && questionNode.get( "question" ) != null)
         {
             question = ServerUtils.deserialize( questionNode.get( "question" ).toString(),
                                                 Question.class );
-            String question_id = question.getQuestion_id();
-            StringStore.dropString( question_id );
-            StringStore.dropString( question_id + "-remoteID" );
-            StringStore.dropString( "question_" + session.getRemoteAddress() + "_"
-                + session.getLocalAddress() );
-        }
-        else
-        {
-            question = Question.fromURL( session.getStartUrl(), session.getAdapterConfig()
-                .getConfigId(), remoteID, localID );
         }
 
-        HashMap<String, String> timeMap = new HashMap<String, String>();
-        timeMap.put( "startTime", startTime );
-        timeMap.put( "answerTime", answerTime );
-        timeMap.put( "releaseTime", releaseTime );
-        question.event( "answered", timeMap, questionNode.get( "remoteCallerId" ).toString() );
+        HashMap<String, Object> timeMap = getTimeMap( startTime, answerTime, releaseTime );
+        question.event( "answered", "Answered", timeMap, questionNode.get( "remoteCallerId" ).asText() );
         DDRWrapper.log( question, session, "Answered" );
         handleQuestion( null, session.getAdapterConfig().getConfigId(), remoteID, sessionKey );
         return Response.ok( "" ).build();
@@ -561,66 +576,93 @@ public class VoiceXMLRESTProxy {
                                 //address += "@outbound";
                                 direction = "transfer";
                                 log.info( "Transfer detected????" );
-                                if ( callState.getTextContent().equals( "Active" ) )
+
+                                //when the receiver hangs up, an active callstate is also triggered. 
+                                // but the releaseCause is also set to Temporarily Unavailable
+                                if ( callState.getTextContent().equals( "Active" )
+                                    && ( releaseCause == null || !releaseCause.getTextContent()
+                                        .equalsIgnoreCase( "Temporarily Unavailable" ) ) )
                                 {
                                     answered( direction, address, config.getMyAddress(),
                                               startTimeString, answerTimeString, releaseTimeString );
                                 }
-                            } else if(personality.getTextContent().equals("Originator")) {
-                                log.info("Outbound detected?????");
-                                direction="outbound";
-                            } else if(personality.getTextContent().equals("Click-to-Dial")) {
-                                log.info("CTD hangup detected?????");
-                                direction="outbound";
-                                
+                            }
+                            else if ( personality.getTextContent().equals( "Originator" ) )
+                            {
+                                log.info( "Outbound detected?????" );
+                                direction = "outbound";
+                            }
+                            else if ( personality.getTextContent().equals( "Click-to-Dial" ) )
+                            {
+                                log.info( "CTD hangup detected?????" );
+                                direction = "outbound";
+
                                 //TODO: move this to internal mechanism to check if call is started!
-                                if(releaseCause.getTextContent().equals("Server Failure")) {
-                                    log.severe("Need to restart the call!!!! ReleaseCause: "+releaseCause.getTextContent());
-                                    
-                                    String retryKey = sessionKey+"_retry";
-                                    int retry = (StringStore.getString(retryKey)==null?0:Integer.parseInt(StringStore.getString(retryKey)));
-                                    if(retry<MAX_RETRIES) {
-                                        
-                                        Broadsoft bs = new Broadsoft(config);
-                                        String extSession = bs.startCall(address);
-                                        log.info("Restarted call extSession: "+extSession);
+                                if ( releaseCause.getTextContent().equals( "Server Failure" ) )
+                                {
+                                    log.severe( "Need to restart the call!!!! ReleaseCause: "
+                                        + releaseCause.getTextContent() );
+
+                                    String retryKey = sessionKey + "_retry";
+                                    int retry = ( StringStore.getString( retryKey ) == null ? 0 : Integer
+                                        .parseInt( StringStore.getString( retryKey ) ) );
+                                    if ( retry < MAX_RETRIES )
+                                    {
+
+                                        Broadsoft bs = new Broadsoft( config );
+                                        String extSession = bs.startCall( address );
+                                        log.info( "Restarted call extSession: " + extSession );
                                         retry++;
-                                        StringStore.storeString(sessionKey+"_rety", retry+"");
-                                    } else {
-                                        // TODO: Send mail to support!!!
-                                        
-                                        log.severe("Retries failed!!!");
-                                        StringStore.dropString(retryKey);
+                                        StringStore.storeString( sessionKey + "_rety", retry + "" );
                                     }
-                                } else if(releaseCause.getTextContent().equals("Request Failure")) {
-                                    log.severe("Restart call?? ReleaseCause: "+releaseCause.getTextContent());
-                                    
-                                    String retryKey = sessionKey+"_retry";
-                                    int retry = (StringStore.getString(retryKey)==null?0:Integer.parseInt(StringStore.getString(retryKey)));
-                                    if(retry<MAX_RETRIES) {
-                                        Broadsoft bs = new Broadsoft(config);
-                                        String extSession = bs.startCall(address);
-                                        log.info("Restarted call extSession: "+extSession);
-                                        retry++;
-                                        StringStore.storeString(retryKey, retry+"");
-                                    } else {
+                                    else
+                                    {
                                         // TODO: Send mail to support!!!
-                                        
-                                        log.severe("Retries failed!!!");
-                                        StringStore.dropString(retryKey);
+
+                                        log.severe( "Retries failed!!!" );
+                                        StringStore.dropString( retryKey );
+                                    }
+                                }
+                                else if ( releaseCause.getTextContent().equals( "Request Failure" ) )
+                                {
+                                    log.severe( "Restart call?? ReleaseCause: "
+                                        + releaseCause.getTextContent() );
+
+                                    String retryKey = sessionKey + "_retry";
+                                    int retry = ( StringStore.getString( retryKey ) == null ? 0 : Integer
+                                        .parseInt( StringStore.getString( retryKey ) ) );
+                                    if ( retry < MAX_RETRIES )
+                                    {
+                                        Broadsoft bs = new Broadsoft( config );
+                                        String extSession = bs.startCall( address );
+                                        log.info( "Restarted call extSession: " + extSession );
+                                        retry++;
+                                        StringStore.storeString( retryKey, retry + "" );
+                                    }
+                                    else
+                                    {
+                                        // TODO: Send mail to support!!!
+                                        log.severe( "Retries failed!!!" );
+                                        StringStore.dropString( retryKey );
                                     }
                                 }
                             }
                             
-                            if(ses!=null && direction!="transfer") {
-                                log.info("SESSSION FOUND!! SEND HANGUP!!!");
-                                this.hangup( direction, address, config.getMyAddress(),
-                                             startTimeString, answerTimeString, releaseTimeString );
+                            if ( ses != null && direction != "transfer"
+                                && !personality.getTextContent().equals( "Terminator" ) )
+                            {
+                                log.info( "SESSSION FOUND!! SEND HANGUP!!!" );
+                                this.hangup( direction, address, config.getMyAddress(), startTimeString,
+                                             answerTimeString, releaseTimeString, false );
                             } else {
                                 
-                                if(personality.getTextContent().equals("Originator")) {
-                                    log.info("Probably a disconnect of a redirect");
-                                } else if(personality.getTextContent().equals("Terminator")) {
+                                if ( personality.getTextContent().equals( "Originator" ) )
+                                {
+                                    log.info( "Probably a disconnect of a redirect. call hangup event" );
+                                    hangup( direction, address, config.getMyAddress(),
+                                            startTimeString, answerTimeString, releaseTimeString, null );
+                                } 
+                                else if(personality.getTextContent().equals("Terminator")) {
                                     log.info("No session for this inbound?????");
                                 } else {
                                     log.info("What the hell was this?????");
@@ -1003,9 +1045,9 @@ public class VoiceXMLRESTProxy {
                     String[] sessionKeyArray = sessionKey.split( "\\|" );
                     if(sessionKeyArray.length == 3)
                     {
-                        String transferKey = "transfer_"
-                            + question.getUrl().replace( "tel:", "" ).trim() + "_"
-                            + sessionKeyArray[1];
+                        String redirectedId = formatNumber( question.getUrl().replace( "tel:", "" ) ).replaceFirst(
+                            "\\+31", "0" );
+                        String transferKey = "transfer_" + redirectedId + "_" + sessionKeyArray[1];
                         log.info( String.format( "referral question %s stored with key: %s",
                                                  questionJSON, transferKey ) );
                         //store the remoteId as its lost while trying to trigger the answered event
@@ -1055,4 +1097,19 @@ public class VoiceXMLRESTProxy {
 	protected String getAnswerUrl() {
 		return "/vxml/answer";
 	}
+	
+    /**
+     * @param startTime
+     * @param answerTime
+     * @param releaseTime
+     * @return
+     */
+    private HashMap<String, Object> getTimeMap( String startTime, String answerTime, String releaseTime )
+    {
+        HashMap<String, Object> timeMap = new HashMap<String, Object>();
+        timeMap.put( "startTime", startTime );
+        timeMap.put( "answerTime", answerTime );
+        timeMap.put( "releaseTime", releaseTime );
+        return timeMap;
+    }
 }

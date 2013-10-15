@@ -83,34 +83,48 @@ public class Session implements SessionIntf {
 		// If there is no session create a new one for the user
 		if (session_json == null || session_json.equals("")){
 			String[] split = key.split("\\|");
+			
 			if (split.length == 3){
 				String type = split[0];
 				String localaddress = split[1];
 				AdapterConfig config = null; 
 				ArrayList<AdapterConfig> configs = AdapterConfig.findAdapters(type, localaddress, null);
-				
-				if (configs.size()==0){
-					log.warning("No adapter found for new session type: "+type+" address: "+localaddress);
-					return null;
-				} else if(configs.size()==1) {
-					config = configs.get(0);
-					log.warning("Adapter found for new session type: "+type+" address: "+localaddress);
-				} else {
-					AdapterConfig defaultConfig = null;
-					for(AdapterConfig conf : configs) {
-						if(conf.getKeyword()==null) {
-							defaultConfig = conf;
-						} else if(keyword!=null && conf.getKeyword().equals(keyword)) {
-							config = conf;
-						}
-					}
-					if(config==null) {
-						log.warning("No adapter with right keyword so using default type: "+type+" address: "+localaddress);
-						config=defaultConfig;
-					} else {
-						log.warning("Adapter found with right keyword type: "+type+" address: "+localaddress+" keyword: "+keyword);
-					}
-				}
+                if ( configs.size() == 0 )
+                {
+                    log.warning( "No adapter found for new session type: " + type + " address: " + localaddress );
+                    return null;
+                }
+                else if ( configs.size() == 1 )
+                {
+                    config = configs.get( 0 );
+                    log.info( "Adapter found for new session type: " + type + " address: " + localaddress );
+                }
+                else
+                {
+                    AdapterConfig defaultConfig = null;
+                    for ( AdapterConfig conf : configs )
+                    {
+                        if ( conf.getKeyword() == null )
+                        {
+                            defaultConfig = conf;
+                        }
+                        else if ( keyword != null && conf.getKeyword().equals( keyword ) )
+                        {
+                            config = conf;
+                        }
+                    }
+                    if ( config == null )
+                    {
+                        log.warning( "No adapter with right keyword so using default type: " + type + " address: "
+                            + localaddress );
+                        config = defaultConfig;
+                    }
+                    else
+                    {
+                        log.info( "Adapter found with right keyword type: " + type + " address: " + localaddress
+                            + " keyword: " + keyword );
+                    }
+                }
 				//TODO: check account/pubkey usage here
 				session = new Session();
 				session.setAdapterID(config.getConfigId());
@@ -120,6 +134,7 @@ public class Session implements SessionIntf {
 				session.setType(type);
 				session.key = key;
 				session.storeSession();
+				log.info( "new session created with id: "+ session.key );
 			} else {
 				log.severe("getSession: incorrect key given:"+key);
 			}

@@ -1,6 +1,10 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+18-10-2013, hotfix_emailSubject
+- Fixed senderName priority: nickname > senderName > myAddress
+- Added "subject" param to /rpc call to update the subject
+
 8-10-2013, hotfix_email
 - Fixed issue with outbound emails not getting sent.
 

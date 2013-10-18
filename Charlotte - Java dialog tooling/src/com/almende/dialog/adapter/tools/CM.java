@@ -1,17 +1,18 @@
 package com.almende.dialog.adapter.tools;
 
+import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
+
+import org.znerd.xmlenc.XMLOutputter;
+
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
-import org.znerd.xmlenc.XMLOutputter;
-
-import java.io.StringWriter;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.Logger;
 
 public class CM {
 
@@ -58,7 +59,7 @@ public class CM {
         // TODO: Check message for special chars, if so change dcs.		
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( to, toName );
-        StringWriter sw = createXMLRequest( message, fromName, addressNameMap, dcs );
+        StringWriter sw = createXMLRequest( message, from, fromName, addressNameMap, dcs );
 
         if ( !ServerUtils.isInUnitTestingEnvironment() && sw != null )
         {
@@ -89,7 +90,7 @@ public class CM {
             dcs = MESSAGE_TYPE_GSM7;
         }
         //create an CM XML request based on the parameters
-        StringWriter sw = createXMLRequest( message, from, addressNameMap, dcs );
+        StringWriter sw = createXMLRequest( message, from, fromName, addressNameMap, dcs );
 
         //add an interceptor so that send Messages is not enabled for unit tests
         if ( !ServerUtils.isInUnitTestingEnvironment() && sw!=null)
@@ -111,7 +112,7 @@ public class CM {
      * @since 9/9/2013 for v0.4.0
      * @return
      */
-    private StringWriter createXMLRequest( String message, String from, Map<String, String> emailNameMap, 
+    private StringWriter createXMLRequest( String message, String from, String fromName, Map<String, String> emailNameMap, 
         String dcs )
     {
         String type = "TEXT";
@@ -130,16 +131,17 @@ public class CM {
             outputter.attribute( "LOGIN", userName );
             outputter.attribute( "PASSWORD", password );
             outputter.endTag();
-
+            
+            String senderId = fromName != null && !fromName.isEmpty() ? fromName : from;
             for ( String to : emailNameMap.keySet() )
             {
                 outputter.startTag( "MSG" );
                 outputter.startTag( "CONCATENATIONTYPE" );
                 outputter.cdata( type );
                 outputter.endTag();
-
+                
                 outputter.startTag( "FROM" );
-                outputter.cdata( from );
+                outputter.cdata( senderId );
                 outputter.endTag();
 
                 outputter.startTag( "BODY" );

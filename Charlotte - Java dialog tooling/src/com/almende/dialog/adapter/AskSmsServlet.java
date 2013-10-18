@@ -51,30 +51,29 @@ public class AskSmsServlet extends TextServlet {
 		return 1;
 	}
 	
-        @Override
-        protected int broadcastMessage( String message, String subject, String from, String fromName,
-            String senderName, Map<String, String> addressNameMap, AdapterConfig config )
-        throws Exception
-        {
-            //            try
-            //            {
-            //                for ( String to : toList )
-            //                {
-            //                    to = URLDecoder.decode( to, "UTF-8" );
-            //                }
-            //            }
-            //            catch ( Exception ex )
-            //            {
-            //                log.warning( "Failed to parse phone number" );
-            //            }
-            //            AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
-            //            SmsMessage msg = new SmsMessage( toList, message );
-            //            datastore.store( msg );
-            //    
-            //            // TODO: Build in message counter
-            //            log.info( "Stored message: " + msg.getMessage() + " for: " + msg.toJson() );
-            return 1;
-        }
+    @Override
+    protected int broadcastMessage( String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+    {
+        //            try
+        //            {
+        //                for ( String to : toList )
+        //                {
+        //                    to = URLDecoder.decode( to, "UTF-8" );
+        //                }
+        //            }
+        //            catch ( Exception ex )
+        //            {
+        //                log.warning( "Failed to parse phone number" );
+        //            }
+        //            AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
+        //            SmsMessage msg = new SmsMessage( toList, message );
+        //            datastore.store( msg );
+        //    
+        //            // TODO: Build in message counter
+        //            log.info( "Stored message: " + msg.getMessage() + " for: " + msg.toJson() );
+        return 1;
+    }
 
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp)

@@ -54,8 +54,8 @@ abstract public class TextServlet extends HttpServlet {
 	 * @param addressNameMap Map with address (e.g. phonenumber or email) as Key and name as value 
 	 * @throws Exception
 	 */
-        protected abstract int broadcastMessage( String message, String subject, String from,
-            String fromName, String senderName, Map<String, String> addressNameMap, AdapterConfig config ) throws Exception;
+    protected abstract int broadcastMessage( String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, AdapterConfig config ) throws Exception;
 	
 	protected abstract TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception; 
 	protected abstract String getServletPath();
@@ -239,9 +239,18 @@ abstract public class TextServlet extends HttpServlet {
         }
         String fromName = getNickname( res.question );
         log.info( String.format( "fromName: %s senderName %s", fromName, senderName ) );
-        //assign senderName with localAdress, if senderName is missing.
-        senderName = senderName != null && !senderName.isEmpty() ? senderName : localaddress;
-        int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, senderName, formattedAddressNameMap, config );
+        //assign senderName with localAdress, if senderName is missing
+        //priority is as: nickname >> senderName >> myAddress
+        if(fromName == null || fromName.isEmpty())
+        {
+            senderName = senderName != null && !senderName.isEmpty() ? senderName : localaddress;
+        }
+        else
+        {
+            senderName = fromName;
+        }
+        int count = broadcastMessage( res.reply, "Message from DH", localaddress, senderName, formattedAddressNameMap,
+            config );
 
         for(Session session : sessions)
         {
@@ -465,7 +474,7 @@ abstract public class TextServlet extends HttpServlet {
 
             HashMap<String, String> addressNameMap = new HashMap<String, String>( 1 );
             addressNameMap.put( msg.getAddress(), msg.getRecipientName() );
-             result = broadcastMessage( escapeInput.reply, msg.getSubject(), msg.getLocalAddress(), fromName, fromName,
+             result = broadcastMessage( escapeInput.reply, msg.getSubject(), msg.getLocalAddress(), fromName,
                                         addressNameMap, config );
         }
         else if ( cmd.startsWith( "reset" ) )

@@ -178,7 +178,7 @@ public class MailServlet extends TextServlet {
 	}
 	
     @Override
-    protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
+    protected int broadcastMessage( String message, String subject, String from, String senderName,
         Map<String, String> addressNameMap, AdapterConfig config )
     {
         Session session = Session.getDefaultInstance( new Properties(), null );

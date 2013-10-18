@@ -1,5 +1,17 @@
 package com.almende.dialog.adapter;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Map;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.joda.time.DateTime;
+import org.scribe.model.Token;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Facebook;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -8,16 +20,6 @@ import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import org.joda.time.DateTime;
-import org.scribe.model.Token;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Map;
 
 public class WallFacebookServlet extends TextServlet {
 
@@ -117,14 +119,14 @@ public class WallFacebookServlet extends TextServlet {
     }
 
     @Override
-    protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
+    protected int broadcastMessage( String message, String subject, String from, String senderName,
                                     Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
     {
         int count = 0;
         for ( String address : addressNameMap.keySet() )
         {
             String toName = addressNameMap.get( address );
-            count = count + sendMessage( message, subject, from, fromName, address, toName, config );
+            count = count + sendMessage( message, subject, from, senderName, address, toName, config );
         }
         return count;
     }

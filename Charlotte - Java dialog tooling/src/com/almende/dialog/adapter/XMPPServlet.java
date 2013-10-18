@@ -1,22 +1,30 @@
 package com.almende.dialog.adapter;
 
-import com.almende.dialog.TestFramework;
-import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.util.ServerUtils;
-import com.google.appengine.api.xmpp.*;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.xml.sax.InputSource;
+import java.io.IOException;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.IOException;
-import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.Map;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.xml.sax.InputSource;
+
+import com.almende.dialog.TestFramework;
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.util.ServerUtils;
+import com.google.appengine.api.xmpp.JID;
+import com.google.appengine.api.xmpp.Message;
+import com.google.appengine.api.xmpp.MessageBuilder;
+import com.google.appengine.api.xmpp.PresenceShow;
+import com.google.appengine.api.xmpp.PresenceType;
+import com.google.appengine.api.xmpp.XMPPService;
+import com.google.appengine.api.xmpp.XMPPServiceFactory;
 
 public class XMPPServlet extends TextServlet {
 	private static final long serialVersionUID = 10291032309680299L;
@@ -77,34 +85,32 @@ public class XMPPServlet extends TextServlet {
 	}
 	
 
-        @Override
-        protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
-            Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+    @Override
+    protected int broadcastMessage( String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+    {
+        JID localJid = new JID( from );
+        ArrayList<JID> jids = new ArrayList<JID>();
+
+        for ( String address : addressNameMap.keySet() )
         {
-            JID localJid = new JID(from);
-            ArrayList<JID> jids = new ArrayList<JID>();
-            
-            for ( String address : addressNameMap.keySet() )
+            JID jid = new JID( address );
+            jids.add( jid );
+            if ( senderName != null )
             {
-                JID jid = new JID( address );
-                jids.add( jid );
-                fromName = fromName != null && !fromName.trim().isEmpty() ? fromName : senderName;  
-                if ( fromName != null )
-                {
-                    xmpp.sendPresence( jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "as: "
-                        + fromName, localJid );
-                    message = "*" + fromName + ":* " + message;
-                }
+                xmpp.sendPresence( jid, PresenceType.AVAILABLE, PresenceShow.CHAT, "as: " + senderName, localJid );
+                message = "*" + senderName + ":* " + message;
             }
-            Message msg = new MessageBuilder().withRecipientJids(jids.toArray( new JID[addressNameMap.size()] ))
-                                              .withFromJid(localJid).withBody(message).build();
-            xmpp.sendMessage(msg);
-            if(ServerUtils.isInUnitTestingEnvironment())
-            {
-                TestFramework.log(msg);
-            }
-            return 1;
         }
+        Message msg = new MessageBuilder().withRecipientJids( jids.toArray( new JID[addressNameMap.size()] ) )
+            .withFromJid( localJid ).withBody( message ).build();
+        xmpp.sendMessage( msg );
+        if ( ServerUtils.isInUnitTestingEnvironment() )
+        {
+            TestFramework.log( msg );
+        }
+        return 1;
+    }
 	    
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp)

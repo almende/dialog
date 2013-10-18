@@ -42,9 +42,9 @@ public class MailServletTest extends TestFramework
         addressNameMap.put( remoteAddressEmail, "Test" );
         String url = "http://askfastmarket1.appspot.com/resource/question/"+ testMessage;
         MailServlet mailServlet = new MailServlet();
-        mailServlet.startDialog( addressNameMap, url, "test", adapterConfig );
+        mailServlet.startDialog( addressNameMap, url, "test", "sendDummyMessageTest", adapterConfig );
         
-        Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, testMessage, "Message from DH" );
+        Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, testMessage, "sendDummyMessageTest" );
         assertOutgoingTextMessage( message );
     }
     

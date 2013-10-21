@@ -1,7 +1,11 @@
 DialogHandler
 https://github.com/almende/dialog/
 
-8-10-2013, hotfix_email
+21-10-2013, version 0.5.0
+- senderName is added to replyTo list, if its an emailId
+- Added 0, * and # to the closed question.
+- Fixed senderName priority: nickname > senderName > myAddress
+- Added "subject" param to /rpc call to update the subject
 - Fixed issue with outbound emails not getting sent.
 
 1-10-2013, version 0.4.1

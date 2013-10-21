@@ -54,8 +54,8 @@ abstract public class TextServlet extends HttpServlet {
 	 * @param addressNameMap Map with address (e.g. phonenumber or email) as Key and name as value 
 	 * @throws Exception
 	 */
-        protected abstract int broadcastMessage( String message, String subject, String from,
-            String fromName, String senderName, Map<String, String> addressNameMap, AdapterConfig config ) throws Exception;
+    protected abstract int broadcastMessage( String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, AdapterConfig config ) throws Exception;
 	
 	protected abstract TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception; 
 	protected abstract String getServletPath();
@@ -175,16 +175,16 @@ abstract public class TextServlet extends HttpServlet {
 	 * updated startDialog with Broadcast functionality
 	 * @throws Exception
 	 */
-    public HashMap<String, String> startDialog( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
-    throws Exception
+    public HashMap<String, String> startDialog( Map<String, String> addressNameMap, String url, String senderName,
+        String subject, AdapterConfig config ) throws Exception
     {
         Map<String, String> formattedAddressNameMap = new HashMap<String, String>();
         if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
         {
             for ( String address : addressNameMap.keySet() )
             {
-                String formattedAddress = formatNumber(address).replaceFirst("\\+31", "0");
-                formattedAddressNameMap.put(formattedAddress, addressNameMap.get(address));
+                String formattedAddress = formatNumber( address ).replaceFirst( "\\+31", "0" );
+                formattedAddressNameMap.put( formattedAddress, addressNameMap.get( address ) );
             }
         }
         else
@@ -199,11 +199,11 @@ abstract public class TextServlet extends HttpServlet {
 
         // If it is a broadcast don't provide the remote address because it is deceiving. 
         String loadAddress = null;
-        if(formattedAddressNameMap.size()==1)
+        if ( formattedAddressNameMap.size() == 1 )
             loadAddress = formattedAddressNameMap.keySet().iterator().next();
-        
+
         //fetch question
-        Question question = Question.fromURL( url, config.getConfigId(),  loadAddress);
+        Question question = Question.fromURL( url, config.getConfigId(), loadAddress );
         String preferred_language = StringStore.getString( loadAddress + "_language" );
         if ( preferred_language == null )
         {
@@ -219,18 +219,17 @@ abstract public class TextServlet extends HttpServlet {
             Session session = Session.getSession( sessionKey, config.getKeyword() );
             if ( session == null )
             {
-                log.severe( "XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
-                        + sessionKey );
+                log.severe( "XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? " + sessionKey );
                 return null;
             }
             session.setPubKey( config.getPublicKey() );
             session.setDirection( "outbound" );
             session.storeSession();
-            
+
             // Add key to the map (for the return)
-            sessionKeyMap.put(address, sessionKey);
-            sessions.add(session);
-            
+            sessionKeyMap.put( address, sessionKey );
+            sessions.add( session );
+
             if ( res.question != null )
             {
                 StringStore.storeString( "question_" + address + "_" + localaddress, res.question.toJSON() );
@@ -239,20 +238,30 @@ abstract public class TextServlet extends HttpServlet {
         }
         String fromName = getNickname( res.question );
         log.info( String.format( "fromName: %s senderName %s", fromName, senderName ) );
-        //assign senderName with localAdress, if senderName is missing.
-        senderName = senderName != null && !senderName.isEmpty() ? senderName : localaddress;
-        int count = broadcastMessage( res.reply, "Message from DH", localaddress, fromName, senderName, formattedAddressNameMap, config );
+        //assign senderName with localAdress, if senderName is missing
+        //priority is as: nickname >> senderName >> myAddress
+        if ( fromName == null || fromName.isEmpty() )
+        {
+            senderName = senderName != null && !senderName.isEmpty() ? senderName : localaddress;
+        }
+        else
+        {
+            senderName = fromName;
+        }
+        subject = subject != null && !subject.isEmpty() ? subject : "Message from DH"; 
+        int count = broadcastMessage( res.reply, subject, localaddress, senderName, formattedAddressNameMap,
+            config );
 
-        for(Session session : sessions)
+        for ( Session session : sessions )
         {
             for ( int i = 0; i < count; i++ )
             {
                 DDRWrapper.log( question, session, "Send", config );
             }
         }
-        if(count < 1)
+        if ( count < 1 )
         {
-            log.severe("Error generating XML");
+            log.severe( "Error generating XML" );
 
         }
         return sessionKeyMap;
@@ -465,7 +474,7 @@ abstract public class TextServlet extends HttpServlet {
 
             HashMap<String, String> addressNameMap = new HashMap<String, String>( 1 );
             addressNameMap.put( msg.getAddress(), msg.getRecipientName() );
-             result = broadcastMessage( escapeInput.reply, msg.getSubject(), msg.getLocalAddress(), fromName, fromName,
+             result = broadcastMessage( escapeInput.reply, msg.getSubject(), msg.getLocalAddress(), fromName,
                                         addressNameMap, config );
         }
         else if ( cmd.startsWith( "reset" ) )

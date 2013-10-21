@@ -1,13 +1,14 @@
 package com.almende.dialog.adapter;
 
-import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.adapter.tools.CM;
-import com.almende.dialog.agent.tools.TextMessage;
+import java.io.IOException;
+import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.Map;
+
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.tools.CM;
+import com.almende.dialog.agent.tools.TextMessage;
 
 public class CMSmsServlet extends TextServlet {
 
@@ -26,13 +27,13 @@ public class CMSmsServlet extends TextServlet {
 	}
 	
     @Override
-    protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
+    protected int broadcastMessage( String message, String subject, String from, String senderName,
         Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
     {
         String[] tokens = config.getAccessToken().split( "\\|" );
 
         CM cm = new CM( tokens[0], tokens[1], config.getAccessTokenSecret() );
-        return cm.broadcastMessage( message, subject, senderName, fromName, addressNameMap, config );
+        return cm.broadcastMessage( message, subject, from, senderName, addressNameMap, config );
     }
 
 	@Override

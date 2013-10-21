@@ -1,16 +1,19 @@
 package com.almende.dialog.adapter;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.lang.reflect.Method;
+
+import org.junit.Test;
+
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.test.TestServlet;
+import com.almende.dialog.test.TestServlet.QuestionInRequest;
+import com.almende.dialog.util.ServerUtils;
 import com.google.appengine.api.xmpp.Message;
-import org.junit.Test;
-
-import java.lang.reflect.Method;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class XMPPServletTest extends TestFramework
 {
@@ -46,7 +49,8 @@ public class XMPPServletTest extends TestFramework
     @Test
     public void ReceiveAppointmentNewSessionMessageTest() throws Exception
     {
-        String initialAgentURL = TestServlet.TEST_SERVLET_PATH + "?appointment=start";
+        String initialAgentURL = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType", QuestionInRequest.APPOINTMENT.name());
+        initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "question", "start" );
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig( "XMPP", TEST_PUBLIC_KEY, localAddressChat, initialAgentURL );
         //create session

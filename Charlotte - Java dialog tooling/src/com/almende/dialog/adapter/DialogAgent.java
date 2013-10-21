@@ -1,5 +1,14 @@
 package com.almende.dialog.adapter;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
@@ -13,10 +22,6 @@ import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.code.twig.annotation.AnnotationObjectDatastore;
-
-import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class DialogAgent extends Agent {
 	
@@ -77,44 +82,50 @@ public class DialogAgent extends Agent {
 	
 
     public HashMap<String, String> outboundCall( @Name( "address" ) String address,
-        @Name("senderName") @Required( false ) String senderName, @Name( "url" ) String url,
+        @Name( "senderName" ) @Required( false ) String senderName,
+        @Name( "subject" ) @Required( false ) String subject, @Name( "url" ) String url,
         @Name( "adapterType" ) @Required( false ) String adapterType,
-        @Name( "adapterID" ) @Required( false ) String adapterID,
-        @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
+        @Name( "adapterID" ) @Required( false ) String adapterID, @Name( "publicKey" ) String pubKey,
+        @Name( "privateKey" ) String privKey ) throws Exception
     {
-        return outboundCallWithList( Arrays.asList( address ), senderName, url, adapterType, adapterID, pubKey, privKey );
+        return outboundCallWithList( Arrays.asList( address ), senderName, subject, url, adapterType, adapterID,
+            pubKey, privKey );
     }
 	
-	/**
-	 * updated the outboundCall functionality to support broadcast functionality
-	 * @param addressList list of addresses
-	 * @throws Exception
-	 */
+    /**
+     * updated the outboundCall functionality to support broadcast functionality
+     * 
+     * @param addressList
+     *            list of addresses
+     * @throws Exception
+     */
     public HashMap<String, String> outboundCallWithList( @Name( "addressList" ) Collection<String> addressList,
-        @Name("senderName") @Required( false ) String senderName, @Name( "url" ) String url, 
+        @Name( "senderName" ) @Required( false ) String senderName,
+        @Name( "subject" ) @Required( false ) String subject, @Name( "url" ) String url,
         @Name( "adapterType" ) @Required( false ) String adapterType,
-        @Name( "adapterID" ) @Required( false ) String adapterID,
-        @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
+        @Name( "adapterID" ) @Required( false ) String adapterID, @Name( "publicKey" ) String pubKey,
+        @Name( "privateKey" ) String privKey ) throws Exception
     {
-        Map<String, String> addressNameMap = new HashMap<String, String>();
-        ServerUtils.putCollectionAsKey( addressNameMap, addressList, "" );
-        return outboundCallWithMap( addressNameMap, senderName, url, adapterType, adapterID, pubKey, privKey );
+        Map<String, String> addressNameMap = ServerUtils.putCollectionAsKey( addressList, "" );
+        return outboundCallWithMap( addressNameMap, senderName, subject, url, adapterType, adapterID, pubKey, privKey );
     }
     
     /**
-     * updated the outboundCall functionality to support broadcast functionality.
-     * @param addressMap Key: address and Value: name
+     * updated the outboundCall functionality to support broadcast
+     * functionality.
+     * @param addressMap
+     *            Key: address and Value: name
      * @throws Exception
      */
     public HashMap<String, String> outboundCallWithMap( @Name( "addressMap" ) Map<String, String> addressMap,
-        @Name("senderName") @Required( false ) String senderName, @Name( "url" ) String url, 
+        @Name( "senderName" ) @Required( false ) String senderName,
+        @Name( "subject" ) @Required( false ) String subject, @Name( "url" ) String url,
         @Name( "adapterType" ) @Required( false ) String adapterType,
-        @Name( "adapterID" ) @Required( false ) String adapterID,
-        @Name( "publicKey" ) String pubKey, @Name( "privateKey" ) String privKey ) throws Exception
+        @Name( "adapterID" ) @Required( false ) String adapterID, @Name( "publicKey" ) String pubKey,
+        @Name( "privateKey" ) String privKey ) throws Exception
     {
         HashMap<String, String> resultSessionMap;
-        if ( adapterType != null && !adapterType.equals( "" ) && adapterID != null
-            && !adapterID.equals( "" ) )
+        if ( adapterType != null && !adapterType.equals( "" ) && adapterID != null && !adapterID.equals( "" ) )
         {
             throw new Exception( "Choose adapterType or adapterID not both" );
         }
@@ -127,47 +138,46 @@ public class DialogAgent extends Agent {
             throw new Exception( "Invalid key provided" );
         //try {
         log.info( "Trying to find config" );
-        AdapterConfig config = AdapterConfig.findAdapterConfigFromList( adapterID, adapterType,
-                                                                        adapterList );
+        AdapterConfig config = AdapterConfig.findAdapterConfigFromList( adapterID, adapterType, adapterList );
         if ( config != null )
         {
             log.info( "Config found: " + config.getConfigId() );
             adapterType = config.getAdapterType();
             if ( adapterType.toUpperCase().equals( "XMPP" ) )
             {
-                resultSessionMap = new XMPPServlet().startDialog( addressMap, url, senderName, config );
+                resultSessionMap = new XMPPServlet().startDialog( addressMap, url, senderName, subject, config );
             }
             else if ( adapterType.toUpperCase().equals( "BROADSOFT" ) )
             {
                 //fetch the first address in the map
-                if( !addressMap.keySet().isEmpty() )
+                if ( !addressMap.keySet().isEmpty() )
                 {
-                    resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, url, senderName, config);
+                    resultSessionMap = VoiceXMLRESTProxy.dial( addressMap, url, senderName, config );
                 }
-                else 
+                else
                 {
                     throw new Exception( "Address should not be empty to setup a call" );
                 }
             }
             else if ( adapterType.toUpperCase().equals( "MAIL" ) )
             {
-                resultSessionMap = new MailServlet().startDialog( addressMap, url, senderName, config );
+                resultSessionMap = new MailServlet().startDialog( addressMap, url, senderName, subject, config );
             }
             else if ( adapterType.toUpperCase().equals( "SMS" ) )
             {
-                resultSessionMap = new MBSmsServlet().startDialog( addressMap, url, senderName, config );
+                resultSessionMap = new MBSmsServlet().startDialog( addressMap, url, senderName, subject, config );
             }
             else if ( adapterType.toUpperCase().equals( "CM" ) )
             {
-                resultSessionMap = new CMSmsServlet().startDialog( addressMap, url, senderName, config );
+                resultSessionMap = new CMSmsServlet().startDialog( addressMap, url, senderName, subject, config );
             }
             else if ( adapterType.toUpperCase().equals( "TWITTER" ) )
             {
-                resultSessionMap = new TwitterServlet().startDialog( addressMap, url, senderName, config );
+                resultSessionMap = new TwitterServlet().startDialog( addressMap, url, senderName, subject, config );
             }
             else
             {
-                throw new Exception("Unknown type given: either broadsoft or xmpp or phone or mail" );
+                throw new Exception( "Unknown type given: either broadsoft or xmpp or phone or mail" );
             }
         }
         else

@@ -147,18 +147,18 @@ public class TwitterServlet extends TextServlet {
 		return count;
 	}
 	
-        @Override
-        protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
-            Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+    @Override
+    protected int broadcastMessage( String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+    {
+        int count = 0;
+        for ( String toAddress : addressNameMap.keySet() )
         {
-            int count = 0;
-            for ( String address : addressNameMap.keySet() )
-            {
-                String toName = addressNameMap.get( address );
-                count = count + sendMessage( message, subject, from, fromName, address, toName, config );
-            }
-            return count;
+            String toName = addressNameMap.get( toAddress );
+            count = count + sendMessage( message, subject, from, senderName, toAddress, toName, config );
         }
+        return count;
+    }
 
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req,

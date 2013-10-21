@@ -1,11 +1,5 @@
 package com.almende.dialog.adapter;
 
-import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.adapter.tools.CM;
-import com.almende.dialog.agent.tools.TextMessage;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -13,6 +7,13 @@ import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.tools.CM;
+import com.almende.dialog.agent.tools.TextMessage;
 
 public class MBSmsServlet extends TextServlet {
 
@@ -35,14 +36,14 @@ public class MBSmsServlet extends TextServlet {
 		return cm.sendMessage(message, subject, from, fromName, to, toName, config);
 	}
 	
-        @Override
-        protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
-            Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
-        {
-            String[] tokens = config.getAccessToken().split( "\\|" );
-            CM cm = new CM( tokens[0], tokens[1], config.getAccessTokenSecret() );
-            return cm.broadcastMessage( message, subject, from, senderName, addressNameMap, config );
-        }
+    @Override
+    protected int broadcastMessage( String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+    {
+        String[] tokens = config.getAccessToken().split( "\\|" );
+        CM cm = new CM( tokens[0], tokens[1], config.getAccessTokenSecret() );
+        return cm.broadcastMessage( message, subject, from, senderName, addressNameMap, config );
+    }
 
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp)

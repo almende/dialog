@@ -178,16 +178,41 @@ public class MailServlet extends TextServlet {
 	}
 	
     @Override
-    protected int broadcastMessage( String message, String subject, String from, String fromName, String senderName,
+    protected int broadcastMessage( String message, String subject, String from, String senderName,
         Map<String, String> addressNameMap, AdapterConfig config )
     {
-        Session session = Session.getDefaultInstance( new Properties(), null );
+//        final String userName = config.getXsiUser();
+//        final String pass = config.getXsiPasswd();
+//        Authenticator authenticator = null;
+        Properties properties = new Properties();
+//        log.info( "user: " + userName + " " + pass.length() );
+//        if ( userName != null && !userName.isEmpty() && pass != null && !pass.isEmpty() )
+//        {
+//            properties.put( "mail.smtp.auth", true );
+//            authenticator = new Authenticator()
+//            {
+//                private PasswordAuthentication pa = new PasswordAuthentication( userName, pass );
+//
+//                @Override
+//                public PasswordAuthentication getPasswordAuthentication()
+//                {
+//                    return pa;
+//                }
+//            };
+//        }
+        Session session = Session.getDefaultInstance( properties, null );
         try
         {
             Message msg = new MimeMessage( session );
             if(senderName!=null)
             {
                 msg.setFrom( new InternetAddress( from, senderName ) );
+                if ( senderName.contains( "@" ) )
+                {
+                    Address[] addresses = new InternetAddress[1];
+                    addresses[0] = new InternetAddress( senderName );
+                    msg.setReplyTo( addresses );
+                }
             }
             else
             {

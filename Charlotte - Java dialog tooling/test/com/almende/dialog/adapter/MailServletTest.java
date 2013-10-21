@@ -21,6 +21,8 @@ import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.test.TestServlet;
+import com.almende.dialog.test.TestServlet.QuestionInRequest;
+import com.almende.dialog.util.ServerUtils;
 
 public class MailServletTest extends TestFramework
 {
@@ -42,9 +44,9 @@ public class MailServletTest extends TestFramework
         addressNameMap.put( remoteAddressEmail, "Test" );
         String url = "http://askfastmarket1.appspot.com/resource/question/"+ testMessage;
         MailServlet mailServlet = new MailServlet();
-        mailServlet.startDialog( addressNameMap, url, "test", adapterConfig );
+        mailServlet.startDialog( addressNameMap, url, "test", "sendDummyMessageTest", adapterConfig );
         
-        Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, testMessage, "Message from DH" );
+        Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, testMessage, "sendDummyMessageTest" );
         assertOutgoingTextMessage( message );
     }
     
@@ -116,7 +118,9 @@ public class MailServletTest extends TestFramework
     @Test
     public void ReceiveAppointmentNewSessionMessageTest() throws Exception
     {
-        String initialAgentURL = TestServlet.TEST_SERVLET_PATH + "?appointment=start";
+        String initialAgentURL = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType",
+            QuestionInRequest.APPOINTMENT.name() );
+        initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "question", "start" );
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY,
                                                            localAddressMail, initialAgentURL );

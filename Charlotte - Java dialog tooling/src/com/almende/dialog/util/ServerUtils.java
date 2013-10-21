@@ -1,6 +1,19 @@
 package com.almende.dialog.util;
 
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
+
+import javax.servlet.http.HttpServletRequest;
+
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+
+import com.almende.dialog.adapter.DialogAgent;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -8,16 +21,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.appengine.api.utils.SystemProperty;
 import com.google.appengine.api.utils.SystemProperty.Environment.Value;
 
-import javax.servlet.http.HttpServletRequest;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Map;
-
 
 public class ServerUtils
 {
+    private static final String serverTimezone = "Europe/Amsterdam";
+    private static final Logger log = Logger.getLogger(DialogAgent.class.getName());
     private static ObjectMapper oMapper = ParallelInit.getObjectMapper();
+    
     public static <T> T deserialize( String jsonString, Class<T> DeserializeClass )
     throws Exception
     {
@@ -29,9 +39,27 @@ public class ServerUtils
         return deserializedEntity;
     }
     
-    public static <T> T deserialize( String jsonString, boolean throwException, Class<T> DeserializeClass ) throws Exception
+    public static <T> T deserialize( String jsonString, boolean throwException, Class<T> DeserializeClass )
+    throws Exception
     {
-        return deserialize( jsonString, DeserializeClass );
+        T deserialized = null;
+        try
+        {
+            deserialized = deserialize( jsonString, DeserializeClass );
+        }
+        catch ( Exception e )
+        {
+            if ( throwException )
+            {
+                throw e;
+            }
+            else
+            {
+                log.warning( String.format( "Failed to deserialize %s to class: %s", jsonString,
+                    DeserializeClass.getSimpleName() ) );
+            }
+        }
+        return deserialized;
     }
 
     public static <T> T deserialize( String jsonString, TypeReference<T> type ) throws Exception
@@ -42,7 +70,11 @@ public class ServerUtils
     public static String serialize( Object objectToBeSerialized ) throws Exception
     {
         oMapper.setSerializationInclusion( Include.NON_NULL );
-        String result = oMapper.writeValueAsString( objectToBeSerialized );
+        String result = null;
+        if(objectToBeSerialized != null )
+        {
+            result = oMapper.writeValueAsString( objectToBeSerialized );
+        }
         return result;
     }
     
@@ -85,31 +117,48 @@ public class ServerUtils
      */
     public static String getURLWithQueryParams(String url, String queryKey, String queryValue)
     {
-        if(url.endsWith( "/" ))
+        String copyURL = new String(url);
+        if(copyURL.endsWith( "/" ))
         {
-            url = url.substring( 0, url.length() - 1 );
+            copyURL = copyURL.substring( 0, copyURL.length() - 1 );
         }
         
-        if(url.indexOf( "?" ) > 0)
+        if(copyURL.indexOf( "?" ) > 0)
         {
-            url = url + "&";
+            copyURL = copyURL + "&";
         }
         else 
         {
-            url = url + "?";
+            copyURL = copyURL + "?";
         }
-        return url + queryKey + "=" + queryValue;
+        return copyURL + queryKey + "=" + queryValue;
     }
     
     /**
      * associates the same value corresponding to keys listed in keyCollection
      */
-    public static <T extends Object> Map<T, T> putCollectionAsKey( Map<T, T> mapToBePopulated, Collection<T> keyCollection, T value )
+    public static <T> Map<T, T> putCollectionAsKey( Collection<T> keyCollection, T value )
     {
+        Map<T, T> mapToBePopulated = new HashMap<T, T>();
         for ( T key : keyCollection )
         {
             mapToBePopulated.put( key, value );
         }
         return mapToBePopulated;
+    }
+    
+    public static DateTime getServerCurrentTime()
+    {
+        return DateTime.now( getServerDateTimeZone() );
+    }
+    
+    public static DateTimeZone getServerDateTimeZone()
+    {
+        return DateTimeZone.forID( serverTimezone );
+    }
+
+    public static long getServerCurrentTimeInMillis()
+    {
+        return getServerCurrentTime().getMillis();
     }
 }

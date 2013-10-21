@@ -18,6 +18,7 @@ import com.almende.dialog.util.QuestionTextTransformer;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.eaio.uuid.UUID;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -46,6 +47,7 @@ public class Question implements QuestionIntf {
 
 	// Factory functions:
 	@JSON(include = false)
+	@JsonIgnore
 	public static Question fromURL(String url,String adapterID) {
 		return fromURL(url, adapterID,"");
 	}
@@ -66,11 +68,8 @@ public class Question implements QuestionIntf {
             WebResource webResource = client.resource(url);
 			try {
 				webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
-				log.info("Getting question url: "+webResource.toString());
 				dialogLog.info(adapterID,"Loading new question from: "+webResource.toString());
 				json = webResource.type("text/plain").get(String.class);
-				
-				log.info("Received new question (fromURL): "+json);
 				dialogLog.info(adapterID,"Received new question: "+json);
 			} catch (ClientHandlerException e) {
 				log.severe(e.toString());
@@ -105,31 +104,30 @@ public class Question implements QuestionIntf {
 		if(json!=null) {
 			try {
 				question = om.readValue(json, Question.class);
-			
 				question.setQuestion_text( URLDecoder.decode( question.getQuestion_text(), "UTF-8" ) );
-				
-				//question = new JSONDeserializer<Question>().use(null,
-				//		Question.class).deserialize(json);
+			    log.info( "question from JSON: %s" + json );	
 			} catch (Exception e) {
 				log.severe(e.toString());
 				dialogLog.severe(adapterID,"ERROR parsing question: "+e.getLocalizedMessage());
 			}
 		}
-		log.info( "question from JSON: %s" + question );
 		return question;
 	}
 
 	@JSON(include = false)
+	@JsonIgnore
 	public String toJSON() {
 		return toJSON(false);
 	}
 	
 	@JSON(include = false)
+	@JsonIgnore
 	public String toJSON(boolean expanded_texts) {
 		return new JSONSerializer().exclude("*.class").transform(new QuestionTextTransformer(expanded_texts), "question_text", "question_expandedtext", "answer_text", "answer_expandedtext", "answers.answer_text", "answers.answer_expandedtext")
 				.include("answers", "event_callbacks").serialize(this);
 	}
 
+	@JsonIgnore
 	@JSON(include = false)
 	public void generateIds() {
 		if (this.getQuestion_id() == null || this.getQuestion_id().equals("")) {
@@ -144,6 +142,7 @@ public class Question implements QuestionIntf {
 		}
 	}
 
+	@JsonIgnore
 	@JSON(include = false)
 	public Question answer(String responder, String adapterID, String answer_id, String answer_input) {
 		Client client = ParallelInit.getClient();
@@ -212,7 +211,7 @@ public class Question implements QuestionIntf {
 			// TODO: somewhat smarter behavior? Should dialog standard provide
 			// error handling?
 			if(answered)
-				newQ = this.event("exception","Wrong answer received", responder);
+				newQ = this.event("exception","Wrong answer received", null, responder);
 			if(newQ!=null)
 				return newQ;
 			
@@ -245,17 +244,19 @@ public class Question implements QuestionIntf {
 			dialogLog.severe(adapterID, "Unable to load question: "+ioe.getMessage());
 			log.severe(ioe.toString());
 			ioe.printStackTrace();
-			newQ = this.event("exception", "Unable to load question", responder);
+			newQ = this.event("exception", "Unable to load question", null, responder);
 		} catch (Exception e) {
 			dialogLog.severe(adapterID, "Unable to parse question json: "+e.getMessage());
 			log.severe(e.toString());
-			newQ = this.event("exception", "Unable to parse question json", responder);
+			newQ = this.event("exception", "Unable to parse question json", null, responder);
 		}
 		return newQ;
 	}
 	
-	public Question event(String eventType, String message, String responder) {
-		log.info("Received: "+eventType+" Message: "+message);
+	public Question event(String eventType, String message, Object extras, String responder) 
+	{
+        log.info( String.format( "Received: %s Message: %s Responder: %s", eventType, message,
+                                 responder ) );
 		Client client = ParallelInit.getClient();
 		ArrayList<EventCallback> events = this.getEvent_callbacks();
 		EventCallback eventCallback=null;
@@ -280,8 +281,7 @@ public class Question implements QuestionIntf {
 		}
 		Question newQ = null;
 		WebResource webResource = client.resource(eventCallback.getCallback());
-		EventPost event = new EventPost(responder, this.getQuestion_id(),
-				eventType, message);
+		EventPost event = new EventPost(responder, this.getQuestion_id(), eventType, message, extras);
 		try {
 			String post = om.writeValueAsString(event);
 			String s = webResource.type("application/json").post(
@@ -325,11 +325,13 @@ public class Question implements QuestionIntf {
 		return question.getRequester();
 	}
 	@Override
+	@JsonIgnore
 	@JSON(include = false)
 	public HashMap<String,String> getExpandedRequester() {
 		return question.getExpandedRequester(this.preferred_language);
 	}
 	@Override
+	@JsonIgnore
 	@JSON(include = false)
 	public HashMap<String,String> getExpandedRequester(String language) {
 		this.preferred_language=language;
@@ -346,12 +348,14 @@ public class Question implements QuestionIntf {
 	}
 
 	@Override
+	@JsonIgnore
 	@JSON(include = false)
 	public String getQuestion_expandedtext() {
 		return question.getQuestion_expandedtext(this.preferred_language);
 	}
 
 	@Override
+	@JsonIgnore
 	@JSON(include = false)
 	public String getQuestion_expandedtext(String language) {
 		this.preferred_language=language;
@@ -393,11 +397,13 @@ public class Question implements QuestionIntf {
 	}
 
 	@JSON(include = false)
+	@JsonIgnore
 	public String getPreferred_language() {
 		return preferred_language;
 	}
 
 	@JSON(include = false)
+	@JsonIgnore
 	public void setPreferred_language(String preferred_language) {
 		this.preferred_language = preferred_language;
 	}

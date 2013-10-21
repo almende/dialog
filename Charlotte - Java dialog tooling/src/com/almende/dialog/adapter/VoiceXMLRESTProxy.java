@@ -844,7 +844,7 @@ public class VoiceXMLRESTProxy {
 							outputter.endTag();
 						outputter.endTag();
 					}
-					for(int cnt=0; cnt<12; cnt++){
+					for(int cnt=0; cnt<answers.size(); cnt++){
 					    Integer dtmf = cnt+1;
 					    String dtmfValue = dtmf.toString(); 
 					    if(dtmf==10) { // 10 translates into 0
@@ -853,6 +853,8 @@ public class VoiceXMLRESTProxy {
 					        dtmfValue = "*";
 					    } else if(dtmf==12) {
 					        dtmfValue = "#";
+                        } else if(dtmf>12) {
+                            break;
                         }
 					    
 						outputter.startTag("choice");

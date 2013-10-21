@@ -844,9 +844,19 @@ public class VoiceXMLRESTProxy {
 							outputter.endTag();
 						outputter.endTag();
 					}
-					for(int cnt=0; cnt<answers.size(); cnt++){
+					for(int cnt=0; cnt<12; cnt++){
+					    Integer dtmf = cnt+1;
+					    String dtmfValue = dtmf.toString(); 
+					    if(dtmf==10) { // 10 translates into 0
+					        dtmfValue = "0";
+					    } else if(dtmf==11) {
+					        dtmfValue = "*";
+					    } else if(dtmf==12) {
+					        dtmfValue = "#";
+                        }
+					    
 						outputter.startTag("choice");
-							outputter.attribute("dtmf", new Integer(cnt+1).toString());
+							outputter.attribute("dtmf", dtmfValue);
 							outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&answer_id="+answers.get(cnt).getAnswer_id()+"&sessionKey="+sessionKey);
 						outputter.endTag();
 					}

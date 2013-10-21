@@ -1,20 +1,22 @@
 package com.almende.dialog.test;
 
-import com.almende.dialog.TestFramework;
-import com.almende.dialog.model.Answer;
-import com.almende.dialog.model.Question;
-import com.almende.dialog.util.ServerUtils;
-import junit.framework.Assert;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
+
+import junit.framework.Assert;
+
+import com.almende.dialog.TestFramework;
+import com.almende.dialog.model.Answer;
+import com.almende.dialog.model.Question;
+import com.almende.dialog.util.ServerUtils;
 
 public class TestServlet extends HttpServlet
 {
@@ -28,18 +30,29 @@ public class TestServlet extends HttpServlet
     public static final String APPOINTMENT_REJECT_RESPONSE = "Thanks for responding to the invitation!";
     public static final String APPOINTMENT_ACCEPTANCE_RESPONSE = "Thanks for accepting the invitation!";
     
+    public enum QuestionInRequest
+    {
+        APPOINTMENT, SIMPLE_COMMENT, OPEN_QUESTION;
+    }
+    
     @Override
     protected void doGet( HttpServletRequest req, HttpServletResponse resp )
     throws ServletException, IOException
     {
         String result = "";
-        if(req.getParameter( "appointment" ) != null)
+        switch ( QuestionInRequest.valueOf( req.getParameter( "questionType" ) ))
         {
-            result = getAppointmentQuestion( req.getParameter( "appointment" ) );
-        }
-        else
-        {
-            result = getJsonSimpleCommentQuestion( req.getParameter( "simpleComment" ) );
+            case APPOINTMENT:
+                result = getAppointmentQuestion( req.getParameter( "question" ) );    
+                break;
+            case SIMPLE_COMMENT:
+                result = getJsonSimpleCommentQuestion( req.getParameter( "question" ) );
+                break;
+            case OPEN_QUESTION:
+                result = getJsonSimpleOpenQuestion( req.getParameter( "question" ) );
+                break;
+            default:
+                break;
         }
         //store all the questions loaded in the TestFramework
         TestFramework.storeResponseQuestionInThread(getResponseQuestionWithOptionsInString(result));
@@ -72,6 +85,15 @@ public class TestServlet extends HttpServlet
         Question question = new Question();
         question.setQuestion_id( "1" );
         question.setType( "comment" );
+        question.setQuestion_text( "text://" + questionText );
+        return question.toJSON();
+    }
+    
+    private String getJsonSimpleOpenQuestion( String questionText )
+    {
+        Question question = new Question();
+        question.setQuestion_id( "1" );
+        question.setType( "open" );
         question.setQuestion_text( "text://" + questionText );
         return question.toJSON();
     }

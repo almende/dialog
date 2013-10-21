@@ -1,9 +1,9 @@
 package com.almende.dialog.model;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Map;
 
@@ -55,11 +55,4 @@ public class QuestionTest extends TestFramework {
         
         assertTrue(properties.get(MediaPropertyKey.TYPE).equalsIgnoreCase("AuDiO"));
     }
-    
-    @Test
-    public void parseClosedQuestionJSON() {
-        
-    }
-    
-    
 }

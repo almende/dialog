@@ -117,20 +117,21 @@ public class ServerUtils
      */
     public static String getURLWithQueryParams(String url, String queryKey, String queryValue)
     {
-        if(url.endsWith( "/" ))
+        String copyURL = new String(url);
+        if(copyURL.endsWith( "/" ))
         {
-            url = url.substring( 0, url.length() - 1 );
+            copyURL = copyURL.substring( 0, copyURL.length() - 1 );
         }
         
-        if(url.indexOf( "?" ) > 0)
+        if(copyURL.indexOf( "?" ) > 0)
         {
-            url = url + "&";
+            copyURL = copyURL + "&";
         }
         else 
         {
-            url = url + "?";
+            copyURL = copyURL + "?";
         }
-        return url + queryKey + "=" + queryValue;
+        return copyURL + queryKey + "=" + queryValue;
     }
     
     /**

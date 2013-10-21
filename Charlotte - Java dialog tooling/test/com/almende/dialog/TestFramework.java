@@ -144,8 +144,8 @@ public class TestFramework
         return createAdapterConfig("BROADSOFT", TEST_PUBLIC_KEY, localAddressBroadsoft, "");
     }
     
-    public static AdapterConfig createAdapterConfig( String adapterType, String publicKey, String myAddress, String initiatAgentURL) 
-    throws Exception
+    public static AdapterConfig createAdapterConfig( String adapterType, String publicKey, String myAddress,
+        String initiatAgentURL ) throws Exception
     {
         AdapterConfig adapterConfig = new AdapterConfig();
         adapterConfig.setAdapterType( adapterType );
@@ -154,8 +154,9 @@ public class TestFramework
         adapterConfig.setMyAddress( myAddress );
         adapterConfig.setAccessToken( "2630|Ask54de" );
         adapterConfig.setInitialAgentURL( initiatAgentURL );
-        String adapterConfigString = adapterConfig.createConfig( ServerUtils.serialize( adapterConfig )).getEntity().toString();
-        return ServerUtils.deserialize( adapterConfigString, AdapterConfig.class);
+        String adapterConfigString = adapterConfig.createConfig( ServerUtils.serialize( adapterConfig ) ).getEntity()
+            .toString();
+        return ServerUtils.deserialize( adapterConfigString, AdapterConfig.class );
     }
     
     public static Method fetchMethodByReflection( String methodName, Class<?> class1, Class<?> parameterType )

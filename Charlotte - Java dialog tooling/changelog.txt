@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+24-10-2015, version 0.5.1
+- Fix not working # in closed question
+
 21-10-2013, version 0.5.0
 - senderName is added to replyTo list, if its an emailId
 - Added 0, * and # to the closed question.

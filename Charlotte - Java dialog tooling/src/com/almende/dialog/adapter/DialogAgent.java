@@ -141,7 +141,7 @@ public class DialogAgent extends Agent {
         AdapterConfig config = AdapterConfig.findAdapterConfigFromList( adapterID, adapterType, adapterList );
         if ( config != null )
         {
-            log.info( "Config found: " + config.getConfigId() );
+            log.info( String.format( "Config found: %s of Type: %s", config.getConfigId(), config.getAdapterType() ) );
             adapterType = config.getAdapterType();
             if ( adapterType.toUpperCase().equals( "XMPP" ) )
             {

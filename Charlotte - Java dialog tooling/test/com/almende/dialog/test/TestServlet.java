@@ -94,7 +94,14 @@ public class TestServlet extends HttpServlet
         Question question = new Question();
         question.setQuestion_id( "1" );
         question.setType( "open" );
-        question.setQuestion_text( "text://" + questionText );
+        if(questionText.startsWith( "http://" ))
+        {
+            question.setQuestion_text( questionText );
+        }
+        else
+        {
+            question.setQuestion_text( "text://" + questionText );
+        }
         return question.toJSON();
     }
 

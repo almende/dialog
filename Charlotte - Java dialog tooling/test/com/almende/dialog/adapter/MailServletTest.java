@@ -42,7 +42,9 @@ public class MailServletTest extends TestFramework
         //fetch and invoke the receieveMessage method
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( remoteAddressEmail, "Test" );
-        String url = "http://askfastmarket1.appspot.com/resource/question/"+ testMessage;
+        String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType", QuestionInRequest.SIMPLE_COMMENT.name() );
+        url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
+        
         MailServlet mailServlet = new MailServlet();
         mailServlet.startDialog( addressNameMap, url, "test", "sendDummyMessageTest", adapterConfig );
         

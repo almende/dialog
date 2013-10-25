@@ -207,6 +207,7 @@ public class MailServlet extends TextServlet {
             if(senderName!=null)
             {
                 msg.setFrom( new InternetAddress( from, senderName ) );
+                //add the senderName to the reply list if its an emailId
                 if ( senderName.contains( "@" ) )
                 {
                     Address[] addresses = new InternetAddress[1];

@@ -3,11 +3,18 @@ package com.almende.dialog.adapter;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
@@ -17,14 +24,70 @@ import com.almende.dialog.adapter.VoiceXMLRESTProxy.Return;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
-import com.almende.dialog.model.Question;
 import com.almende.dialog.model.MediaProperty.MediumType;
+import com.almende.dialog.model.Question;
+import com.almende.dialog.test.TestServlet;
+import com.almende.dialog.test.TestServlet.QuestionInRequest;
+import com.almende.dialog.util.ServerUtils;
+import com.thetransactioncompany.cors.HTTPMethod;
 
 public class VoiceXMLServletTest extends TestFramework {
 
     protected static final String COMMENT_QUESTION_ID = "1";
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio.wav";
 
+    /**
+     * this test is to check the bug which rethrows the same question when an open question doesnt
+     * have an answer nor a timeout eventtype
+     * @throws Exception
+     */
+    @Test
+    public void inbountPhoneCall_WithOpenQuestion_MissingAnswerTest() throws Exception
+    {
+        String senderName = "TestUser";
+        String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType",
+            QuestionInRequest.OPEN_QUESTION.name() );
+        url = ServerUtils.getURLWithQueryParams( url, "question", COMMENT_QUESTION_AUDIO );
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig( "broadsoft", TEST_PUBLIC_KEY, localAddressBroadsoft, url );
+
+        //create session
+        getOrCreateSession( adapterConfig, remoteAddressVoice );
+
+        //mock the Context
+        UriInfo uriInfo = Mockito.mock( UriInfo.class );
+        Mockito.when( uriInfo.getBaseUri() ).thenReturn( new URI( TestServlet.TEST_SERVLET_PATH ) );
+        VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
+        Response newDialog = voiceXMLRESTProxy.getNewDialog( "inbound", remoteAddressVoice, localAddressBroadsoft,
+            uriInfo );
+        HashMap<String, String> answerVariables = assertOpenQuestionWithDTMFType( newDialog.getEntity().toString() );
+
+        //answer the dialog
+        Question retrivedQuestion = ServerUtils.deserialize( TestFramework.fetchResponse( HTTPMethod.GET, url, null ),
+            Question.class );
+        String mediaPropertyValue = retrivedQuestion.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.LENGTH );
+        
+        Integer retryCount = Question.getRetryCount( answerVariables.get( "sessionKey" ) );
+        int i = 0;
+        while ( i++ < 10 )
+        {
+            voiceXMLRESTProxy.answer( answerVariables.get( "question_id" ), null,
+                answerVariables.get( "answer_input" ), answerVariables.get( "sessionKey" ), uriInfo );
+        }
+        retryCount = Question.getRetryCount( answerVariables.get( "sessionKey" ) );
+        assertTrue( retryCount != null );
+        if(mediaPropertyValue != null)
+        {
+            assertTrue( retryCount < i );
+            assertTrue( retryCount == Integer.parseInt( mediaPropertyValue ) );
+        }
+        else
+        {
+            assertTrue( retryCount < i );
+            assertTrue( retryCount == Question.DEFAULT_MAX_QUESTION_LOAD );
+        }
+    }
+    
     private Question getCommentQuestion() {
 
         Question question = new Question();
@@ -145,19 +208,7 @@ public class VoiceXMLServletTest extends TestFramework {
         
         String result = renderQuestion(question, adapter, sessionKey);
 
-        Document doc = getXMLDocumentBuilder(result);
-        Node vxml = doc.getFirstChild();
-        Node form = vxml.getChildNodes().item(3);
-
-        Node field = form.getFirstChild();
-        
-        assertNotNull(doc);
-        assertEquals(doc.getChildNodes().getLength(), 1);
-        assertEquals(vxml.getNodeName(), "vxml");
-        assertEquals(form.getNodeName(), "form");
-        assertEquals(field.getNodeName(), "field");
-        
-        assertEquals(field.getChildNodes().getLength(), 4);
+        assertOpenQuestionWithDTMFType( result );
     }
 
     @Test
@@ -185,5 +236,50 @@ public class VoiceXMLServletTest extends TestFramework {
         assertNotEquals(form.getChildNodes().getLength(), 4);
         assertEquals(record.getNodeName(), "record");
         assertEquals(subdialog.getNodeName(), "subdialog");
+    }
+    
+    /**
+     * @param result
+     * @throws Exception
+     */
+    protected HashMap<String,String> assertOpenQuestionWithDTMFType( String result ) throws Exception
+    {
+        HashMap<String, String> variablesForAnswer = new HashMap<String, String>();
+
+        Document doc = getXMLDocumentBuilder( result );
+        Node vxml = doc.getFirstChild();
+        Node answerInputNode = vxml.getChildNodes().item( 0 );
+        Node questionIdNode = vxml.getChildNodes().item( 1 );
+        Node sessionKeyNode = vxml.getChildNodes().item( 2 );
+        Node form = vxml.getChildNodes().item( 3 );
+
+        Node field = form.getFirstChild();
+
+        assertNotNull( doc );
+        assertEquals( doc.getChildNodes().getLength(), 1 );
+        assertEquals( vxml.getNodeName(), "vxml" );
+        assertEquals( form.getNodeName(), "form" );
+        assertEquals( "answer_input", answerInputNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
+        assertEquals( "question_id", questionIdNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
+        assertEquals( "sessionKey", sessionKeyNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
+        assertEquals( field.getNodeName(), "field" );
+        assertEquals( field.getChildNodes().getLength(), 4 );
+
+        if(answerInputNode.getAttributes().getNamedItem( "expr" ) != null)
+        {
+            variablesForAnswer.put( "answer_input", answerInputNode.getAttributes().getNamedItem( "expr" ).getNodeValue()
+            .replace( "'", "" ) );
+        }
+        if(questionIdNode.getAttributes().getNamedItem( "expr" ) != null)
+        {
+            variablesForAnswer.put( "question_id", questionIdNode.getAttributes().getNamedItem( "expr" ).getNodeValue()
+            .replace( "'", "" ) );
+        }
+        if(sessionKeyNode.getAttributes().getNamedItem( "expr" ) != null)
+        {
+            variablesForAnswer.put( "sessionKey", sessionKeyNode.getAttributes().getNamedItem( "expr" ).getNodeValue()
+                .replace( "'", "" ) );
+        }
+        return variablesForAnswer;
     }
 }

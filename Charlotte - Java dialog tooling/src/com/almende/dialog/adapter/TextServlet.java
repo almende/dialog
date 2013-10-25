@@ -39,6 +39,7 @@ abstract public class TextServlet extends HttpServlet {
 	protected static final Logger log = Logger.getLogger(TextServlet.class.getSimpleName());
 	protected static final int LOOP_DETECTION=10;
 	protected static final String DEMODIALOG = "/charlotte/";
+	protected String sessionKey = null;
 	
     /**
      * @deprecated use {@link TextServlet#broadcastMessage(String,String,String,
@@ -118,7 +119,7 @@ abstract public class TextServlet extends HttpServlet {
 				reply = reply.substring(0, reply.length() - 1) + " ]";
 				break; //Jump from forloop
 			} else if (question.getType().equalsIgnoreCase("comment")) {
-				question = question.answer(null, adapterID, null, null);//Always returns null! So no need, but maybe in future?
+				question = question.answer(null, adapterID, null, null, null);//Always returns null! So no need, but maybe in future?
 			} else 	if (question.getType().equalsIgnoreCase("referral")) {
 				question = Question.fromURL(question.getUrl(), adapterID ,address);
 			} else {
@@ -137,7 +138,7 @@ abstract public class TextServlet extends HttpServlet {
 			address = formatNumber(address);
 		}
 		String localaddress = config.getMyAddress();
-		String sessionKey =getAdapterType()+"|"+localaddress+"|"+address;
+		sessionKey =getAdapterType()+"|"+localaddress+"|"+address;
 		Session session = Session.getSession(sessionKey, config.getKeyword());
 		if (session == null){
 			log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "+sessionKey);
@@ -418,7 +419,8 @@ abstract public class TextServlet extends HttpServlet {
 				question.setPreferred_language(preferred_language);
 				// Do not answer a question, when it's the first and the type is comment or referral anyway.
 				if(!(start && (question.getType().equalsIgnoreCase("comment") || question.getType().equalsIgnoreCase("referral")))) {
-				    question = question.answer(address, config.getConfigId(), null, escapeInput.body);
+                    question = question.answer( address, config.getConfigId(), null, escapeInput.body,
+                        Question.getRetryCount( sessionKey ) );
 				}
 				Return replystr = formQuestion(question, config.getConfigId(),address);
 				escapeInput.reply = replystr.reply;

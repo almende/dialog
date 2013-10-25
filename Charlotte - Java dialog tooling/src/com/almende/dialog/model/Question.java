@@ -36,6 +36,9 @@ public class Question implements QuestionIntf {
 			.getLogger("DialogHandler");
 	static final ObjectMapper om =ParallelInit.getObjectMapper();
 	
+	public static final int DEFAULT_MAX_QUESTION_LOAD = 5;
+	private static ThreadLocal<HashMap<String, Integer>> questionRetryCounter = new ThreadLocal<HashMap<String,Integer>>();   
+	
 	QuestionIntf question;
 	private String preferred_language = "nl";
 
@@ -55,48 +58,65 @@ public class Question implements QuestionIntf {
 	public static Question fromURL(String url,String adapterID,String remoteID)  {
 		return fromURL(url, adapterID, remoteID, "");
 	}
-	@JSON(include = false)
-	public static Question fromURL(String url,String adapterID,String remoteID,String fromID)  {
-            
-	    log.info( String.format( "Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID, fromID  ));
-	    if(remoteID==null)
-	        remoteID="";
-        String json = "";            
-        if( !ServerUtils.isInUnitTestingEnvironment() )
+	
+    @JSON( include = false )
+    public static Question fromURL( String url, String adapterID, String remoteID, String fromID )
+    {
+        log.info( String.format( "Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url,
+            remoteID, fromID ) );
+        if ( remoteID == null )
+            remoteID = "";
+        String json = "";
+        if ( url != null && !url.trim().isEmpty() )
         {
-            Client client = ParallelInit.getClient();
-            WebResource webResource = client.resource(url);
-			try {
-				webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8")).queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
-				dialogLog.info(adapterID,"Loading new question from: "+webResource.toString());
-				json = webResource.type("text/plain").get(String.class);
-				dialogLog.info(adapterID,"Received new question: "+json);
-			} catch (ClientHandlerException e) {
-				log.severe(e.toString());
-				dialogLog.severe(adapterID,"ERROR loading question: "+e.toString());
-			} catch (UniformInterfaceException e) {
-				log.severe(e.toString());
-				dialogLog.severe(adapterID,"ERROR loading question: "+e.toString());
-			} catch (UnsupportedEncodingException e) {
-				log.severe(e.toString());
-				dialogLog.severe(adapterID,"ERROR loading question: "+e.toString());
-			}
+            if ( !ServerUtils.isInUnitTestingEnvironment() )
+            {
+                Client client = ParallelInit.getClient();
+                WebResource webResource = client.resource( url );
+                try
+                {
+                    webResource = webResource.queryParam( "responder", URLEncoder.encode( remoteID, "UTF-8" ) )
+                        .queryParam( "requester", URLEncoder.encode( fromID, "UTF-8" ) );
+                    dialogLog.info( adapterID, "Loading new question from: " + webResource.toString() );
+                    json = webResource.type( "text/plain" ).get( String.class );
+                    dialogLog.info( adapterID, "Received new question: " + json );
+                }
+                catch ( ClientHandlerException e )
+                {
+                    log.severe( e.toString() );
+                    dialogLog.severe( adapterID, "ERROR loading question: " + e.toString() );
+                }
+                catch ( UniformInterfaceException e )
+                {
+                    log.severe( e.toString() );
+                    dialogLog.severe( adapterID, "ERROR loading question: " + e.toString() );
+                }
+                catch ( UnsupportedEncodingException e )
+                {
+                    log.severe( e.toString() );
+                    dialogLog.severe( adapterID, "ERROR loading question: " + e.toString() );
+                }
+            }
+            else
+            {
+                try
+                {
+                    url = ServerUtils.getURLWithQueryParams( url, "responder", URLEncoder.encode( remoteID, "UTF-8" ) );
+                    url = ServerUtils.getURLWithQueryParams( url, "requester", URLEncoder.encode( fromID, "UTF-8" ) );
+                    json = TestFramework.fetchResponse( HTTPMethod.GET, url, null );
+                }
+                catch ( UnsupportedEncodingException e )
+                {
+                    log.severe( e.toString() );
+                }
+            }
+            return fromJSON( json, adapterID );
         }
         else
         {
-            try
-            {
-                url = ServerUtils.getURLWithQueryParams( url, "responder", URLEncoder.encode(remoteID, "UTF-8") );
-                url = ServerUtils.getURLWithQueryParams( url, "requester", URLEncoder.encode(fromID, "UTF-8") );
-                json = TestFramework.fetchResponse( HTTPMethod.GET, url, null );
-            }
-            catch ( UnsupportedEncodingException e )
-            {
-                log.severe(e.toString());
-            }
+            return null;
         }
-        return fromJSON(json, adapterID);
-	}
+    }
 
 	@JSON(include = false)
 	public static Question fromJSON(String json, String adapterID) {
@@ -142,116 +162,177 @@ public class Question implements QuestionIntf {
 		}
 	}
 
-	@JsonIgnore
-	@JSON(include = false)
-	public Question answer(String responder, String adapterID, String answer_id, String answer_input) {
-		Client client = ParallelInit.getClient();
-		boolean answered=false;
-		Answer answer = null;
-		if (this.getType().equals("open")) {
-			answer = this.getAnswers().get(0); // TODO: error handling, what if
-												// answer doesn't exist, or
-												// multiple answers
-												// (=out-of-spec)
-		} else if(this.getType().equals("openaudio")) {
-			answer = this.getAnswers().get(0);
-			try {
-				answer_input = URLDecoder.decode(answer_input, "UTF-8");
-				log.info("Received answer: "+answer_input);
-			} catch (Exception e) {
-			}
-		} else if (this.getType().equals("comment") || this.getType().equals("referral")) {
-			if(this.getAnswers() == null || this.getAnswers().size()==0)
-				return null;
-			answer = this.getAnswers().get(0);
-			
-		} else if (answer_id != null) {
-			answered=true;
-			Collection<Answer> answers = question.getAnswers();
-			for (Answer ans : answers) {
-				if (ans.getAnswer_id().equals(answer_id)) {
-					answer = ans;
-					break;
-				}
-			}
-		} else if (answer_input != null) {
-			answered=true;
-			// check all answers of question to see if they match, possibly
-			// retrieving the answer_text for each
-			answer_input = answer_input.trim();
-			ArrayList<Answer> answers = question.getAnswers();
-			for (Answer ans : answers) {
-				if (ans.getAnswer_text()!=null && ans.getAnswer_text().equals(answer_input)) {
-					answer = ans;
-					break;
-				}
-			}
-			if (answer == null) {
-				for (Answer ans : answers) {
-					if (ans.getAnswer_expandedtext(this.preferred_language).equalsIgnoreCase(
-							answer_input)) {
-						answer = ans;
-						break;
-					}
-				}
-			}
-			if (answer == null) {
-				try {
-					int answer_nr = Integer.parseInt(answer_input);
-					if(answer_nr <= answers.size())
-						answer = answers.get(answer_nr-1);
-				} catch(NumberFormatException ex) {
-					
-				}
-			}
-		}
-		Question newQ = null;
-		if (!this.getType().equals("comment") && answer == null) {
-			// Oeps, couldn't find/handle answer, just repeat last question:
-			// TODO: somewhat smarter behavior? Should dialog standard provide
-			// error handling?
-			if(answered)
-				newQ = this.event("exception","Wrong answer received", null, responder);
-			if(newQ!=null)
-				return newQ;
-			
-			return this;
-		}
-		// Send answer to answer.callback.
-		WebResource webResource = client.resource(answer.getCallback());
-		AnswerPost ans = new AnswerPost(this.getQuestion_id(),
-				answer.getAnswer_id(), answer_input, responder);
-		// Check if answer.callback gives new question for this dialog
-		try {
-			String post = om.writeValueAsString(ans);
-			log.info("Going to send: "+post);
-			String newQuestionJSON = null;
-			if( !ServerUtils.isInUnitTestingEnvironment() )
-			{
-			    newQuestionJSON = webResource.type("application/json").post(String.class, post);
-			}
-			else
-			{
-			    newQuestionJSON = TestFramework.fetchResponse( HTTPMethod.POST, answer.getCallback(), post );
-			}
-			
-			log.info("Received new question (answer): "+ newQuestionJSON);
-			dialogLog.info(adapterID, "Received new question (answer): "+newQuestionJSON);
-			
-			newQ = om.readValue(newQuestionJSON, Question.class);
-			newQ.setPreferred_language(preferred_language);
-		} catch (ClientHandlerException ioe) {
-			dialogLog.severe(adapterID, "Unable to load question: "+ioe.getMessage());
-			log.severe(ioe.toString());
-			ioe.printStackTrace();
-			newQ = this.event("exception", "Unable to load question", null, responder);
-		} catch (Exception e) {
-			dialogLog.severe(adapterID, "Unable to parse question json: "+e.getMessage());
-			log.severe(e.toString());
-			newQ = this.event("exception", "Unable to parse question json", null, responder);
-		}
-		return newQ;
-	}
+	/**
+	 * used to fetch an answer for a question.
+	 * @param responder the responder address from the incoming request
+	 * @param adapterID the adapterId used for the communication
+	 * @param answer_id the answerId that must be picked if any. If empty, the {@link answer_input} is matched
+	 * @param answer_input input given by the user
+	 * @param retryCount valid only for VoiceServlet.
+	 * @return
+	 */
+    @JsonIgnore
+    @JSON( include = false )
+    public Question answer( String responder, String adapterID, String answer_id, String answer_input,
+        Integer retryCount )
+    {
+        Client client = ParallelInit.getClient();
+        boolean answered = false;
+        Answer answer = null;
+        if ( this.getType().equals( "open" ) )
+        {
+            //updated as part of bug#16 at https://github.com/almende/dialog/issues/16
+            ArrayList<Answer> answers = getAnswers();
+            answer = answers != null ? answers.get( 0 ) : null;
+        }
+        else if ( this.getType().equals( "openaudio" ) )
+        {
+            answer = this.getAnswers().get( 0 );
+            try
+            {
+                answer_input = URLDecoder.decode( answer_input, "UTF-8" );
+                log.info( "Received answer: " + answer_input );
+            }
+            catch ( Exception e )
+            {
+            }
+        }
+        else if ( this.getType().equals( "comment" ) || this.getType().equals( "referral" ) )
+        {
+            if ( this.getAnswers() == null || this.getAnswers().size() == 0 )
+                return null;
+            answer = this.getAnswers().get( 0 );
+
+        }
+        else if ( answer_id != null )
+        {
+            answered = true;
+            Collection<Answer> answers = question.getAnswers();
+            for ( Answer ans : answers )
+            {
+                if ( ans.getAnswer_id().equals( answer_id ) )
+                {
+                    answer = ans;
+                    break;
+                }
+            }
+        }
+        else if ( answer_input != null )
+        {
+            answered = true;
+            // check all answers of question to see if they match, possibly
+            // retrieving the answer_text for each
+            answer_input = answer_input.trim();
+            ArrayList<Answer> answers = question.getAnswers();
+            for ( Answer ans : answers )
+            {
+                if ( ans.getAnswer_text() != null && ans.getAnswer_text().equals( answer_input ) )
+                {
+                    answer = ans;
+                    break;
+                }
+            }
+            if ( answer == null )
+            {
+                for ( Answer ans : answers )
+                {
+                    if ( ans.getAnswer_expandedtext( this.preferred_language ).equalsIgnoreCase( answer_input ) )
+                    {
+                        answer = ans;
+                        break;
+                    }
+                }
+            }
+            if ( answer == null )
+            {
+                try
+                {
+                    int answer_nr = Integer.parseInt( answer_input );
+                    if ( answer_nr <= answers.size() )
+                        answer = answers.get( answer_nr - 1 );
+                }
+                catch ( NumberFormatException ex )
+                {
+
+                }
+            }
+        }
+        Question newQ = null;
+        if ( !this.getType().equals( "comment" ) && answer == null )
+        {
+            // Oeps, couldn't find/handle answer, just repeat last question:
+            // TODO: somewhat smarter behavior? Should dialog standard provide
+            // error handling?
+            if ( answered )
+                newQ = this.event( "exception", "Wrong answer received", null, responder );
+            if ( newQ != null )
+                return newQ;
+
+            String retryLoadLimit = getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.LENGTH );
+            if(retryCount == null)
+            {
+                retryCount = getRetryCount( null );
+            }
+            
+            if ( retryLoadLimit != null && retryCount != null && retryCount < Integer.parseInt( retryLoadLimit ) )
+            {
+                log.warning( String.format( "returning the same question as RetryCount: %s < RetryLoadLimit: %s",
+                    retryCount, retryLoadLimit ) );
+                updateRetryCount( null );
+                return this;
+            }
+            else if ( retryCount != null && retryCount < DEFAULT_MAX_QUESTION_LOAD )
+            {
+                log.warning( String.format( "returning the same question as RetryCount: %s < DEFAULT_MAX: %s",
+                    retryCount, DEFAULT_MAX_QUESTION_LOAD ) );
+                updateRetryCount( null );
+                return this;
+            }
+            else
+            {
+                //only TextServlets must get into this
+                return this;
+            }
+        }
+        // Send answer to answer.callback.
+        WebResource webResource = client.resource( answer.getCallback() );
+        AnswerPost ans = new AnswerPost( this.getQuestion_id(), answer.getAnswer_id(), answer_input, responder );
+        // Check if answer.callback gives new question for this dialog
+        try
+        {
+            String post = om.writeValueAsString( ans );
+            log.info( "Going to send: " + post );
+            String newQuestionJSON = null;
+            if ( !ServerUtils.isInUnitTestingEnvironment() )
+            {
+                newQuestionJSON = webResource.type( "application/json" ).post( String.class, post );
+            }
+            else
+            {
+                newQuestionJSON = TestFramework.fetchResponse( HTTPMethod.POST, answer.getCallback(), post );
+            }
+
+            log.info( "Received new question (answer): " + newQuestionJSON );
+            dialogLog.info( adapterID, "Received new question (answer): " + newQuestionJSON );
+
+            newQ = om.readValue( newQuestionJSON, Question.class );
+            newQ.setPreferred_language( preferred_language );
+        }
+        catch ( ClientHandlerException ioe )
+        {
+            dialogLog.severe( adapterID, "Unable to load question: " + ioe.getMessage() );
+            log.severe( ioe.toString() );
+            ioe.printStackTrace();
+            newQ = this.event( "exception", "Unable to load question", null, responder );
+        }
+        catch ( Exception e )
+        {
+            dialogLog.severe( adapterID, "Unable to parse question json: " + e.getMessage() );
+            log.severe( e.toString() );
+            newQ = this.event( "exception", "Unable to parse question json", null, responder );
+        }
+        return newQ;
+    }
 	
 	public Question event(String eventType, String message, Object extras, String responder) 
 	{
@@ -469,5 +550,49 @@ public class Question implements QuestionIntf {
     {
         media_properties = media_properties == null ? new ArrayList<MediaProperty>() : media_properties;
         media_properties.add( mediaProperty );
+    }
+    
+    public static Integer getRetryCount( String sessionKey )
+    {
+        if(sessionKey == null && questionRetryCounter.get() != null && questionRetryCounter.get().size() == 1)
+        {
+            sessionKey = questionRetryCounter.get().keySet().iterator().next();
+        }
+        else if ( questionRetryCounter.get() != null )
+        {
+            if ( questionRetryCounter.get().get( sessionKey ) == null )
+            {
+                HashMap<String, Integer> retryHashMap = questionRetryCounter.get();
+                retryHashMap.put( sessionKey, 0 );
+                questionRetryCounter.set( retryHashMap );
+            }
+        }
+        else if(sessionKey != null)
+        {
+            HashMap<String, Integer> retryHashMap = new HashMap<String, Integer>();
+            retryHashMap.put( sessionKey, 0 );
+            questionRetryCounter.set( retryHashMap );
+        }
+        return sessionKey != null ? questionRetryCounter.get().get( sessionKey ) : null;
+    }
+    
+    /**
+     * updates The retryCount based on the sessionKey.
+     * If sessionKey is null and questionRetryCounter has only one element, then increments it
+     * @param sessionKey
+     * @return
+     */
+    public static Integer updateRetryCount( String sessionKey )
+    {
+        Integer retryCount = getRetryCount( sessionKey );
+        if(sessionKey == null && questionRetryCounter.get() != null && questionRetryCounter.get().size() == 1)
+        {
+            sessionKey = questionRetryCounter.get().keySet().iterator().next();
+        }
+        if ( retryCount != null && questionRetryCounter.get() != null )
+        {
+            questionRetryCounter.get().put( sessionKey, ++retryCount );
+        }
+        return retryCount;
     }
 }

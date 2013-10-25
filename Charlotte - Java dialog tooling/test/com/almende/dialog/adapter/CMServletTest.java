@@ -9,7 +9,6 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -63,34 +62,6 @@ public class CMServletTest extends TestFramework
             "outBoundSMSCallSenderNameNotNullTest" );
     }
     
-    /**
-     * this test is to check the bug which rethrows the same question when an open question doesnt
-     * have an answer nor a timeout eventtype
-     * @throws Exception
-     */
-    @Test
-    @Ignore
-    //TODO: fix this unit test
-    public void inbountSMSCall_WithOpenQuestion_MissingAnswerTest() throws Exception
-    {
-        String senderName = "TestUser";
-        String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType",
-            QuestionInRequest.OPEN_QUESTION.name() );
-        url = ServerUtils.getURLWithQueryParams( url, "question", simpleQuestion );
-        //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, localAddressBroadsoft, url );
-
-        //create session
-        getOrCreateSession( adapterConfig, remoteAddressVoice );
-        TextMessage textMessage = smsAppointmentInteraction( "hi" );
-        HashMap<String, String> addressNameMap = new HashMap<String, String>();
-        addressNameMap.put( textMessage.getAddress(), textMessage.getRecipientName() );
-        String expectedQuestion = TestServlet.getResponseQuestionWithOptionsInString( TestServlet
-            .getJsonAppointmentQuestion() );
-        assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, expectedQuestion,
-            textMessage.getLocalAddress(), null );
-    }
-
     /**
      * tests if an outbound call works when the sender name is null. In this
      * case it should pick up the adapter.Myaddress as the senderName. <br>

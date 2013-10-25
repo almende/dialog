@@ -857,6 +857,13 @@ public class VoiceXMLRESTProxy {
 			outputter.startTag("vxml");
 				outputter.attribute("version", "2.1");
 				outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
+				
+				if(answers.size()>11) {
+				    outputter.startTag("property");
+				        outputter.attribute("name", "termchar");
+				        outputter.attribute("value", "");
+				    outputter.endTag();    
+				}
 				outputter.startTag("menu");	
 					for (String prompt : prompts){
 						outputter.startTag("prompt");

@@ -155,7 +155,7 @@ public class MailServlet extends TextServlet {
             msg.addRecipient(Message.RecipientType.TO,
                              new InternetAddress(to, toName));
             msg.setSubject(subject);
-            msg.setText(message);
+            msg.setContent( message, "text/html; charset=utf-8" );
             Transport.send(msg);
             
             String logString = String.format( "Email sent:\n" + "From: %s<%s>\n" + "To: %s<%s>\n" + "Subject: %s\n" + "Body: %s",
@@ -225,7 +225,7 @@ public class MailServlet extends TextServlet {
                 msg.addRecipient( Message.RecipientType.TO, new InternetAddress( address, toName ) );
             }
             msg.setSubject( subject );
-            msg.setText( message );
+            msg.setContent( message, "text/html; charset=utf-8" );
             if(ServerUtils.isInUnitTestingEnvironment())
             {
                 TestFramework.log( msg );

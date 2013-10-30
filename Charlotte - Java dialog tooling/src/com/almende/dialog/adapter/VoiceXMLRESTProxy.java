@@ -33,13 +33,10 @@ import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.i18n.phonenumbers.NumberParseException;
-import com.google.i18n.phonenumbers.PhoneNumberUtil;
-import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
-import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 
@@ -75,9 +72,18 @@ public class VoiceXMLRESTProxy {
 	 * @return
 	 */
 	@Deprecated
-	public static String dial(String address, String url, AdapterConfig config){
-
-		address = formatNumber(address).replaceFirst("\\+31", "0")+"@outbound";
+	public static String dial(String address, String url, AdapterConfig config)
+	{
+		try
+        {
+            address = PhoneNumberUtils.formatNumber(address)+"@outbound";
+        }
+        catch ( Exception e )
+        {
+            log.severe( String.format( "Phonenumber: %s is not valid", address ) );
+            return "";
+        }
+		
 		String adapterType="broadsoft";
 		String sessionKey = adapterType+"|"+config.getMyAddress()+"|"+address;
 		Session session = Session.getSession(sessionKey);
@@ -132,36 +138,43 @@ public class VoiceXMLRESTProxy {
 
         for ( String address : addressNameMap.keySet() )
         {
-            String formattedAddress = formatNumber( address ).replaceFirst( "\\+31", "0" ) + "@outbound";
-            String sessionKey = sessionPrefix + formattedAddress;
-            Session session = Session.getSession( sessionKey );
-            if ( session == null )
+            try
             {
-                log.severe( "VoiceXMLRESTProxy couldn't start new outbound Dialog, adapterConfig not found? "
-                    + sessionKey );
-                return null;
+                String formattedAddress = PhoneNumberUtils.formatNumber( address ) + "@outbound";
+                String sessionKey = sessionPrefix + formattedAddress;
+                Session session = Session.getSession( sessionKey );
+                if ( session == null )
+                {
+                    log.severe( "VoiceXMLRESTProxy couldn't start new outbound Dialog, adapterConfig not found? "
+                        + sessionKey );
+                    return null;
+                }
+                session.killed=false;
+                session.setStartUrl(url);
+                session.setDirection("outbound");
+                session.setRemoteAddress(address);
+                session.setType(adapterType);
+                session.setTrackingToken(UUID.randomUUID().toString());
+                
+                if(session.getAdapterID()==null)
+                    session.setAdapterID(config.getConfigId());
+                session.storeSession();
+
+                StringStore.storeString("InitialQuestion_"+ sessionKey, questionJson);
+                DDRWrapper.log(url,session.getTrackingToken(),session,"Dial",config);
+
+                Broadsoft bs = new Broadsoft( config );
+                bs.startSubscription();
+
+                String extSession = bs.startCall( formattedAddress );
+                session.setExternalSession( extSession );
+                session.storeSession();
+                resultSessionMap.put(address, sessionKey);
             }
-            session.killed=false;
-            session.setStartUrl(url);
-            session.setDirection("outbound");
-            session.setRemoteAddress(address);
-            session.setType(adapterType);
-            session.setTrackingToken(UUID.randomUUID().toString());
-            
-            if(session.getAdapterID()==null)
-                session.setAdapterID(config.getConfigId());
-            session.storeSession();
-
-            StringStore.storeString("InitialQuestion_"+ sessionKey, questionJson);
-            DDRWrapper.log(url,session.getTrackingToken(),session,"Dial",config);
-
-            Broadsoft bs = new Broadsoft( config );
-            bs.startSubscription();
-
-            String extSession = bs.startCall( formattedAddress );
-            session.setExternalSession( extSession );
-            session.storeSession();
-            resultSessionMap.put(address, sessionKey);
+            catch ( Exception e )
+            {
+                log.severe( String.format( "Phonenumber: %s is not valid", address ) );
+            }
         }
         return resultSessionMap;
     }
@@ -179,17 +192,6 @@ public class VoiceXMLRESTProxy {
 	public static boolean killActiveCalls(AdapterConfig config) {
 		Broadsoft bs = new Broadsoft(config);
 		return bs.killActiveCalls();
-	}
-	
-	private static String formatNumber(String phone) {
-		PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
-		try {
-			PhoneNumber numberProto = phoneUtil.parse(phone,"NL");
-			return phoneUtil.format(numberProto,PhoneNumberFormat.E164);
-		} catch (NumberParseException e) {
-		  log.severe("NumberParseException was thrown: " + e.toString());
-		}
-		return null;	
 	}
 	
 	@Path("dtmf2hash")
@@ -582,8 +584,9 @@ public class VoiceXMLRESTProxy {
                             
                             log.info("Going to format phone number: "+address);
                             
-                            if(address.startsWith("+")) {
-                                address = formatNumber(address).replaceFirst("\\+31", "0");
+                            if(address.startsWith("+")) 
+                            {
+                                address = PhoneNumberUtils.formatNumber(address);
                             }
                             
                             String adapterType="broadsoft";
@@ -711,7 +714,7 @@ public class VoiceXMLRESTProxy {
             }
             
         } catch (Exception e) {
-            log.severe("Something failed: "+e.getMessage());
+            log.severe("Something failed: "+ e.getMessage());
         }
         
         
@@ -1091,30 +1094,38 @@ public class VoiceXMLRESTProxy {
                     log.info( String.format( "session key at handle question is: %s and remoteId %s",
                                              sessionKey, remoteID ) );
                     String[] sessionKeyArray = sessionKey.split( "\\|" );
-                    if(sessionKeyArray.length == 3)
+                    if ( sessionKeyArray.length == 3 )
                     {
-                        String redirectedId = formatNumber( question.getUrl().replace( "tel:", "" ) ).replaceFirst(
-                            "\\+31", "0" );
-                        String transferKey = "transfer_" + redirectedId + "_" + sessionKeyArray[1];
-                        log.info( String.format( "referral question %s stored with key: %s",
-                                                 questionJSON, transferKey ) );
-                        //store the remoteId as its lost while trying to trigger the answered event
-                        HashMap<String, Object> questionMap = new HashMap<String, Object>();
-                        questionMap.put( "question", question );
-                        questionMap.put( "remoteCallerId", remoteID );
-                        String questionMapString = null;
                         try
                         {
-                            questionMapString = ServerUtils.serialize( questionMap );
+                            String redirectedId = PhoneNumberUtils
+                                .formatNumber( question.getUrl().replace( "tel:", "" ) );
+                            String transferKey = "transfer_" + redirectedId + "_" + sessionKeyArray[1];
+                            log.info( String.format( "referral question %s stored with key: %s", questionJSON,
+                                transferKey ) );
+                            //store the remoteId as its lost while trying to trigger the answered event
+                            HashMap<String, Object> questionMap = new HashMap<String, Object>();
+                            questionMap.put( "question", question );
+                            questionMap.put( "remoteCallerId", remoteID );
+                            String questionMapString = null;
+                            try
+                            {
+                                questionMapString = ServerUtils.serialize( questionMap );
+                            }
+                            catch ( Exception e )
+                            {
+                                log.severe( "Question map serialization failed" );
+                                e.printStackTrace();
+                            }
+                            log.info( "question map: " + questionMapString );
+                            //key format: transfer_requester_remoteId
+                            StringStore.storeString( transferKey, questionMapString );
                         }
                         catch ( Exception e )
                         {
-                            log.severe( "Question map serialization failed" );
-                            e.printStackTrace();
+                            log.severe( String.format( "Phonenumber: %s is not valid",
+                                question.getUrl().replace( "tel:", "" ) ) );
                         }
-                        log.info( "question map: "+ questionMapString );
-                        //key format: transfer_requester_remoteId
-                        StringStore.storeString( transferKey , questionMapString );
                     }
                     else
                     {

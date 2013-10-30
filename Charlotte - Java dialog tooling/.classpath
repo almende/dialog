@@ -30,5 +30,6 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/appengine-testing-1.7.2.1.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/httpunit.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/slf4j-api-1.6.4.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/offline-geocoder-2.1.jar"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>

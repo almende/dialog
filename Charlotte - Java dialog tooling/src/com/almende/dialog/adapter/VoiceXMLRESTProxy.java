@@ -37,6 +37,7 @@ import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 
@@ -76,7 +77,7 @@ public class VoiceXMLRESTProxy {
 	{
 		try
         {
-            address = PhoneNumberUtils.formatNumber(address)+"@outbound";
+            address = PhoneNumberUtils.formatNumber(address, null)+"@outbound";
         }
         catch ( Exception e )
         {
@@ -140,7 +141,7 @@ public class VoiceXMLRESTProxy {
         {
             try
             {
-                String formattedAddress = PhoneNumberUtils.formatNumber( address ) + "@outbound";
+                String formattedAddress = PhoneNumberUtils.formatNumber( address, null ) + "@outbound";
                 String sessionKey = sessionPrefix + formattedAddress;
                 Session session = Session.getSession( sessionKey );
                 if ( session == null )
@@ -586,7 +587,7 @@ public class VoiceXMLRESTProxy {
                             
                             if(address.startsWith("+")) 
                             {
-                                address = PhoneNumberUtils.formatNumber(address);
+                                address = PhoneNumberUtils.formatNumber(address, null);
                             }
                             
                             String adapterType="broadsoft";
@@ -604,13 +605,17 @@ public class VoiceXMLRESTProxy {
 
                                 //when the receiver hangs up, an active callstate is also triggered. 
                                 // but the releaseCause is also set to Temporarily Unavailable
-                                if ( callState.getTextContent().equals( "Active" )
-                                    && ( releaseCause != null && !releaseCause.getTextContent().equalsIgnoreCase(
-                                        "Temporarily Unavailable" ) && !releaseCause.getTextContent().equalsIgnoreCase(
-                                        "User Not Found" )))
+                                if ( callState.getTextContent().equals( "Active" ) )
                                 {
-                                    answered( direction, address, config.getMyAddress(), startTimeString,
-                                        answerTimeString, releaseTimeString );
+                                    if ( callState == null
+                                        || ( releaseCause != null
+                                            && !releaseCause.getTextContent().equalsIgnoreCase(
+                                                "Temporarily Unavailable" ) && !releaseCause.getTextContent()
+                                            .equalsIgnoreCase( "User Not Found" ) ) )
+                                    {
+                                        answered( direction, address, config.getMyAddress(), startTimeString,
+                                            answerTimeString, releaseTimeString );
+                                    }
                                 }
                             }
                             else if ( personality.getTextContent().equals( "Originator" ) )
@@ -1099,7 +1104,9 @@ public class VoiceXMLRESTProxy {
                         try
                         {
                             String redirectedId = PhoneNumberUtils
-                                .formatNumber( question.getUrl().replace( "tel:", "" ) );
+                                .formatNumber( question.getUrl().replace( "tel:", "" ), null );
+                            //update url with formatted redirecteId
+                            question.setUrl( PhoneNumberUtils.formatNumber( redirectedId, PhoneNumberFormat.RFC3966 ) );
                             String transferKey = "transfer_" + redirectedId + "_" + sessionKeyArray[1];
                             log.info( String.format( "referral question %s stored with key: %s", questionJSON,
                                 transferKey ) );

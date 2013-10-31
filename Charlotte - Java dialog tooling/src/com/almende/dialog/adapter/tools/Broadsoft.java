@@ -14,6 +14,7 @@ import org.w3c.dom.NodeList;
 
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -47,18 +48,29 @@ public class Broadsoft {
 	
 	public String startCall(String address) {
 		
+	    String formattedAddress = new String(address);
+	    try
+        {
+	        formattedAddress = PhoneNumberUtils.formatNumber( address, null );
+        }
+        catch ( Exception e )
+        {
+            log.severe( String.format( "Phonenumber: %s is not valid", address ) );
+            return null;
+        }
+	    
 		WebResource webResource = client.resource(XSI_URL+XSI_ACTIONS+user+XSI_START_CALL);
 		webResource.addFilter(this.auth);
 		try {
-			String result = webResource.queryParam("address", URLEncoder.encode(address, "UTF-8")).type("text/plain").post(String.class);
+			String result = webResource.queryParam("address", URLEncoder.encode(formattedAddress, "UTF-8")).type("text/plain").post(String.class);
 			
 			log.info("Result from BroadSoft: "+result);
-			dialogLog.info(config.getConfigId(), "Start outbound call to: "+address);
+			dialogLog.info(config.getConfigId(), "Start outbound call to: "+ formattedAddress);
 			
 			return getCallId(result);
 		} catch (Exception e) {
 			log.severe("Problems dialing out:"+e.getMessage());
-			dialogLog.severe(config.getConfigId(), "Failed to start call to: "+address+" Error: "+e.getMessage());
+			dialogLog.severe(config.getConfigId(), "Failed to start call to: "+formattedAddress+" Error: "+e.getMessage());
 		}
 		
 		return null;

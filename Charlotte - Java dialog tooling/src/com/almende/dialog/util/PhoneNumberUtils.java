@@ -57,20 +57,19 @@ public class PhoneNumberUtils
     }
 
     /**
-     * returns the phone number in the format 00 + Country_Code +
-     * National_Number
-     * 
+     * returns the phone number in the format 00 + Country_Code + National_Number
      * @param phoneNumber
      * @return
-     * @throws NumberParseException
+     * @throws NumberParseException 
      */
-    public static String formatNumber( String phoneNumber ) throws Exception
+    public static String formatNumber( String phoneNumber, PhoneNumberFormat phoneNumberFormat ) throws Exception
     {
         PhoneNumber parse = getPhoneNumberProto( phoneNumber, null );
-        String formattedNumber = getPhoneNumberUtil().format( parse, PhoneNumberFormat.E164 );
+        phoneNumberFormat = phoneNumberFormat != null ? phoneNumberFormat : PhoneNumberFormat.E164;
+        String formattedNumber = getPhoneNumberUtil().format( parse, phoneNumberFormat );
         if ( formattedNumber != null && getPhoneNumberType( formattedNumber ) != PhoneNumberType.UNKNOWN )
         {
-            return formattedNumber.replaceFirst( "\\+", "00" );
+            return formattedNumber.replaceFirst( "\\+", "00" ).replace( "-", "" );
         }
         else
         {

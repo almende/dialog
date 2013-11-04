@@ -124,7 +124,7 @@ public class Question implements QuestionIntf {
 		if(json!=null) {
 			try {
 				question = om.readValue(json, Question.class);
-				question.setQuestion_text( URLDecoder.decode( question.getQuestion_text(), "UTF-8" ) );
+//				question.setQuestion_text( URLDecoder.decode( question.getQuestion_text(), "UTF-8" ) );
 			    log.info( "question from JSON: %s" + json );	
 			} catch (Exception e) {
 				log.severe(e.toString());
@@ -140,12 +140,31 @@ public class Question implements QuestionIntf {
 		return toJSON(false);
 	}
 	
-	@JSON(include = false)
-	@JsonIgnore
-	public String toJSON(boolean expanded_texts) {
-		return new JSONSerializer().exclude("*.class").transform(new QuestionTextTransformer(expanded_texts), "question_text", "question_expandedtext", "answer_text", "answer_expandedtext", "answers.answer_text", "answers.answer_expandedtext")
-				.include("answers", "event_callbacks").serialize(this);
-	}
+    @JSON( include = false )
+    @JsonIgnore
+    public String toJSON( boolean expanded_texts )
+    {
+        if ( ServerUtils.isInUnitTestingEnvironment() )
+        {
+            try
+            {
+                return ServerUtils.serialize( this );
+            }
+            catch ( Exception e )
+            {
+                e.printStackTrace();
+                return null;
+            }
+        }
+        else
+        {
+            return new JSONSerializer()
+                .exclude( "*.class" )
+                .transform( new QuestionTextTransformer( expanded_texts ), "question_text", "question_expandedtext",
+                    "answer_text", "answer_expandedtext", "answers.answer_text", "answers.answer_expandedtext" )
+                .include( "answers", "event_callbacks" ).serialize( this );
+        }
+    }
 
 	@JsonIgnore
 	@JSON(include = false)

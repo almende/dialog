@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.nio.CharBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -423,7 +424,8 @@ abstract public class TextServlet extends HttpServlet {
                         Question.getRetryCount( sessionKey ) );
 				}
 				Return replystr = formQuestion(question, config.getConfigId(),address);
-				escapeInput.reply = replystr.reply;
+				//fix for bug: #15 https://github.com/almende/dialog/issues/15
+				escapeInput.reply = URLDecoder.decode(replystr.reply);
 				question = replystr.question;
 				fromName = getNickname(question);
 

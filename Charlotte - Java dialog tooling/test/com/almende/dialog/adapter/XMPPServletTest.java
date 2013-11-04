@@ -24,8 +24,11 @@ public class XMPPServletTest extends TestFramework
     @Test
     public void ReceiveHelpMessageTest() throws Exception
     {
+        String initialAgentURL = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType", QuestionInRequest.APPOINTMENT.name());
+        initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "question", "start" );
+        
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "XMPP", TEST_PUBLIC_KEY, localAddressChat, "" );
+        AdapterConfig adapterConfig = createAdapterConfig( "XMPP", TEST_PUBLIC_KEY, localAddressChat, initialAgentURL );
         //create session
         getOrCreateSession( adapterConfig, remoteAddressEmail );
         

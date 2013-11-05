@@ -288,7 +288,7 @@ public class TestFramework
     private ServletRunner setupTestServlet()
     {
         ServletRunner servletRunner = new ServletRunner();
-        servletRunner.registerServlet( "unitTestServlet", TestServlet.class.getName() );
+        servletRunner.registerServlet( "/unitTestServlet/*", TestServlet.class.getName() );
         return servletRunner;
     }
     
@@ -307,7 +307,10 @@ public class TestFramework
 
     public static void storeResponseQuestionInThread(String questionText)
     {
-        responseQuestionString.set(questionText);
+        if(questionText != null && !questionText.isEmpty())
+        {
+            responseQuestionString.set(questionText);
+        }
     }
 
     protected javax.mail.Message getMessageFromDetails(String remoteAddress, String localAddress, String messageText, 

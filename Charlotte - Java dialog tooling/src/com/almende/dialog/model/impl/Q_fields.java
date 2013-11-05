@@ -4,14 +4,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
+import com.almende.dialog.TestFramework;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.intf.QuestionIntf;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
+import com.thetransactioncompany.cors.HTTPMethod;
 
 public class Q_fields implements QuestionIntf {
 	private static final long serialVersionUID = 748817624285821262L;
@@ -124,13 +127,23 @@ public class Q_fields implements QuestionIntf {
 			url+=url.indexOf("?")>0?"&":"?";
 			url+="preferred_language="+language;
 		}
-		WebResource webResource = client.resource(url);
 		String text = "";
-		try {
-			text = webResource.type("text/plain").get(String.class);
-		} catch (Exception e){
-			log.severe(e.toString());
-		}
+        try
+        {
+            if(!ServerUtils.isInUnitTestingEnvironment())
+            {
+                WebResource webResource = client.resource(url);
+                text = webResource.type( "text/plain" ).get( String.class );
+            }
+            else
+            {
+                text = TestFramework.fetchResponse( HTTPMethod.GET, url, null );
+            }
+        }
+        catch ( Exception e )
+        {
+            log.severe( e.toString() );
+        }
 		return text;
 	}
 	@Override

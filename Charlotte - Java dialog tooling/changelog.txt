@@ -1,7 +1,8 @@
 DialogHandler
 https://github.com/almende/dialog/
 
-31-10-2013, version 0.6.0
+4-11-2013, version 0.6.0
+- Fixed issue with fetching encoded URLs #15
 - Fix emails with html content-type
 
 30-10-2013, version 0.5.2

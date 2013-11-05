@@ -14,7 +14,6 @@ import org.w3c.dom.NodeList;
 
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -49,15 +48,16 @@ public class Broadsoft {
 	public String startCall(String address) {
 		
 	    String formattedAddress = new String(address);
-	    try
-        {
-	        formattedAddress = PhoneNumberUtils.formatNumber( address, null );
-        }
-        catch ( Exception e )
-        {
-            log.severe( String.format( "Phonenumber: %s is not valid", address ) );
-            return null;
-        }
+//	    try
+//        {
+//	        //trim address
+//	        formattedAddress = PhoneNumberUtils.formatNumber( address, null );
+//        }
+//        catch ( Exception e )
+//        {
+//            log.severe( String.format( "Phonenumber: %s is not valid", address ) );
+//            return null;
+//        }
 	    
 		WebResource webResource = client.resource(XSI_URL+XSI_ACTIONS+user+XSI_START_CALL);
 		webResource.addFilter(this.auth);

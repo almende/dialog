@@ -6,6 +6,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Method;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -212,7 +213,7 @@ public class CMServletTest extends TestFramework
     {
         String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType",
             questionInRequest.name() );
-        url = ServerUtils.getURLWithQueryParams( url, "question", simpleQuestion );
+        url = ServerUtils.getURLWithQueryParams( url, "question", URLEncoder.encode( simpleQuestion, "UTF-8" ));
         DialogAgent dialogAgent = new DialogAgent();
         if ( addressNameMap.size() > 1 )
         {

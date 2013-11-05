@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Method;
+import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Properties;
@@ -59,8 +60,11 @@ public class MailServletTest extends TestFramework
     @Test
     public void MailServletReceiveDummyMessageTest() throws Exception
     {
+        String initialAgentURL = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType", QuestionInRequest.APPOINTMENT.name());
+        initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "question", "start" );
+        
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY, localAddressMail, "" );
+        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY, localAddressMail, initialAgentURL );
         //create session
         getOrCreateSession( adapterConfig, remoteAddressEmail );
         
@@ -181,6 +185,33 @@ public class MailServletTest extends TestFramework
         TextMessage textMessage = mailAppointmentInteraction(TestServlet.APPOINTMENT_NO_ANSWER);
         assertOutgoingTextMessage(textMessage);
     }
+    
+    /**
+     * test if a URL passed into the question_text is parsed normally
+     * @throws Exception
+     */
+    @Test
+    public void QuestionTextWithURLDoesNotCreateIssuesTest() throws Exception
+    {
+        String textMessage = "How are you doing?";
+        //create mail adapter
+        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY, localAddressMail, "" );
+        //create session
+        getOrCreateSession( adapterConfig, remoteAddressEmail );
+
+        //fetch and invoke the receieveMessage method
+        HashMap<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put( remoteAddressEmail, "Test" );
+        String url = TestServlet.TEST_SERVLET_PATH + TestServlet.OPEN_QUESTION_URL_WITH_SPACES + "/"
+            + URLEncoder.encode( textMessage, "UTF-8");
+        
+        MailServlet mailServlet = new MailServlet();
+        mailServlet.startDialog( addressNameMap, url, "test", "sendDummyMessageTest", adapterConfig );
+
+        Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, textMessage,
+            "sendDummyMessageTest" );
+        assertOutgoingTextMessage( message );
+    }
 
     /**
      * this is a test to test if the old message block is trimmed off 
@@ -233,7 +264,6 @@ public class MailServletTest extends TestFramework
     {
         javax.mail.Message messageFromDetails = getMessageFromDetails(textMessage.getAddress(), textMessage.getLocalAddress(), 
                                                                       responseQuestionString.get(), "");
-
         assertTrue(logObject.get() instanceof javax.mail.Message);
         javax.mail.Message messageLogged = (javax.mail.Message) logObject.get();
         assertEquals(messageFromDetails.getFrom(), messageLogged.getFrom());

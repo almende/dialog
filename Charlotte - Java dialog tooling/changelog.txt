@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+15-11-2013, version 0.6.1
+- HotFix answered event not triggered correctly
+
 31-10-2013, version 0.6.0
 - Fix emails with html content-type
 

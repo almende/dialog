@@ -448,15 +448,15 @@ public class VoiceXMLRESTProxy {
             question.event( "hangup", "Hangup", timeMap, remoteID );
             DDRWrapper.log( question, session, "Hangup" );
             handleQuestion( null, session.getAdapterConfig().getConfigId(), remoteID, sessionKey );
+            //delete all session entities
+            String question_id = question.getQuestion_id();
+            StringStore.dropString(question_id);
+            StringStore.dropString(question_id+"-remoteID");
         }
         else
         {
             log.info( "no question received" );
         }
-        //delete all session entities
-        String question_id = question.getQuestion_id();
-        StringStore.dropString(question_id);
-        StringStore.dropString(question_id+"-remoteID");
         StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
         StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound");
         StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound_retry");

@@ -48,18 +48,7 @@ public class Broadsoft {
 	public String startCall(String address) {
 		
 	    String formattedAddress = new String(address);
-//	    try
-//        {
-//	        //trim address
-//	        formattedAddress = PhoneNumberUtils.formatNumber( address, null );
-//        }
-//        catch ( Exception e )
-//        {
-//            log.severe( String.format( "Phonenumber: %s is not valid", address ) );
-//            return null;
-//        }
-	    
-		WebResource webResource = client.resource(XSI_URL+XSI_ACTIONS+user+XSI_START_CALL);
+	    WebResource webResource = client.resource(XSI_URL+XSI_ACTIONS+user+XSI_START_CALL);
 		webResource.addFilter(this.auth);
 		try {
 			String result = webResource.queryParam("address", URLEncoder.encode(formattedAddress, "UTF-8")).type("text/plain").post(String.class);

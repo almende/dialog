@@ -141,7 +141,8 @@ public class VoiceXMLRESTProxy {
         {
             try
             {
-                String formattedAddress = PhoneNumberUtils.formatNumber( address, null ) + "@outbound";
+                String formattedAddress = PhoneNumberUtils.formatNumber( address, PhoneNumberFormat.E164 )
+                    + "@outbound";
                 String sessionKey = sessionPrefix + formattedAddress;
                 Session session = Session.getSession( sessionKey );
                 if ( session == null )
@@ -153,7 +154,7 @@ public class VoiceXMLRESTProxy {
                 session.killed=false;
                 session.setStartUrl(url);
                 session.setDirection("outbound");
-                session.setRemoteAddress(address);
+                session.setRemoteAddress(formattedAddress);
                 session.setType(adapterType);
                 session.setTrackingToken(UUID.randomUUID().toString());
                 
@@ -170,7 +171,7 @@ public class VoiceXMLRESTProxy {
                 String extSession = bs.startCall( formattedAddress );
                 session.setExternalSession( extSession );
                 session.storeSession();
-                resultSessionMap.put(address, sessionKey);
+                resultSessionMap.put(formattedAddress, sessionKey);
             }
             catch ( Exception e )
             {
@@ -389,26 +390,26 @@ public class VoiceXMLRESTProxy {
 	}
 
 	@Path("hangup")
-	@GET
-	@Produces("application/voicexml+xml")
+    @GET
+    @Produces("application/voicexml+xml")
     public Response hangup( @QueryParam( "direction" ) String direction,
         @QueryParam( "remoteID" ) String remoteID, @QueryParam( "localID" ) String localID,
         @QueryParam( "startTime" ) String startTime, @QueryParam( "answerTime" ) String answerTime,
         @QueryParam( "releaseTime" ) String releaseTime, @QueryParam( "notPickedUp" ) Boolean notPickedUp ) 
         throws Exception
     {
-		log.info("call hangup with:"+direction+":"+remoteID+":"+localID);
-		
-		String adapterType="broadsoft";
-		
-		String sessionKey = adapterType+"|"+localID+"|"+remoteID;
-		Session session = Session.getSession(sessionKey);
-		
-		Question question = null;
-        log.info( String.format( "Session key: %s with remote: %s and local %s", session.getSession_id(),
+        log.info("call hangup with:"+direction+":"+remoteID+":"+localID);
+        
+        String adapterType="broadsoft";
+        
+        String sessionKey = adapterType+"|"+localID+"|"+remoteID;
+        Session session = Session.getSession(sessionKey);
+        
+        Question question = null;
+        log.info( String.format( "Session key: %s with remote: %s and local %s", sessionKey,
             session.getRemoteAddress(), session.getLocalAddress() ) );
-        String json = StringStore.getString( direction + "_" + session.getRemoteAddress() + "_"
-            + session.getLocalAddress() );
+        String stringStoreKey = direction + "_" + session.getRemoteAddress() + "_" + session.getLocalAddress();
+        String json = StringStore.getString( stringStoreKey );
         if ( json != null )
         {
             ObjectNode questionNode = ServerUtils.deserialize( json, ObjectNode.class );
@@ -416,25 +417,27 @@ public class VoiceXMLRESTProxy {
             remoteID = questionNode.get( "remoteCallerId" ).asText();
             //not deleting the remoteCallerIdQuestionMap as hangup (personality: Originator callState: Released) 
             //is received via the ccxml file 
-//            StringStore.dropString( direction + "_" + session.getRemoteAddress() + "_" + session.getLocalAddress() );
+            //            StringStore.dropString( direction + "_" + session.getRemoteAddress() + "_" + session.getLocalAddress() );
         }
         else
         {
-            json = StringStore.getString( "question_" + session.getRemoteAddress() + "_"
-                + session.getLocalAddress() );
-            question = Question.fromJSON(json, session.getAdapterConfig().getConfigId());
+            stringStoreKey = "question_" + session.getRemoteAddress() + "_" + session.getLocalAddress();
+            json = StringStore.getString( stringStoreKey );
+            if ( json == null )
+            {
+                stringStoreKey = "question_" + session.getRemoteAddress()
+                    + ( session.getRemoteAddress().contains( "@outbound" ) ? "" : "@outbound" ) + "_"
+                    + session.getLocalAddress();
+                json = StringStore.getString( stringStoreKey );
+            }
+            question = Question.fromJSON( json, session.getAdapterConfig().getConfigId() );
         }
-        
-		if(json!=null) 
-		{
-			String question_id = question.getQuestion_id();
-			StringStore.dropString(question_id);
-			StringStore.dropString(question_id+"-remoteID");
-			StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
-		} else {
-			question = Question.fromURL(session.getStartUrl(), session.getAdapterConfig().getConfigId(),remoteID,localID);
-		}
-		
+        log.info( String.format( "tried fetching question: %s from StringStore with id: %s", json, stringStoreKey ));
+        if ( question == null )
+        {
+            question = Question.fromURL( session.getStartUrl(), session.getAdapterConfig().getConfigId(), remoteID,
+                localID );
+        }
         if ( question != null )
         {
             HashMap<String, Object> timeMap = getTimeMap( startTime, answerTime, releaseTime );
@@ -444,21 +447,30 @@ public class VoiceXMLRESTProxy {
             }
             question.event( "hangup", "Hangup", timeMap, remoteID );
             DDRWrapper.log( question, session, "Hangup" );
-
             handleQuestion( null, session.getAdapterConfig().getConfigId(), remoteID, sessionKey );
         }
         else
         {
             log.info( "no question received" );
         }
-		return Response.ok("").build();
-	}
+        //delete all session entities
+        String question_id = question.getQuestion_id();
+        StringStore.dropString(question_id);
+        StringStore.dropString(question_id+"-remoteID");
+        StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
+        StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound");
+        StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound_retry");
+        StringStore.dropString(sessionKey);
+        StringStore.dropString(sessionKey+"@outbound");
+        StringStore.dropString( stringStoreKey );
+        return Response.ok("").build();
+    }
 
-	/**
-	 * used to trigger answered event unlike {@link VoiceXMLRESTProxy#answer(String, String, String, String, UriInfo)}
-	 * @return
-	 * @throws Exception 
-	 */
+    /**
+     * used to trigger answered event unlike {@link VoiceXMLRESTProxy#answer(String, String, String, String, UriInfo)}
+     * @return
+     * @throws Exception 
+     */
     public Response answered( String direction, String remoteID, String localID, String startTime,
         String answerTime, String releaseTime ) throws Exception
     {
@@ -469,21 +481,34 @@ public class VoiceXMLRESTProxy {
         log.info( "question from session got: "+ session.getSession_id() );
         Question question = null;
         String json = StringStore.getString( direction + "_" + remoteID + "_" + localID );
-        log.info( "question from session: "+ json );
-        
+        String responder = "";
+        //for direction = transfer (redirect event), json should not be null        
         if ( json != null )
         {
+            log.info( String.format( "question from string store with id: %s is: %s", direction + "_" + remoteID + "_"
+                + localID, json ) );
             ObjectNode questionNode = ServerUtils.deserialize( json, false, ObjectNode.class );
             log.info( "questionNode at answered: " + questionNode.toString() );
             if ( questionNode != null && questionNode.get( "question" ) != null )
             {
                 question = ServerUtils.deserialize( questionNode.get( "question" ).toString(), Question.class );
             }
-
+            responder = questionNode.get( "remoteCallerId" ).asText();
+        }
+        //this is invoked when an outbound call is triggered and answered by the callee
+        else 
+        {
+            String initialQuestionSessionId = "InitialQuestion_"+ sessionKey + (sessionKey.contains( "@outbound" ) ? "" : "@outbound");
+            json = StringStore.getString( initialQuestionSessionId );
+            question = ServerUtils.deserialize( json, Question.class );
+            log.info( String.format( "question from string store with id: %s is: %s", initialQuestionSessionId, json ) );
+        }
+        if(question != null)
+        {
             HashMap<String, Object> timeMap = getTimeMap( startTime, answerTime, releaseTime );
-            question.event( "answered", "Answered", timeMap, questionNode.get( "remoteCallerId" ).asText() );
+            question.event( "answered", "Answered", timeMap, responder );
             DDRWrapper.log( question, session, "Answered" );
-            handleQuestion( null, session.getAdapterConfig().getConfigId(), remoteID, sessionKey );
+//            handleQuestion( null, session.getAdapterConfig().getConfigId(), remoteID, sessionKey );
         }
         return Response.ok( "" ).build();
     }
@@ -569,6 +594,7 @@ public class VoiceXMLRESTProxy {
                         // Check if a sip or network call
                         String type="";
                         String address="";
+                        String fullAddress = "";
                         for(int i=0; i<remoteParty.getChildNodes().getLength();i++) {
                             Node rpChild = remoteParty.getChildNodes().item(i);
                             if(rpChild.getNodeName().equals("address")) {
@@ -578,6 +604,7 @@ public class VoiceXMLRESTProxy {
                             }
                         }
                         
+                        fullAddress = new String(address);
                         // Check if session can be matched to call
                         if(type.equals("Network") || type.equals("Group") || type.equals("Unknown")) {
                             
@@ -607,7 +634,7 @@ public class VoiceXMLRESTProxy {
                                 // but the releaseCause is also set to Temporarily Unavailable
                                 if ( callState.getTextContent().equals( "Active" ) )
                                 {
-                                    if ( callState == null
+                                    if ( releaseCause == null
                                         || ( releaseCause != null
                                             && !releaseCause.getTextContent().equalsIgnoreCase(
                                                 "Temporarily Unavailable" ) && !releaseCause.getTextContent()
@@ -679,25 +706,39 @@ public class VoiceXMLRESTProxy {
                                 }
                             }
                             
-                            if ( ses != null && direction != "transfer"
-                                && !personality.getTextContent().equals( "Terminator" ) )
+                            if ( callState.getTextContent().equals( "Released" ) )
                             {
-                                log.info( "SESSSION FOUND!! SEND HANGUP!!!" );
-                                this.hangup( direction, address, config.getMyAddress(), startTimeString,
-                                             answerTimeString, releaseTimeString, false );
-                            } else {
-                                
-                                if ( personality.getTextContent().equals( "Originator" ) )
+                                if ( ses != null && direction != "transfer"
+                                    && !personality.getTextContent().equals( "Terminator" )
+                                    && fullAddress.startsWith( "tel:" ) )
                                 {
-                                    log.info( "Probably a disconnect of a redirect. call hangup event" );
-                                    hangup( direction, address, config.getMyAddress(),
-                                            startTimeString, answerTimeString, releaseTimeString, null );
-                                } 
-                                else if(personality.getTextContent().equals("Terminator")) {
-                                    log.info("No session for this inbound?????");
-                                } else {
-                                    log.info("What the hell was this?????");
-                                    log.info("Session already ended?");
+                                    log.info( "SESSSION FOUND!! SEND HANGUP!!!" );
+                                    this.hangup( direction, address, config.getMyAddress(), startTimeString,
+                                        answerTimeString, releaseTimeString, false );
+                                }
+                                else
+                                {
+                                    if ( personality.getTextContent().equals( "Originator" )
+                                        && fullAddress.startsWith( "sip:" ) )
+                                    {
+                                        log.info( "Probably a disconnect of a sip. call hangup event" );
+                                    }
+                                    else if ( personality.getTextContent().equals( "Originator" )
+                                        && fullAddress.startsWith( "tel:" ) )
+                                    {
+                                        log.info( "Probably a disconnect of a redirect. call hangup event" );
+                                        hangup( direction, address, config.getMyAddress(), startTimeString,
+                                            answerTimeString, releaseTimeString, null );
+                                    }
+                                    else if ( personality.getTextContent().equals( "Terminator" ) )
+                                    {
+                                        log.info( "No session for this inbound?????" );
+                                    }
+                                    else
+                                    {
+                                        log.info( "What the hell was this?????" );
+                                        log.info( "Session already ended?" );
+                                    }
                                 }
                             }
                             
@@ -1079,8 +1120,8 @@ public class VoiceXMLRESTProxy {
             StringStore.storeString( question.getQuestion_id() + "-remoteID", remoteID );
 
             Session session = Session.getSession( sessionKey );
-            StringStore.storeString( "question_" + session.getRemoteAddress() + "_"
-                                         + session.getLocalAddress(), questionJSON );
+            StringStore.storeString( "question_" + session.getRemoteAddress() + "_" + session.getLocalAddress(),
+                questionJSON );
 
             if ( question.getType().equalsIgnoreCase( "closed" ) )
             {

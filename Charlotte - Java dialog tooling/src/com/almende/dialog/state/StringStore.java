@@ -2,6 +2,7 @@ package com.almende.dialog.state;
 
 import java.util.Iterator;
 //import java.util.logging.Logger;
+import java.util.logging.Logger;
 
 import com.almende.util.ParallelInit;
 import com.google.appengine.api.datastore.DatastoreService;
@@ -13,7 +14,7 @@ import com.google.appengine.api.memcache.MemcacheService;
 import com.google.appengine.api.memcache.MemcacheServiceFactory;
 
 public class StringStore {
-	//private static final Logger log = Logger.getLogger(com.almende.dialog.state.StringStore.class.getName()); 	
+	private static final Logger log = Logger.getLogger(StringStore.class.getName()); 	
 	
 	static DatastoreService datastore = ParallelInit.getDatastore();
 	static MemcacheService syncCache = MemcacheServiceFactory
@@ -25,6 +26,7 @@ public class StringStore {
 			//log.warning("drop :"+id+ " : "+ entity.getKey());
 			datastore.delete(entity.getKey());
 			syncCache.delete(id);
+		     log.info( "StringStore entity with id: "+ id + " is deleted" );
 			return true;
 		}
 		return false;
@@ -42,7 +44,7 @@ public class StringStore {
 		entity.setUnindexedProperty("string", new Text(text));
 		datastore.put(entity);
 		syncCache.put(id, entity);
-
+		log.info( String.format( "String with id: %s and text: %s saved", id, text ) );
 	}
 
 	@SuppressWarnings("deprecation")

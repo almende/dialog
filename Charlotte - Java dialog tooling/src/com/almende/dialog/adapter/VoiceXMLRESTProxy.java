@@ -163,6 +163,8 @@ public class VoiceXMLRESTProxy {
                 session.storeSession();
 
                 StringStore.storeString("InitialQuestion_"+ sessionKey, questionJson);
+                StringStore.storeString( "question_" + session.getRemoteAddress() + "_" + session.getLocalAddress(),
+                    questionJson );
                 DDRWrapper.log(url,session.getTrackingToken(),session,"Dial",config);
 
                 Broadsoft bs = new Broadsoft( config );
@@ -480,8 +482,10 @@ public class VoiceXMLRESTProxy {
         Session session = Session.getSession(sessionKey);
         log.info( "question from session got: "+ session.getSession_id() );
         Question question = null;
-        String json = StringStore.getString( direction + "_" + remoteID + "_" + localID );
+        String stringStoreKey = direction + "_" + remoteID + "_" + localID;
+        String json = StringStore.getString( stringStoreKey );
         String responder = "";
+        
         //for direction = transfer (redirect event), json should not be null        
         if ( json != null )
         {
@@ -498,11 +502,18 @@ public class VoiceXMLRESTProxy {
         //this is invoked when an outbound call is triggered and answered by the callee
         else 
         {
-            String initialQuestionSessionId = "InitialQuestion_"+ sessionKey + (sessionKey.contains( "@outbound" ) ? "" : "@outbound");
-            json = StringStore.getString( initialQuestionSessionId );
-            question = ServerUtils.deserialize( json, Question.class );
-            log.info( String.format( "question from string store with id: %s is: %s", initialQuestionSessionId, json ) );
+            stringStoreKey = "question_" + session.getRemoteAddress() + "_" + session.getLocalAddress();
+            json = StringStore.getString( stringStoreKey );
+            if ( json == null )
+            {
+                stringStoreKey = "question_" + session.getRemoteAddress()
+                    + ( session.getRemoteAddress().contains( "@outbound" ) ? "" : "@outbound" ) + "_"
+                    + session.getLocalAddress();
+                json = StringStore.getString( stringStoreKey );
+            }
+            question = Question.fromJSON( json, session.getAdapterConfig().getConfigId() );
         }
+        log.info( String.format( "tried fetching question: %s from StringStore with id: %s", json, stringStoreKey ));
         if(question != null)
         {
             HashMap<String, Object> timeMap = getTimeMap( startTime, answerTime, releaseTime );

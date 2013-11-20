@@ -953,7 +953,7 @@ public class VoiceXMLRESTProxy {
 					    
 						outputter.startTag("choice");
 							outputter.attribute("dtmf", dtmfValue);
-							outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&answer_id="+answers.get(cnt).getAnswer_id()+"&sessionKey="+sessionKey);
+							outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&answer_id="+answers.get(cnt).getAnswer_id()+"&answer_input="+dtmfValue+"&sessionKey="+sessionKey);
 						outputter.endTag();
 					}
 					outputter.startTag("noinput");

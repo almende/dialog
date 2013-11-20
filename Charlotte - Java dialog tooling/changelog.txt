@@ -1,15 +1,13 @@
 DialogHandler
 https://github.com/almende/dialog/
 
-<<<<<<< HEAD
-4-11-2013, version 0.6.0
-- Fixed issue with fetching encoded URLs #15
-=======
+20-11-2013, version 0.6.2
+- Hotfix added dtmf value entered in the POST payload
+
 15-11-2013, version 0.6.1
 - HotFix answered event not triggered correctly
 
 31-10-2013, version 0.6.0
->>>>>>> hotfix_0.6.1
 - Fix emails with html content-type
 
 30-10-2013, version 0.5.2

@@ -125,7 +125,6 @@ public class Question implements QuestionIntf {
 			try {
 				question = om.readValue(json, Question.class);
 //				question.setQuestion_text( URLDecoder.decode( question.getQuestion_text(), "UTF-8" ) );
-			    log.info( "question from JSON: %s" + json );	
 			} catch (Exception e) {
 				log.severe(e.toString());
 				dialogLog.severe(adapterID,"ERROR parsing question: "+e.getLocalizedMessage());

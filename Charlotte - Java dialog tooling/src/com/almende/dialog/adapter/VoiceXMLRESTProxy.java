@@ -2,6 +2,8 @@ package com.almende.dialog.adapter;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -295,6 +297,14 @@ public class VoiceXMLRESTProxy {
         @QueryParam( "answer_id" ) String answer_id, @QueryParam( "answer_input" ) String answer_input,
         @QueryParam( "sessionKey" ) String sessionKey, @Context UriInfo ui )
     {
+        try
+        {
+            answer_input = answer_input != null ? URLDecoder.decode( answer_input, "UTF-8" ) : answer_input;
+        }
+        catch ( UnsupportedEncodingException e )
+        {
+            log.warning( String.format( "Answer input decode failed for: %s", answer_input) );
+        }
         this.host = ui.getBaseUri().toString().replace( ":80", "" );
         String reply = "<vxml><exit/></vxml>";
         Session session = Session.getSession( sessionKey );
@@ -953,7 +963,7 @@ public class VoiceXMLRESTProxy {
 					    
 						outputter.startTag("choice");
 							outputter.attribute("dtmf", dtmfValue);
-							outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&answer_id="+answers.get(cnt).getAnswer_id()+"&answer_input="+dtmfValue+"&sessionKey="+sessionKey);
+							outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&answer_id="+answers.get(cnt).getAnswer_id()+"&answer_input="+URLEncoder.encode( dtmfValue, "UTF-8")+"&sessionKey="+sessionKey);
 						outputter.endTag();
 					}
 					outputter.startTag("noinput");

@@ -200,6 +200,7 @@ public class Question implements QuestionIntf {
         if ( this.getType().equals( "open" ) )
         {
             //updated as part of bug#16 at https://github.com/almende/dialog/issues/16
+            //Infinitely prepares the same question when an invalid format of Open question is received.
             ArrayList<Answer> answers = getAnswers();
             answer = answers != null ? answers.get( 0 ) : null;
         }
@@ -220,7 +221,6 @@ public class Question implements QuestionIntf {
             if ( this.getAnswers() == null || this.getAnswers().size() == 0 )
                 return null;
             answer = this.getAnswers().get( 0 );
-
         }
         else if ( answer_id != null )
         {
@@ -275,6 +275,11 @@ public class Question implements QuestionIntf {
                 }
             }
         }
+        else if(answer_input == null)
+        {
+            return this;
+        }
+        
         Question newQ = null;
         if ( !this.getType().equals( "comment" ) && answer == null )
         {
@@ -294,22 +299,25 @@ public class Question implements QuestionIntf {
             
             if ( retryLoadLimit != null && retryCount != null && retryCount < Integer.parseInt( retryLoadLimit ) )
             {
-                log.warning( String.format( "returning the same question as RetryCount: %s < RetryLoadLimit: %s",
+                log.info( String.format( "returning the same question as RetryCount: %s < RetryLoadLimit: %s",
                     retryCount, retryLoadLimit ) );
                 updateRetryCount( null );
                 return this;
             }
             else if ( retryCount != null && retryCount < DEFAULT_MAX_QUESTION_LOAD )
             {
-                log.warning( String.format( "returning the same question as RetryCount: %s < DEFAULT_MAX: %s",
-                    retryCount, DEFAULT_MAX_QUESTION_LOAD ) );
+                log.info( String.format(
+                    "returning the same question as RetryCount: %s < DEFAULT_MAX: %s", retryCount,
+                    DEFAULT_MAX_QUESTION_LOAD ) );
                 updateRetryCount( null );
                 return this;
             }
             else
             {
-                //only TextServlets must get into this
-                return this;
+                log.warning( String.format(
+                    "return null question as RetryCount: %s >= DEFAULT_MAX: %s or >= LOAD_LIMIT: %s", retryCount,
+                    DEFAULT_MAX_QUESTION_LOAD, retryLoadLimit ) );
+                return null;
             }
         }
         // Send answer to answer.callback.

@@ -949,12 +949,6 @@ public class VoiceXMLRESTProxy {
 							outputter.endTag();
 						outputter.endTag();
 					}
-//					if(answers.size()>11) {
-//					    outputter.startTag("property");
-//					        outputter.attribute("name", "termchar");
-//					        outputter.attribute("value", "");
-//					    outputter.endTag();    
-//					}
 					for ( int cnt = 0; cnt < answers.size(); cnt++ )
                     {
                         Integer dtmf = cnt + 1;

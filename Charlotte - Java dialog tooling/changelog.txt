@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+21-11-2013, version 0.7.0
+- Feature: dtmf key based fetch of answers
+
 21-11-2013, version 0.6.2
 - Hotfix encoding and decoding dtmf value to answer_input
 - Hotfix added dtmf value entered in the POST payload

@@ -53,6 +53,10 @@ public class A_fields implements AnswerIntf {
 		String url = this.getAnswer_text();
 		if (url == null || url.equals("")) return "";
 		if (url.startsWith("text://")) return url.replace("text://", "");
+		if(url.startsWith( "dtmfKey://" ))
+        {
+            return url;
+        }
 		if (language != null && !language.equals("")){
 			url+=url.indexOf("?")>0?"&":"?";
 			url+="preferred_language="+language;

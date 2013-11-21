@@ -928,12 +928,19 @@ public class VoiceXMLRESTProxy {
 				outputter.attribute("version", "2.1");
 				outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
 				
-				if(answers.size()>11) {
-				    outputter.startTag("property");
-				        outputter.attribute("name", "termchar");
-				        outputter.attribute("value", "");
-				    outputter.endTag();    
-				}
+				//remove the termchar operator when # is found in the answer
+                for ( Answer answer : answers )
+                {
+                    if ( answers.size() > 11
+                        || ( answer.getAnswer_text() != null && answer.getAnswer_text().contains( "dtmfKey://" ) ) )
+                    {
+                        outputter.startTag( "property" );
+                        outputter.attribute( "name", "termchar" );
+                        outputter.attribute( "value", "" );
+                        outputter.endTag();
+                        break;
+                    }
+                }
 				outputter.startTag("menu");	
 					for (String prompt : prompts){
 						outputter.startTag("prompt");
@@ -942,30 +949,47 @@ public class VoiceXMLRESTProxy {
 							outputter.endTag();
 						outputter.endTag();
 					}
-					if(answers.size()>11) {
-					    outputter.startTag("property");
-					        outputter.attribute("name", "termchar");
-					        outputter.attribute("value", "");
-					    outputter.endTag();    
-					}
-					for(int cnt=0; cnt<answers.size(); cnt++){
-					    Integer dtmf = cnt+1;
-					    String dtmfValue = dtmf.toString(); 
-					    if(dtmf==10) { // 10 translates into 0
-					        dtmfValue = "0";
-					    } else if(dtmf==11) {
-					        dtmfValue = "*";
-					    } else if(dtmf==12) {
-					        dtmfValue = "#";
-                        } else if(dtmf>12) {
-                            break;
+//					if(answers.size()>11) {
+//					    outputter.startTag("property");
+//					        outputter.attribute("name", "termchar");
+//					        outputter.attribute("value", "");
+//					    outputter.endTag();    
+//					}
+					for ( int cnt = 0; cnt < answers.size(); cnt++ )
+                    {
+                        Integer dtmf = cnt + 1;
+                        String dtmfValue = dtmf.toString();
+                        if ( answers.get( cnt ).getAnswer_text() != null
+                            && answers.get( cnt ).getAnswer_text().startsWith( "dtmfKey://" ) )
+                        {
+                            dtmfValue = answers.get( cnt ).getAnswer_text().replace( "dtmfKey://", "" ).trim();
                         }
-					    
-						outputter.startTag("choice");
-							outputter.attribute("dtmf", dtmfValue);
-							outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&answer_id="+answers.get(cnt).getAnswer_id()+"&answer_input="+URLEncoder.encode( dtmfValue, "UTF-8")+"&sessionKey="+sessionKey);
-						outputter.endTag();
-					}
+                        else
+                        {
+                            if ( dtmf == 10 )
+                            { // 10 translates into 0
+                                dtmfValue = "0";
+                            }
+                            else if ( dtmf == 11 )
+                            {
+                                dtmfValue = "*";
+                            }
+                            else if ( dtmf == 12 )
+                            {
+                                dtmfValue = "#";
+                            }
+                            else if ( dtmf > 12 )
+                            {
+                                break;
+                            }
+                        }
+                        outputter.startTag( "choice" );
+                        outputter.attribute( "dtmf", dtmfValue );
+                        outputter.attribute( "next", getAnswerUrl() + "?question_id=" + question.getQuestion_id()
+                            + "&answer_id=" + answers.get( cnt ).getAnswer_id() + "&answer_input=" + URLEncoder.encode( dtmfValue, "UTF-8" ) + "&sessionKey="
+                            + sessionKey );
+                        outputter.endTag();
+                    }
 					outputter.startTag("noinput");
 						outputter.startTag("goto");
 							outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);

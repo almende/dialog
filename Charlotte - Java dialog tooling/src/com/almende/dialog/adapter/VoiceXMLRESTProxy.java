@@ -328,7 +328,7 @@ public class VoiceXMLRESTProxy {
                 StringStore.dropString( question_id + "-remoteID" );
                 StringStore.dropString( "question_" + session.getRemoteAddress() + "_" + session.getLocalAddress() );
                 question = question.answer( responder, session.getAdapterConfig().getConfigId(), answer_id,
-                    answer_input, Question.getRetryCount( sessionKey ) );
+                    answer_input, sessionKey );
                 return handleQuestion( question, session.getAdapterConfig().getConfigId(), responder, sessionKey );
             } else {
                 log.warning( "No question found in session!" );

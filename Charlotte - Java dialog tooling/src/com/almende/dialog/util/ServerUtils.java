@@ -68,6 +68,19 @@ public class ServerUtils
         return oMapper.readValue( jsonString, type );
     }
 
+    public static String serializeWithoutException( Object objectToBeSerialized )
+    {
+        try
+        {
+            return serialize( objectToBeSerialized );
+        }
+        catch ( Exception e )
+        {
+            log.severe( e.getLocalizedMessage() );
+            return null;
+        }
+    }
+    
     public static String serialize( Object objectToBeSerialized ) throws Exception
     {
         oMapper.setSerializationInclusion( Include.NON_NULL );

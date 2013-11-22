@@ -44,7 +44,6 @@ public class VoiceXMLServletTest extends TestFramework {
     @Test
     public void inbountPhoneCall_WithOpenQuestion_MissingAnswerTest() throws Exception
     {
-        String senderName = "TestUser";
         String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType",
             QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name() );
         url = ServerUtils.getURLWithQueryParams( url, "question", COMMENT_QUESTION_AUDIO );
@@ -71,10 +70,22 @@ public class VoiceXMLServletTest extends TestFramework {
         int i = 0;
         while ( i++ < 10 )
         {
-            voiceXMLRESTProxy.answer( answerVariables.get( "question_id" ), null,
+            Response answerResponse = voiceXMLRESTProxy.answer( answerVariables.get( "question_id" ), null,
                 answerVariables.get( "answer_input" ), answerVariables.get( "sessionKey" ), uriInfo );
+            if ( answerResponse.getEntity() != null )
+            {
+                if ( answerResponse
+                    .getEntity()
+                    .toString()
+                    .equals(
+                        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" "
+                            + "xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>" ) )
+                {
+                    break;
+                }
+            }
+            retryCount++;
         }
-        retryCount = Question.getRetryCount( answerVariables.get( "sessionKey" ) );
         assertTrue( retryCount != null );
         if(mediaPropertyValue != null)
         {
@@ -83,7 +94,7 @@ public class VoiceXMLServletTest extends TestFramework {
         }
         else
         {
-            assertTrue( retryCount < i );
+            assertTrue( retryCount <= i );
             assertEquals( new Integer(Question.DEFAULT_MAX_QUESTION_LOAD), retryCount );
         }
     }

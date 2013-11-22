@@ -11,9 +11,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
@@ -788,6 +791,33 @@ public class VoiceXMLRESTProxy {
         return Response.ok(reply).build();
     }
 		
+    /**
+     * redirects to the TSS functionality to play the audio
+     * @param text to be converted to Voice
+     * @return
+     */
+    @GET
+    @Path( "tts/{text}" )
+    public HttpServletResponse redirectToTTS( @PathParam( "text" ) String text,
+        @Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse )
+    throws Exception
+    {
+        String ttsURL = "https://voicerss-text-to-speech.p.mashape.com/?key=afafc70fde4b4b32a730842e6fcf0c62&src="
+            + text.replace( ".wav", "" ) + "&hl=en-us&r=0&c=wav&f=8khz_8bit_mono";
+        httpServletResponse.addHeader( "X-Mashape-Authorization", "Fy6ynDFxV5Yi6K0pj8NYxPneKgfztwp4" );
+        httpServletResponse.sendRedirect( ttsURL );
+
+        //        Client client = ParallelInit.getClient();
+        //        httpServletRequest.getSession().setAttribute( "X-Mashape-Authorization", "Fy6ynDFxV5Yi6K0pj8NYxPneKgfztwp4" );
+        //        WebResource webResource = client.resource( ttsURL );
+        //        ClientResponse clientResponse = webResource.getRequestBuilder()
+        //            .header( "X-Mashape-Authorization", "Fy6ynDFxV5Yi6K0pj8NYxPneKgfztwp4" ).get( ClientResponse.class );
+        //        return Response.ok( clientResponse.getEntityInputStream() ).build();
+        //        return Response.seeOther( webResource.getURI() )
+        //            .header( "X-Mashape-Authorization", "Fy6ynDFxV5Yi6K0pj8NYxPneKgfztwp4" ).build();
+        return httpServletResponse;
+    }
+    
 	public class Return {
 		ArrayList<String> prompts;
 		Question question;
@@ -1016,6 +1046,14 @@ public class VoiceXMLRESTProxy {
 				// Check if media property type equals audio
 				// if so record audio message, if not record dtmf input
 				String typeProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TYPE );
+				String voiceMessageLengthProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_LENGTH );
+		        //assign a default timeout if one is not specified
+		        String voiceMessageLength = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
+		        if(!voiceMessageLength.endsWith("s"))
+		        {
+		            log.warning("Redirect timeout must be end with 's'. E.g. 40s. Found: "+ voiceMessageLength);
+		            voiceMessageLength += "s";
+		        }
 				if(typeProperty!=null && typeProperty.equalsIgnoreCase("audio")) {
 				    
 				    // Fetch the upload url
@@ -1034,7 +1072,7 @@ public class VoiceXMLRESTProxy {
                         outputter.startTag("record");
                             outputter.attribute("name", "file");
                             outputter.attribute("beep", "true");
-                            outputter.attribute("maxtime", "15s");
+                            outputter.attribute("maxtime", voiceMessageLength);
                             outputter.attribute("dtmfterm", "true");
                             //outputter.attribute("finalsilence", "3s");
                             for (String prompt : prompts){

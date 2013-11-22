@@ -70,6 +70,9 @@ public class TestFramework
     @Before
     public void setup()
     {
+        servletRunner.remove();
+        logObject.remove();
+        responseQuestionString.remove();
         helper.setUp();
         if(servletRunner.get() == null)
         {
@@ -80,7 +83,10 @@ public class TestFramework
     @After
     public void tearDown()
     {
-        helper.tearDown() ;
+        helper.tearDown();
+        servletRunner.remove();
+        logObject.remove();
+        responseQuestionString.remove();
     }
     
     public static String fetchResponse( HTTPMethod httpMethods, String url, String payload )

@@ -37,7 +37,7 @@ public class Question implements QuestionIntf {
 	static final ObjectMapper om =ParallelInit.getObjectMapper();
 	
 	public static final int DEFAULT_MAX_QUESTION_LOAD = 5;
-	private static ThreadLocal<HashMap<String, Integer>> questionRetryCounter = new ThreadLocal<HashMap<String,Integer>>();   
+	private static HashMap<String, Integer> questionRetryCounter = null;
 	
 	QuestionIntf question;
 	private String preferred_language = "nl";
@@ -186,13 +186,12 @@ public class Question implements QuestionIntf {
 	 * @param adapterID the adapterId used for the communication
 	 * @param answer_id the answerId that must be picked if any. If empty, the {@link answer_input} is matched
 	 * @param answer_input input given by the user
-	 * @param retryCount valid only for VoiceServlet.
+	 * @param sessionKey valid only for VoiceServlet.
 	 * @return
 	 */
     @JsonIgnore
     @JSON( include = false )
-    public Question answer( String responder, String adapterID, String answer_id, String answer_input,
-        Integer retryCount )
+    public Question answer( String responder, String adapterID, String answer_id, String answer_input, String sessionKey )
     {
         Client client = ParallelInit.getClient();
         boolean answered = false;
@@ -200,6 +199,7 @@ public class Question implements QuestionIntf {
         if ( this.getType().equals( "open" ) )
         {
             //updated as part of bug#16 at https://github.com/almende/dialog/issues/16
+            //Infinitely prepares the same question when an invalid format of Open question is received.
             ArrayList<Answer> answers = getAnswers();
             answer = answers != null ? answers.get( 0 ) : null;
         }
@@ -213,6 +213,7 @@ public class Question implements QuestionIntf {
             }
             catch ( Exception e )
             {
+                log.severe( e.getLocalizedMessage() );
             }
         }
         else if ( this.getType().equals( "comment" ) || this.getType().equals( "referral" ) )
@@ -220,7 +221,6 @@ public class Question implements QuestionIntf {
             if ( this.getAnswers() == null || this.getAnswers().size() == 0 )
                 return null;
             answer = this.getAnswers().get( 0 );
-
         }
         else if ( answer_id != null )
         {
@@ -271,10 +271,15 @@ public class Question implements QuestionIntf {
                 }
                 catch ( NumberFormatException ex )
                 {
-
+                    log.severe( ex.getLocalizedMessage() );
                 }
             }
         }
+        else if(answer_input == null)
+        {
+            return this;
+        }
+        
         Question newQ = null;
         if ( !this.getType().equals( "comment" ) && answer == null )
         {
@@ -287,30 +292,53 @@ public class Question implements QuestionIntf {
                 return newQ;
 
             String retryLoadLimit = getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.LENGTH );
-            if(retryCount == null)
-            {
-                retryCount = getRetryCount( null );
-            }
-            
+            Integer retryCount = getRetryCount( sessionKey );
             if ( retryLoadLimit != null && retryCount != null && retryCount < Integer.parseInt( retryLoadLimit ) )
             {
-                log.warning( String.format( "returning the same question as RetryCount: %s < RetryLoadLimit: %s",
+                updateRetryCount( sessionKey );
+                log.info( String.format( "returning the same question as RetryCount: %s < RetryLoadLimit: %s",
                     retryCount, retryLoadLimit ) );
-                updateRetryCount( null );
+                dialogLog.warning( adapterID, String.format( "Repeating question %s (count: %s) due to invalid answer: %s",
+                        ServerUtils.serializeWithoutException( this ), retryCount, answer_input ) );
                 return this;
             }
             else if ( retryCount != null && retryCount < DEFAULT_MAX_QUESTION_LOAD )
             {
-                log.warning( String.format( "returning the same question as RetryCount: %s < DEFAULT_MAX: %s",
-                    retryCount, DEFAULT_MAX_QUESTION_LOAD ) );
-                updateRetryCount( null );
+                updateRetryCount( sessionKey );
+                log.info( String.format(
+                    "returning the same question as RetryCount: %s < DEFAULT_MAX: %s", retryCount,
+                    DEFAULT_MAX_QUESTION_LOAD ) );
+                dialogLog.warning(
+                    adapterID,
+                    String.format( "Repeating question %s (count: %s) due to invalid answer: %s",
+                        ServerUtils.serializeWithoutException( this ), retryCount, answer_input ) );
                 return this;
+            }
+            else if( sessionKey != null )
+            {
+                flushRetryCount( sessionKey );
+                log.warning( String.format(
+                    "return null question as RetryCount: %s >= DEFAULT_MAX: %s or >= LOAD_LIMIT: %s", retryCount,
+                    DEFAULT_MAX_QUESTION_LOAD, retryLoadLimit ) );
+                dialogLog
+                    .warning( adapterID, String.format(
+                                "Return empty/null question as retryCount %s equals DEFAULT_MAX: %s or LOAD_LIMIT: %s, due to invalid answer: %s",
+                                retryCount, DEFAULT_MAX_QUESTION_LOAD, retryLoadLimit, answer_input ) );
+                return null;
             }
             else
             {
-                //only TextServlets must get into this
+                log.info( "returning the same question as its TextServlet request??" );
+                dialogLog.warning( adapterID, 
+                    String.format( "Repeating question %s due to invalid answer: %s in the TextServlet",
+                        ServerUtils.serializeWithoutException( this ), answer_input ) );
                 return this;
             }
+        }
+        else
+        {
+            //flush any existing retry counters for this session
+            flushRetryCount( sessionKey );
         }
         // Send answer to answer.callback.
         WebResource webResource = client.resource( answer.getCallback() );
@@ -570,28 +598,20 @@ public class Question implements QuestionIntf {
         media_properties.add( mediaProperty );
     }
     
+    /**
+     * gets the retry Count of the number of times the Question has been loaded corresponding to the 
+     * current sessionKey. If the sessionKey is not found, it will create one and set the value to 0. 
+     * @param sessionKey
+     * @return
+     */
     public static Integer getRetryCount( String sessionKey )
     {
-        if(sessionKey == null && questionRetryCounter.get() != null && questionRetryCounter.get().size() == 1)
+        questionRetryCounter = questionRetryCounter != null ? questionRetryCounter : new HashMap<String, Integer>();
+        if ( sessionKey != null && !questionRetryCounter.containsKey( sessionKey ) )
         {
-            sessionKey = questionRetryCounter.get().keySet().iterator().next();
+            questionRetryCounter.put( sessionKey, 1 );
         }
-        else if ( questionRetryCounter.get() != null )
-        {
-            if ( questionRetryCounter.get().get( sessionKey ) == null )
-            {
-                HashMap<String, Integer> retryHashMap = questionRetryCounter.get();
-                retryHashMap.put( sessionKey, 0 );
-                questionRetryCounter.set( retryHashMap );
-            }
-        }
-        else if(sessionKey != null)
-        {
-            HashMap<String, Integer> retryHashMap = new HashMap<String, Integer>();
-            retryHashMap.put( sessionKey, 0 );
-            questionRetryCounter.set( retryHashMap );
-        }
-        return sessionKey != null ? questionRetryCounter.get().get( sessionKey ) : null;
+        return sessionKey != null ? questionRetryCounter.get( sessionKey ) : null;
     }
     
     /**
@@ -603,14 +623,32 @@ public class Question implements QuestionIntf {
     public static Integer updateRetryCount( String sessionKey )
     {
         Integer retryCount = getRetryCount( sessionKey );
-        if(sessionKey == null && questionRetryCounter.get() != null && questionRetryCounter.get().size() == 1)
+        try
         {
-            sessionKey = questionRetryCounter.get().keySet().iterator().next();
+            log.info( "serialized retry map: " + ServerUtils.serialize( questionRetryCounter ) );
         }
-        if ( retryCount != null && questionRetryCounter.get() != null )
+        catch ( Exception e )
         {
-            questionRetryCounter.get().put( sessionKey, ++retryCount );
+            log.info( "serialized retry map failed" );
+        }
+        if ( retryCount != null && questionRetryCounter != null )
+        {
+            questionRetryCounter.put( sessionKey, ++retryCount );
         }
         return retryCount;
+    }
+    
+    /**
+     * flushes the retry count corresponding to hte session key in the
+     * questionRetryCounter
+     * 
+     * @param sessionKey
+     */
+    public static void flushRetryCount( String sessionKey )
+    {
+        if ( questionRetryCounter != null && sessionKey != null )
+        {
+            questionRetryCounter.remove( sessionKey );
+        }
     }
 }

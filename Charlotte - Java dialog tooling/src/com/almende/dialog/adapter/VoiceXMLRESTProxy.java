@@ -1047,15 +1047,15 @@ public class VoiceXMLRESTProxy {
 				// if so record audio message, if not record dtmf input
 				String typeProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TYPE );
 				String voiceMessageLengthProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_LENGTH );
-		        //assign a default timeout if one is not specified
-		        String voiceMessageLength = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
-		        if(!voiceMessageLength.endsWith("s"))
-		        {
-		            log.warning("Redirect timeout must be end with 's'. E.g. 40s. Found: "+ voiceMessageLength);
-		            voiceMessageLength += "s";
-		        }
 				if(typeProperty!=null && typeProperty.equalsIgnoreCase("audio")) {
-				    
+				    //assign a default voice mail length if one is not specified
+	                String voiceMessageLength = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
+	                if(!voiceMessageLength.endsWith("s"))
+	                {
+	                    log.warning("Redirect timeout must be end with 's'. E.g. 40s. Found: "+ voiceMessageLength);
+	                    voiceMessageLength += "s";
+	                }
+	                
 				    // Fetch the upload url
 				    String storedAudiofile = this.host+"upload/"+UUID.randomUUID().toString()+".wav";
 			        Client client = ParallelInit.getClient();

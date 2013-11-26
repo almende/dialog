@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+26-11-2013, version 0.7.1
+- Feature: Allow for blind transfers
+
 22-11-2013, version 0.7.0
 - Feature: dtmf key based fetch of answers
 - Fix: issue with infinitely repeating question on wrong answer input

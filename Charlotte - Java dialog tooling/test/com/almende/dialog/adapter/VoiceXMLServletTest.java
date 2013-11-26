@@ -64,7 +64,7 @@ public class VoiceXMLServletTest extends TestFramework {
         //answer the dialog
         Question retrivedQuestion = ServerUtils.deserialize( TestFramework.fetchResponse( HTTPMethod.GET, url, null ),
             Question.class );
-        String mediaPropertyValue = retrivedQuestion.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.LENGTH );
+        String mediaPropertyValue = retrivedQuestion.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT );
         
         Integer retryCount = Question.getRetryCount( answerVariables.get( "sessionKey" ) );
         int i = 0;

@@ -14,11 +14,11 @@ import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.impl.Q_fields;
 import com.almende.dialog.model.intf.QuestionIntf;
-import com.almende.dialog.util.QuestionTextTransformer;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.eaio.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -27,7 +27,6 @@ import com.sun.jersey.api.client.WebResource;
 import com.thetransactioncompany.cors.HTTPMethod;
 
 import flexjson.JSON;
-import flexjson.JSONSerializer;
 
 public class Question implements QuestionIntf {
 	private static final long serialVersionUID = -9069211642074173182L;
@@ -54,10 +53,29 @@ public class Question implements QuestionIntf {
 	public static Question fromURL(String url,String adapterID) {
 		return fromURL(url, adapterID,"");
 	}
+	
 	@JSON(include = false)
 	public static Question fromURL(String url,String adapterID,String remoteID)  {
 		return fromURL(url, adapterID, remoteID, "");
 	}
+	
+    public static String getJSONFromURL( String url, String adapterID, String remoteID, String fromID )
+    {
+        Client client = ParallelInit.getClient();
+        WebResource webResource;
+        try
+        {
+            webResource = client.resource( url ).queryParam( "responder", URLEncoder.encode( remoteID, "UTF-8" ) )
+                .queryParam( "requester", fromID );
+            return webResource.type( "text/plain" ).get( String.class );
+        }
+        catch ( UnsupportedEncodingException e )
+        {
+            log.severe( e.toString() );
+            dialogLog.severe( adapterID, "ERROR loading question: " + e.toString() );
+        }
+        return null;
+    }
 	
     @JSON( include = false )
     public static Question fromURL( String url, String adapterID, String remoteID, String fromID )
@@ -143,25 +161,15 @@ public class Question implements QuestionIntf {
     @JsonIgnore
     public String toJSON( boolean expanded_texts )
     {
-        if ( ServerUtils.isInUnitTestingEnvironment() )
+        try
         {
-            try
-            {
-                return ServerUtils.serialize( this );
-            }
-            catch ( Exception e )
-            {
-                e.printStackTrace();
-                return null;
-            }
+            return ServerUtils.serialize( this );
         }
-        else
+        catch ( Exception e )
         {
-            return new JSONSerializer()
-                .exclude( "*.class" )
-                .transform( new QuestionTextTransformer( expanded_texts ), "question_text", "question_expandedtext",
-                    "answer_text", "answer_expandedtext", "answers.answer_text", "answers.answer_expandedtext" )
-                .include( "answers", "event_callbacks" ).serialize( this );
+            e.printStackTrace();
+            log.severe( "Question serialization failed. Message: " + e.getLocalizedMessage() );
+            return null;
         }
     }
 
@@ -193,7 +201,6 @@ public class Question implements QuestionIntf {
     @JSON( include = false )
     public Question answer( String responder, String adapterID, String answer_id, String answer_input, String sessionKey )
     {
-        Client client = ParallelInit.getClient();
         boolean answered = false;
         Answer answer = null;
         if ( this.getType().equals( "open" ) )
@@ -291,7 +298,7 @@ public class Question implements QuestionIntf {
             if ( newQ != null )
                 return newQ;
 
-            String retryLoadLimit = getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.LENGTH );
+            String retryLoadLimit = getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT );
             Integer retryCount = getRetryCount( sessionKey );
             if ( retryLoadLimit != null && retryCount != null && retryCount < Integer.parseInt( retryLoadLimit ) )
             {
@@ -341,6 +348,7 @@ public class Question implements QuestionIntf {
             flushRetryCount( sessionKey );
         }
         // Send answer to answer.callback.
+        Client client = ParallelInit.getClient();
         WebResource webResource = client.resource( answer.getCallback() );
         AnswerPost ans = new AnswerPost( this.getQuestion_id(), answer.getAnswer_id(), answer_input, responder );
         // Check if answer.callback gives new question for this dialog
@@ -523,14 +531,10 @@ public class Question implements QuestionIntf {
 		question.setEvent_callbacks(event_callbacks);
 	}
 
-	@JSON(include = false)
-	@JsonIgnore
 	public String getPreferred_language() {
 		return preferred_language;
 	}
 
-	@JSON(include = false)
-	@JsonIgnore
 	public void setPreferred_language(String preferred_language) {
 		this.preferred_language = preferred_language;
 	}
@@ -556,9 +560,16 @@ public class Question implements QuestionIntf {
 		this.question.setTrackingToken(token);
 	}
 
+	@JsonProperty("media_properties")
     public Collection<MediaProperty> getMedia_properties()
     {
         return media_properties;
+    }
+	
+	@JsonProperty("media_properties")
+    public void setMedia_Properties( Collection<MediaProperty> media_properties )
+    {
+        this.media_properties = media_properties;
     }
     
     @JSON(include = false)
@@ -585,11 +596,6 @@ public class Question implements QuestionIntf {
             }
         }
         return null;
-    }
-
-    public void setMedia_Properties( Collection<MediaProperty> media_properties )
-    {
-        this.media_properties = media_properties;
     }
 
     public void addMedia_Properties( MediaProperty mediaProperty )

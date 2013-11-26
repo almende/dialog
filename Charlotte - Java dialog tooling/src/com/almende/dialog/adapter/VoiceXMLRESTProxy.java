@@ -1,8 +1,11 @@
 package com.almende.dialog.adapter;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -42,6 +45,7 @@ import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.api.server.spi.config.DefaultValue;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -139,8 +143,7 @@ public class VoiceXMLRESTProxy {
             loadAddress = addressNameMap.keySet().iterator().next();
 
         //fetch the question
-        Question question = Question.fromURL(url, config.getConfigId(), loadAddress);
-        String questionJson = question.toJSON();
+        String questionJson = Question.getJSONFromURL( url, config.getConfigId(), loadAddress, "" );
 
         for ( String address : addressNameMap.keySet() )
         {
@@ -206,8 +209,10 @@ public class VoiceXMLRESTProxy {
 	@Path("dtmf2hash")
 	@GET
 	@Produces("application/srgs+xml")
-	public Response getDTMF2Hash() {
-		
+	public Response getDTMF2Hash(@QueryParam("minlength") String minLength, @QueryParam("maxlength") String maxLength) {
+	    minLength = (minLength != null && !minLength.isEmpty()) ? minLength : "0";
+	    maxLength = (maxLength != null && !maxLength.isEmpty()) ? maxLength : "";
+	    String repeat = minLength.equals( maxLength ) ? minLength : minLength + "-" +  maxLength;
 		String result = "<?xml version=\"1.0\"?> "+
 						"<grammar mode=\"dtmf\" version=\"1.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.w3.org/2001/06/grammar http://www.w3.org/TR/speech-grammar/grammar.xsd\" xmlns=\"http://www.w3.org/2001/06/grammar\"  root=\"untilHash\" > "+
 							"<rule id=\"digit\"> "+
@@ -227,12 +232,11 @@ public class VoiceXMLRESTProxy {
 							"</rule> "+
 							"<rule id=\"untilHash\" scope=\"public\"> "+
 								"<one-of> "+
-									"<item repeat=\"0-\"><ruleref uri=\"#digit\"/></item> "+
+									"<item repeat=\"" + repeat + "\"><ruleref uri=\"#digit\"/></item> "+
 									"<item> # </item> "+
 								"</one-of> "+
 							"</rule> "+
 						"</grammar> ";
-		
 		return Response.ok(result).build();
 	}
 	
@@ -790,34 +794,18 @@ public class VoiceXMLRESTProxy {
         
         return Response.ok(reply).build();
     }
-		
-    /**
-     * redirects to the TSS functionality to play the audio
-     * @param text to be converted to Voice
-     * @return
-     */
-    @GET
-    @Path( "tts/{text}" )
-    public HttpServletResponse redirectToTTS( @PathParam( "text" ) String text,
-        @Context HttpServletRequest httpServletRequest, @Context HttpServletResponse httpServletResponse )
-    throws Exception
-    {
-        String ttsURL = "https://voicerss-text-to-speech.p.mashape.com/?key=afafc70fde4b4b32a730842e6fcf0c62&src="
-            + text.replace( ".wav", "" ) + "&hl=en-us&r=0&c=wav&f=8khz_8bit_mono";
-        httpServletResponse.addHeader( "X-Mashape-Authorization", "Fy6ynDFxV5Yi6K0pj8NYxPneKgfztwp4" );
-        httpServletResponse.sendRedirect( ttsURL );
-
-        //        Client client = ParallelInit.getClient();
-        //        httpServletRequest.getSession().setAttribute( "X-Mashape-Authorization", "Fy6ynDFxV5Yi6K0pj8NYxPneKgfztwp4" );
-        //        WebResource webResource = client.resource( ttsURL );
-        //        ClientResponse clientResponse = webResource.getRequestBuilder()
-        //            .header( "X-Mashape-Authorization", "Fy6ynDFxV5Yi6K0pj8NYxPneKgfztwp4" ).get( ClientResponse.class );
-        //        return Response.ok( clientResponse.getEntityInputStream() ).build();
-        //        return Response.seeOther( webResource.getURI() )
-        //            .header( "X-Mashape-Authorization", "Fy6ynDFxV5Yi6K0pj8NYxPneKgfztwp4" ).build();
-        return httpServletResponse;
-    }
     
+    @GET
+    @Path( "tts/{textForSpeech}" )
+    public Response redirectToSpeechEngine( @PathParam( "textForSpeech" ) String textForSpeech,
+        @QueryParam( "hl" ) @DefaultValue( "nl-nl" ) String language,
+        @QueryParam( "c" ) @DefaultValue( "wav" ) String contentType, @Context HttpServletRequest req,
+        @Context HttpServletResponse resp ) throws IOException, URISyntaxException
+    {
+        String ttsURL = getTTSURL( textForSpeech, language, contentType );
+        return Response.seeOther( new URI( ttsURL ) ).build();
+    }
+
 	public class Return {
 		ArrayList<String> prompts;
 		Question question;
@@ -1046,14 +1034,14 @@ public class VoiceXMLRESTProxy {
 				// Check if media property type equals audio
 				// if so record audio message, if not record dtmf input
 				String typeProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TYPE );
-				String voiceMessageLengthProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_LENGTH );
 				if(typeProperty!=null && typeProperty.equalsIgnoreCase("audio")) {
 				    //assign a default voice mail length if one is not specified
-	                String voiceMessageLength = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
-	                if(!voiceMessageLength.endsWith("s"))
+	                String voiceMessageLengthProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_LENGTH );
+	                voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
+	                if(!voiceMessageLengthProperty.endsWith("s"))
 	                {
-	                    log.warning("Redirect timeout must be end with 's'. E.g. 40s. Found: "+ voiceMessageLength);
-	                    voiceMessageLength += "s";
+	                    log.warning("Voicemail length must be end with 's'. E.g. 40s. Found: "+ voiceMessageLengthProperty);
+	                    voiceMessageLengthProperty += "s";
 	                }
 	                
 				    // Fetch the upload url
@@ -1072,7 +1060,7 @@ public class VoiceXMLRESTProxy {
                         outputter.startTag("record");
                             outputter.attribute("name", "file");
                             outputter.attribute("beep", "true");
-                            outputter.attribute("maxtime", voiceMessageLength);
+                            outputter.attribute("maxtime", voiceMessageLengthProperty);
                             outputter.attribute("dtmfterm", "true");
                             //outputter.attribute("finalsilence", "3s");
                             for (String prompt : prompts){
@@ -1124,6 +1112,12 @@ public class VoiceXMLRESTProxy {
                     outputter.endTag();
 				} else {
 				    
+				    //see if a dtmf length is defined in the question
+                    String dtmfMinLength = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.ANSWER_INPUT_MIN_LENGTH );
+                    dtmfMinLength = dtmfMinLength != null ? dtmfMinLength : "";
+                    String dtmfMaxLength = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.ANSWER_INPUT_MAX_LENGTH );
+                    dtmfMaxLength = dtmfMaxLength != null ? dtmfMaxLength : "";
+                    
     				outputter.startTag("var");
     					outputter.attribute("name","answer_input");
     				outputter.endTag();
@@ -1140,7 +1134,8 @@ public class VoiceXMLRESTProxy {
     						outputter.attribute("name", "answer");
     						outputter.startTag("grammar");
     							outputter.attribute("mode", "dtmf");
-    							outputter.attribute("src", DTMFGRAMMAR);
+                                outputter.attribute( "src", DTMFGRAMMAR + "?minlength=" + dtmfMinLength 
+                                    + "&maxlength=" + dtmfMaxLength );
     							outputter.attribute("type", "application/srgs+xml");
     						outputter.endTag();
     						for (String prompt: prompts){
@@ -1186,7 +1181,7 @@ public class VoiceXMLRESTProxy {
 		if(question !=null && !question.getType().equalsIgnoreCase("comment"))
 			question = res.question;
 		
-		log.info( "question formed at handleQuestion is: "+ question );
+		log.info( "question formed at handleQuestion is: "+ ServerUtils.serializeWithoutException( question ));
 		log.info( "prompts formed at handleQuestion is: "+ res.prompts );
 
         if ( question != null )
@@ -1199,7 +1194,29 @@ public class VoiceXMLRESTProxy {
             Session session = Session.getSession( sessionKey );
             StringStore.storeString( "question_" + session.getRemoteAddress() + "_" + session.getLocalAddress(),
                 questionJSON );
-
+            
+            //convert all text prompts to speech 
+            if(res.prompts != null)
+            {
+                String language = question.getPreferred_language().equals( "nl" ) ? "nl-nl" : "en-us";
+                ArrayList<String> promptsCopy = new ArrayList<String>();
+                for ( String prompt : res.prompts )
+                {
+                    if ( !prompt.startsWith( "dtmfKey://" ) )
+                    {
+                        if ( !prompt.endsWith( ".wav" ) )
+                        {
+                            promptsCopy.add( getTTSURL( prompt, language, "wav" ) );
+                        }
+                        else
+                        {
+                            promptsCopy.add( prompt );
+                        }
+                    }
+                }
+                res.prompts = promptsCopy;
+            }
+            
             if ( question.getType().equalsIgnoreCase( "closed" ) )
             {
                 result = renderClosedQuestion( question, res.prompts, sessionKey );
@@ -1295,5 +1312,30 @@ public class VoiceXMLRESTProxy {
         timeMap.put( "answerTime", answerTime );
         timeMap.put( "releaseTime", releaseTime );
         return timeMap;
+    }
+    
+    /**
+     * returns the TTS URL from voiceRSS.
+     * 
+     * @param textForSpeech
+     * @param language
+     * @param contentType
+     * @return
+     */
+    private String getTTSURL( String textForSpeech, String language, String contentType )
+    {
+        try
+        {
+            textForSpeech = URLEncoder.encode( textForSpeech.replace( "text://", "" ), "UTF-8").replace( "+", "%20" );
+        }
+        catch ( UnsupportedEncodingException e )
+        {
+            e.printStackTrace();
+            log.severe( e.getLocalizedMessage() );
+        }
+        return "http://api.voicerss.org/?key=afafc70fde4b4b32a730842e6fcf0c62&src=" + textForSpeech + "&hl=" + language
+            + "&c=" + contentType + "&type=.wav";
+        //        return "http://www.voicerss.org/controls/speech.ashx?hl=" + language + "&src="
+        //            + textForSpeech.replace( ".wav", "" ) + "&c" + contentType + "&rnd=0.4776021621655673";
     }
 }

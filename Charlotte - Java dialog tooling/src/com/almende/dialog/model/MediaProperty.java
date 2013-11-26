@@ -11,8 +11,17 @@ public class MediaProperty
 {
     public enum MediaPropertyKey
     {
-        TIMEOUT, ANSWER_INPUT, LENGTH, TYPE;
-        
+        TIMEOUT, //defines the timeout associated with the call
+        ANSWER_INPUT, //defines if the answer is given via dtmf, text etc
+        ANSWER_INPUT_MIN_LENGTH, //defines the length of th answer input. Typically dtmf
+        ANSWER_INPUT_MAX_LENGTH,
+        // defines a subtype for the question type. 
+        //E.g. open question with type: audio refers to voicemail
+        TYPE,
+        VOICE_MESSAGE_LENGTH, //defines the length of the voicemail to be recorded
+        //defines the number of times the question should repeat in case of a wrong answer input.
+        //works only for phonecalls so as to end a call with repeated input errors. 
+        RETRY_LIMIT; 
         @JsonCreator
         public static MediaPropertyKey fromJson(String name) {
             return valueOf(name.toUpperCase());

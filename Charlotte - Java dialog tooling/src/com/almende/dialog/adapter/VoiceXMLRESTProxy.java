@@ -847,7 +847,15 @@ public class VoiceXMLRESTProxy {
             log.warning("Redirect timeout must be end with 's'. E.g. 40s. Found: "+ redirectTimeout);
             redirectTimeout += "s";
         }
-		
+        
+        String redirectTypeProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TYPE );
+        String redirectType = redirectTypeProperty != null ? redirectTypeProperty.toLowerCase() : "bridge";
+        if(!redirectType.equals("blind") && !redirectType.equals("bridge"))
+        {
+            log.warning("Redirect must be blind or bridge. Found: "+ redirectTimeout);
+            redirectTypeProperty = "bridge";
+        }
+        
 		StringWriter sw = new StringWriter();
 		try {
 			XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
@@ -860,7 +868,11 @@ public class VoiceXMLRESTProxy {
 							outputter.startTag("transfer");
 								outputter.attribute("name", "thisCall");
 								outputter.attribute("dest", question.getUrl());
-								outputter.attribute("bridge","true");
+								if(redirectType.equals("bridge")) {
+									outputter.attribute("bridge","true");
+								} else {
+									outputter.attribute("bridge","false");
+								}
 								outputter.attribute("connecttimeout",redirectTimeout);
 								for (String prompt : prompts){
 									outputter.startTag("prompt");

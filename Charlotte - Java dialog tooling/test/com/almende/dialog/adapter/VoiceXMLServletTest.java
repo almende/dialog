@@ -269,12 +269,19 @@ public class VoiceXMLServletTest extends TestFramework {
         assertNotNull( doc );
         assertEquals( doc.getChildNodes().getLength(), 1 );
         assertEquals( vxml.getNodeName(), "vxml" );
-        assertEquals( form.getNodeName(), "form" );
+        assertEquals( "form", form.getNodeName() );
         assertEquals( "answer_input", answerInputNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
         assertEquals( "question_id", questionIdNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
         assertEquals( "sessionKey", sessionKeyNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
-        assertEquals( field.getNodeName(), "field" );
-        assertEquals( field.getChildNodes().getLength(), 4 );
+        assertEquals( "property", field.getNodeName() );
+        
+        field = form.getChildNodes().item( 1 );
+        assertEquals( "form", form.getNodeName() );
+        assertEquals( "answer_input", answerInputNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
+        assertEquals( "question_id", questionIdNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
+        assertEquals( "sessionKey", sessionKeyNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
+        assertEquals( "field", field.getNodeName() );
+        assertEquals( 4, field.getChildNodes().getLength() );
 
         if(answerInputNode.getAttributes().getNamedItem( "expr" ) != null)
         {

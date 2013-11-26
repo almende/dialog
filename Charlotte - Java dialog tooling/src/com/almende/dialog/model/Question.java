@@ -390,8 +390,8 @@ public class Question implements QuestionIntf {
 	
 	public Question event(String eventType, String message, Object extras, String responder) 
 	{
-        log.info( String.format( "Received: %s Message: %s Responder: %s", eventType, message,
-                                 responder ) );
+        log.info( String.format( "Received: %s Message: %s Responder: %s Extras: %s", eventType, message,
+                                 responder, ServerUtils.serializeWithoutException( extras ) ) );
 		Client client = ParallelInit.getClient();
 		ArrayList<EventCallback> events = this.getEvent_callbacks();
 		EventCallback eventCallback=null;

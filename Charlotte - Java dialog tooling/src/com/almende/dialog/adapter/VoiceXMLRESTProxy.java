@@ -959,6 +959,14 @@ public class VoiceXMLRESTProxy {
                         break;
                     }
                 }
+                String noAnswerTimeout = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
+                //assign a default timeout if one is not specified
+                noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "5s";
+                if(!noAnswerTimeout.endsWith("s"))
+                {
+                    log.warning("No answer timeout must end with 's'. E.g. 10s. Found: "+ noAnswerTimeout);
+                    noAnswerTimeout += "s";
+                }
 				outputter.startTag("menu");	
 					for (String prompt : prompts){
 						outputter.startTag("prompt");
@@ -1003,6 +1011,7 @@ public class VoiceXMLRESTProxy {
                         outputter.endTag();
                     }
 					outputter.startTag("noinput");
+					    outputter.attribute("timeout", noAnswerTimeout);
 						outputter.startTag("goto");
 							outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
 						outputter.endTag();
@@ -1117,7 +1126,14 @@ public class VoiceXMLRESTProxy {
                     dtmfMinLength = dtmfMinLength != null ? dtmfMinLength : "";
                     String dtmfMaxLength = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.ANSWER_INPUT_MAX_LENGTH );
                     dtmfMaxLength = dtmfMaxLength != null ? dtmfMaxLength : "";
-                    
+                    String noAnswerTimeout = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
+                    //assign a default timeout if one is not specified
+                    noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "5s";
+                    if(!noAnswerTimeout.endsWith("s"))
+                    {
+                        log.warning("No answer timeout must end with 's'. E.g. 10s. Found: "+ noAnswerTimeout);
+                        noAnswerTimeout += "s";
+                    }
     				outputter.startTag("var");
     					outputter.attribute("name","answer_input");
     				outputter.endTag();
@@ -1146,6 +1162,7 @@ public class VoiceXMLRESTProxy {
     							outputter.endTag();
     						}
     						outputter.startTag("noinput");
+    						    outputter.attribute("timeout", noAnswerTimeout);
     							outputter.startTag("reprompt");
     							outputter.endTag();
     						outputter.endTag();

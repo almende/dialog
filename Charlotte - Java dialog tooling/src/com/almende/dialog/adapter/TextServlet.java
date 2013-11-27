@@ -24,16 +24,13 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.KeyServerLib;
+import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.util.ParallelInit;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.taskqueue.TaskOptions;
 import com.google.appengine.api.taskqueue.TaskOptions.Method;
-import com.google.i18n.phonenumbers.NumberParseException;
-import com.google.i18n.phonenumbers.PhoneNumberUtil;
-import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
-import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
@@ -135,9 +132,10 @@ abstract public class TextServlet extends HttpServlet {
 	 */
 	@Deprecated
 	public String startDialog(String address, String url, AdapterConfig config) throws Exception {
-		if(config.getAdapterType().equals("CM") || config.getAdapterType().equals("SMS")) {
-			address = formatNumber(address);
-		}
+        if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
+        {
+            address = PhoneNumberUtils.formatNumber( address, null );
+        }
 		String localaddress = config.getMyAddress();
 		sessionKey =getAdapterType()+"|"+localaddress+"|"+address;
 		Session session = Session.getSession(sessionKey, config.getKeyword());
@@ -185,7 +183,7 @@ abstract public class TextServlet extends HttpServlet {
         {
             for ( String address : addressNameMap.keySet() )
             {
-                String formattedAddress = formatNumber( address ).replaceFirst( "\\+31", "0" );
+                String formattedAddress = PhoneNumberUtils.formatNumber( address, null );
                 formattedAddressNameMap.put( formattedAddress, addressNameMap.get( address ) );
             }
         }
@@ -539,18 +537,5 @@ abstract public class TextServlet extends HttpServlet {
 			e.printStackTrace();
 		}
 		return url;
-	}
-	
-	protected String formatNumber(String phone) {
-		//TODO: Change this so that it will also work with international numbers and providers
-		PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
-		try {
-			PhoneNumber numberProto = phoneUtil.parse(phone,"NL");
-			//TODO: Change to E164 as soon as portal is fixed
-			return phoneUtil.format(numberProto,PhoneNumberFormat.NATIONAL).replace(" ","");
-		} catch (NumberParseException e) {
-		  log.severe("NumberParseException was thrown: " + e.toString());
-		}
-		return null;	
 	}
 }

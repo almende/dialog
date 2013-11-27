@@ -20,6 +20,7 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.test.TestServlet;
 import com.almende.dialog.test.TestServlet.QuestionInRequest;
+import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 
 
@@ -246,8 +247,7 @@ public class CMServletTest extends TestFramework
 
         assertEquals( customerInfo[1], userNodeList.item( 0 ).getAttributes().getNamedItem( "LOGIN" ).getNodeValue() );
 
-        int addressCount = 0;
-        for ( String address : addressNameMap.keySet() )
+        for ( int addressCount = 0 ; addressCount < addressNameMap.keySet().size(); addressCount++ )
         {
             Node msgNode = childMessageNodeList.item( addressCount );
             NodeList childNodes = msgNode.getChildNodes();
@@ -268,10 +268,18 @@ public class CMServletTest extends TestFramework
                 }
                 else if ( childNode.getNodeName().equals( "TO" ) )
                 {
-                    assertEquals( address.replaceFirst( "\\+31", "0" ), childNode.getFirstChild().getNodeValue() );
+                    boolean addressMatchFlag = false;
+                    for ( String address : addressNameMap.keySet() )
+                    {
+                        if ( PhoneNumberUtils.formatNumber( address, null ).equals(
+                            childNode.getFirstChild().getNodeValue() ) )
+                        {
+                            addressMatchFlag = true;
+                        }
+                    }
+                    assertTrue( addressMatchFlag );
                 }
             }
-            addressCount++;
         }
     }
 }

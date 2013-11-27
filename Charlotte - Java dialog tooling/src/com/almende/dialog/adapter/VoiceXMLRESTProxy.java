@@ -824,6 +824,11 @@ public class VoiceXMLRESTProxy {
 		for (int count = 0; count<=LOOP_DETECTION; count++){
 			if (question == null) break;
 			log.info("Going to form question of type: "+question.getType());
+            if ( question.getType() == null )
+            {
+                question = null;
+                break;
+            }
 			String preferred_language = question.getPreferred_language();
 			question.setPreferred_language(preferred_language);	
 			String qText = question.getQuestion_text();

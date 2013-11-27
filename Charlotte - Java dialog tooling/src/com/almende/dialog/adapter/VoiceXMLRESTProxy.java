@@ -799,10 +799,13 @@ public class VoiceXMLRESTProxy {
     @Path( "tts/{textForSpeech}" )
     public Response redirectToSpeechEngine( @PathParam( "textForSpeech" ) String textForSpeech,
         @QueryParam( "hl" ) @DefaultValue( "nl-nl" ) String language,
-        @QueryParam( "c" ) @DefaultValue( "wav" ) String contentType, @Context HttpServletRequest req,
+        @QueryParam( "c" ) @DefaultValue( "wav" ) String contentType,
+        @QueryParam( "r" ) @DefaultValue( "wav" ) String speed,
+        @QueryParam( "f" ) @DefaultValue( "wav" ) String format,
+        @Context HttpServletRequest req,
         @Context HttpServletResponse resp ) throws IOException, URISyntaxException
     {
-        String ttsURL = getTTSURL( textForSpeech, language, contentType );
+        String ttsURL = getTTSURL( textForSpeech, language, contentType, speed, format );
         return Response.seeOther( new URI( ttsURL ) ).build();
     }
 
@@ -1056,6 +1059,11 @@ public class VoiceXMLRESTProxy {
 	                    voiceMessageLengthProperty += "s";
 	                }
 	                
+	                String dtmfTerm = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.DTMF_TERMINATE );
+	                dtmfTerm = dtmfTerm != null ? dtmfTerm : "true";
+	                String voiceMailBeep = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_BEEP );
+	                voiceMailBeep = voiceMailBeep != null ? voiceMailBeep : "true";
+	                
 				    // Fetch the upload url
 				    String storedAudiofile = this.host+"upload/"+UUID.randomUUID().toString()+".wav";
 			        Client client = ParallelInit.getClient();
@@ -1071,9 +1079,9 @@ public class VoiceXMLRESTProxy {
                         outputter.attribute("id", "ComposeMessage");
                         outputter.startTag("record");
                             outputter.attribute("name", "file");
-                            outputter.attribute("beep", "true");
+                            outputter.attribute("beep", voiceMailBeep);
                             outputter.attribute("maxtime", voiceMessageLengthProperty);
-                            outputter.attribute("dtmfterm", "true");
+                            outputter.attribute("dtmfterm", dtmfTerm);
                             //outputter.attribute("finalsilence", "3s");
                             for (String prompt : prompts){
                                 outputter.startTag("prompt");
@@ -1222,6 +1230,8 @@ public class VoiceXMLRESTProxy {
             if(res.prompts != null)
             {
                 String language = question.getPreferred_language().equals( "nl" ) ? "nl-nl" : "en-us";
+                String ttsSpeedProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TSS_SPEED );
+                ttsSpeedProperty = ttsSpeedProperty != null ? ttsSpeedProperty : "0";
                 ArrayList<String> promptsCopy = new ArrayList<String>();
                 for ( String prompt : res.prompts )
                 {
@@ -1229,7 +1239,7 @@ public class VoiceXMLRESTProxy {
                     {
                         if ( !prompt.endsWith( ".wav" ) )
                         {
-                            promptsCopy.add( getTTSURL( prompt, language, "wav" ) );
+                            promptsCopy.add( getTTSURL( prompt, language, "wav", ttsSpeedProperty, null ) );
                         }
                         else
                         {
@@ -1345,8 +1355,10 @@ public class VoiceXMLRESTProxy {
      * @param contentType
      * @return
      */
-    private String getTTSURL( String textForSpeech, String language, String contentType )
+    private String getTTSURL( String textForSpeech, String language, String contentType, String speed, String format )
     {
+        speed = (speed != null && !speed.isEmpty()) ? speed : "0"; 
+        format = (format != null && !format.isEmpty()) ? format : "8khz_8bit_mono";
         try
         {
             textForSpeech = URLEncoder.encode( textForSpeech.replace( "text://", "" ), "UTF-8").replace( "+", "%20" );
@@ -1357,8 +1369,6 @@ public class VoiceXMLRESTProxy {
             log.severe( e.getLocalizedMessage() );
         }
         return "http://api.voicerss.org/?key=afafc70fde4b4b32a730842e6fcf0c62&src=" + textForSpeech + "&hl=" + language
-            + "&c=" + contentType + "&type=.wav";
-        //        return "http://www.voicerss.org/controls/speech.ashx?hl=" + language + "&src="
-        //            + textForSpeech.replace( ".wav", "" ) + "&c" + contentType + "&rnd=0.4776021621655673";
+            + "&c=" + contentType + "&r=" + speed + "&f=" + format + "&type=.wav";
     }
 }

@@ -14,6 +14,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.util.PhoneNumberUtils;
 
 public class MBSmsServlet extends TextServlet {
 
@@ -66,7 +67,17 @@ public class MBSmsServlet extends TextServlet {
         TextMessage msg=null;
 
         String localAddress = URLDecoder.decode(data.get("receiver"), "UTF-8").replaceFirst("31", "0");
-        String address = formatNumber(URLDecoder.decode(data.get("sender"),"UTF-8").replaceFirst("31", "0"));
+        String address;
+        try
+        {
+            address = PhoneNumberUtils.formatNumber( URLDecoder.decode( data.get( "sender" ), "UTF-8" )
+                .replaceFirst( "31", "0" ), null );
+        }
+        catch ( Exception e )
+        {
+            e.printStackTrace();
+            return null;
+        }
         msg = new TextMessage(USE_KEYWORDS);
         msg.setLocalAddress(localAddress);
         msg.setAddress(address);

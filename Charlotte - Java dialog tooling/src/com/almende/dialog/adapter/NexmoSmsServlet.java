@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.util.PhoneNumberUtils;
 
 public class NexmoSmsServlet extends TextServlet {
 
@@ -47,7 +48,7 @@ public class NexmoSmsServlet extends TextServlet {
 		TextMessage msg=null;
 			
 		String localAddress = req.getParameter("to").replaceFirst("31", "0");
-		String address = formatNumber(req.getParameter("msisdn").replaceFirst("31", "0"));
+		String address = PhoneNumberUtils.formatNumber( req.getParameter("msisdn").replaceFirst("31", "0"), null);
 		msg = new TextMessage(USE_KEYWORDS);
 		msg.setLocalAddress(localAddress);
 		msg.setAddress(address);

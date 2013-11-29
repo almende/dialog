@@ -4,7 +4,14 @@ https://github.com/almende/dialog/
 26-11-2013, version 0.7.1
 - Feature: Allow for blind transfers
 
-22-11-2013, version 0.7.0
+29-11-2013, version 0.7.0
+- Feature: MediaProperties for DTMFTerm, Beep, Control TTS speed, DTMF length, Voicemail length
+- Fix: Issue with infinitely parsing question for Voice
+- Improvement: added sessionKey to questionId for StringStore persist
+- Feature: dtmf key based answer fetch
+- Fix: Issue with SMS number formatting
+- Feature: setting timeout for OPEN and CLOSED questions
+- Feature: TTS functionality with voicerss services.
 - Feature: dtmf key based fetch of answers
 - Fix: issue with infinitely repeating question on wrong answer input
 

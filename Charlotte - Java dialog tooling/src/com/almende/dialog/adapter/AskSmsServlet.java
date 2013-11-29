@@ -15,6 +15,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.sms.SmsMessage;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -85,7 +86,8 @@ public class AskSmsServlet extends TextServlet {
 		TextMessage msg=null;
 		if(data.get("secret").equals("askask")) {
 			
-			String address = formatNumber(URLDecoder.decode(data.get("from"),"UTF-8")).replaceFirst("\\+31", "0");
+            String address = PhoneNumberUtils.formatNumber( URLDecoder.decode( data.get( "from" ), "UTF-8" )
+                .replaceFirst( "\\+31", "0" ), null );
 			msg = new TextMessage();
 			msg.setLocalAddress("0615004624");
 			msg.setAddress(address);

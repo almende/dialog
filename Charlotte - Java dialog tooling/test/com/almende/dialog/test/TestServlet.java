@@ -1,5 +1,6 @@
 package com.almende.dialog.test;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -120,6 +121,26 @@ public class TestServlet extends HttpServlet
         {
             result = getJsonSimpleCommentQuestion( req.getParameter( "question" ) );
         }
+        else
+        {
+            StringBuffer jb = new StringBuffer();
+            String line = null;
+            try
+            {
+                BufferedReader reader = req.getReader();
+                while ( ( line = reader.readLine() ) != null )
+                {
+                    jb.append( line );
+                }
+                result = jb.toString();
+                TestFramework.log( result );
+            }
+            catch ( Exception e )
+            {
+                Assert.fail( "POST payload retrieval failed. Message: " + e.getLocalizedMessage() );
+                return;
+            }
+        }
         resp.getWriter().write( result );
         resp.setHeader( "Content-Type", MediaType.APPLICATION_JSON );
     }
@@ -206,7 +227,7 @@ public class TestServlet extends HttpServlet
         question.setQuestion_id( "1" );
         question.setType( "closed" );
         question.setQuestion_text( "text://" + APPOINTMENT_MAIN_QUESTION );
-        
+        question.addEventCallback( null, "delivered", TEST_SERVLET_PATH );
         Answer yesAnswer = new Answer( "text://" + APPOINTMENT_YES_ANSWER, TEST_SERVLET_PATH + "?appointment=" + APPOINTMENT_YES_ANSWER );
         Answer noAnswer = new Answer( "text://" + APPOINTMENT_NO_ANSWER, TEST_SERVLET_PATH + "?appointment=" + APPOINTMENT_NO_ANSWER );
         

@@ -143,7 +143,7 @@ public class MailServlet extends TextServlet {
          */
 	@Override
 	protected int sendMessage(String message, String subject, String from, String fromName,
-			String to, String toName, AdapterConfig config) {
+			String to, String toName, Map<String, Object> extras, AdapterConfig config) {
 		Properties props = new Properties();
         javax.mail.Session session = javax.mail.Session.getDefaultInstance(props, null);
 
@@ -179,7 +179,7 @@ public class MailServlet extends TextServlet {
 	
     @Override
     protected int broadcastMessage( String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, AdapterConfig config )
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config )
     {
 //        final String userName = config.getXsiUser();
 //        final String pass = config.getXsiPasswd();

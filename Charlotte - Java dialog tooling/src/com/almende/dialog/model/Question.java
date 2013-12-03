@@ -605,6 +605,40 @@ public class Question implements QuestionIntf {
     }
     
     /**
+     * fetches the first event which matches the parameter
+     * @param event
+     * @return
+     */
+    public EventCallback getEventCallback( String event )
+    {
+        ArrayList<EventCallback> event_callbacks = getEvent_callbacks();
+        if ( event_callbacks != null )
+        {
+            for ( EventCallback eventCallback : event_callbacks )
+            {
+                if(eventCallback.getEvent().equals( event ))
+                {
+                    return eventCallback;
+                }
+            }
+        }
+        return null;
+    }
+    
+    public void addEventCallback(String eventId, String event, String callback)
+    {
+        if(question.getEvent_callbacks() == null)
+        {
+            question.setEvent_callbacks( new ArrayList<EventCallback>() );
+        }
+        EventCallback eventCallback = new EventCallback();
+        eventCallback.setEvent( event );
+        eventCallback.setEvent_id( eventId );
+        eventCallback.setCallback( callback );
+        question.getEvent_callbacks().add( eventCallback );
+    }
+    
+    /**
      * gets the retry Count of the number of times the Question has been loaded corresponding to the 
      * current sessionKey. If the sessionKey is not found, it will create one and set the value to 0. 
      * @param sessionKey

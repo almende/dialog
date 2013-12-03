@@ -88,18 +88,17 @@ public class PrivateFacebookServlet extends TextServlet {
     }
 
     @Override
-    protected int sendMessage(String message, String subject, String from,
-                              String fromName, String to, String toName, AdapterConfig config) {
-
-        Facebook fb = new Facebook(new Token(config.getAccessToken(), config.getAccessTokenSecret()));
-        fb.sendMessage(message, to, toName);
-
+    protected int sendMessage( String message, String subject, String from, String fromName, String to, String toName,
+        Map<String, Object> extras, AdapterConfig config )
+    {
+        Facebook fb = new Facebook( new Token( config.getAccessToken(), config.getAccessTokenSecret() ) );
+        fb.sendMessage( message, to, toName );
         return 1;
     }
 
     @Override
     protected int broadcastMessage( String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
         return 1;
     }

@@ -5,18 +5,28 @@ package com.almende.dialog.adapter;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.apache.tools.ant.filters.StringInputStream;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.tools.CMStatus;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.test.TestServlet;
 import com.almende.dialog.test.TestServlet.QuestionInRequest;
@@ -54,7 +64,7 @@ public class CMServletTest extends TestFramework
     {
         String senderName = "TestUser";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, "", "" );
+        AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, "ASK", "" );
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put( remoteAddressVoice, null );
@@ -183,6 +193,75 @@ public class CMServletTest extends TestFramework
             .next();
         assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, expectedQuestion,
             textMessage.getLocalAddress(), null );
+    }
+    
+    @Test
+    public void parseSMSDeliveryStatusPayloadTest() throws Exception
+    {
+        String testXml = getTestSMSStatusXML("0031614765863", "SMS-Status_0031614765863_0031636465236_1385978625000");
+        Method handleStatusReport = fetchMethodByReflection( "handleDeliveryStatusReport", CMSmsServlet.class,
+            String.class );
+        CMSmsServlet cmSmsServlet = new CMSmsServlet();
+        Object reportReply = invokeMethodByReflection( handleStatusReport, cmSmsServlet, testXml );
+        assertTrue( reportReply instanceof CMStatus );
+        CMStatus cmStatus = (CMStatus) reportReply;
+        assertEquals( "2009-06-15T13:45:30", cmStatus.getSentTimeStamp() );
+        assertEquals( "0031614765863", cmStatus.getRemoteAddress() );
+        assertEquals( "2009-06-15T13:45:30", cmStatus.getDeliveredTimeStamp() );
+        assertEquals( "200", cmStatus.getCode() );
+        assertEquals( "0", cmStatus.getErrorCode() );
+        assertEquals( "No Error", cmStatus.getErrorDescription() );
+    }
+    
+    @Test
+    public void smsDeliveryStatusPayloadTest() throws Exception
+    {
+        //send an outbound SMS
+        ReceiveAppointmentNewSessionMessageTest();
+        
+        String smsRequestXML = logObject.get().toString();
+        //fetch the sms reference
+        DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
+        DocumentBuilder newDocumentBuilder = newInstance.newDocumentBuilder();
+        Document parse = newDocumentBuilder.parse( new ByteArrayInputStream(smsRequestXML.getBytes("UTF-8")) );
+        Node referenceNode = parse.getElementsByTagName( "REFERENCE" ).item( 0 );
+        
+        assertTrue( referenceNode != null );
+        CMStatus cmStatus = CMStatus.fetch( referenceNode.getTextContent() );
+        assertTrue( cmStatus != null );
+        assertEquals( TestServlet.TEST_SERVLET_PATH, cmStatus.getCallback() );
+        
+        //mimic a POST call to /sms/cm/deliveryStatus
+        CMSmsServlet cmSmsServlet = new CMSmsServlet();
+        HttpServletRequest httpServletRequest = Mockito.mock( HttpServletRequest.class );
+        Mockito.when( httpServletRequest.getRequestURI() ).thenReturn( "/sms/cm/deliveryStatus" );
+        Mockito.when( httpServletRequest.getMethod() ).thenReturn( "POST" );
+        Mockito.when( httpServletRequest.getReader() ).thenReturn(
+            new BufferedReader( new InputStreamReader( new StringInputStream( getTestSMSStatusXML( remoteAddressVoice,
+                referenceNode.getTextContent() ) ) ) ) );
+        cmSmsServlet.service( httpServletRequest, null );
+        
+        //assert that a POST call was performd on the callback
+        String callbackPayload = logObject.get().toString();
+        assertTrue( callbackPayload != null );
+        CMStatus smsPayload = ServerUtils.deserialize( callbackPayload, false, CMStatus.class);
+        assertTrue( smsPayload != null );
+        assertEquals( "Are you available today?\n[ Yup | Nope  ]", smsPayload.getSms() );
+        assertEquals( "2009-06-15T13:45:30", smsPayload.getSentTimeStamp() );
+        assertEquals( "2009-06-15T13:45:30", smsPayload.getDeliveredTimeStamp() );
+        assertEquals( remoteAddressVoice, smsPayload.getRemoteAddress() );
+        assertEquals( "200", smsPayload.getCode() );
+        assertEquals( "0", smsPayload.getErrorCode() );
+        assertEquals( "No Error", smsPayload.getErrorDescription() );
+    }
+    
+    private String getTestSMSStatusXML(String to, String reference)
+    {
+        return "<?xml version=\"1.0\"?> \r\n<MESSAGES SENT=\"2009-06-15T13:45:30\" > \r\n <MSG RECEIVED="
+        + "\"2009-06-15T13:45:30\" > \r\n <TO>" + to + "</TO> "
+        + "\r\n <REFERENCE>"+ reference +"</REFERENCE> "
+        + "\r\n <STATUS> \r\n <CODE>200</CODE> \r\n <ERRORCODE>0</ERRORCODE> "
+        + "\r\n <ERRORDESCRIPTION>No Error</ERRORDESCRIPTION> \r\n </STATUS> \r\n </MSG> \r\n</MESSAGES>";
     }
 
     /**

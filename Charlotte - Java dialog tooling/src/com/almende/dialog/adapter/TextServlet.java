@@ -171,7 +171,7 @@ abstract public class TextServlet extends HttpServlet {
         }
         if(question != null)
         {
-            extras = storeSMSRelatedData( address, localaddress, config, question, res.reply );
+            extras = storeSMSRelatedData( address, localaddress, config, question, res.reply, extras );
         }
 		
 		DDRWrapper.log(question,session,"Start",config);
@@ -186,21 +186,23 @@ abstract public class TextServlet extends HttpServlet {
 	 * updated startDialog with Broadcast functionality
 	 * @throws Exception
 	 */
-    public HashMap<String, String> startDialog( Map<String, String> addressNameMap, String url, String senderName,
+    public HashMap<String, String> startDialog( Map<String, String> addressNameMap,
+        Map<String, String> addressCcNameMap, Map<String, String> addressBccNameMap, String url, String senderName,
         String subject, AdapterConfig config ) throws Exception
     {
-        Map<String, String> formattedAddressNameMap = new HashMap<String, String>();
+        addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
+        Map<String, String> formattedAddressNameToMap = new HashMap<String, String>();
         if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
         {
             for ( String address : addressNameMap.keySet() )
             {
                 String formattedAddress = PhoneNumberUtils.formatNumber( address, null );
-                formattedAddressNameMap.put( formattedAddress, addressNameMap.get( address ) );
+                formattedAddressNameToMap.put( formattedAddress, addressNameMap.get( address ) );
             }
         }
         else
         {
-            formattedAddressNameMap = addressNameMap;
+            formattedAddressNameToMap = addressNameMap;
         }
         String localaddress = config.getMyAddress();
         url = encodeURLParams( url );
@@ -210,8 +212,8 @@ abstract public class TextServlet extends HttpServlet {
 
         // If it is a broadcast don't provide the remote address because it is deceiving. 
         String loadAddress = null;
-        if ( formattedAddressNameMap.size() == 1 )
-            loadAddress = formattedAddressNameMap.keySet().iterator().next();
+        if ( formattedAddressNameToMap.size() == 1 )
+            loadAddress = formattedAddressNameToMap.keySet().iterator().next();
 
         //fetch question
         Question question = Question.fromURL( url, config.getConfigId(), loadAddress );
@@ -224,7 +226,19 @@ abstract public class TextServlet extends HttpServlet {
         Return res = formQuestion( question, config.getConfigId(), loadAddress );
         //store the extra information
         Map<String, Object> extras = new HashMap<String, Object>();
-        for ( String address : formattedAddressNameMap.keySet() )
+        //add addresses in cc and bcc map
+        HashMap<String, String> fullAddressMap = new HashMap<String, String>(addressNameMap);
+        if(addressCcNameMap != null)
+        {
+            fullAddressMap.putAll( addressCcNameMap );
+            extras.put( MailServlet.CC_ADDRESS_LIST_KEY, addressCcNameMap );
+        }
+        if(addressBccNameMap != null)
+        {
+            fullAddressMap.putAll( addressBccNameMap );
+            extras.put( MailServlet.BCC_ADDRESS_LIST_KEY, addressBccNameMap );
+        }
+        for ( String address : fullAddressMap.keySet() )
         {
             //store the session first
             String sessionKey = getAdapterType() + "|" + localaddress + "|" + address;
@@ -246,9 +260,9 @@ abstract public class TextServlet extends HttpServlet {
             {
                 StringStore.storeString( "question_" + address + "_" + localaddress, res.question.toJSON() );
             }
-            if(question != null)
+            if ( question != null )
             {
-                extras = storeSMSRelatedData( address, localaddress, config, question, res.reply );
+                extras = storeSMSRelatedData( address, localaddress, config, question, res.reply, extras );
             }
             DDRWrapper.log( question, session, "Start", config );
         }
@@ -264,8 +278,8 @@ abstract public class TextServlet extends HttpServlet {
         {
             senderName = fromName;
         }
-        subject = subject != null && !subject.isEmpty() ? subject : "Message from DH"; 
-        int count = broadcastMessage( res.reply, subject, localaddress, senderName, formattedAddressNameMap, extras,
+        subject = subject != null && !subject.isEmpty() ? subject : "Message from DH";
+        int count = broadcastMessage( res.reply, subject, localaddress, senderName, formattedAddressNameToMap, extras,
             config );
 
         for ( Session session : sessions )
@@ -350,7 +364,7 @@ abstract public class TextServlet extends HttpServlet {
 		if (session == null){
 			log.info("No session so retrieving config");
 			config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
-			extras = storeSMSRelatedData( address, localaddress, config, null, getNoConfigMessage() );
+			extras = storeSMSRelatedData( address, localaddress, config, null, getNoConfigMessage(), extras );
             count = sendMessage( getNoConfigMessage(), subject, localaddress, fromName, address, toName, extras, config);
             // Create new session to store the send in the ddr.
             session = new Session();
@@ -372,7 +386,7 @@ abstract public class TextServlet extends HttpServlet {
 				config = AdapterConfig.findAdapterConfig(getAdapterType(),localaddress);
                 try
                 {
-                    extras = storeSMSRelatedData( address, localaddress, config, null, getNoConfigMessage() );
+                    extras = storeSMSRelatedData( address, localaddress, config, null, getNoConfigMessage(), extras );
                     count = sendMessage( getNoConfigMessage(), subject, localaddress, fromName, address, toName,
                         extras, config );
                 }
@@ -448,7 +462,7 @@ abstract public class TextServlet extends HttpServlet {
 				question = replystr.question;
 				fromName = getNickname(question);
 
-				extras = storeSMSRelatedData( address, localaddress, config, question, escapeInput.reply );
+				extras = storeSMSRelatedData( address, localaddress, config, question, escapeInput.reply, extras );
 				if (question == null) {
 					StringStore.dropString("question_"+address+"_"+localaddress);
 					session.drop();
@@ -503,8 +517,8 @@ abstract public class TextServlet extends HttpServlet {
 
             HashMap<String, String> addressNameMap = new HashMap<String, String>( 1 );
             addressNameMap.put( msg.getAddress(), msg.getRecipientName() );
-            HashMap<String, Object> extras = storeSMSRelatedData( msg.getAddress(), msg.getLocalAddress(), config,
-                null, escapeInput.reply );
+            Map<String, Object> extras = storeSMSRelatedData( msg.getAddress(), msg.getLocalAddress(), config,
+                null, escapeInput.reply, null );
             result = broadcastMessage( escapeInput.reply, msg.getSubject(), msg.getLocalAddress(), fromName,
                                         addressNameMap, extras, config );
         }
@@ -556,10 +570,10 @@ abstract public class TextServlet extends HttpServlet {
      * @param extras
      * @throws Exception
      */
-    protected HashMap<String, Object> storeSMSRelatedData( String address, String localaddress, AdapterConfig config,
-        Question question, String smsText ) throws Exception
+    protected Map<String, Object> storeSMSRelatedData( String address, String localaddress, AdapterConfig config,
+        Question question, String smsText, Map<String, Object> extras ) throws Exception
     {
-        HashMap<String, Object> extras = new HashMap<String, Object>();
+        extras = extras != null ? extras : new HashMap<String, Object>();
         //check if SMS delivery notification is requested
         if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
         {

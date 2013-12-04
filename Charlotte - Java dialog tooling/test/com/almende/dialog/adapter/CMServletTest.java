@@ -297,7 +297,7 @@ public class CMServletTest extends TestFramework
         DialogAgent dialogAgent = new DialogAgent();
         if ( addressNameMap.size() > 1 )
         {
-            dialogAgent.outboundCallWithMap( addressNameMap, senderName, subject, url, null,
+            dialogAgent.outboundCallWithMap( addressNameMap, null, null, senderName, subject, url, null,
                 adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "" );
         }
         else

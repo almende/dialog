@@ -3,6 +3,7 @@ package com.almende.dialog.util;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Collection;
 import java.util.HashMap;
@@ -128,16 +129,17 @@ public class ServerUtils
      * returns the url by adding the queryKey=queryValue based on if a query param is 
      * already seen in the url 
      * @return
+     * @throws UnsupportedEncodingException 
      */
-    public static String getURLWithQueryParams( String url, String queryKey, String queryValue )
+    public static String getURLWithQueryParams( String url, String queryKey, String queryValue ) throws UnsupportedEncodingException
     {
         String copyURL = new String( url );
-        if ( copyURL.endsWith( "/" ) || copyURL.endsWith( URLEncoder.encode( "/" ) ) )
+        if ( copyURL.endsWith( "/" ) || copyURL.endsWith( URLEncoder.encode( "/" ,"UTF-8") ) )
         {
             copyURL = copyURL.substring( 0, copyURL.length() - 1 );
         }
 
-        if ( ( copyURL.indexOf( "?" ) > 0 || copyURL.indexOf( URLEncoder.encode( "?" ) ) > 0 )
+        if ( ( copyURL.indexOf( "?" ) > 0 || copyURL.indexOf( URLEncoder.encode( "?" ,"UTF-8" ) ) > 0 )
             && !copyURL.endsWith( "?" ) )
         {
             copyURL = copyURL + "&";

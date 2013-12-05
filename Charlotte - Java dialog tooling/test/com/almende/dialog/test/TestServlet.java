@@ -172,7 +172,7 @@ public class TestServlet extends HttpServlet
         }
     }
     
-    private String getJsonSimpleOpenQuestion( String questionText )
+    private String getJsonSimpleOpenQuestion( String questionText ) throws UnsupportedEncodingException
     {
         Question question = new Question();
         question.setQuestion_id( "1" );

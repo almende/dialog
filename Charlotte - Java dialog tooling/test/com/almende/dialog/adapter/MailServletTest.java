@@ -1,6 +1,7 @@
 package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Method;
@@ -75,6 +76,7 @@ public class MailServletTest extends TestFramework
         
         //fetch and invoke the receieveMessage method
         MailServlet mailServlet = new MailServlet();
+        @SuppressWarnings("unchecked")
         Method fetchMethodByReflection = fetchMethodByReflection( "receiveMessage", MailServlet.class, 
                                                                   Arrays.asList( MimeMessage.class, String.class ) );
         TextMessage textMessage = (TextMessage) invokeMethodByReflection( fetchMethodByReflection, mailServlet, 
@@ -105,6 +107,7 @@ public class MailServletTest extends TestFramework
         
         //fetch and invoke the receieveMessage method
         MailServlet mailServlet = new MailServlet();
+        @SuppressWarnings("unchecked")
         Method fetchMethodByReflection = fetchMethodByReflection( "receiveMessage", MailServlet.class, 
                                                                   Arrays.asList( MimeMessage.class, String.class ) );
         TextMessage textMessage = (TextMessage) invokeMethodByReflection( fetchMethodByReflection, mailServlet, 
@@ -246,6 +249,7 @@ public class MailServletTest extends TestFramework
         
         //fetch and invoke the receieveMessage method
         MailServlet mailServlet = new MailServlet();
+        @SuppressWarnings("unchecked")
         Method fetchMethodByReflection = fetchMethodByReflection( "receiveMessage", MailServlet.class, 
                                                                   Arrays.asList( MimeMessage.class, String.class ) );
         TextMessage textMessage = (TextMessage) invokeMethodByReflection( fetchMethodByReflection, mailServlet, 
@@ -266,8 +270,8 @@ public class MailServletTest extends TestFramework
                                                                       responseQuestionString.get(), "");
         assertTrue(logObject.get() instanceof javax.mail.Message);
         javax.mail.Message messageLogged = (javax.mail.Message) logObject.get();
-        assertEquals(messageFromDetails.getFrom(), messageLogged.getFrom());
-        assertEquals(messageFromDetails.getAllRecipients(), messageLogged.getAllRecipients());
+        assertArrayEquals(messageFromDetails.getFrom(), messageLogged.getFrom());
+        assertArrayEquals(messageFromDetails.getAllRecipients(), messageLogged.getAllRecipients());
         assertEquals(messageFromDetails.getSubject(), messageLogged.getSubject().replaceAll("RE:|null","").trim());
         assertEquals(messageFromDetails.getContent().toString(), messageLogged.getContent().toString());
     }
@@ -276,8 +280,8 @@ public class MailServletTest extends TestFramework
     {
         assertTrue(logObject.get() instanceof javax.mail.Message);
         javax.mail.Message messageLogged = (javax.mail.Message) logObject.get();
-        assertEquals(message.getFrom(), messageLogged.getFrom());
-        assertEquals(message.getAllRecipients(), messageLogged.getAllRecipients());
+        assertArrayEquals(message.getFrom(), messageLogged.getFrom());
+        assertArrayEquals(message.getAllRecipients(), messageLogged.getAllRecipients());
         assertEquals(message.getSubject(), messageLogged.getSubject().replaceAll("RE:|null","").trim());
         assertEquals(message.getContent().toString(), messageLogged.getContent().toString());
     }

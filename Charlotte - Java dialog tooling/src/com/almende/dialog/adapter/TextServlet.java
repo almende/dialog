@@ -421,7 +421,7 @@ abstract public class TextServlet extends HttpServlet {
 				}
 				Return replystr = formQuestion(question, config.getConfigId(),address);
 				//fix for bug: #15 https://github.com/almende/dialog/issues/15
-				escapeInput.reply = URLDecoder.decode(replystr.reply);
+				escapeInput.reply = URLDecoder.decode(replystr.reply, "UTF-8");
 				question = replystr.question;
 				fromName = getNickname(question);
 

@@ -1,9 +1,10 @@
 package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.not;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -244,7 +245,7 @@ public class VoiceXMLServletTest extends TestFramework {
         assertEquals(doc.getChildNodes().getLength(), 1);
         assertEquals(vxml.getNodeName(), "vxml");
         assertEquals(form.getNodeName(), "form");
-        assertNotEquals(form.getChildNodes().getLength(), 4);
+        assertThat(form.getChildNodes().getLength(), not(4));
         assertEquals(record.getNodeName(), "record");
         assertEquals(subdialog.getNodeName(), "subdialog");
     }

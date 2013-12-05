@@ -279,6 +279,8 @@ abstract public class TextServlet extends HttpServlet {
             senderName = fromName;
         }
         subject = subject != null && !subject.isEmpty() ? subject : "Message from DH";
+        //fix for bug: #15 https://github.com/almende/dialog/issues/15
+        res.reply = URLDecoder.decode(res.reply);
         int count = broadcastMessage( res.reply, subject, localaddress, senderName, formattedAddressNameToMap, extras,
             config );
 

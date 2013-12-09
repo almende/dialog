@@ -1,19 +1,23 @@
 package com.almende.dialog;
 
-import com.almende.dialog.util.KeyServerLib;
-import com.almende.dialog.util.ServerUtils;
-import com.almende.util.ParallelInit;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.sun.jersey.api.client.ClientResponse.Status;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
-import java.util.*;
+
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.util.KeyServerLib;
+import com.almende.dialog.util.ServerUtils;
+import com.almende.util.ParallelInit;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.jersey.api.client.ClientResponse.Status;
 
 @Path("log")
 public class LogWrapper {
@@ -22,30 +26,27 @@ public class LogWrapper {
 
 	@GET
 	@Produces("application/json")
-	public Response getLogs(@QueryParam("privateKey") String privateKey, @QueryParam("publicKey") String publicKey,
+	public Response getLogs(@QueryParam("accountID") String accountId, @QueryParam("bearerToken") String bearerToken,
 							@QueryParam("id") String adapterID,
 							@QueryParam("type") String adapterType,
 							@QueryParam("level") LogLevel level, 
 							@QueryParam("end") Long endTime, 
 							@QueryParam("offset") Integer offset, 
-							@QueryParam("limit") Integer limit) {
+							@QueryParam("limit") Integer limit) throws Exception {
 		
-		if(privateKey==null || privateKey.isEmpty())
-			return Response.status(Status.BAD_REQUEST).entity("Missing private key").build();
-
-        if(publicKey==null || publicKey.isEmpty())
-			return Response.status(Status.BAD_REQUEST).entity("Missing public key").build();
-		
-		ArrayNode list = KeyServerLib.getAllowedAdapterList(publicKey, privateKey);
+		// Check accountID/bearer Token against OAuth KeyServer
+		if (Settings.KEYSERVER != null) {
+			if (!KeyServerLib.checkAccount(accountId, bearerToken)) {
+				throw new Exception("Invalid token given");
+			}
+		}
+		ArrayList<AdapterConfig> list = AdapterConfig.findAdapters(null, null, null);
 		Collection<String> adapterIDs = new HashSet<String>();
-        if ( list != null )
-        {
-            for ( JsonNode adapter : list )
-            {
-                adapterIDs.add( adapter.get( "id" ).asText() );
-            }
-        }
-
+        for (AdapterConfig config: list){
+        	if (config.getPublicKey().equals(accountId)){
+        		adapterIDs.add( config.getConfigId() );
+        	}
+		}
         if(ServerUtils.isInDeployedAppspotEnvironment())
         {
 		    if(adapterIDs.size()==0)

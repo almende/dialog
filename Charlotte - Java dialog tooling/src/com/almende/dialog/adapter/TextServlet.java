@@ -23,7 +23,6 @@ import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
-import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.util.ParallelInit;
@@ -374,6 +373,8 @@ abstract public class TextServlet extends HttpServlet {
         escapeInput.preferred_language = preferred_language;
         escapeInput.reply = "I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
 
+        /*
+        //TODO: this is a model break, for the purpose of trying to prevent overshoot. Potentially this will significantly slow down chat messaging.....
         if ( KeyServerLib.checkCredits( config.getPublicKey() ) )
         {
             //check if any escape input command is received
@@ -388,6 +389,7 @@ abstract public class TextServlet extends HttpServlet {
             escapeInput.reply = "Not enough credits to return an answer";
             escapeInput.skip = true;
         }
+        */
                 
 		if (!escapeInput.skip) 
 		{

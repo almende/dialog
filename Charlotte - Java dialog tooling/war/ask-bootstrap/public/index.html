@@ -84,11 +84,11 @@
             <div class="container">
                 <div class="row">
                     <div class="span5">
-                        <label id="pubKeyLabel" style="min-width: 80px;" class="span1">Public Key*</label>
+                        <label id="pubKeyLabel" style="min-width: 80px;" class="span1">AccountId*</label>
                         <input id="pubKey" type="text" placeholder="Public Key" style="min-width: 300px;" class="span3">
                     </div>
                     <div class="span5">
-                        <label id="priKeyLabel" style="min-width: 80px;" class="span1">Private Key*</label>
+                        <label id="priKeyLabel" style="min-width: 80px;" class="span1">Token*</label>
                         <input id="priKey" type="text" placeholder="Private Key" style="min-width: 300px;"
                                class="span3">
                     </div>
@@ -279,9 +279,9 @@
 
             var queryData = '';
             var stringEndDate = $('#dp1').val();
-            queryData += 'privateKey=';
+            queryData += 'bearerToken=';
             queryData += $.trim($('#priKey').val()) != '' ? $('#priKey').val() : '';
-            queryData += '&publicKey=';
+            queryData += '&accountID=';
             queryData += $.trim($('#pubKey').val()) != '' ? $('#pubKey').val() : '';
 //            if ($.trim($('#adapterId').val()) != '') {
 //                queryData += '&id=' + $.trim($('#adapterId').val());

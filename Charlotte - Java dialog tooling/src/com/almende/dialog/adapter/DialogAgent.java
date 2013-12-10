@@ -167,24 +167,25 @@ public class DialogAgent extends Agent {
 		
 		log.info("Trying to find config");
 		AdapterConfig config = null;
-		if (adapterID != null){
+		if (adapterID != null) {
 			config = AdapterConfig.getAdapterConfig(adapterID);
 		} else {
-			final List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters(adapterType, null, null);
-			for (AdapterConfig cfg : adapterConfigs){
-				if (cfg.getPublicKey().equals(accountId)){
-					config=cfg;
+			final List<AdapterConfig> adapterConfigs = AdapterConfig
+					.findAdapters(adapterType, null, null);
+			for (AdapterConfig cfg : adapterConfigs) {
+				if (cfg.getPublicKey().equals(accountId)) {
+					config = cfg;
 					break;
 				}
 			}
 		}
-		
-		if (config.getPublicKey() != null && !config.getPublicKey().equals(accountId)){
-			throw new JSONRPCException("You are not allowed to use this adapter!");
-		}
-
-		
 		if (config != null) {
+			if (config.getPublicKey() != null
+					&& !config.getPublicKey().equals(accountId)) {
+				throw new JSONRPCException(
+						"You are not allowed to use this adapter!");
+			}
+			
 			log.info(String.format("Config found: %s of Type: %s",
 					config.getConfigId(), config.getAdapterType()));
 			adapterType = config.getAdapterType();
@@ -232,8 +233,8 @@ public class DialogAgent extends Agent {
 	public String changeAgent(@Name("url") String url,
 			@Name("adapterType") @Required(false) String adapterType,
 			@Name("adapterID") @Required(false) String adapterID,
-			@Name("accountId") String accountId, @Name("bearerToken") String bearerToken)
-			throws Exception {
+			@Name("accountId") String accountId,
+			@Name("bearerToken") String bearerToken) throws Exception {
 		
 		if (adapterType != null && !adapterType.equals("") && adapterID != null
 				&& !adapterID.equals("")) {
@@ -251,22 +252,25 @@ public class DialogAgent extends Agent {
 		log.info("KeyServer says ok!");
 		log.info("Trying to find config");
 		AdapterConfig config = null;
-		if (adapterID != null){
+		if (adapterID != null) {
 			config = AdapterConfig.getAdapterConfig(adapterID);
 		} else {
-			final List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters(adapterType, null, null);
-			for (AdapterConfig cfg : adapterConfigs){
-				if (cfg.getPublicKey().equals(accountId)){
-					config=cfg;
+			final List<AdapterConfig> adapterConfigs = AdapterConfig
+					.findAdapters(adapterType, null, null);
+			for (AdapterConfig cfg : adapterConfigs) {
+				if (cfg.getPublicKey().equals(accountId)) {
+					config = cfg;
 					break;
 				}
 			}
 		}
-		if (config.getPublicKey() != null && !config.getPublicKey().equals(accountId)){
-			throw new JSONRPCException("You are not allowed to change this adapter!");
-		}
-		
 		if (config != null) {
+			if (config.getPublicKey() != null
+					&& !config.getPublicKey().equals(accountId)) {
+				throw new JSONRPCException(
+						"You are not allowed to change this adapter!");
+			}
+			
 			log.info("Config found: " + config.getConfigId());
 			AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 			config.setInitialAgentURL(url);
@@ -295,7 +299,8 @@ public class DialogAgent extends Agent {
 			}
 		}
 		log.info("KeyServer says ok!");
-		List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters(adapterType, null, null);
+		List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters(
+				adapterType, null, null);
 		return adapterConfigs;
 	}
 	

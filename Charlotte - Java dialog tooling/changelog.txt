@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+11-12-2013, version 0.8.1
+- fix: fixed unit tests. included hamcrest in the buildpath
+
 11-12-2013, version 0.8.0
 - Improvement: retry mechanisms for starting/updating broadsoft subscriptions
 - fix: finite retry mechanism when timeout callback is not set for closed question

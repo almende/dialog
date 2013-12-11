@@ -22,7 +22,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
 import com.thetransactioncompany.cors.HTTPMethod;
 
@@ -36,7 +35,7 @@ public class Question implements QuestionIntf {
 	static final ObjectMapper om =ParallelInit.getObjectMapper();
 	
 	public static final int DEFAULT_MAX_QUESTION_LOAD = 5;
-	private static HashMap<String, Integer> questionRetryCounter = null;
+	private static HashMap<String, Integer> questionRetryCounter = new HashMap<String, Integer>();
 	
 	QuestionIntf question;
 	private String preferred_language = "nl";
@@ -99,21 +98,34 @@ public class Question implements QuestionIntf {
                     json = webResource.type( "text/plain" ).get( String.class );
                     dialogLog.info( adapterID, "Received new question: " + json );
                 }
-                catch ( ClientHandlerException e )
+                catch ( Exception e )
                 {
                     log.severe( e.toString() );
                     dialogLog.severe( adapterID, "ERROR loading question: " + e.toString() );
+                    if( questionRetryCounter.get( url ) == null)
+                    {
+                        questionRetryCounter.put( url, 0 );
+                    }
+                    while ( questionRetryCounter.get( url ) != null
+                        && questionRetryCounter.get( url ) < DEFAULT_MAX_QUESTION_LOAD )
+                    {
+                        try
+                        {
+                            dialogLog.info( adapterID, String.format(
+                                "Fetch question from URL: %s failed. Trying again (Count: %s) ",
+                                webResource.toString(), questionRetryCounter.get( url ) ) );
+                            json = webResource.type( "text/plain" ).get( String.class );
+                            dialogLog.info( adapterID, "Received new question: " + json );
+                            break;
+                        }
+                        catch ( Exception ex )
+                        {
+                            Integer retryCount = questionRetryCounter.get( url );
+                            questionRetryCounter.put( url, ++retryCount );
+                        }
+                    }
                 }
-                catch ( UniformInterfaceException e )
-                {
-                    log.severe( e.toString() );
-                    dialogLog.severe( adapterID, "ERROR loading question: " + e.toString() );
-                }
-                catch ( UnsupportedEncodingException e )
-                {
-                    log.severe( e.toString() );
-                    dialogLog.severe( adapterID, "ERROR loading question: " + e.toString() );
-                }
+                questionRetryCounter.remove( url );
             }
             else
             {
@@ -298,55 +310,14 @@ public class Question implements QuestionIntf {
             if ( newQ != null )
                 return newQ;
 
-            String retryLoadLimit = getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT );
-            Integer retryCount = getRetryCount( sessionKey );
-            if ( retryLoadLimit != null && retryCount != null && retryCount < Integer.parseInt( retryLoadLimit ) )
-            {
-                updateRetryCount( sessionKey );
-                log.info( String.format( "returning the same question as RetryCount: %s < RetryLoadLimit: %s",
-                    retryCount, retryLoadLimit ) );
-                dialogLog.warning( adapterID, String.format( "Repeating question %s (count: %s) due to invalid answer: %s",
-                        ServerUtils.serializeWithoutException( this ), retryCount, answer_input ) );
-                return this;
-            }
-            else if ( retryCount != null && retryCount < DEFAULT_MAX_QUESTION_LOAD )
-            {
-                updateRetryCount( sessionKey );
-                log.info( String.format(
-                    "returning the same question as RetryCount: %s < DEFAULT_MAX: %s", retryCount,
-                    DEFAULT_MAX_QUESTION_LOAD ) );
-                dialogLog.warning(
-                    adapterID,
-                    String.format( "Repeating question %s (count: %s) due to invalid answer: %s",
-                        ServerUtils.serializeWithoutException( this ), retryCount, answer_input ) );
-                return this;
-            }
-            else if( sessionKey != null )
-            {
-                flushRetryCount( sessionKey );
-                log.warning( String.format(
-                    "return null question as RetryCount: %s >= DEFAULT_MAX: %s or >= LOAD_LIMIT: %s", retryCount,
-                    DEFAULT_MAX_QUESTION_LOAD, retryLoadLimit ) );
-                dialogLog
-                    .warning( adapterID, String.format(
-                                "Return empty/null question as retryCount %s equals DEFAULT_MAX: %s or LOAD_LIMIT: %s, due to invalid answer: %s",
-                                retryCount, DEFAULT_MAX_QUESTION_LOAD, retryLoadLimit, answer_input ) );
-                return null;
-            }
-            else
-            {
-                log.info( "returning the same question as its TextServlet request??" );
-                dialogLog.warning( adapterID, 
-                    String.format( "Repeating question %s due to invalid answer: %s in the TextServlet",
-                        ServerUtils.serializeWithoutException( this ), answer_input ) );
-                return this;
-            }
+            return retryLoadingQuestion( adapterID, answer_input, sessionKey );
         }
         else
         {
             //flush any existing retry counters for this session
             flushRetryCount( sessionKey );
         }
+        
         // Send answer to answer.callback.
         Client client = ParallelInit.getClient();
         WebResource webResource = client.resource( answer.getCallback() );
@@ -387,7 +358,7 @@ public class Question implements QuestionIntf {
         }
         return newQ;
     }
-	
+
 	public Question event(String eventType, String message, Object extras, String responder) 
 	{
         log.info( String.format( "Received: %s Message: %s Responder: %s Extras: %s", eventType, message,
@@ -411,9 +382,18 @@ public class Question implements QuestionIntf {
 			if(eventType.equals("hangup") || eventType.equals("exception") || this.question.getType().equals("referral") ) {
 				return null;
 			}
-			
-			return this;
+			else if(extras != null && extras instanceof Map)
+			{
+			    HashMap<String, String> extrasMap = (HashMap<String, String>) extras;
+			    retryLoadingQuestion( null, null, extrasMap.get( "sessionKey" ) );
+			}
+			else
+			{
+			    log.warning( "Unguardedly repeating question!" );
+			    return this;
+			}
 		}
+		
 		Question newQ = null;
 		WebResource webResource = client.resource(eventCallback.getCallback());
 		EventPost event = new EventPost(responder, this.getQuestion_id(), eventType, message, extras);
@@ -573,6 +553,7 @@ public class Question implements QuestionIntf {
     }
     
     @JSON(include = false)
+    @JsonIgnore
     public Map<MediaPropertyKey, String> getMediaPropertyByType( MediumType type ) {
 
         if(this.media_properties!=null) {
@@ -689,6 +670,67 @@ public class Question implements QuestionIntf {
         if ( questionRetryCounter != null && sessionKey != null )
         {
             questionRetryCounter.remove( sessionKey );
+        }
+    }
+    
+    /** (intended for VOICE) simple retry mechanism to reload the question finitely. 
+     * @param adapterID
+     * @param answer_input
+     * @param sessionKey
+     * @return
+     */
+    protected Question retryLoadingQuestion( String adapterID, String answer_input, String sessionKey )
+    {
+        String retryLoadLimit = getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT );
+        Integer retryCount = getRetryCount( sessionKey );
+        if ( retryLoadLimit != null && retryCount != null && retryCount < Integer.parseInt( retryLoadLimit ) )
+        {
+            updateRetryCount( sessionKey );
+            log.info( String.format( "returning the same question as RetryCount: %s < RetryLoadLimit: %s",
+                retryCount, retryLoadLimit ) );
+            if ( adapterID != null && answer_input != null )
+            {
+                dialogLog.warning( adapterID,
+                    String.format( "Repeating question %s (count: %s) due to invalid answer: %s",
+                        ServerUtils.serializeWithoutException( this ), retryCount, answer_input ) );
+            }
+            return this;
+        }
+        else if ( retryCount != null && retryCount < DEFAULT_MAX_QUESTION_LOAD )
+        {
+            updateRetryCount( sessionKey );
+            log.info( String.format(
+                "returning the same question as RetryCount: %s < DEFAULT_MAX: %s", retryCount,
+                DEFAULT_MAX_QUESTION_LOAD ) );
+            if ( adapterID != null && answer_input != null )
+            {
+                dialogLog.warning( adapterID,
+                    String.format( "Repeating question %s (count: %s) due to invalid answer: %s",
+                        ServerUtils.serializeWithoutException( this ), retryCount, answer_input ) );
+            }
+            return this;
+        }
+        else if( sessionKey != null )
+        {
+            flushRetryCount( sessionKey );
+            log.warning( String.format(
+                "return null question as RetryCount: %s >= DEFAULT_MAX: %s or >= LOAD_LIMIT: %s", retryCount,
+                DEFAULT_MAX_QUESTION_LOAD, retryLoadLimit ) );
+            if ( adapterID != null && answer_input != null )
+            {
+                dialogLog.warning( adapterID, 
+                    String.format("Return empty/null question as retryCount %s equals DEFAULT_MAX: %s or LOAD_LIMIT: %s, due to invalid answer: %s",
+                        retryCount, DEFAULT_MAX_QUESTION_LOAD, retryLoadLimit, answer_input ) );
+            }
+            return null;
+        }
+        else
+        {
+            log.info( "returning the same question as its TextServlet request??" );
+            dialogLog.warning( adapterID, 
+                String.format( "Repeating question %s due to invalid answer: %s in the TextServlet",
+                    ServerUtils.serializeWithoutException( this ), answer_input ) );
+            return this;
         }
     }
 }

@@ -68,6 +68,26 @@ public class ServerUtils
     {
         return oMapper.readValue( jsonString, type );
     }
+    
+    public static <T> T deserialize( String jsonString, boolean throwException, TypeReference<T> type ) throws Exception
+    {
+        try
+        {
+            return oMapper.readValue( jsonString, type );
+        }
+        catch ( Exception e )
+        {
+            if(throwException)
+            {
+                throw e;
+            }
+            else
+            {
+                log.severe( e.getLocalizedMessage() );
+                return null;
+            }
+        }
+    }
 
     public static String serializeWithoutException( Object objectToBeSerialized )
     {

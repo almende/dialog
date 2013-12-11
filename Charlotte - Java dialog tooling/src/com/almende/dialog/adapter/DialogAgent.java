@@ -94,9 +94,7 @@ public class DialogAgent extends Agent {
 	
     /**
      * updated the outboundCall functionality to support broadcast functionality
-     * 
-     * @param addressList
-     *            list of addresses
+     * @param addressList list of addresses
      * @throws Exception
      */
     public HashMap<String, String> outboundCallWithList( @Name( "addressList" ) Collection<String> addressList,
@@ -107,17 +105,29 @@ public class DialogAgent extends Agent {
         @Name( "privateKey" ) String privKey ) throws Exception
     {
         Map<String, String> addressNameMap = ServerUtils.putCollectionAsKey( addressList, "" );
-        return outboundCallWithMap( addressNameMap, senderName, subject, url, adapterType, adapterID, pubKey, privKey );
+        return outboundCallWithMap( addressNameMap, null, null, senderName, subject, url, adapterType, adapterID,
+            pubKey, privKey );
     }
     
     /**
-     * updated the outboundCall functionality to support broadcast
-     * functionality.
-     * @param addressMap
-     *            Key: address and Value: name
+     * updated the outboundCall functionality to support broadcast functionality including to,cc and bcc list
+     * @param addressMap Key: address and Value: name
+     * @param addressCcMap Key: address and Value: name (Specific to EMAIL)
+     * @param addressBccMap Key: address and Value: name (Specific to EMAIL)
+     * @param senderName senderName (Specific to TextServlets)
+     * @param subject (Specific to EMAIL)
+     * @param url URL to fetch the question from.
+     * @param adapterType the type of the adapter used for this broadcast call
+     * @param adapterID adapterID used for this broadcast call
+     * @param pubKey public key of this account/user
+     * @param privKey private key of this account/user
+     * @return
      * @throws Exception
      */
-    public HashMap<String, String> outboundCallWithMap( @Name( "addressMap" ) Map<String, String> addressMap,
+    public HashMap<String, String> outboundCallWithMap(
+        @Name( "addressMap" ) @Required( false ) Map<String, String> addressMap,
+        @Name( "addressCcMap" ) @Required( false ) Map<String, String> addressCcMap,
+        @Name( "addressBccMap" ) @Required( false ) Map<String, String> addressBccMap,
         @Name( "senderName" ) @Required( false ) String senderName,
         @Name( "subject" ) @Required( false ) String subject, @Name( "url" ) String url,
         @Name( "adapterType" ) @Required( false ) String adapterType,
@@ -143,9 +153,22 @@ public class DialogAgent extends Agent {
         {
             log.info( String.format( "Config found: %s of Type: %s", config.getConfigId(), config.getAdapterType() ) );
             adapterType = config.getAdapterType();
+            if(addressMap == null )
+            {
+                if(!adapterType.toUpperCase().equals( "MAIL" ))
+                {
+                    throw new Exception("address is mising");
+                }
+                else if ( ( addressCcMap == null || addressCcMap.isEmpty() )
+                    && ( addressBccMap == null || addressBccMap.isEmpty() ) )
+                {
+                    throw new Exception( "address is mising" );
+                }
+            }
             if ( adapterType.toUpperCase().equals( "XMPP" ) )
             {
-                resultSessionMap = new XMPPServlet().startDialog( addressMap, url, senderName, subject, config );
+                resultSessionMap = new XMPPServlet().startDialog( addressMap, null, null, url, senderName, subject,
+                    config );
             }
             else if ( adapterType.toUpperCase().equals( "BROADSOFT" ) )
             {
@@ -161,19 +184,23 @@ public class DialogAgent extends Agent {
             }
             else if ( adapterType.toUpperCase().equals( "MAIL" ) )
             {
-                resultSessionMap = new MailServlet().startDialog( addressMap, url, senderName, subject, config );
+                resultSessionMap = new MailServlet().startDialog( addressMap, addressCcMap, addressBccMap, url,
+                    senderName, subject, config );
             }
             else if ( adapterType.toUpperCase().equals( "SMS" ) )
             {
-                resultSessionMap = new MBSmsServlet().startDialog( addressMap, url, senderName, subject, config );
+                resultSessionMap = new MBSmsServlet().startDialog( addressMap, null, null, url, senderName, subject,
+                    config );
             }
             else if ( adapterType.toUpperCase().equals( "CM" ) )
             {
-                resultSessionMap = new CMSmsServlet().startDialog( addressMap, url, senderName, subject, config );
+                resultSessionMap = new CMSmsServlet().startDialog( addressMap, null, null, url, senderName, subject,
+                    config );
             }
             else if ( adapterType.toUpperCase().equals( "TWITTER" ) )
             {
-                resultSessionMap = new TwitterServlet().startDialog( addressMap, url, senderName, subject, config );
+                resultSessionMap = new TwitterServlet().startDialog( addressMap, null, null, url, senderName, subject,
+                    config );
             }
             else
             {

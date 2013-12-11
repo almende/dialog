@@ -116,7 +116,7 @@ public class TwitterServlet extends TextServlet {
 
 	@Override
 	protected int sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName, AdapterConfig config) {
+			String fromName, String to, String toName, Map<String, Object> extras, AdapterConfig config) {
 
 		OAuthService service = new ServiceBuilder()
         .provider(TwitterApi.class)
@@ -149,13 +149,13 @@ public class TwitterServlet extends TextServlet {
 	
     @Override
     protected int broadcastMessage( String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
         int count = 0;
         for ( String toAddress : addressNameMap.keySet() )
         {
             String toName = addressNameMap.get( toAddress );
-            count = count + sendMessage( message, subject, from, senderName, toAddress, toName, config );
+            count = count + sendMessage( message, subject, from, senderName, toAddress, toName, extras, config );
         }
         return count;
     }

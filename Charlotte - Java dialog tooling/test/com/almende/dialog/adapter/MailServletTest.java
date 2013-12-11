@@ -48,7 +48,7 @@ public class MailServletTest extends TestFramework
         url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
         
         MailServlet mailServlet = new MailServlet();
-        mailServlet.startDialog( addressNameMap, url, "test", "sendDummyMessageTest", adapterConfig );
+        mailServlet.startDialog( addressNameMap, null, null, url, "test", "sendDummyMessageTest", adapterConfig );
         
         Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, testMessage, "sendDummyMessageTest" );
         assertOutgoingTextMessage( message );
@@ -209,7 +209,7 @@ public class MailServletTest extends TestFramework
             + URLEncoder.encode( textMessage, "UTF-8");
         
         MailServlet mailServlet = new MailServlet();
-        mailServlet.startDialog( addressNameMap, url, "test", "sendDummyMessageTest", adapterConfig );
+        mailServlet.startDialog( addressNameMap, null, null, url, "test", "sendDummyMessageTest", adapterConfig );
 
         Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, textMessage,
             "sendDummyMessageTest" );

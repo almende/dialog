@@ -29,6 +29,8 @@ import com.google.appengine.api.utils.SystemProperty;
 
 public class MailServlet extends TextServlet {
 	
+    public static final String CC_ADDRESS_LIST_KEY = "cc_email";
+    public static final String BCC_ADDRESS_LIST_KEY = "bcc_email";
 	private static final long serialVersionUID = 6892283600126803780L;
 	private static final String servletPath = "/_ah/mail/";
 	private static final String adapterType = "MAIL";
@@ -143,7 +145,7 @@ public class MailServlet extends TextServlet {
          */
 	@Override
 	protected int sendMessage(String message, String subject, String from, String fromName,
-			String to, String toName, AdapterConfig config) {
+			String to, String toName, Map<String, Object> extras, AdapterConfig config) {
 		Properties props = new Properties();
         javax.mail.Session session = javax.mail.Session.getDefaultInstance(props, null);
 
@@ -179,7 +181,7 @@ public class MailServlet extends TextServlet {
 	
     @Override
     protected int broadcastMessage( String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, AdapterConfig config )
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config )
     {
 //        final String userName = config.getXsiUser();
 //        final String pass = config.getXsiPasswd();
@@ -219,10 +221,47 @@ public class MailServlet extends TextServlet {
             {
                 msg.setFrom( new InternetAddress( from ) );
             }
+            //add to list
             for ( String address : addressNameMap.keySet() )
             {
-                String toName = addressNameMap.get( address );
+                String toName = addressNameMap.get( address ) != null ? addressNameMap.get( address ) : address;
                 msg.addRecipient( Message.RecipientType.TO, new InternetAddress( address, toName ) );
+            }
+            //add cc list
+            if ( extras.get( CC_ADDRESS_LIST_KEY ) != null )
+            {
+                if(extras.get( CC_ADDRESS_LIST_KEY ) instanceof Map)
+                {
+                    Map<String, String> ccAddressNameMap = (Map<String, String>)extras.get( CC_ADDRESS_LIST_KEY );
+                    for ( String address : ccAddressNameMap.keySet() )
+                    {
+                        String toName = ccAddressNameMap.get( address ) != null ? ccAddressNameMap.get( address ) : address;
+                        msg.addRecipient( Message.RecipientType.CC, new InternetAddress( address, toName ) );
+                    }
+                }
+                else
+                {
+                    log.severe( String.format( "CC list seen but not of Map type: %s",
+                        ServerUtils.serializeWithoutException( extras.get( CC_ADDRESS_LIST_KEY ) ) ) );
+                }
+            }
+            //add bcc list
+            if ( extras.get( BCC_ADDRESS_LIST_KEY ) != null )
+            {
+                if(extras.get( BCC_ADDRESS_LIST_KEY ) instanceof Map)
+                {
+                    Map<String, String> bccAddressNameMap = (Map<String, String>)extras.get( BCC_ADDRESS_LIST_KEY );
+                    for ( String address : bccAddressNameMap.keySet() )
+                    {
+                        String toName = bccAddressNameMap.get( address ) != null ? bccAddressNameMap.get( address ) : address;
+                        msg.addRecipient( Message.RecipientType.BCC, new InternetAddress( address, toName ) );
+                    }
+                }
+                else
+                {
+                    log.severe( String.format( "BCC list seen but not of Map type: %s",
+                        ServerUtils.serializeWithoutException( extras.get( BCC_ADDRESS_LIST_KEY ) ) ) );
+                }
             }
             msg.setSubject( subject );
             msg.setContent( message, "text/html; charset=utf-8" );

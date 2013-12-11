@@ -1,6 +1,13 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+11-12-2013, version 0.8.0
+- Improvement: retry mechanisms for starting/updating broadsoft subscriptions
+- fix: finite retry mechanism when timeout callback is not set for closed question
+- fix: finite retry mechanism when open question is not answered. 
+- feature: added TO: CC: and BCC: list to amn outbound /rpc call
+- feature: CM SMS delivery status callback endpoint
+  
 26-11-2013, version 0.7.1
 - Feature: Allow for blind transfers
 

@@ -62,6 +62,7 @@ public class VoiceXMLRESTProxy {
 	protected String EXCEPTION_URL="/vxml/exception";
 	
 	private String host = "";
+	private static HashMap<String, Integer> questionRetryCounter = new HashMap<String, Integer>();
 	
 	public static void killSession(Session session){
 		
@@ -352,7 +353,7 @@ public class VoiceXMLRESTProxy {
     @GET
     @Produces( "application/voicexml+xml" )
     public Response timeout( @QueryParam( "question_id" ) String question_id,
-        @QueryParam( "sessionKey" ) String sessionKey )
+        @QueryParam( "sessionKey" ) String sessionKey ) throws Exception
     {
         String reply = "<vxml><exit/></vxml>";
         String json = StringStore.getString( question_id + "_" + sessionKey );
@@ -361,6 +362,20 @@ public class VoiceXMLRESTProxy {
             Session session = Session.getSession( sessionKey );
             Question question = Question.fromJSON( json, session.getAdapterConfig().getConfigId() );
             String responder = StringStore.getString( question_id + "-remoteID" + "_" + sessionKey );
+            //check if there was a redirection before
+            String referralJSON = StringStore.getString( "transfer_" + session.getRemoteAddress() + "_"
+                + session.getLocalAddress() );
+            String referredCalledId = null;
+            String remoteID = null;
+            if ( referralJSON != null )
+            {
+                ObjectNode questionNode = ServerUtils.deserialize( referralJSON, false, ObjectNode.class );
+                if ( questionNode != null )
+                {
+                    remoteID = questionNode.get( "remoteCallerId" ).asText();
+                    referredCalledId = questionNode.get( "referredCalledId" ).asText();
+                }
+            }
             if ( session.killed )
             {
                 return Response.status( Response.Status.BAD_REQUEST ).build();
@@ -372,9 +387,11 @@ public class VoiceXMLRESTProxy {
             StringStore.dropString( "question_" + session.getRemoteAddress() + "_"
                 + session.getLocalAddress() );
 
-            String currentTimeInMillis = String.valueOf( ServerUtils.getServerCurrentTimeInMillis());
-            getTimeMap( currentTimeInMillis, currentTimeInMillis, currentTimeInMillis );
-            question = question.event( "timeout", "No answer received", null, responder );
+            HashMap<String,Object> extras = new HashMap<String, Object>();
+            extras.put( "remoteCallerId", remoteID );
+            extras.put( "referredCalledId", referredCalledId );
+            extras.put( "sessionKey", sessionKey );
+            question = question.event( "timeout", "No answer received", extras, responder );
 
             return handleQuestion( question, session.getAdapterConfig().getConfigId(), responder,
                                    sessionKey );
@@ -392,6 +409,9 @@ public class VoiceXMLRESTProxy {
 			Session session = Session.getSession(sessionKey);
 			Question question = Question.fromJSON(json, session.getAdapterConfig().getConfigId());
 			String responder = StringStore.getString(question_id + "-remoteID" + "_" + sessionKey);
+			//check if there was a 
+            String string = StringStore.getString( "transfer_" + session.getRemoteAddress() + "_"
+                + session.getLocalAddress() );
 			if (session.killed){
 				return Response.status(Response.Status.BAD_REQUEST).build();
 			}
@@ -401,7 +421,9 @@ public class VoiceXMLRESTProxy {
 			StringStore.dropString(question_id+"-remoteID");
 			StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
 
-			question = question.event("exception", "Wrong answer received", null, responder);
+			HashMap<String, String> extras = new HashMap<String, String>();
+			extras.put( "sessionKey", sessionKey );
+			question = question.event("exception", "Wrong answer received", extras, responder);
 			
 			return handleQuestion(question,session.getAdapterConfig().getConfigId(),responder,sessionKey);
 		}
@@ -418,9 +440,7 @@ public class VoiceXMLRESTProxy {
         throws Exception
     {
         log.info("call hangup with:"+direction+":"+remoteID+":"+localID);
-        
         String adapterType="broadsoft";
-        
         String sessionKey = adapterType+"|"+localID+"|"+remoteID;
         Session session = Session.getSession(sessionKey);
         
@@ -429,11 +449,13 @@ public class VoiceXMLRESTProxy {
             session.getRemoteAddress(), session.getLocalAddress() ) );
         String stringStoreKey = direction + "_" + session.getRemoteAddress() + "_" + session.getLocalAddress();
         String json = StringStore.getString( stringStoreKey );
+        String referredCalledId = null;
         if ( json != null )
         {
             ObjectNode questionNode = ServerUtils.deserialize( json, ObjectNode.class );
             question = ServerUtils.deserialize( questionNode.get( "question" ).toString(), Question.class );
             remoteID = questionNode.get( "remoteCallerId" ).asText();
+            referredCalledId = questionNode.get( "referredCalledId" ).asText();
             //not deleting the remoteCallerIdQuestionMap as hangup (personality: Originator callState: Released) 
             //is received via the ccxml file 
             //            StringStore.dropString( direction + "_" + session.getRemoteAddress() + "_" + session.getLocalAddress() );
@@ -464,6 +486,8 @@ public class VoiceXMLRESTProxy {
             {
                 timeMap.put( "notPickedUp", notPickedUp );
             }
+            timeMap.put( "referredCalledId", referredCalledId );
+            timeMap.put( "sessionKey", sessionKey );
             question.event( "hangup", "Hangup", timeMap, remoteID );
             DDRWrapper.log( question, session, "Hangup" );
             handleQuestion( null, session.getAdapterConfig().getConfigId(), remoteID, sessionKey );
@@ -502,7 +526,7 @@ public class VoiceXMLRESTProxy {
         String stringStoreKey = direction + "_" + remoteID + "_" + localID;
         String json = StringStore.getString( stringStoreKey );
         String responder = "";
-        
+        String referredCalledId = null;
         //for direction = transfer (redirect event), json should not be null        
         if ( json != null )
         {
@@ -510,11 +534,15 @@ public class VoiceXMLRESTProxy {
                 + localID, json ) );
             ObjectNode questionNode = ServerUtils.deserialize( json, false, ObjectNode.class );
             log.info( "questionNode at answered: " + questionNode.toString() );
-            if ( questionNode != null && questionNode.get( "question" ) != null )
+            if ( questionNode != null )
             {
-                question = ServerUtils.deserialize( questionNode.get( "question" ).toString(), Question.class );
+                if(questionNode.get( "question" ) != null)
+                {
+                    question = ServerUtils.deserialize( questionNode.get( "question" ).toString(), Question.class );
+                }
+                responder = questionNode.get( "remoteCallerId" ).asText();
+                referredCalledId = questionNode.get( "referredCalledId" ).asText();
             }
-            responder = questionNode.get( "remoteCallerId" ).asText();
         }
         //this is invoked when an outbound call is triggered and answered by the callee
         else 
@@ -534,9 +562,10 @@ public class VoiceXMLRESTProxy {
         if(question != null)
         {
             HashMap<String, Object> timeMap = getTimeMap( startTime, answerTime, releaseTime );
+            timeMap.put( "referredCalledId", referredCalledId );
+            timeMap.put( "sessionKey", sessionKey );
             question.event( "answered", "Answered", timeMap, responder );
             DDRWrapper.log( question, session, "Answered" );
-//            handleQuestion( null, session.getAdapterConfig().getConfigId(), remoteID, sessionKey );
         }
         return Response.ok( "" ).build();
     }
@@ -561,10 +590,7 @@ public class VoiceXMLRESTProxy {
             Node eventData = dom.getElementsByTagName("eventData").item(0);
             // check if incall event
             if(eventData.getChildNodes().getLength()>1) {
-                
-                
                 Node call = eventData.getChildNodes().item(1);
-                
                 Node personality = null;
                 Node callState = null;
                 Node remoteParty = null;
@@ -673,6 +699,7 @@ public class VoiceXMLRESTProxy {
                                     }
                                 }
                             }
+                            
                             else if ( personality.getTextContent().equals( "Originator" ) )
                             {
                                 log.info( "Outbound detected?????" );
@@ -790,23 +817,62 @@ public class VoiceXMLRESTProxy {
         } catch (Exception e) {
             log.severe("Something failed: "+ e.getMessage());
         }
-        
-        
         return Response.ok(reply).build();
     }
     
+    /**
+     * endpoint for tts functionality
+     * @param textForSpeech actually text that has to be spoken 
+     * @param language format "language-country" check the full link at {@link http://www.voicerss.org/api/documentation.aspx VoiceRSS}
+     * @param contentType file format
+     * @param speed -10 to 10
+     * @param format audio formats
+     * @param req
+     * @param resp
+     */
     @GET
     @Path( "tts/{textForSpeech}" )
     public Response redirectToSpeechEngine( @PathParam( "textForSpeech" ) String textForSpeech,
         @QueryParam( "hl" ) @DefaultValue( "nl-nl" ) String language,
         @QueryParam( "c" ) @DefaultValue( "wav" ) String contentType,
-        @QueryParam( "r" ) @DefaultValue( "wav" ) String speed,
-        @QueryParam( "f" ) @DefaultValue( "wav" ) String format,
+        @QueryParam( "r" ) @DefaultValue( "0" ) String speed,
+        @QueryParam( "f" ) @DefaultValue( "8khz_8bit_mono" ) String format,
         @Context HttpServletRequest req,
         @Context HttpServletResponse resp ) throws IOException, URISyntaxException
     {
         String ttsURL = getTTSURL( textForSpeech, language, contentType, speed, format );
         return Response.seeOther( new URI( ttsURL ) ).build();
+    }
+    
+    /**
+     * simple endpoint for repeating a question based on its session and question id
+     * @param sessionKey
+     * @param questionId
+     * @return
+     * @throws Exception 
+     */
+    @GET
+    @Path( "retry" )
+    public Response retryQuestion( @QueryParam( "sessionKey" ) String sessionKey,
+        @QueryParam( "question_id" ) String questionId ) throws Exception
+    {
+        String resultQuestion = "";
+        Session session = Session.getSession( sessionKey );
+        if ( questionId != null && sessionKey != null )
+        {
+            resultQuestion = StringStore.getString( questionId + "_" + sessionKey );
+        }
+        else if ( sessionKey != null )
+        {
+            resultQuestion = StringStore.getString( "question_" + session.getRemoteAddress() + "_"
+                + session.getLocalAddress() );
+        }
+        if(resultQuestion != null)
+        {
+            Question question = ServerUtils.deserialize( resultQuestion, false, Question.class );
+            return handleQuestion( question, session.getAdapterID(), session.getRemoteAddress(), sessionKey );
+        }
+        return Response.ok( "" ).build();
     }
 
 	public class Return {
@@ -1053,8 +1119,9 @@ public class VoiceXMLRESTProxy {
 		return sw.toString();
 	}
 	
-	protected String renderOpenQuestion(Question question,ArrayList<String> prompts,String sessionKey){
-
+	protected String renderOpenQuestion(Question question,ArrayList<String> prompts,String sessionKey)
+	{
+	    String handleTimeoutURL = "/vxml/timeout";
 		StringWriter sw = new StringWriter();
 		try {
 			XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
@@ -1066,95 +1133,19 @@ public class VoiceXMLRESTProxy {
 				// Check if media property type equals audio
 				// if so record audio message, if not record dtmf input
 				String typeProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TYPE );
-				if(typeProperty!=null && typeProperty.equalsIgnoreCase("audio")) {
-				    //assign a default voice mail length if one is not specified
-	                String voiceMessageLengthProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_LENGTH );
-	                voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
-	                if(!voiceMessageLengthProperty.endsWith("s"))
-	                {
-	                    log.warning("Voicemail length must be end with 's'. E.g. 40s. Found: "+ voiceMessageLengthProperty);
-	                    voiceMessageLengthProperty += "s";
-	                }
-	                
-	                String dtmfTerm = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.DTMF_TERMINATE );
-	                dtmfTerm = dtmfTerm != null ? dtmfTerm : "true";
-	                String voiceMailBeep = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_BEEP );
-	                voiceMailBeep = voiceMailBeep != null ? voiceMailBeep : "true";
-	                
-				    // Fetch the upload url
-				    String storedAudiofile = this.host+"upload/"+UUID.randomUUID().toString()+".wav";
-			        Client client = ParallelInit.getClient();
-			        WebResource webResource = client.resource(storedAudiofile+"?url");
-			        String uploadURL = "";
-			        try {
-			            uploadURL = webResource.type("application/json").get(String.class);
-			        } catch(Exception e){
-			        }
-			        uploadURL = uploadURL.replace(this.host, "/");
-			        
-				    outputter.startTag("form");
-                        outputter.attribute("id", "ComposeMessage");
-                        outputter.startTag("record");
-                            outputter.attribute("name", "file");
-                            outputter.attribute("beep", voiceMailBeep);
-                            outputter.attribute("maxtime", voiceMessageLengthProperty);
-                            outputter.attribute("dtmfterm", dtmfTerm);
-                            //outputter.attribute("finalsilence", "3s");
-                            for (String prompt : prompts){
-                                outputter.startTag("prompt");
-                                    outputter.attribute("timeout", "5s");
-                                    outputter.startTag("audio");
-                                        outputter.attribute("src", prompt);
-                                    outputter.endTag();
-                                outputter.endTag();
-                            }
-                            outputter.startTag("noinput");
-                                for (String prompt : prompts){
-                                    outputter.startTag("prompt");
-                                        outputter.startTag("audio");
-                                            outputter.attribute("src", prompt);
-                                        outputter.endTag();
-                                    outputter.endTag();
-                                }
-                                /*outputter.startTag("goto");
-                                    outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
-                                outputter.endTag();*/
-                            outputter.endTag();
-                        outputter.endTag();
-                        
-                        outputter.startTag("subdialog");
-                            outputter.attribute("name", "saveWav");
-                            outputter.attribute("src", uploadURL);
-                            outputter.attribute("namelist", "file");
-                            outputter.attribute("method", "post");
-                            outputter.attribute("enctype", "multipart/form-data");
-                            outputter.startTag("filled");
-                                outputter.startTag("if");
-                                    outputter.attribute("cond", "saveWav.response='SUCCESS'");
-                                    outputter.startTag("goto");
-                                        outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answer_input="+URLEncoder.encode(storedAudiofile, "UTF-8"));
-                                    outputter.endTag();
-                                outputter.startTag("else");
-                                outputter.endTag();
-                                    for (String prompt : prompts){
-                                        outputter.startTag("prompt");
-                                            outputter.startTag("audio");
-                                                outputter.attribute("src", prompt);
-                                            outputter.endTag();
-                                        outputter.endTag();
-                                    }
-                                outputter.endTag();
-                            outputter.endTag();
-                        outputter.endTag();
-                    outputter.endTag();
-				} else {
-				    
+				if(typeProperty!=null && typeProperty.equalsIgnoreCase("audio")) 
+				{
+				    renderVoiceMailQuestion( question, prompts, sessionKey, outputter );
+				} 
+				else 
+				{
 				    //see if a dtmf length is defined in the question
                     String dtmfMinLength = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.ANSWER_INPUT_MIN_LENGTH );
                     dtmfMinLength = dtmfMinLength != null ? dtmfMinLength : "";
                     String dtmfMaxLength = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.ANSWER_INPUT_MAX_LENGTH );
                     dtmfMaxLength = dtmfMaxLength != null ? dtmfMaxLength : "";
                     String noAnswerTimeout = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
+                    String retryLimit = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT );
                     //assign a default timeout if one is not specified
                     noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "5s";
                     if(!noAnswerTimeout.endsWith("s"))
@@ -1193,10 +1184,31 @@ public class VoiceXMLRESTProxy {
     								outputter.endTag();
     							outputter.endTag();
     						}
-    						outputter.startTag("noinput");
-    							outputter.startTag("reprompt");
-    							outputter.endTag();
-    						outputter.endTag();
+    						
+    						outputter.startTag( "noinput" );
+                                outputter.startTag( "goto" );
+                                if ( retryLimit == null )
+                                {
+                
+                                    outputter.attribute( "next", handleTimeoutURL + 
+                                        "?question_id=" + question.getQuestion_id() + "&sessionKey=" + sessionKey );
+                                }
+                                else
+                                {
+                                    Integer retryCount = Question.getRetryCount( sessionKey );
+                                    if ( retryCount < Integer.parseInt( retryLimit ) )
+                                    {
+                                        outputter.attribute( "next", "/retry" + "?question_id=" + question.getQuestion_id()
+                                            + "&sessionKey=" + sessionKey );
+                                        Question.updateRetryCount( sessionKey );
+                                    }
+                                    else
+                                    {
+                                        Question.flushRetryCount( sessionKey );
+                                    }
+                                }
+                                outputter.endTag();
+                            outputter.endTag();
     					
     						outputter.startTag("filled");
     							outputter.startTag("assign");
@@ -1221,6 +1233,99 @@ public class VoiceXMLRESTProxy {
 		}		
 		return sw.toString();
 	}
+
+    /** renders/updates the xml for recording an audio and posts it to the user on the callback 
+     * @param question
+     * @param prompts
+     * @param sessionKey
+     * @param outputter
+     * @throws IOException
+     * @throws UnsupportedEncodingException
+     */
+    protected void renderVoiceMailQuestion( Question question, ArrayList<String> prompts, String sessionKey,
+        XMLOutputter outputter ) throws IOException, UnsupportedEncodingException
+    {
+        //assign a default voice mail length if one is not specified
+        String voiceMessageLengthProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_LENGTH );
+        voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
+        if(!voiceMessageLengthProperty.endsWith("s"))
+        {
+            log.warning("Voicemail length must be end with 's'. E.g. 40s. Found: "+ voiceMessageLengthProperty);
+            voiceMessageLengthProperty += "s";
+        }
+        
+        String dtmfTerm = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.DTMF_TERMINATE );
+        dtmfTerm = dtmfTerm != null ? dtmfTerm : "true";
+        String voiceMailBeep = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_BEEP );
+        voiceMailBeep = voiceMailBeep != null ? voiceMailBeep : "true";
+        
+        // Fetch the upload url
+        String storedAudiofile = this.host+"upload/"+UUID.randomUUID().toString()+".wav";
+        Client client = ParallelInit.getClient();
+        WebResource webResource = client.resource(storedAudiofile+"?url");
+        String uploadURL = "";
+        try {
+            uploadURL = webResource.type("application/json").get(String.class);
+        } catch(Exception e){
+        }
+        uploadURL = uploadURL.replace(this.host, "/");
+        
+        outputter.startTag("form");
+            outputter.attribute("id", "ComposeMessage");
+            outputter.startTag("record");
+                outputter.attribute("name", "file");
+                outputter.attribute("beep", voiceMailBeep);
+                outputter.attribute("maxtime", voiceMessageLengthProperty);
+                outputter.attribute("dtmfterm", dtmfTerm);
+                //outputter.attribute("finalsilence", "3s");
+                for (String prompt : prompts){
+                    outputter.startTag("prompt");
+                        outputter.attribute("timeout", "5s");
+                        outputter.startTag("audio");
+                            outputter.attribute("src", prompt);
+                        outputter.endTag();
+                    outputter.endTag();
+                }
+                outputter.startTag("noinput");
+                    for (String prompt : prompts){
+                        outputter.startTag("prompt");
+                            outputter.startTag("audio");
+                                outputter.attribute("src", prompt);
+                            outputter.endTag();
+                        outputter.endTag();
+                    }
+                    /*outputter.startTag("goto");
+                        outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+                    outputter.endTag();*/
+                outputter.endTag();
+            outputter.endTag();
+            
+            outputter.startTag("subdialog");
+                outputter.attribute("name", "saveWav");
+                outputter.attribute("src", uploadURL);
+                outputter.attribute("namelist", "file");
+                outputter.attribute("method", "post");
+                outputter.attribute("enctype", "multipart/form-data");
+                outputter.startTag("filled");
+                    outputter.startTag("if");
+                        outputter.attribute("cond", "saveWav.response='SUCCESS'");
+                        outputter.startTag("goto");
+                            outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answer_input="+URLEncoder.encode(storedAudiofile, "UTF-8"));
+                        outputter.endTag();
+                    outputter.startTag("else");
+                    outputter.endTag();
+                        for (String prompt : prompts){
+                            outputter.startTag("prompt");
+                                outputter.startTag("audio");
+                                    outputter.attribute("src", prompt);
+                                outputter.endTag();
+                            outputter.endTag();
+                        }
+                    outputter.endTag();
+                outputter.endTag();
+            outputter.endTag();
+        outputter.endTag();
+    }
 	
 	private Response handleQuestion(Question question, String adapterID,String remoteID,String sessionKey)
 	{
@@ -1290,7 +1395,7 @@ public class VoiceXMLRESTProxy {
                         {
                             String redirectedId = PhoneNumberUtils
                                 .formatNumber( question.getUrl().replace( "tel:", "" ), null );
-                            //update url with formatted redirecteId
+                            //update url with formatted redirecteId. RFC3966 returns format tel:<blabla> as expected
                             question.setUrl( PhoneNumberUtils.formatNumber( redirectedId, PhoneNumberFormat.RFC3966 ) );
                             String transferKey = "transfer_" + redirectedId + "_" + sessionKeyArray[1];
                             log.info( String.format( "referral question %s stored with key: %s", questionJSON,
@@ -1299,6 +1404,7 @@ public class VoiceXMLRESTProxy {
                             HashMap<String, Object> questionMap = new HashMap<String, Object>();
                             questionMap.put( "question", question );
                             questionMap.put( "remoteCallerId", remoteID );
+                            questionMap.put( "referredCalledId", redirectedId );
                             String questionMapString = null;
                             try
                             {

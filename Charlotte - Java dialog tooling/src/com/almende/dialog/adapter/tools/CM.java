@@ -16,6 +16,7 @@ import com.sun.jersey.api.client.WebResource;
 
 public class CM {
 
+    public static final String SMS_DELIVERY_STATUS_KEY = "CM-SMS_Status";
 	private static final Logger log = Logger.getLogger(CM.class.getName()); 
 	
 	private static final String MIN_MESSAGE_PARTS="1";
@@ -39,7 +40,7 @@ public class CM {
 	}
 	
     public int sendMessage( String message, String subject, String from, String fromName,
-        String to, String toName, AdapterConfig config ) throws Exception
+        String to, String toName, Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
         String dcs = MESSAGE_TYPE_GSM7;
 
@@ -59,7 +60,13 @@ public class CM {
         // TODO: Check message for special chars, if so change dcs.		
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( to, toName );
-        StringWriter sw = createXMLRequest( message, from, fromName, addressNameMap, dcs );
+        String reference = null;
+        if(extras != null)
+        {
+            reference = extras.get( SMS_DELIVERY_STATUS_KEY ) != null ? extras.get( SMS_DELIVERY_STATUS_KEY )
+                .toString() : null;
+        }
+        StringWriter sw = createXMLRequest( message, from, fromName, reference, addressNameMap, dcs );
 
         if ( !ServerUtils.isInUnitTestingEnvironment() && sw != null )
         {
@@ -78,7 +85,7 @@ public class CM {
     }
     
     public int broadcastMessage( String message, String subject, String from, String fromName,
-        Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
         String dcs;
         if ( !isGSMSeven( message ) )
@@ -90,10 +97,16 @@ public class CM {
             dcs = MESSAGE_TYPE_GSM7;
         }
         //create an CM XML request based on the parameters
-        StringWriter sw = createXMLRequest( message, from, fromName, addressNameMap, dcs );
+        String reference = null;
+        if(extras != null)
+        {
+            reference = extras.get( SMS_DELIVERY_STATUS_KEY ) != null ? extras.get( SMS_DELIVERY_STATUS_KEY )
+                .toString() : null;
+        }
+        StringWriter sw = createXMLRequest( message, from, fromName, reference, addressNameMap, dcs );
 
         //add an interceptor so that send Messages is not enabled for unit tests
-        if ( !ServerUtils.isInUnitTestingEnvironment() && sw!=null)
+        if ( !ServerUtils.isInUnitTestingEnvironment() && sw != null )
         {
             Client client = ParallelInit.getClient();
             WebResource webResource = client.resource( url );
@@ -112,8 +125,8 @@ public class CM {
      * @since 9/9/2013 for v0.4.0
      * @return
      */
-    private StringWriter createXMLRequest( String message, String from, String fromName, Map<String, String> emailNameMap, 
-        String dcs )
+    private StringWriter createXMLRequest( String message, String from, String fromName, String reference,
+        Map<String, String> addressNameMap, String dcs )
     {
         String type = "TEXT";
         // TODO: Check message for special chars, if so change dcs.             
@@ -132,14 +145,21 @@ public class CM {
             outputter.attribute( "PASSWORD", password );
             outputter.endTag();
             
+            if(reference != null)
+            {
+                outputter.startTag( "REFERENCE" );
+                outputter.cdata( reference );
+                outputter.endTag();
+            }
+
             String senderId = fromName != null && !fromName.isEmpty() ? fromName : from;
-            for ( String to : emailNameMap.keySet() )
+            for ( String to : addressNameMap.keySet() )
             {
                 outputter.startTag( "MSG" );
                 outputter.startTag( "CONCATENATIONTYPE" );
                 outputter.cdata( type );
                 outputter.endTag();
-                
+
                 outputter.startTag( "FROM" );
                 outputter.cdata( senderId );
                 outputter.endTag();
@@ -172,15 +192,15 @@ public class CM {
         }
         catch ( Exception ex )
         {
-            log.severe( "Exception in creating question XML: " + ex.toString()+" xml: "+sw.toString() );
+            log.severe( "Exception in creating question XML: " + ex.toString() + " xml: " + sw.toString() );
             return null;
         }
 
-        log.info("XML created: "+ sw.toString());
+        log.info( "XML created: " + sw.toString() );
         //perform some unit by logging the XML generated
-        if(ServerUtils.isInUnitTestingEnvironment())
+        if ( ServerUtils.isInUnitTestingEnvironment() )
         {
-            TestFramework.log(sw.toString());
+            TestFramework.log( sw.toString() );
         }
         return sw;
     }

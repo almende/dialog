@@ -80,7 +80,7 @@ public class CMSmsServlet extends TextServlet {
                 try
                 {
                     handleDeliveryStatusReport( req.getParameter( "reference" ), req.getParameter( "sent" ),
-                        req.getParameter( "received" ), req.getParameter( "recipient" ),
+                        req.getParameter( "received" ), req.getParameter( "to" ),
                         req.getParameter( "statuscode" ), req.getParameter( "errorcode" ),
                         req.getParameter( "errordescription" ) );
                 }

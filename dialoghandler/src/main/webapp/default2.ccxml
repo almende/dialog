@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ccxml version="1.0" xmlns="http://www.w3.org/2002/09/ccxml">
+  <var name="remoteID" expr="''"/>
+  <var name="localID" expr="''"/>
+  <var name="direction" expr="'inbound'"/>
+  <var name="timeout" expr="'10s'" />
+  <var name="incomingCallConnId" expr="''" />
+  <var name="outgoingCallConnId" expr="''" />
+  <var name="outerConn" expr="''" />
+  <var name="dialogID" expr="''"/>
+  <var name="dialURL" expr="''" />
+  <var name="results" expr="''" />
+  <var name="vxmlScript" expr="'/vxml/new'" />
+  <var name="vxmlContinue" expr="'/vxml/continue'" />
+  <var name="currentState" expr="'initial'" />
+  <eventprocessor statevariable="currentState" >
+    <transition state="initial" event="connection.alerting">
+      <assign name="incomingCallConnId" expr="event$.connectionid"/>
+      <assign name="outerConn" expr="event$.connectionid"/>
+      <script>
+          var remote = event$.connection.remote;
+          var strings = remote.split('@');
+
+          localID = event$.connection.local;
+          remoteID = strings[0];
+          var domain   = strings[1];
+          if (domain.substring(0,8) == "outbound") {
+            direction = "outbound";
+            dialURL = "sip:"+remoteID+"@asb-02.voipit.nl";
+          }
+        </script>
+        <if cond="direction == 'outbound'">
+            <createcall dest="dialURL" connectionid="incomingCallConnId" timeout="timeout" />
+        <else />
+          <accept connectionid="incomingCallConnId"/>
+        </if>
+    </transition>
+
+    <transition state="initial" event="connection.connected">
+      <dialogstart src="vxmlScript" connectionid="incomingCallConnId" dialogid="dialogID" namelist="direction localID remoteID"/>
+      <assign name="currentState" expr="'connestablished'" />
+    </transition>
+
+    <transition state="connestablished" event="dialog.transfer">
+
+      <if cond="event$.type == 'blind'">
+        <assign name="currentState" expr="'redirecting'" />
+        <redirect connectionid="incomingCallConnId" dest="event$.URI" />
+      <else />
+        <script>
+          var remote = event$.URI;
+          var strings = remote.split(':');
+          if(strings[0] == "tel")
+            dialURL = "sip:"+strings[1]+"@asb-02.voipit.nl";
+ 		</script>
+        <assign name="currentState" expr="'originatingcall'" />
+        <createcall dest="dialURL" connectionid="outgoingCallConnId" />
+      </if>
+    </transition>
+    
+    <transition state="originatingcall" event="connection.failed">
+	  <assign name="results" expr="event$.reason"/>
+	  <send name="'dialog.transfer.complete'"
+			target="dialogID"
+			targettype="'dialog'"
+			namelist="results" />
+	</transition>
+
+    <transition state="originatingcall" event="connection.connected">
+      <unjoin id1="incomingCallConnId" id2="dialogID" />
+      <join id1="incomingCallConnId" id2="outgoingCallConnId" duplex="'full'"/>
+      <assign name="currentState" expr="'conferenceestablished'" />
+    </transition>
+
+    <transition state="conferenceestablished" event="connection.disconnected">
+      <if cond="event$.connectionid == outgoingCallConnId" >
+        <dialogstart src="vxmlContinue" connectionid="incomingCallConnId" dialogid="dialogID" namelist="direction localID remoteID"/>
+        <assign name="currentState" expr="'connestablished'" />
+      <else />
+        <accept connectionid="outerConn"/>
+        <exit/>
+      </if>
+    </transition>
+    
+    <transition state="originatingcall" event="connection.disconnected">
+	  <if cond="event$.connectionid == incomingCallConnId" >
+	    <disconnect connectionid="outgoingCallConnId"/>
+	  </if>
+	</transition>
+	 
+    <transition event="connection.disconnected">
+      <accept connectionid="outerConn"/>
+      <exit/>
+    </transition>
+
+    <transition state="connestablished" event="dialog.exit">
+      <accept connectionid="outerConn"/>
+      <exit/>
+    </transition>
+
+    <transition event="conference.destroyed" >
+      <exit />
+    </transition>
+
+    <transition event="connection.failed">
+      <exit/>
+    </transition>
+
+  </eventprocessor>
+</ccxml>

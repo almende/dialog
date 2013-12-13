@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Ask.Bootstrap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ask Bootstrap: a compilation of frameworks with handy scripts and styles, ready for cooking a new project or web app immediately.">
+    <meta name="author" content="Compiled and maintained by Cengiz Ulusoy. Refer to 'copyrights' section for licences of the components used in this project.">
+
+    <!-- Le styles -->
+    <link href="/src/css/bootstrap.css" rel="stylesheet">
+    <link href="/src/css/responsive.css" rel="stylesheet">
+    
+    <link href="/docs/js/google/prettify/prettify.css" rel="stylesheet">
+    
+    <link href="/docs/css/docs.css" rel="stylesheet">
+    
+    <link href="/docs/js/google/prettify/prettify.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="/src/img/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/src/img/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/src/img/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/src/img/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="/src/img/ico/apple-touch-icon-57-precomposed.png">
+    
+  </head>
+
+  <body>
+
+    <!-- Navbar
+    ================================================== -->
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="/docs/index.html">Ask.Bootstrap</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="">
+                <a href="/docs/index.html">Home</a>
+              </li>
+              <li class="">
+                <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+              </li>
+              <li class="">
+                <a href="/docs/base-css/typography.html">Base CSS</a>
+              </li>
+              <li class="">
+                <a href="/docs/components/dropdowns.html">Components</a>
+              </li>
+              <li class="active">
+                <a href="/docs/javascript/overview.html">JavaScript</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Subhead
+================================================== -->
+<header class="jumbotron subhead">
+  <div class="container">
+    <h1>JavaScript</h1>
+    <p class="lead">Bring Bootstrap's components to life&mdash;now with 13 custom jQuery plugins.
+  </div>
+</header>
+
+  <div class="container">
+
+    <!-- Docs nav
+    ================================================== -->
+    <div class="row">
+      <div class="span3">
+        <ul class="nav nav-tabs nav-stacked">
+          <li><a href="/docs/javascript/overview.html"><i class="icon-chevron-right"></i> Overview</a></li>
+          <li><a href="/docs/javascript/transitions.html"><i class="icon-chevron-right"></i> Transitions</a></li>
+          <li><a href="/docs/javascript/modals.html"><i class="icon-chevron-right"></i> Modal</a></li>
+          <li><a href="/docs/javascript/dropdowns.html"><i class="icon-chevron-right"></i> Dropdown</a></li>
+          <li><a href="/docs/javascript/scrollspy.html"><i class="icon-chevron-right"></i> Scrollspy</a></li>
+          <li><a href="/docs/javascript/tabs.html"><i class="icon-chevron-right"></i> Tab</a></li>
+          <li><a href="/docs/javascript/tooltips.html"><i class="icon-chevron-right"></i> Tooltip</a></li>
+          <li><a href="/docs/javascript/popovers.html"><i class="icon-chevron-right"></i> Popover</a></li>
+          <li><a href="/docs/javascript/alerts.html"><i class="icon-chevron-right"></i> Alert</a></li>
+          <li><a href="/docs/javascript/buttons.html"><i class="icon-chevron-right"></i> Button</a></li>
+          <li><a href="/docs/javascript/collapse.html"><i class="icon-chevron-right"></i> Collapse</a></li>
+          <li><a href="/docs/javascript/carousel.html"><i class="icon-chevron-right"></i> Carousel</a></li>
+          <li class="active"><a href="/docs/javascript/typeahead.html"><i class="icon-chevron-right"></i> Typeahead</a></li>
+          <li><a href="/docs/javascript/affix.html"><i class="icon-chevron-right"></i> Affix</a></li>
+          <li><a href="/docs/javascript/tables.html"><i class="icon-chevron-right"></i> Tables</a></li>
+          <li><a href="/docs/javascript/daterange.html"><i class="icon-chevron-right"></i> Date Range</a></li>
+          <li><a href="/docs/javascript/chosen.html"><i class="icon-chevron-right"></i> Chosen</a></li>
+        </ul>
+      </div>
+      <div class="span9">
+
+
+          <!-- Typeahead
+          ================================================== -->
+          <section id="typeahead">
+            <div class="page-header">
+              <h1>Typeahead <small>bootstrap-typeahead.js</small></h1>
+            </div>
+
+
+            <h2>Example</h2>
+            <p>A basic, easily extended plugin for quickly creating elegant typeaheads with any form text input.</p>
+            <div class="bs-docs-example">
+              <input type="text" class="span3" style="margin: 0 auto;" data-provide="typeahead" data-items="4" data-source='["Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware","Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Dakota","North Carolina","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia","Wisconsin","Wyoming"]'>
+            </div>
+            <pre class="prettyprint linenums">&lt;input type="text" data-provide="typeahead"&gt;</pre>
+
+
+            <hr class="bs-docs-separator">
+
+
+            <h2>Usage</h2>
+
+            <h3>Via data attributes</h3>
+            <p>Add data attributes to register an element with typeahead functionality as shown in the example above.</p>
+
+            <h3>Via JavaScript</h3>
+            <p>Call the typeahead manually with:</p>
+            <pre class="prettyprint linenums">$('.typeahead').typeahead()</pre>
+
+            <h3>Options</h3>
+            <p>Options can be passed via data attributes or JavaScript. For data attributes, append the option name to <code>data-</code>, as in <code>data-source=""</code>.</p>
+            <table class="table table-bordered table-striped">
+              <thead>
+               <tr>
+                 <th style="width: 100px;">Name</th>
+                 <th style="width: 50px;">type</th>
+                 <th style="width: 100px;">default</th>
+                 <th>description</th>
+               </tr>
+              </thead>
+              <tbody>
+                <tr>
+                 <td>source</td>
+                 <td>array, function</td>
+                 <td>[ ]</td>
+                 <td>The data source to query against. May be an array of strings or a function. The function is passed two arguments, the <code>query</code> value in the input field and the <code>process</code> callback. The function may be used synchronously by returning the data source directly or asynchronously via the <code>process</code> callback's single argument.</td>
+               </tr>
+               <tr>
+                 <td>items</td>
+                 <td>number</td>
+                 <td>8</td>
+                 <td>The max number of items to display in the dropdown.</td>
+               </tr>
+               <tr>
+                 <td>minLength</td>
+                 <td>number</td>
+                 <td>1</td>
+                 <td>The minimum character length needed before triggering autocomplete suggestions</td>
+               </tr>
+               <tr>
+                 <td>matcher</td>
+                 <td>function</td>
+                 <td>case insensitive</td>
+                 <td>The method used to determine if a query matches an item. Accepts a single argument, the <code>item</code> against which to test the query. Access the current query with <code>this.query</code>. Return a boolean <code>true</code> if query is a match.</td>
+               </tr>
+               <tr>
+                 <td>sorter</td>
+                 <td>function</td>
+                 <td>exact match,<br> case sensitive,<br> case insensitive</td>
+                 <td>Method used to sort autocomplete results. Accepts a single argument <code>items</code> and has the scope of the typeahead instance. Reference the current query with <code>this.query</code>.</td>
+               </tr>
+               <tr>
+                 <td>updater</td>
+                 <td>function</td>
+                 <td>returns selected item</td>
+                 <td>The method used to return selected item. Accepts a single argument, the <code>item</code> and has the scope of the typeahead instance.</td>
+               </tr>
+               <tr>
+                 <td>highlighter</td>
+                 <td>function</td>
+                 <td>highlights all default matches</td>
+                 <td>Method used to highlight autocomplete results. Accepts a single argument <code>item</code> and has the scope of the typeahead instance. Should return html.</td>
+               </tr>
+              </tbody>
+            </table>
+
+            <h3>Methods</h3>
+            <h4>.typeahead(options)</h4>
+            <p>Initializes an input with a typeahead.</p>
+          </section>
+
+
+
+      </div>
+    </div>
+
+  </div>
+
+
+
+    <!-- Footer
+    ================================================== -->
+    <footer class="footer">
+      <div class="container" style="font-size:12px;">
+        <p class="pull-right"><a href="#">Back to top</a><br><br></p>
+        
+        <p>Ask.Bootstrap (v 0.1.0) is a front-end framework combinations of mainly <a href="http://html5boilerplate.com/">HTML5 Boilerplate</a>, <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a> with other additional handy libraries.<br>
+        Project is maintained by <a href="http://www.twitter.com/cengizism" target="_blank">Cengiz Ulusoy</a> at <a href="http://www.ask-cs.nl/" target="_blank">Ask Community Systems</a>, Rotterdam.<br>
+        Please read <a href="/docs/index.html#copyrights">copyrights</a> section for more information about the creators of the frameworks and components used in this project.</p>
+        
+        <ul class="footer-links">
+          <li class="">
+            <a href="/docs/index.html">Home</a>
+          </li>
+          <li class="">
+            <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+          </li>
+          <li class="">
+            <a href="/docs/base-css/typography.html">Base CSS</a>
+          </li>
+          <li class="">
+            <a href="/docs/components/dropdowns.html">Components</a>
+          </li>
+          <li class="">
+            <a href="/docs/javascript/overview.html">JavaScript</a>
+          </li>
+        </ul>
+        
+      </div>
+    </footer>
+
+
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    
+    <script src="/src/js/libs/jquery/jquery.js"></script>
+    <script src="/src/js/libs/bootstrap/bootstrap.js"></script>
+    <script src="/src/js/libs/vendor/prefixfree.min.js"></script>
+    
+    <script src="/docs/js/google/prettify/prettify.js"></script>
+    
+    <script src="/docs/js/application.js"></script>
+
+  </body>
+</html>

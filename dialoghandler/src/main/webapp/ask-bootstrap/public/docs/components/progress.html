@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Ask.Bootstrap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ask Bootstrap: a compilation of frameworks with handy scripts and styles, ready for cooking a new project or web app immediately.">
+    <meta name="author" content="Compiled and maintained by Cengiz Ulusoy. Refer to 'copyrights' section for licences of the components used in this project.">
+
+    <!-- Le styles -->
+    <link href="/src/css/bootstrap.css" rel="stylesheet">
+    <link href="/src/css/responsive.css" rel="stylesheet">
+    
+    <link href="/docs/js/google/prettify/prettify.css" rel="stylesheet">
+    
+    <link href="/docs/css/docs.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="/src/img/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/src/img/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/src/img/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/src/img/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="/src/img/ico/apple-touch-icon-57-precomposed.png">
+    
+  </head>
+
+  <body>
+
+    <!-- Navbar
+    ================================================== -->
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="index.html">Ask.Bootstrap</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="">
+                <a href="/docs/index.html">Home</a>
+              </li>
+              <li class="">
+                <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+              </li>
+              <li class="">
+                <a href="/docs/base-css/typography.html">Base CSS</a>
+              </li>
+              <li class="active">
+                <a href="/docs/components/dropdowns.html">Components</a>
+              </li>
+              <li class="">
+                <a href="/docs/javascript/overview.html">JavaScript</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Subhead
+================================================== -->
+<header class="jumbotron subhead" id="overview">
+  <div class="container">
+    <h1>Components</h1>
+    <p class="lead">Dozens of reusable components built to provide navigation, alerts, popovers, and more.</p>
+  </div>
+</header>
+
+
+  <div class="container">
+
+    <!-- Docs nav
+    ================================================== -->
+    <div class="row">
+      <div class="span3">
+        <ul class="nav nav-tabs nav-stacked">
+          <li><a href="/docs/components/dropdowns.html"><i class="icon-chevron-right"></i> Dropdowns</a></li>
+          <li><a href="/docs/components/button_groups.html"><i class="icon-chevron-right"></i> Button groups</a></li>
+          <li><a href="/docs/components/button_dropdowns.html"><i class="icon-chevron-right"></i> Button dropdowns</a></li>
+          <li><a href="/docs/components/navs.html"><i class="icon-chevron-right"></i> Navs</a></li>
+          <li><a href="/docs/components/navbar.html"><i class="icon-chevron-right"></i> Navbar</a></li>
+          <li><a href="/docs/components/breadcrumbs.html"><i class="icon-chevron-right"></i> Breadcrumbs</a></li>
+          <li><a href="/docs/components/pagination.html"><i class="icon-chevron-right"></i> Pagination</a></li>
+          <li><a href="/docs/components/labels_badges.html"><i class="icon-chevron-right"></i> Labels and badges</a></li>
+          <li><a href="/docs/components/typography.html"><i class="icon-chevron-right"></i> Typography</a></li>
+          <li><a href="/docs/components/thumbnails.html"><i class="icon-chevron-right"></i> Thumbnails</a></li>
+          <li><a href="/docs/components/alerts.html"><i class="icon-chevron-right"></i> Alerts</a></li>
+          <li class="active"><a href="/docs/components/progress.html"><i class="icon-chevron-right"></i> Progress bars</a></li>
+          <li><a href="/docs/components/media.html"><i class="icon-chevron-right"></i> Media object</a></li>
+          <li><a href="/docs/components/misc.html"><i class="icon-chevron-right"></i> Misc</a></li>
+        </ul>
+      </div>
+      <div class="span9">
+
+
+        <!-- Progress bars
+        ================================================== -->
+        <section id="progress">
+          <div class="page-header">
+            <h1>Progress bars <small>For loading, redirecting, or action status</small></h1>
+          </div>
+
+          <h2>Examples and markup</h2>
+
+          <h3>Basic</h3>
+          <p>Default progress bar with a vertical gradient.</p>
+          <div class="bs-docs-example">
+            <div class="progress">
+              <div class="bar" style="width: 60%;"></div>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="progress"&gt;
+  &lt;div class="bar" style="width: 60%;"&gt;&lt;/div&gt;
+&lt;/div&gt;
+</pre>
+
+          <h3>Striped</h3>
+          <p>Uses a gradient to create a striped effect. Not available in IE7-8.</p>
+          <div class="bs-docs-example">
+            <div class="progress progress-striped">
+              <div class="bar" style="width: 20%;"></div>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="progress progress-striped"&gt;
+  &lt;div class="bar" style="width: 20%;"&gt;&lt;/div&gt;
+&lt;/div&gt;
+</pre>
+
+          <h3>Animated</h3>
+          <p>Add <code>.active</code> to <code>.progress-striped</code> to animate the stripes right to left. Not available in all versions of IE.</p>
+          <div class="bs-docs-example">
+            <div class="progress progress-striped active">
+              <div class="bar" style="width: 45%"></div>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="progress progress-striped active"&gt;
+  &lt;div class="bar" style="width: 40%;"&gt;&lt;/div&gt;
+&lt;/div&gt;
+</pre>
+
+          <h3>Stacked</h3>
+          <p>Place multiple bars into the same <code>.progress</code> to stack them.</p>
+          <div class="bs-docs-example">
+            <div class="progress">
+              <div class="bar bar-success" style="width: 35%"></div>
+              <div class="bar bar-warning" style="width: 20%"></div>
+              <div class="bar bar-danger" style="width: 10%"></div>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="progress"&gt;
+  &lt;div class="bar bar-success" style="width: 35%;"&gt;&lt;/div&gt;
+  &lt;div class="bar bar-warning" style="width: 20%;"&gt;&lt;/div&gt;
+  &lt;div class="bar bar-danger" style="width: 10%;"&gt;&lt;/div&gt;
+&lt;/div&gt;
+</pre>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Options</h2>
+
+          <h3>Additional colors</h3>
+          <p>Progress bars use some of the same button and alert classes for consistent styles.</p>
+          <div class="bs-docs-example">
+            <div class="progress progress-info" style="margin-bottom: 9px;">
+              <div class="bar" style="width: 20%"></div>
+            </div>
+            <div class="progress progress-success" style="margin-bottom: 9px;">
+              <div class="bar" style="width: 40%"></div>
+            </div>
+            <div class="progress progress-warning" style="margin-bottom: 9px;">
+              <div class="bar" style="width: 60%"></div>
+            </div>
+            <div class="progress progress-danger">
+              <div class="bar" style="width: 80%"></div>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="progress progress-info"&gt;
+  &lt;div class="bar" style="width: 20%"&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="progress progress-success"&gt;
+  &lt;div class="bar" style="width: 40%"&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="progress progress-warning"&gt;
+  &lt;div class="bar" style="width: 60%"&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="progress progress-danger"&gt;
+  &lt;div class="bar" style="width: 80%"&gt;&lt;/div&gt;
+&lt;/div&gt;
+</pre>
+
+          <h3>Striped bars</h3>
+          <p>Similar to the solid colors, we have varied striped progress bars.</p>
+          <div class="bs-docs-example">
+            <div class="progress progress-info progress-striped" style="margin-bottom: 9px;">
+              <div class="bar" style="width: 20%"></div>
+            </div>
+            <div class="progress progress-success progress-striped" style="margin-bottom: 9px;">
+              <div class="bar" style="width: 40%"></div>
+            </div>
+            <div class="progress progress-warning progress-striped" style="margin-bottom: 9px;">
+              <div class="bar" style="width: 60%"></div>
+            </div>
+            <div class="progress progress-danger progress-striped">
+              <div class="bar" style="width: 80%"></div>
+            </div>
+          </div>
+<pre class="prettyprint linenums">
+&lt;div class="progress progress-info progress-striped"&gt;
+  &lt;div class="bar" style="width: 20%"&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="progress progress-success progress-striped"&gt;
+  &lt;div class="bar" style="width: 40%"&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="progress progress-warning progress-striped"&gt;
+  &lt;div class="bar" style="width: 60%"&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="progress progress-danger progress-striped"&gt;
+  &lt;div class="bar" style="width: 80%"&gt;&lt;/div&gt;
+&lt;/div&gt;
+</pre>
+
+
+          <hr class="bs-docs-separator">
+
+
+          <h2>Browser support</h2>
+          <p>Progress bars use CSS3 gradients, transitions, and animations to achieve all their effects. These features are not supported in IE7-9 or older versions of Firefox.</p>
+          <p>Versions earlier than Internet Explorer 10 and Opera 12 do not support animations.</p>
+
+        </section>
+
+
+      </div>
+    </div>
+
+  </div>
+
+
+
+    <!-- Footer
+    ================================================== -->
+    <footer class="footer">
+      <div class="container" style="font-size:12px;">
+        <p class="pull-right"><a href="#">Back to top</a><br><br></p>
+        
+        <p>Ask.Bootstrap (v 0.1.0) is a front-end framework combinations of mainly <a href="http://html5boilerplate.com/">HTML5 Boilerplate</a>, <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a> with other additional handy libraries.<br>
+        Project is maintained by <a href="http://www.twitter.com/cengizism" target="_blank">Cengiz Ulusoy</a> at <a href="http://www.ask-cs.nl/" target="_blank">Ask Community Systems</a>, Rotterdam.<br>
+        Please read <a href="/docs/index.html#copyrights">copyrights</a> section for more information about the creators of the frameworks and components used in this project.</p>
+        
+        <ul class="footer-links">
+          <li class="">
+            <a href="/docs/index.html">Home</a>
+          </li>
+          <li class="">
+            <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+          </li>
+          <li class="">
+            <a href="/docs/base-css/typography.html">Base CSS</a>
+          </li>
+          <li class="">
+            <a href="/docs/components/dropdowns.html">Components</a>
+          </li>
+          <li class="">
+            <a href="/docs/javascript/overview.html">JavaScript</a>
+          </li>
+        </ul>
+        
+      </div>
+    </footer>
+
+
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    
+    <script src="/src/js/libs/jquery/jquery.js"></script>
+    <script src="/src/js/libs/bootstrap/bootstrap.js"></script>
+    <script src="/src/js/libs/vendor/prefixfree.min.js"></script>
+    
+    <script src="/docs/js/google/prettify/prettify.js"></script>
+    
+    <script src="/docs/js/application.js"></script>
+
+  </body>
+</html>

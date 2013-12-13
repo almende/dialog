@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+
+<grammar mode="dtmf" version="1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.w3.org/2001/06/grammar http://www.w3.org/TR/speech-grammar/grammar.xsd" xmlns="http://www.w3.org/2001/06/grammar"  root="untilHash" >
+	<rule id="digit">
+		<one-of>
+			<item> 0 </item>
+			<item> 1 </item>
+			<item> 2 </item>
+			<item> 3 </item>
+			<item> 4 </item>
+			<item> 5 </item>
+			<item> 6 </item>
+			<item> 7 </item>
+			<item> 8 </item>
+			<item> 9 </item>
+			<item> * </item>
+		</one-of>
+	</rule>
+	<rule id="untilHash" scope="public">
+		<one-of>
+			<item repeat="0-"><ruleref uri="#digit"/></item>
+			<item> # </item>
+		</one-of>
+	</rule>
+</grammar>

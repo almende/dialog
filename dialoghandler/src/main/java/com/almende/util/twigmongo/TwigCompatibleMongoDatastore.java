@@ -52,8 +52,14 @@ public class TwigCompatibleMongoDatastore {
 				clazz);
 		return val;
 	}
-	
+
 	public void update(Object document) {
+		update(document,false);
+	}
+	public void storeOrUpdate(Object document) {
+		update(document,true);
+	}
+	private void update(Object document, boolean add) {
 		AnnotatedField keyField = getKeyField(document.getClass());
 		try {
 			Object key = keyField.getField().get(document);
@@ -67,7 +73,7 @@ public class TwigCompatibleMongoDatastore {
 			
 			BasicDBObject doc = JOM.getInstance().convertValue(document,
 					BasicDBObject.class);
-			table.update(searchQuery, doc);
+			table.update(searchQuery, doc, add, false);
 		} catch (Exception e) {
 			System.err.println("Warning: Couldn't get key field from:"
 					+ document.getClass());

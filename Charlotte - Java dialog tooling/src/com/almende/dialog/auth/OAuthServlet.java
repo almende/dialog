@@ -160,7 +160,7 @@ public class OAuthServlet extends HttpServlet {
 			Verifier v = new Verifier(oauthVerifier);
 			Token accessToken = this.service.getAccessToken(requestToken, v);
 			
-			OAuthRequest request = new OAuthRequest(Verb.GET, "http://api.twitter.com/1/account/verify_credentials.json");
+			OAuthRequest request = new OAuthRequest(Verb.GET, "http://api.twitter.com/1.1/account/verify_credentials.json");
 			this.service.signRequest(accessToken, request);
 			Response response = request.send();
 			

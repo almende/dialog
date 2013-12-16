@@ -38,7 +38,7 @@ import com.google.appengine.api.taskqueue.TaskOptions.Method;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
-	protected static final Logger log = Logger.getLogger(TextServlet.class.getSimpleName());
+    protected static final Logger log = Logger.getLogger(TextServlet.class.getSimpleName());
 	protected static final int LOOP_DETECTION=10;
 	protected static final String DEMODIALOG = "/charlotte/";
 	protected String sessionKey = null;
@@ -217,6 +217,9 @@ abstract public class TextServlet extends HttpServlet {
 
         //fetch question
         Question question = Question.fromURL( url, config.getConfigId(), loadAddress );
+        //store the extra information
+        Map<String, Object> extras = new HashMap<String, Object>();
+        extras.put( "media_properties", question.getMedia_properties() );
         String preferred_language = StringStore.getString( loadAddress + "_language" );
         if ( preferred_language == null )
         {
@@ -224,8 +227,6 @@ abstract public class TextServlet extends HttpServlet {
         }
         question.setPreferred_language( preferred_language );
         Return res = formQuestion( question, config.getConfigId(), loadAddress );
-        //store the extra information
-        Map<String, Object> extras = new HashMap<String, Object>();
         //add addresses in cc and bcc map
         HashMap<String, String> fullAddressMap = new HashMap<String, String>(addressNameMap);
         if(addressCcNameMap != null)
@@ -339,15 +340,22 @@ abstract public class TextServlet extends HttpServlet {
 
         try
         {
-            processMessage(msg);
+            processMessage( msg );
         }
-        catch (Exception e)
+        catch ( Exception e )
         {
-            log.severe(e.getLocalizedMessage());
+            log.severe( e.getLocalizedMessage() );
             e.printStackTrace();
         }
     }
 	
+	/**
+	 * processes any message (based on a Dialog) and takes actions like sending, broadcasting corresponding messages. 
+	 * @param msg
+	 * @param extras
+	 * @return
+	 * @throws Exception
+	 */
 	protected int processMessage(TextMessage msg) throws  Exception
     {
 		String localaddress = msg.getLocalAddress();
@@ -359,7 +367,7 @@ abstract public class TextServlet extends HttpServlet {
 		String fromName="DH";
 		int count=0;
 		
-		Map<String, Object> extras = new HashMap<String, Object>();		
+		Map<String, Object> extras = msg.getExtras();
 		AdapterConfig config;
 		Session session = Session.getSession(getAdapterType()+"|"+localaddress+"|"+address, keyword);
 		// If session is null it means the adapter is not found.
@@ -487,6 +495,7 @@ abstract public class TextServlet extends HttpServlet {
 		} 
 		catch(Exception ex) 
 		{
+		    log.severe( "Message sending failed. Message: "+ ex.getLocalizedMessage() );
 		}
 		for(int i=0;i<count;i++) 
 		{ 

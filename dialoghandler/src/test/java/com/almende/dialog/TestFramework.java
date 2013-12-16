@@ -32,12 +32,6 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.test.TestServlet;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
-import com.google.appengine.api.xmpp.JID;
-import com.google.appengine.api.xmpp.Message;
-import com.google.appengine.api.xmpp.MessageBuilder;
-import com.google.appengine.api.xmpp.MessageType;
-import com.google.appengine.tools.development.testing.LocalDatastoreServiceTestConfig;
-import com.google.appengine.tools.development.testing.LocalServiceTestHelper;
 import com.google.common.io.ByteStreams;
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.PostMethodWebRequest;
@@ -193,38 +187,6 @@ public class TestFramework
                     Collection<Object> argObjects ) throws Exception
     {
         return methodToBeFetched.invoke( targetObject, argObjects.toArray( new Object[argObjects.size()] ));
-    }
-    
-    public static Message getTestXMPPMessage(String localAddress, String remoteAddress, String body) throws Exception
-    {
-        MessageBuilder builder = new MessageBuilder();
-        builder.withMessageType( MessageType.CHAT );
-        MimeMultipart multipart = getTestMimeMultipart( remoteAddress, localAddress, body, null);
-        int parts = multipart.getCount();
-        for ( int i = 0; i < parts; i++ )
-        {
-            BodyPart part = multipart.getBodyPart( i );
-            String fieldName = getFieldName( part );
-            if ( "from".equals( fieldName ) )
-            {
-                builder.withFromJid( new JID( getTextContent( part ) ) );
-            }
-            else if ( "to".equals( fieldName ) )
-            {
-                builder.withRecipientJids( new JID( getTextContent( part ) ) );
-            }
-            else if ( "body".equals( fieldName ) )
-            {
-                builder.withBody( getTextContent( part ) );
-            }
-            else if ( "stanza".equals( fieldName ) )
-            {
-                Method withStanzaMethod = fetchMethodByReflection( "withStanza", MessageBuilder.class, String.class );
-                invokeMethodByReflection( withStanzaMethod, builder, getTextContent( part ) );
-            }
-        }
-
-        return builder.build();
     }
     
     public static MimeMultipart getTestMimeMultipart(String from, String to, String body, String stanza) throws MessagingException

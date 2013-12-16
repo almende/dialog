@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.almende.util.twigmongo.FilterOperator;
+import com.almende.util.twigmongo.SortDirection;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 

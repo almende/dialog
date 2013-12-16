@@ -20,6 +20,8 @@ import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.appengine.api.utils.SystemProperty;
+import com.google.appengine.api.utils.SystemProperty.Environment.Value;
 
 
 public class ServerUtils
@@ -108,6 +110,20 @@ public class ServerUtils
         return new String( sb );
     }
 
+    public static boolean isInLocalDevelopmentServerEnvironment()
+    {
+        return SystemProperty.environment.value() == Value.Development;
+    }
+
+    public static boolean isInDeployedAppspotEnvironment()
+    {
+        return SystemProperty.environment.value() == Value.Production;
+    }
+
+    public static boolean isInUnitTestingEnvironment()
+    {
+        return SystemProperty.environment.value() == null;
+    }
     
     /**
      * returns the url by adding the queryKey=queryValue based on if a query param is 
@@ -162,8 +178,4 @@ public class ServerUtils
     {
         return getServerCurrentTime().getMillis();
     }
-
-	public static boolean isInUnitTestingEnvironment() {
-		return false;
-	}
 }

@@ -121,40 +121,69 @@ public class TwigCompatibleMongoDatastore {
 		return result;
 	}
 	
-	public FindCommand find(){
+	public FindCommand find() {
 		return new FindCommand();
 	}
-	public <T> QueryResultIterator<T> find(Class<T> clazz){
+	
+	public <T> QueryResultIterator<T> find(Class<T> clazz) {
 		RootFindCommand<T> fc = find().type(clazz);
 		return fc.now();
 	}
-	public class FindCommand{
-		public <T> RootFindCommand<T> type(Class<T> clazz){
+	
+	public class FindCommand {
+		public <T> RootFindCommand<T> type(Class<T> clazz) {
 			return new RootFindCommand<T>(clazz);
 		}
 	}
-	public class RootFindCommand<T>{
-		private Class<T> clazz = null;
-		private BasicDBObject searchQuery = new BasicDBObject();
+	
+	public class RootFindCommand<T> {
+		private Class<T>		clazz		= null;
+		private BasicDBObject	searchQuery	= new BasicDBObject();
+		private BasicDBObject	orderBy		= new BasicDBObject();
+		private int				offset		= 0;
+		private int				max			= Integer.MAX_VALUE;
+		
 		public RootFindCommand(Class<T> clazz) {
-			this.clazz=clazz;
+			this.clazz = clazz;
 		}
-		public RootFindCommand<T> addFilter(String fieldName, String operator, Object value){
-			if (operator == null || operator.equals("")){
-				searchQuery.append(fieldName, value); 
+		
+		public RootFindCommand<T> addFilter(String fieldName,
+				FilterOperator operator, Object value) {
+			if (operator == null || operator.equals("")) {
+				searchQuery.append(fieldName, value);
 			} else {
-				searchQuery.append(fieldName, new BasicDBObject(operator,value));
+				searchQuery.append(fieldName,
+						new BasicDBObject(operator.getOperator(), value));
 			}
 			return this;
 		}
-		public QueryResultIterator<T> now(){
+		
+		public QueryResultIterator<T> now() {
 			String collectionName = clazz.getCanonicalName().toLowerCase()
 					+ "s";
 			DBCollection table = ParallelInit.getDatastore().getCollection(
 					collectionName);
-			//TODO: Spannend:)
+			// TODO: Spannend:)
 			DBCursor cursor = table.find(searchQuery);
-			return new QueryResultIterator<T>(clazz,cursor);
+			if (!orderBy.isEmpty()) {
+				cursor.sort(orderBy);
+			}
+			cursor.limit(max);
+			cursor.skip(offset);
+			
+			return new QueryResultIterator<T>(clazz, cursor);
+		}
+		
+		public void startFrom(int offset) {
+			this.offset = offset;
+		}
+		
+		public void fetchMaximum(int max) {
+			this.max = max;
+		}
+		
+		public void addSort(String fieldname, SortDirection dir) {
+			orderBy.append(fieldname, dir.getDirection());
 		}
 	}
 	

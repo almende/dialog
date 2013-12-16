@@ -179,10 +179,11 @@ public class DialogAgent extends Agent {
 					config.getConfigId(), config.getAdapterType()));
 			adapterType = config.getAdapterType();
 			try {
-				if (adapterType.toUpperCase().equals("XMPP")) {
+				/*if (adapterType.toUpperCase().equals("XMPP")) {
 					resultSessionMap = new XMPPServlet().startDialog(
 							addressMap, url, senderName, subject, config);
-				} else if (adapterType.toUpperCase().equals("BROADSOFT")) {
+				} else*/ 
+				if (adapterType.toUpperCase().equals("BROADSOFT")) {
 					// fetch the first address in the map
 					if (!addressMap.keySet().isEmpty()) {
 						resultSessionMap = VoiceXMLRESTProxy.dial(addressMap,
@@ -205,7 +206,7 @@ public class DialogAgent extends Agent {
 							addressMap, url, senderName, subject, config);
 				} else {
 					throw new Exception(
-							"Unknown type given: either broadsoft or xmpp or phone or mail");
+							"Unknown type given: either broadsoft or phone or mail:"+adapterType.toUpperCase());
 				}
 			} catch (Exception e) {
 				JSONRPCException jse = new JSONRPCException();

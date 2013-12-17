@@ -3,6 +3,12 @@ package com.almende.dialog;
 import com.almende.dialog.util.ServerUtils;
 
 public class Settings {
+	public static final Object Development = new Object();
+	public static final Object Production = new Object();
+	
+	public static Object environment(){
+		return Development;
+	}
 	
 	// public static final String HOST="char-a-lot.appspot.com";
 	// public static String KEYSERVER=null;

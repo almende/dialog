@@ -10,6 +10,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.entity.Item;
+import com.almende.util.myBlobstore.BlobKey;
+import com.almende.util.myBlobstore.MyBlobStore;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.QueryResultIterator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
@@ -17,41 +19,17 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 public class TwigStore {
 	
 	protected TwigCompatibleMongoDatastore datastore;
-	protected BlobstoreService blobstore = BlobstoreServiceFactory.getBlobstoreService();
-	protected BlobInfoFactory blobmeta = new BlobInfoFactory();
+	protected MyBlobStore blobstore = new MyBlobStore();
 	
 	public TwigStore() {
-		super();
 		datastore = new TwigCompatibleMongoDatastore();
 	}
-	
-	public Item create( String path, String parent ) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
 	
 	public Item read( String path ) {
 		return datastore.load( Item.class, path );
 	}
 	
-	public Item update( Item item ) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	
-	public void save( Item item ) {
-		// TODO Auto-generated method stub
-		
-	}
-	
-	public void delete( Item item ) {
-		// TODO Auto-generated method stub
-		
-	}
-
 	public String createUploadUrl( String retpath ) {
-		// TODO Auto-generated method stub
 		return blobstore.createUploadUrl( retpath );
 	}
 	
@@ -65,7 +43,7 @@ public class TwigStore {
 		if ( list != null && list.size() >= 1 ) {
 			Date now = new Date();
 			BlobKey key = list.get( 0 );
-			BlobInfo info = blobmeta.loadBlobInfo( key );
+			
 			String[] split = path.split( "/" );
 			String stem = "/";
 			for ( int i = 1; i < split.length - 1; i++ ) {
@@ -89,9 +67,9 @@ public class TwigStore {
 			}
 			item.key = key;
 			item.modified = now;
-			item.etag = info.getMd5Hash();
-			item.type = info.getContentType();
-			item.length = info.getSize();
+			item.etag = blobstore.getHashCode(key);
+			item.type = blobstore.getContentType(key);
+			item.length = blobstore.getSize(key);
 			datastore.storeOrUpdate( item );
 		} else if ( item != null ) {
 			blobstore.delete( item.key );

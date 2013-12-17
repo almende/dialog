@@ -15,13 +15,12 @@ import javax.servlet.http.HttpServletRequest;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
+import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.DialogAgent;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.appengine.api.utils.SystemProperty;
-import com.google.appengine.api.utils.SystemProperty.Environment.Value;
 
 
 public class ServerUtils
@@ -112,17 +111,17 @@ public class ServerUtils
 
     public static boolean isInLocalDevelopmentServerEnvironment()
     {
-        return SystemProperty.environment.value() == Value.Development;
+        return Settings.environment() == Settings.Development;
     }
 
     public static boolean isInDeployedAppspotEnvironment()
     {
-        return SystemProperty.environment.value() == Value.Production;
+        return Settings.environment() == Settings.Production;
     }
 
     public static boolean isInUnitTestingEnvironment()
     {
-        return SystemProperty.environment.value() == null;
+        return Settings.environment() == null;
     }
     
     /**

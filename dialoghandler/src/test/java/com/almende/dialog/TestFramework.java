@@ -1,18 +1,12 @@
 package com.almende.dialog;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
 
-import javax.mail.BodyPart;
 import javax.mail.MessagingException;
-import javax.mail.internet.ContentDisposition;
-import javax.mail.internet.ContentType;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.InternetHeaders;
 import javax.mail.internet.MimeBodyPart;
@@ -32,7 +26,6 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.test.TestServlet;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
-import com.google.common.io.ByteStreams;
 import com.meterware.httpunit.GetMethodWebRequest;
 import com.meterware.httpunit.PostMethodWebRequest;
 import com.meterware.httpunit.WebRequest;
@@ -48,7 +41,8 @@ import com.sun.jersey.api.client.WebResource;
  */
 public class TestFramework
 {
-    private final LocalServiceTestHelper helper = new LocalServiceTestHelper( new LocalDatastoreServiceTestConfig() );
+	//TODO!
+//    private final LocalServiceTestHelper helper = new LocalServiceTestHelper( new LocalDatastoreServiceTestConfig() );
     protected static final String localAddressMail      = "info@dialog-handler.appspotmail.com";
     protected static final String localAddressChat      = "info@dialog-handler.appspotchat.com";
     protected static final String remoteAddressEmail         = "sshetty@ask-cs.com";
@@ -67,7 +61,7 @@ public class TestFramework
         servletRunner.remove();
         logObject.remove();
         responseQuestionString.remove();
-        helper.setUp();
+//        helper.setUp();
         if(servletRunner.get() == null)
         {
             servletRunner.set( setupTestServlet() );
@@ -77,7 +71,7 @@ public class TestFramework
     @After
     public void tearDown()
     {
-        helper.tearDown();
+//        helper.tearDown();
         servletRunner.remove();
         logObject.remove();
         responseQuestionString.remove();
@@ -222,7 +216,7 @@ public class TestFramework
         mimeMultipart.addBodyPart( new MimeBodyPart( internetHeaders, value.getBytes()) );
     }
     
-    private static String getFieldName( BodyPart part ) throws MessagingException
+   /* private static String getFieldName( BodyPart part ) throws MessagingException
     {
         String[] values = part.getHeader( "Content-Disposition" );
         String name = null;
@@ -251,7 +245,7 @@ public class TestFramework
         {
             return new String( baos.toByteArray() );
         }
-    }
+    }*/
     
     private ServletRunner setupTestServlet()
     {

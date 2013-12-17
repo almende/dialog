@@ -3,6 +3,7 @@ package com.almende.dialog.entity;
 import java.io.Serializable;
 import java.util.Date;
 
+import com.almende.util.myBlobstore.BlobKey;
 import com.almende.util.twigmongo.annotations.Id;
 
 public class Item

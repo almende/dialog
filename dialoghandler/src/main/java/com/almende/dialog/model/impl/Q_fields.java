@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Logger;
 
-import javax.ws.rs.HttpMethod;
-
-import com.almende.dialog.TestFramework;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.intf.QuestionIntf;
@@ -138,7 +135,8 @@ public class Q_fields implements QuestionIntf {
             }
             else
             {
-                text = TestFramework.fetchResponse( HttpMethod.GET, url, null );
+                  //TODO: fix TestFramework dependency (Maven doesn't include it during normal builds)
+//                text = TestFramework.fetchResponse( HttpMethod.GET, url, null );
             }
         }
         catch ( Exception e )

@@ -20,7 +20,6 @@ import javax.mail.internet.MimeMultipart;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.util.ServerUtils;
@@ -159,7 +158,8 @@ public class MailServlet extends TextServlet {
                                               fromName, from, toName, to, subject, message );
             if(ServerUtils.isInUnitTestingEnvironment())
             {
-                TestFramework.log( msg );
+                //TODO: fix TestFramework dependency (Maven doesn't include it during normal builds)
+//                TestFramework.log( msg );
             }
             log.info( logString );
             log.info("Send reply to mail post: "+(new Date().getTime()));
@@ -225,7 +225,8 @@ public class MailServlet extends TextServlet {
             msg.setContent( message, "text/html; charset=utf-8" );
             if(ServerUtils.isInUnitTestingEnvironment())
             {
-                TestFramework.log( msg );
+                //TODO: fix TestFramework dependency (Maven doesn't include it during normal builds)
+//                TestFramework.log( msg );
             }
             Transport.send( msg );
 

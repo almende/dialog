@@ -9,9 +9,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import javax.ws.rs.HttpMethod;
-
-import com.almende.dialog.TestFramework;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.impl.Q_fields;
@@ -121,7 +118,8 @@ public class Question implements QuestionIntf {
                 {
                     url = ServerUtils.getURLWithQueryParams( url, "responder", URLEncoder.encode( remoteID, "UTF-8" ) );
                     url = ServerUtils.getURLWithQueryParams( url, "requester", URLEncoder.encode( fromID, "UTF-8" ) );
-                    json = TestFramework.fetchResponse( HttpMethod.GET, url, null );
+                    //TODO: fix TestFramework dependency (Maven doesn't include it during normal builds)
+//                    json = TestFramework.fetchResponse( HttpMethod.GET, url, null );
                 }
                 catch ( UnsupportedEncodingException e )
                 {
@@ -360,7 +358,8 @@ public class Question implements QuestionIntf {
             }
             else
             {
-                newQuestionJSON = TestFramework.fetchResponse( HttpMethod.POST, answer.getCallback(), post );
+                //TODO: fix TestFramework dependency (Maven doesn't include it during normal builds)
+//                newQuestionJSON = TestFramework.fetchResponse( HttpMethod.POST, answer.getCallback(), post );
             }
 
             log.info( "Received new question (answer): " + newQuestionJSON );

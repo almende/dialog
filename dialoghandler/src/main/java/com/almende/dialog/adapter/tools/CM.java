@@ -7,7 +7,6 @@ import java.util.logging.Logger;
 
 import org.znerd.xmlenc.XMLOutputter;
 
-import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
@@ -180,7 +179,8 @@ public class CM {
         //perform some unit by logging the XML generated
         if(ServerUtils.isInUnitTestingEnvironment())
         {
-            TestFramework.log(sw.toString());
+            //TODO: fix TestFramework dependency (Maven doesn't include it during normal builds)
+//            TestFramework.log(sw.toString());
         }
         return sw;
     }

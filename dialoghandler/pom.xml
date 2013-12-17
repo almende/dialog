@@ -8,10 +8,12 @@
 	<name>Dialog Handler</name>
 
 	<properties>
+                <skipTests>true</skipTests>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven-resources-plugin.version>2.5</maven-resources-plugin.version>
 		<maven-eclipse-plugin.version>2.9</maven-eclipse-plugin.version>
 		<maven-compiler-plugin.version>3.1</maven-compiler-plugin.version>
+                <maven-surefire-plugin.version>2.12</maven-surefire-plugin.version>
 		<wink.version>1.4</wink.version>
 		<jax-rs.version>2.0</jax-rs.version>
 		<jetty.version>9.1.0.v20131115</jetty.version>
@@ -122,7 +124,6 @@
 			<artifactId>mongo-java-driver</artifactId>
 			<version>${mongo.version}</version>
 		</dependency>
-
 	</dependencies>
 
 	<build>
@@ -206,6 +207,21 @@
 					<encoding>${project.build.sourceEncoding}</encoding>
 				</configuration>
 			</plugin>
+
+                        <!-- skip all tests -->
+                        <plugin>
+                                <groupId>org.apache.maven.plugins</groupId>
+                                <artifactId>maven-surefire-plugin</artifactId>
+                                <version>${maven-surefire-plugin.version}</version>
+                                <configuration>
+                                        <useSystemClassLoader>false</useSystemClassLoader>
+                                        <skipTests>${skipTests}</skipTests>
+                                        <forkMode>never</forkMode>
+                                        <parallel>methods</parallel>
+                                        <threadCount>10</threadCount>
+                                </configuration>
+                        </plugin>
+
 		</plugins>
 	</build>
 

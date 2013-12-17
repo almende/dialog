@@ -2,7 +2,6 @@ package com.almende.dialog;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.logging.Logger;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Question;
@@ -12,7 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class DDRWrapper {
-	private static final Logger ddr = Logger.getLogger("DDR");
+	private static final Logger ddr =  new com.almende.dialog.Logger();
 	private static ObjectMapper om = ParallelInit.getObjectMapper();
 	private static DateFormat formatter = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss.SSS");
     
@@ -35,7 +34,7 @@ public class DDRWrapper {
                     node.put( "pubKey", config.getPublicKey() );
 		}
 		try {
-			ddr.info(om.writeValueAsString(node));
+			ddr.info(config.getConfigId(),om.writeValueAsString(node));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

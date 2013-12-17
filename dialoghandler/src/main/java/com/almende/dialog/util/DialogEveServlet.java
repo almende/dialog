@@ -10,21 +10,29 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.adapter.DialogAgent;
 import com.almende.eve.agent.Agent;
+import com.almende.eve.agent.AgentHost;
 import com.almende.eve.rpc.jsonrpc.JSONRPC;
 import com.almende.eve.rpc.jsonrpc.JSONRPCException;
 import com.almende.eve.rpc.jsonrpc.JSONResponse;
+import com.almende.eve.state.MemoryState;
 
 
 public class DialogEveServlet extends HttpServlet {
 	private static final long serialVersionUID = 2523444841594323679L;
 	private static Logger logger = Logger.getLogger(DialogEveServlet.class.getSimpleName());
-	static Agent agent = new DialogAgent();
+	static AgentHost host = AgentHost.getInstance();
+	static Agent agent = null;
+	static {
+		agent = new DialogAgent();
+		agent.constr(host, new MemoryState());
+	}
 
 	public void doPost(HttpServletRequest req, HttpServletResponse resp)
 			throws IOException {
 		String response = "";
 		try {
 			String request = streamToString(req.getInputStream());
+			
 			response = JSONRPC.invoke(agent, request, agent);
 			
 		} catch (Exception err) {

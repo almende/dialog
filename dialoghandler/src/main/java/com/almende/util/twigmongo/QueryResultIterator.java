@@ -26,7 +26,7 @@ public class QueryResultIterator<E>  implements Iterator<E> {
 
 	@Override
 	public E next() {
-		return type.cast(cursor.next());
+		return JOM.getInstance().convertValue(cursor.next(), this.type);
 	}
 
 	@Override

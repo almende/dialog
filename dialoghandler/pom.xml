@@ -8,12 +8,12 @@
 	<name>Dialog Handler</name>
 
 	<properties>
-                <skipTests>true</skipTests>
+		<skipTests>true</skipTests>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven-resources-plugin.version>2.5</maven-resources-plugin.version>
 		<maven-eclipse-plugin.version>2.9</maven-eclipse-plugin.version>
 		<maven-compiler-plugin.version>3.1</maven-compiler-plugin.version>
-                <maven-surefire-plugin.version>2.12</maven-surefire-plugin.version>
+		<maven-surefire-plugin.version>2.12</maven-surefire-plugin.version>
 		<wink.version>1.4</wink.version>
 		<jax-rs.version>2.0</jax-rs.version>
 		<jetty.version>9.1.0.v20131115</jetty.version>
@@ -28,6 +28,7 @@
 		<lpn-geocode.version>2.10</lpn-geocode.version>
 		<guava.version>15.0</guava.version>
 		<mongo.version>2.11.3</mongo.version>
+		<cors.version>1.8</cors.version>
 		<eve.version>2.1.0-SNAPSHOT</eve.version>
 	</properties>
 
@@ -124,9 +125,17 @@
 			<artifactId>mongo-java-driver</artifactId>
 			<version>${mongo.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>com.thetransactioncompany</groupId>
+			<artifactId>cors-filter</artifactId>
+			<version>${cors.version}</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
+		<finalName>${project.artifactId}</finalName>
+
 		<extensions>
 		</extensions>
 
@@ -208,20 +217,61 @@
 				</configuration>
 			</plugin>
 
-                        <!-- skip all tests -->
-                        <plugin>
-                                <groupId>org.apache.maven.plugins</groupId>
-                                <artifactId>maven-surefire-plugin</artifactId>
-                                <version>${maven-surefire-plugin.version}</version>
-                                <configuration>
-                                        <useSystemClassLoader>false</useSystemClassLoader>
-                                        <skipTests>${skipTests}</skipTests>
-                                        <forkMode>never</forkMode>
-                                        <parallel>methods</parallel>
-                                        <threadCount>10</threadCount>
-                                </configuration>
-                        </plugin>
+			<!-- skip all tests -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>${maven-surefire-plugin.version}</version>
+				<configuration>
+					<useSystemClassLoader>false</useSystemClassLoader>
+					<skipTests>${skipTests}</skipTests>
+					<forkMode>never</forkMode>
+					<parallel>methods</parallel>
+					<threadCount>10</threadCount>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.eclipse.jetty</groupId>
+				<artifactId>jetty-maven-plugin</artifactId>
+				<version>${jetty.version}</version>
+				<configuration>
+					<reload>manual</reload>
+					<webAppSourceDirectory>${basedir}/src/main/webapp</webAppSourceDirectory>
+					<webApp>
+						<contextPath>/dialoghandler</contextPath>
+						<descriptor>src/main/webapp/WEB-INF/web.xml</descriptor>
+					</webApp>
+					<systemProperties>
+						<systemProperty>
+							<name>com.almende.eve.runtime.environment</name>
+							<value>Development</value>
+						</systemProperty>
+					</systemProperties>
+					<stopKey>myAgents</stopKey>
+					<stopPort>9999</stopPort>
+				</configuration>
 
+				<executions>
+					<execution>
+						<id>start-jetty</id>
+						<phase>pre-integration-test</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<scanIntervalSeconds>0</scanIntervalSeconds>
+							<daemon>true</daemon>
+						</configuration>
+					</execution>
+					<execution>
+						<id>stop-jetty</id>
+						<phase>post-integration-test</phase>
+						<goals>
+							<goal>stop</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 

@@ -140,6 +140,7 @@ public class AdapterConfig {
 			return Response.ok(om.writeValueAsString(config)).build();
 		} catch (Exception e) {
 			log.severe("getConfig: Failed to read config");
+			e.printStackTrace();
 		}
 		return Response.status(Status.BAD_REQUEST).build();
 	}
@@ -171,6 +172,7 @@ public class AdapterConfig {
 			return Response.ok(om.writeValueAsString(adapters)).build();
 		} catch (Exception e) {
 			log.severe("getConfig: Failed to read config");
+			e.printStackTrace();
 		}
 		return Response.status(Status.BAD_REQUEST).build();
 	}

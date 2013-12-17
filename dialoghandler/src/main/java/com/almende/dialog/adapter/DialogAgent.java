@@ -15,6 +15,8 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
+import com.almende.eve.rpc.annotation.Access;
+import com.almende.eve.rpc.annotation.AccessType;
 import com.almende.eve.rpc.annotation.Name;
 import com.almende.eve.rpc.annotation.Optional;
 import com.almende.eve.rpc.jsonrpc.JSONRPCException;
@@ -24,6 +26,7 @@ import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+@Access(AccessType.PUBLIC)
 public class DialogAgent extends Agent {
 	
 	private static final Logger	log	= Logger.getLogger(DialogAgent.class

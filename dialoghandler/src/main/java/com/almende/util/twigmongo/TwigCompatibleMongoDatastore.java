@@ -29,7 +29,7 @@ public class TwigCompatibleMongoDatastore {
 	}
 	
 	public void store(Object document) {
-		getKeyField(document.getClass());
+		AnnotatedField keyField = getKeyField(document.getClass());
 		String collectionName = document.getClass().getCanonicalName()
 				.toLowerCase()
 				+ "s";
@@ -38,6 +38,9 @@ public class TwigCompatibleMongoDatastore {
 		BasicDBObject doc = JOM.getInstance().convertValue(document,
 				BasicDBObject.class);
 		table.insert(doc);
+		if (keyField != null){
+			table.ensureIndex(keyField.getName());
+		}
 	}
 	
 	public <T> T load(Class<T> clazz, Object key) {

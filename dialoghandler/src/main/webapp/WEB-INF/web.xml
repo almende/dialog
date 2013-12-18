@@ -15,17 +15,8 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>RESTServlet</servlet-name>
-		<url-pattern>/*</url-pattern>
+		<url-pattern>/rest/*</url-pattern>
 	</servlet-mapping>
-
-	<!-- <servlet> -->
-	<!-- <servlet-name>JSON</servlet-name> -->
-	<!-- <servlet-class>com.chap.memo.memoNodes.servlet.MemoJSONServlet</servlet-class> -->
-	<!-- </servlet> -->
-	<!-- <servlet-mapping> -->
-	<!-- <servlet-name>JSON</servlet-name> -->
-	<!-- <url-pattern>/json</url-pattern> -->
-	<!-- </servlet-mapping> -->
 	<filter>
 		<filter-name>CORS</filter-name>
 		<filter-class>com.thetransactioncompany.cors.CORSFilter</filter-class>
@@ -54,11 +45,6 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<servlet-name>SingleAgentServlet</servlet-name>
 		<url-pattern>/rpc/*</url-pattern>
 	</servlet-mapping>
-	<!-- <servlet> <servlet-name>xmppreceiver</servlet-name> <servlet-class>com.almende.dialog.adapter.XMPPServlet</servlet-class> 
-		</servlet> <servlet-mapping> <servlet-name>xmppreceiver</servlet-name> <url-pattern>/_ah/xmpp/message/chat/</url-pattern> 
-		</servlet-mapping> <servlet-mapping> <servlet-name>xmppreceiver</servlet-name> 
-		<url-pattern>/_ah/xmpp/message/error/</url-pattern> </servlet-mapping> -->
-
 	<servlet>
 		<servlet-name>mailhandler</servlet-name>
 		<servlet-class>com.almende.dialog.adapter.MailServlet</servlet-class>
@@ -149,14 +135,9 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<url-pattern>/upload/*</url-pattern>
 	</servlet-mapping>
 
-<!-- 	<servlet>
-		<servlet-name>unitTestServlet</servlet-name>
-		<servlet-class>com.almende.dialog.test.TestServlet</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>unitTestServlet</servlet-name>
-		<url-pattern>/unitTestServlet/*</url-pattern>
-	</servlet-mapping> -->
+	<!-- <servlet> <servlet-name>unitTestServlet</servlet-name> <servlet-class>com.almende.dialog.test.TestServlet</servlet-class> 
+		</servlet> <servlet-mapping> <servlet-name>unitTestServlet</servlet-name> 
+		<url-pattern>/unitTestServlet/*</url-pattern> </servlet-mapping> -->
 
 	<welcome-file-list>
 		<welcome-file>ask-bootstrap/public/index.html</welcome-file>

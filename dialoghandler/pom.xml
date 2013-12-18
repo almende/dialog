@@ -246,8 +246,8 @@
 					<reload>manual</reload>
 					<webAppSourceDirectory>${basedir}/src/main/webapp</webAppSourceDirectory>
 					<webApp>
-						<contextPath>/dialoghandler</contextPath>
-						<descriptor>src/main/webapp/WEB-INF/web.xml</descriptor>
+						<contextPath>/dialoghandler/</contextPath>
+						<descriptor>WEB-INF/web.xml</descriptor>
 					</webApp>
 					<systemProperties>
 						<systemProperty>

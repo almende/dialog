@@ -299,7 +299,7 @@
                 queryData += '&limit=' + $('#limit').val();
             }
             $.ajax({
-                url: '/log/',
+                url: 'rest/log/',
                 type: 'GET',
                 data: queryData,
                 success: showResult,
@@ -331,6 +331,9 @@
                         var logLabel = '';
                         if (log['level'] == 'INFO') {
                             logLabel = '<label style="color: #069317;font-weight:bolder">' + log['level'] + '</label>';
+                        }
+                        else if (log['level'] == 'DDR') {
+                            logLabel = '<label style="color: #0f18b8;font-weight:bolder">' + log['level'] + '</label>';
                         }
                         else if (log['level'] == 'DEBUG') {
                             logLabel = '<label style="color: #0f14b3;font-weight:bolder">' + log['level'] + '</label>';

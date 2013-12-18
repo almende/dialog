@@ -37,13 +37,13 @@ public class DDR implements Serializable {
 		
 		RootFindCommand<Log> cmd = datastore.find().type(Log.class);
 		
-		long start = (System.currentTimeMillis() - 86400000) * 1000;
+		long start = (System.currentTimeMillis() - 86400000);
 		if (from != null) {
-			start = Long.parseLong(from) * 1000000;
+			start = Long.parseLong(from) * 1000;
 		}
 		cmd.addFilter("timestamp", FilterOperator.GREATER_THAN_OR_EQUAL, start);
 		if (to != null) {
-			long end = Long.parseLong(to) * 1000000;
+			long end = Long.parseLong(to) * 1000;
 			if (start == end) end++;
 			cmd.addFilter("timestamp", FilterOperator.LESS_THAN_OR_EQUAL, end);
 		}
@@ -55,6 +55,7 @@ public class DDR implements Serializable {
 			Log nextLog = log.next();
 			
 			String msg = nextLog.getMessage();
+//			System.err.println("Found log line:"+msg);
 			if (msg.startsWith("com.almende.dialog.DDRWrapper log:")) {
 				// log.warning("checking record:"+msg);
 				JsonNode rec;

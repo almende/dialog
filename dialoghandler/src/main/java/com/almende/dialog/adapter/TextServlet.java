@@ -159,7 +159,7 @@ abstract public class TextServlet extends HttpServlet {
 		sessionKey = getAdapterType() + "|" + localaddress + "|" + address;
 		Session session = Session.getSession(sessionKey, config.getKeyword());
 		if (session == null) {
-			log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
+			log.severe("TextServlet couldn't start new outbound Dialog, adapterConfig not found? "
 					+ sessionKey);
 			return "";
 		}
@@ -244,7 +244,7 @@ abstract public class TextServlet extends HttpServlet {
 			Session session = Session.getSession(sessionKey,
 					config.getKeyword());
 			if (session == null) {
-				log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
+				log.severe("TextServlet couldn't start new outbound Dialog, adapterConfig not found? "
 						+ sessionKey);
 				return null;
 			}

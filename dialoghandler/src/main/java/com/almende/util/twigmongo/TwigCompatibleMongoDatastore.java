@@ -155,7 +155,7 @@ public class TwigCompatibleMongoDatastore {
 		
 		public RootFindCommand<T> addFilter(String fieldName,
 				FilterOperator operator, Object value) {
-			if (operator == null || operator.equals("")) {
+			if (operator == null || operator.getOperator().equals("")) {
 				searchQuery.append(fieldName, value);
 			} else {
 				searchQuery.append(fieldName,
@@ -170,7 +170,13 @@ public class TwigCompatibleMongoDatastore {
 			DBCollection table = ParallelInit.getDatastore().getCollection(
 					collectionName);
 			// TODO: Spannend:)
+//			System.err.println("Collection:"+collectionName);
+//			System.err.println("Search:" + searchQuery.toString());
+//			System.err.println("OrderBy:" + orderBy.toString());
+//			System.err.println("Max:" + max + " Offset:"+offset);
+			
 			DBCursor cursor = table.find(searchQuery);
+//			System.err.println("Found "+cursor.count()+" elements!");
 			if (!orderBy.isEmpty()) {
 				cursor.sort(orderBy);
 			}

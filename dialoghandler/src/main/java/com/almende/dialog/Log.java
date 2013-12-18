@@ -2,10 +2,26 @@ package com.almende.dialog;
 
 import java.io.Serializable;
 
-public class Log implements Serializable {
+import com.almende.util.twigmongo.annotations.Id;
+import com.almende.util.uuid.UUID;
 
-	public Log() {}
-	public Log(LogLevel level, String adapterID, String adapterType, String message) {
+public class Log implements Serializable {
+	private static final long	serialVersionUID	= -8797389516750753990L;
+	
+	@Id
+	private String				logId				= null;
+	private LogLevel			level				= null;
+	private String				adapterID			= null;
+	private String				adapterType			= null;
+	private String				message				= null;
+	private long				timestamp			= 0;
+	
+	public Log() {
+	}
+	
+	public Log(LogLevel level, String adapterID, String adapterType,
+			String message) {
+		this.logId = new UUID().toString();
 		this.level = level;
 		this.adapterID = adapterID;
 		this.adapterType = adapterType;
@@ -49,11 +65,16 @@ public class Log implements Serializable {
 		return timestamp;
 	}
 	
-	private LogLevel level=null;
-	private String adapterID = null;
-	private String adapterType=null;
-	private String message=null;
-	private long timestamp = 0;
+	public void setTimestamp(long timestamp) {
+		this.timestamp = timestamp;
+	}
 	
-	private static final long serialVersionUID = -8797389516750753990L;
+	public String getLogId() {
+		return logId;
+	}
+	
+	public void setLogId(String logId) {
+		this.logId = logId;
+	}
+	
 }

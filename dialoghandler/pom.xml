@@ -29,6 +29,7 @@
 		<guava.version>15.0</guava.version>
 		<mongo.version>2.11.3</mongo.version>
 		<cors.version>1.8</cors.version>
+		<slf4j.version>1.7.5</slf4j.version>
 		<eve.version>2.1.0-SNAPSHOT</eve.version>
 	</properties>
 
@@ -130,7 +131,11 @@
 			<artifactId>cors-filter</artifactId>
 			<version>${cors.version}</version>
 		</dependency>
-
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>${slf4j.version}</version>
+		</dependency>
 	</dependencies>
 
 	<build>

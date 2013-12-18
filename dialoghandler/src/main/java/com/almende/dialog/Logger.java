@@ -36,6 +36,10 @@ public class Logger {
 		this.log(LogLevel.DEBUG,adapterID,null,message);
 	}
 	
+	public void ddr(String adapterID, String message) {
+		this.log(LogLevel.DDR, adapterID, null, message);
+	}
+	
 	public void log(LogLevel level, String adapterID, String message) {
 		this.log(level,adapterID,null,message);
 	}

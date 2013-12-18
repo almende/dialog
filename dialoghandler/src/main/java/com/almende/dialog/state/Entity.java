@@ -7,6 +7,8 @@ public class Entity {
 	private String	id		= null;
 	private String	string	= null;
 	
+	public Entity(){}
+	
 	public Entity(String id) {
 		this.id = id;
 	}

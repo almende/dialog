@@ -227,8 +227,7 @@ abstract public class TextServlet extends HttpServlet {
 				.keySet().iterator().next();
 		
 		// fetch question
-		Question question = Question.fromURL(url, config.getConfigId(),
-				loadAddress);
+		Question question = Question.fromURL(url, config.getConfigId(), loadAddress);
 		String preferred_language = StringStore.getString(loadAddress
 				+ "_language");
 		if (preferred_language == null) {
@@ -236,7 +235,6 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		question.setPreferred_language(preferred_language);
 		Return res = formQuestion(question, config.getConfigId(), loadAddress);
-		
 		for (String address : formattedAddressNameMap.keySet()) {
 			// store the session first
 			String sessionKey = getAdapterType() + "|" + localaddress + "|"
@@ -273,6 +271,7 @@ abstract public class TextServlet extends HttpServlet {
 		} else {
 			senderName = fromName;
 		}
+
 		subject = subject != null && !subject.isEmpty() ? subject
 				: "Message from DH";
 		int count = broadcastMessage(res.reply, subject, localaddress,
@@ -310,7 +309,7 @@ abstract public class TextServlet extends HttpServlet {
 		
 		if (loading) {
 			ParallelInit.getClient();
-			service(req,res);
+			service(req, res);
 			return;
 		}
 		

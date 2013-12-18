@@ -2,6 +2,7 @@ package com.almende.dialog;
 
 import java.io.Serializable;
 import java.util.Iterator;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.ws.rs.GET;
@@ -23,7 +24,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 public class DDR implements Serializable {
 	
 	private static final long					serialVersionUID	= 7594102523777048633L;
-
+	
 	private static ObjectMapper					om					= JOM.getInstance();
 	static final Logger							LOG					= Logger.getLogger("DDR");
 	static final TwigCompatibleMongoDatastore	datastore			= new TwigCompatibleMongoDatastore();
@@ -36,7 +37,7 @@ public class DDR implements Serializable {
 		ArrayNode result = om.createArrayNode();
 		
 		RootFindCommand<Log> cmd = datastore.find().type(Log.class);
-		
+		cmd.addFilter("level", FilterOperator.EQUAL, "DDR");
 		long start = (System.currentTimeMillis() - 86400000);
 		if (from != null) {
 			start = Long.parseLong(from) * 1000;
@@ -55,26 +56,22 @@ public class DDR implements Serializable {
 			Log nextLog = log.next();
 			
 			String msg = nextLog.getMessage();
-//			System.err.println("Found log line:"+msg);
-			if (msg.startsWith("com.almende.dialog.DDRWrapper log:")) {
-				// log.warning("checking record:"+msg);
-				JsonNode rec;
-				try {
-					rec = om.readTree(msg.substring(35));
-					if (account == null || rec.has("account")
-							&& rec.get("account").asText().equals(account)) {
+			JsonNode rec;
+			try {
+				rec = om.readTree(msg);
+				if (account == null || rec.has("account")
+						&& rec.get("account").asText().equals(account)) {
+					
+					if (adapter == null
+							|| (rec.has("adapterType") && rec
+									.get("adapterType").asText()
+									.equals(adapter))) {
 						
-						if (adapter == null
-								|| (rec.has("adapterType") && rec
-										.get("adapterType").asText()
-										.equals(adapter))) {
-							
-							result.add(rec);
-						}
+						result.add(rec);
 					}
-				} catch (Exception e) {
-					LOG.warning("Couldn't parse DDR:" + msg);
 				}
+			} catch (Exception e) {
+				LOG.log(Level.WARNING,"Couldn't parse DDR:" + msg, e );
 			}
 		}
 		return Response.ok(result.toString()).build();

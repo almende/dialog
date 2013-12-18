@@ -212,8 +212,8 @@ public class DialogAgent extends Agent {
 							"Unknown type given: either broadsoft or phone or mail:"+adapterType.toUpperCase());
 				}
 			} catch (Exception e) {
-				JSONRPCException jse = new JSONRPCException();
-				jse.initCause(e);
+				JSONRPCException jse = new JSONRPCException(CODE.REMOTE_EXCEPTION,"Failed to call out!",e);
+				log.log(Level.WARNING,"OutboundCallWithMap, failed to call out!",e);
 				throw jse;
 			}
 		} else {

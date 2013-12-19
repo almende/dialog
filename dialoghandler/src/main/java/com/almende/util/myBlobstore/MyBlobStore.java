@@ -45,6 +45,10 @@ public class MyBlobStore {
 	
 	public MyBlobStore() {
 		datastore = new TwigCompatibleMongoDatastore();
+		File folder = new File(BASEPATH);
+		if (!folder.exists()){
+			folder.mkdir();
+		}
 	}
 	
 	@POST

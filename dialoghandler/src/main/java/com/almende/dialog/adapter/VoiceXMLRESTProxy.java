@@ -54,12 +54,12 @@ import com.sun.jersey.api.client.WebResource;
 public class VoiceXMLRESTProxy {
 	protected static final Logger log = Logger.getLogger(com.almende.dialog.adapter.VoiceXMLRESTProxy.class.getName());
 	private static final int LOOP_DETECTION=10;
-	private static final String DTMFGRAMMAR="vxml/dtmf2hash";
+	private static final String DTMFGRAMMAR="rest/vxml/dtmf2hash";
 	
 	private static final int MAX_RETRIES=1;
 	
-	protected String TIMEOUT_URL="vxml/timeout";
-	protected String EXCEPTION_URL="vxml/exception";
+	protected String TIMEOUT_URL="rest/vxml/timeout";
+	protected String EXCEPTION_URL="rest/vxml/exception";
 	
 	private String host = "";
 	
@@ -862,8 +862,8 @@ public class VoiceXMLRESTProxy {
 	
 	protected String renderComment(Question question,ArrayList<String> prompts, String sessionKey){
 
-		String handleTimeoutURL = "vxml/timeout";
-		String handleExceptionURL = "vxml/exception";
+		String handleTimeoutURL = "rest/vxml/timeout";
+		String handleExceptionURL = "rest/vxml/exception";
 		
 		String redirectTimeoutProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
         //assign a default timeout if one is not specified
@@ -956,7 +956,7 @@ public class VoiceXMLRESTProxy {
 	private String renderClosedQuestion(Question question,ArrayList<String> prompts,String sessionKey){
 		ArrayList<Answer> answers=question.getAnswers();
 		
-		String handleTimeoutURL = "vxml/timeout";
+		String handleTimeoutURL = "rest/vxml/timeout";
 
 		StringWriter sw = new StringWriter();
 		try {
@@ -1346,7 +1346,7 @@ public class VoiceXMLRESTProxy {
 	}
 	
 	protected String getAnswerUrl() {
-		return "vxml/answer";
+		return "rest/vxml/answer";
 	}
 	
     /**

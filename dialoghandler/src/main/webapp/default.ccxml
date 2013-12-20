@@ -13,7 +13,7 @@
   <var name="holdDialogID" expr="''"/>
   <var name="dialURL" expr="''" />
   <var name="results" expr="''" />
-  <var name="vxmlScript" expr="'vxml/new'" />
+  <var name="vxmlScript" expr="'rest/vxml/new'" />
   <var name="holdVxmlScript" expr="'/transfer.vxml'" />
   <var name="currentState" expr="'initial'" />
   

@@ -4,7 +4,7 @@ import com.almende.util.twigmongo.annotations.Id;
 
 public class Entity {
 	@Id
-	private String	id		= null;
+	public String	id		= null;
 	private String	string	= null;
 	
 	public Entity(){}

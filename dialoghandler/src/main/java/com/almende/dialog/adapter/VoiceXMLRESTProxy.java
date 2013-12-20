@@ -1082,7 +1082,8 @@ public class VoiceXMLRESTProxy {
 	                voiceMailBeep = voiceMailBeep != null ? voiceMailBeep : "true";
 	                
 				    // Fetch the upload url
-				    String storedAudiofile = this.host+"upload/"+UUID.randomUUID().toString()+".wav";
+	                String host = this.host.replace("rest/", "");
+				    String storedAudiofile = host+"upload/"+UUID.randomUUID().toString()+".wav";
 			        Client client = ParallelInit.getClient();
 			        WebResource webResource = client.resource(storedAudiofile+"?url");
 			        String uploadURL = "";
@@ -1090,7 +1091,7 @@ public class VoiceXMLRESTProxy {
 			            uploadURL = webResource.type("application/json").get(String.class);
 			        } catch(Exception e){
 			        }
-			        uploadURL = uploadURL.replace(this.host, "/");
+			        uploadURL = uploadURL.replace(host, "/");
 			        
 				    outputter.startTag("form");
                         outputter.attribute("id", "ComposeMessage");

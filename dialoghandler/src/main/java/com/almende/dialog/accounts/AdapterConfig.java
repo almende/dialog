@@ -39,7 +39,7 @@ public class AdapterConfig {
 	static final ObjectMapper om = new ObjectMapper();
 
 	@Id
-	String configId;
+	public String configId;
 	String publicKey="";
 	String adapterType = "";
 	String preferred_language = "nl";

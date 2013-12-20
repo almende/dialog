@@ -99,7 +99,7 @@ public class MyBlobStore {
 	
 	public String createUploadUrl(String retpath) {
 		BlobKey blobKey = new BlobKey();
-		String res = "/blob/" + blobKey.getUuid() + "?retPath=";
+		String res = "/dialoghandler/rest/blob/" + blobKey.getUuid() + "?retPath=";
 		
 		try {
 			res += URLEncoder.encode(retpath, "UTF-8");

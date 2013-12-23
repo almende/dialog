@@ -10,12 +10,12 @@ public class FileContentType implements Serializable {
 	@Id
 	public String				uuid;
 	public String				contentType;
-	public String				fieldName;
+	public String				fileName;
 	
 	public FileContentType(String uuid, String contentType, String fieldName) {
 		this.uuid = uuid;
 		this.contentType = contentType;
-		this.fieldName = fieldName;
+		this.fileName = fieldName;
 	}
 	
 	public FileContentType() {

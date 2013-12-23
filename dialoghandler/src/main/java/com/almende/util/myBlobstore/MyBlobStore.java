@@ -11,7 +11,6 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,10 +27,12 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.UriBuilder;
 
 import org.apache.wink.common.model.multipart.BufferedInMultiPart;
 import org.apache.wink.common.model.multipart.InPart;
@@ -55,7 +56,8 @@ public class MyBlobStore {
 	@Consumes(MediaType.MULTIPART_FORM_DATA)
 	@Produces("text/plain")
 	public void doUpload(BufferedInMultiPart bimp,
-			@PathParam("key") String key, @QueryParam("retPath") String retPath)
+			@PathParam("key") String key, @QueryParam("retPath") String retPath, 
+			@Context HttpServletRequest req, @Context HttpServletResponse res)
 			throws URISyntaxException {
 		BlobKey blobKey = new BlobKey(key);
 		
@@ -82,19 +84,20 @@ public class MyBlobStore {
 				out.close();
 				
 				MultivaluedMap<String, String> headers = part.getHeaders();
+				String filename = headers.getFirst("filename");
 				
 				datastore.store(new FileContentType(blobKey.getUuid(), part
-						.getContentType(), headers.getFirst("filename")));
+						.getContentType(), filename));
 			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 		
+		URI uri = UriBuilder.fromUri(retPath).queryParam("blob-key", key).build();
 		try {
-			throw new WebApplicationException(Response.seeOther(
-					new URI(URLDecoder.decode(retPath, "UTF-8"))).build());
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		}
+			res.sendRedirect(uri.toString());
+		} catch(Exception e){}
+		
 	}
 	
 	public String createUploadUrl(String retpath) {
@@ -116,7 +119,7 @@ public class MyBlobStore {
 		FileContentType fct = datastore.load(FileContentType.class,uuid);
 		List<BlobKey> list = new ArrayList<BlobKey>(1);
 		list.add(new BlobKey(uuid));
-		result.put(fct.fieldName,list);
+		result.put(fct.fileName,list);
 		
 		return result;
 	}

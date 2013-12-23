@@ -126,14 +126,14 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<url-pattern>/facebook_wall/*</url-pattern>
 	</servlet-mapping>
 
-	<servlet>
+	<!-- <servlet>
 		<servlet-name>upload</servlet-name>
-		<servlet-class>com.almende.dialog.util.UploadServlet</servlet-class>
+		<servlet-class>com.almende.dialog.util.NewUploadServlet</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>upload</servlet-name>
 		<url-pattern>/upload/*</url-pattern>
-	</servlet-mapping>
+	</servlet-mapping>-->
 
 	<!-- <servlet> <servlet-name>unitTestServlet</servlet-name> <servlet-class>com.almende.dialog.test.TestServlet</servlet-class> 
 		</servlet> <servlet-mapping> <servlet-name>unitTestServlet</servlet-name> 

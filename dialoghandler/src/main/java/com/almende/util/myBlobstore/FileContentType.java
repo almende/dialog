@@ -14,10 +14,10 @@ public class FileContentType implements Serializable {
 	@Index
 	public String				fileName;
 	
-	public FileContentType(String uuid, String contentType, String fieldName) {
+	public FileContentType(String uuid, String contentType, String fileName) {
 		this.uuid = uuid;
 		this.contentType = contentType;
-		this.fileName = fieldName;
+		this.fileName = fileName;
 	}
 	
 	public FileContentType() {

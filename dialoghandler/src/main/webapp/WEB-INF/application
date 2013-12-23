@@ -16,3 +16,5 @@ com.almende.dialog.accounts.AdapterConfig
 com.almende.dialog.DDR
 com.almende.dialog.LogWrapper
 com.almende.util.myBlobstore.MyBlobStore
+com.almende.dialog.util.UploadUtil
+com.almende.dialog.util.DownloadUtil

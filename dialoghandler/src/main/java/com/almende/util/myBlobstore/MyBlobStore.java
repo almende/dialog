@@ -36,6 +36,7 @@ import javax.ws.rs.core.UriBuilder;
 import org.apache.wink.common.model.multipart.BufferedInMultiPart;
 import org.apache.wink.common.model.multipart.InPart;
 
+import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 
 @Path("/blob/{key}")
@@ -100,7 +101,7 @@ public class MyBlobStore {
 	
 	private String getFileName(InPart part) {
 	    for (String content : part.getHeaders().getFirst("content-disposition").split(";")) {
-	        if (content.trim().startsWith("filename")) {
+	        if (content.trim().startsWith("name")) {
 	            return content.substring(
 	                    content.indexOf('=') + 1).trim().replace("\"", "");
 	        }
@@ -153,11 +154,34 @@ public class MyBlobStore {
 		return Integer.toHexString(file.hashCode()).toUpperCase();
 	}
 	
+	private String getFilename(BlobKey key) {
+		FileContentType fct = datastore.load(FileContentType.class,
+				key.getUuid());
+		return fct.fileName;
+	}
+	
+	public BlobKey getUploadedBlob(String filename) {
+		Iterator<FileContentType> fct = datastore.find()
+				.type(FileContentType.class)
+				.addFilter("fileName", FilterOperator.EQUAL, filename)
+				.now();
+		if (fct.hasNext()) {
+			return new BlobKey(fct.next().uuid);
+		}
+		return null;
+	}
+	
 	public void serve(BlobKey key, HttpServletResponse res) {
 		try {
 			
+			String filename = getFilename(key);
+			String contentType = getContentType(key);
+			if(filename.endsWith(".wav")) {
+				contentType = "audio/basic";
+			}			 
+			
 			res.setContentLength(getSize(key));
-			res.setContentType(getContentType(key));
+			res.setContentType(contentType);
 			res.setHeader("ETag", getHashCode(key));
 			
 			OutputStream out = new BufferedOutputStream(res.getOutputStream());
@@ -176,5 +200,7 @@ public class MyBlobStore {
 			e.printStackTrace();
 		}
 	}
+	
+	
 	
 }

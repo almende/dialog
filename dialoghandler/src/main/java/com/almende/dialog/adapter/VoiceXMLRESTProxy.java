@@ -1082,10 +1082,12 @@ public class VoiceXMLRESTProxy {
 	                voiceMailBeep = voiceMailBeep != null ? voiceMailBeep : "true";
 	                
 				    // Fetch the upload url
-	                String host = this.host.replace("rest/", "");
-				    String storedAudiofile = host+"upload/"+UUID.randomUUID().toString()+".wav";
+	                //String host = this.host.replace("rest/", "");
+	                String uuid = UUID.randomUUID().toString();
+	                String filename = uuid+".wav";
+				    String storedAudiofile = host+"download/"+filename;
 			        Client client = ParallelInit.getClient();
-			        WebResource webResource = client.resource(storedAudiofile+"?url");
+			        WebResource webResource = client.resource(storedAudiofile);
 			        String uploadURL = "";
 			        try {
 			            uploadURL = webResource.type("application/json").get(String.class);
@@ -1124,14 +1126,14 @@ public class VoiceXMLRESTProxy {
                         outputter.endTag();
                         
                         outputter.startTag("subdialog");
-                            outputter.attribute("name", "saveWav");
+                            outputter.attribute("name", filename);
                             outputter.attribute("src", uploadURL);
                             outputter.attribute("namelist", "file");
                             outputter.attribute("method", "post");
                             outputter.attribute("enctype", "multipart/form-data");
                             outputter.startTag("filled");
                                 outputter.startTag("if");
-                                    outputter.attribute("cond", "saveWav.response='SUCCESS'");
+                                    outputter.attribute("cond", filename+".response='SUCCESS'");
                                     outputter.startTag("goto");
                                         outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answer_input="+URLEncoder.encode(storedAudiofile, "UTF-8"));
                                     outputter.endTag();

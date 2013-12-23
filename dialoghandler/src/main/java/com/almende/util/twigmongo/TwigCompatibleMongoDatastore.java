@@ -10,12 +10,18 @@ import com.almende.util.AnnotationUtil.AnnotatedClass;
 import com.almende.util.AnnotationUtil.AnnotatedField;
 import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.annotations.Id;
+import com.almende.util.twigmongo.annotations.Index;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 
 public class TwigCompatibleMongoDatastore {
+	
+	private List<AnnotatedField> getIndexFields(Class<?> clazz){
+		AnnotatedClass ac = AnnotationUtil.get(clazz);
+		return ac.getAnnotatedFields(Index.class);
+	}
 	
 	private AnnotatedField getKeyField(Class<?> clazz) {
 		AnnotatedClass ac = AnnotationUtil.get(clazz);
@@ -40,6 +46,10 @@ public class TwigCompatibleMongoDatastore {
 		table.insert(doc);
 		if (keyField != null){
 			table.ensureIndex(keyField.getName());
+		}
+		List<AnnotatedField> indexes = getIndexFields(document.getClass());
+		for (AnnotatedField field : indexes){
+			table.ensureIndex(field.getName());
 		}
 	}
 	

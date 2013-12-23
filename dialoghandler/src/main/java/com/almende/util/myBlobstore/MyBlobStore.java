@@ -29,7 +29,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
@@ -83,8 +82,7 @@ public class MyBlobStore {
 				out.flush();
 				out.close();
 				
-				MultivaluedMap<String, String> headers = part.getHeaders();
-				String filename = headers.getFirst("filename");
+				String filename = getFileName(part);
 				
 				datastore.store(new FileContentType(blobKey.getUuid(), part
 						.getContentType(), filename));
@@ -98,6 +96,16 @@ public class MyBlobStore {
 			res.sendRedirect(uri.toString());
 		} catch(Exception e){}
 		
+	}
+	
+	private String getFileName(InPart part) {
+	    for (String content : part.getHeaders().getFirst("content-disposition").split(";")) {
+	        if (content.trim().startsWith("filename")) {
+	            return content.substring(
+	                    content.indexOf('=') + 1).trim().replace("\"", "");
+	        }
+	    }
+	    return null;
 	}
 	
 	public String createUploadUrl(String retpath) {

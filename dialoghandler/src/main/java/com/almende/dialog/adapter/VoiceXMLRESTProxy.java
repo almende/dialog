@@ -44,11 +44,9 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.util.ParallelInit;
+import com.almende.util.myBlobstore.MyBlobStore;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
 
 @Path("/vxml/")
 public class VoiceXMLRESTProxy {
@@ -1086,14 +1084,9 @@ public class VoiceXMLRESTProxy {
 	                String uuid = UUID.randomUUID().toString();
 	                String filename = uuid+".wav";
 				    String storedAudiofile = host+"download/"+filename;
-			        Client client = ParallelInit.getClient();
-			        WebResource webResource = client.resource(storedAudiofile);
-			        String uploadURL = "";
-			        try {
-			            uploadURL = webResource.type("application/json").get(String.class);
-			        } catch(Exception e){
-			        }
-			        uploadURL = uploadURL.replace(host, "/");
+
+			        MyBlobStore store = new MyBlobStore();
+			        String uploadURL = store.createUploadUrl("/dialoghandler/download/audio.vxml");
 			        
 				    outputter.startTag("form");
                         outputter.attribute("id", "ComposeMessage");

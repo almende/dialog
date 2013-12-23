@@ -18,6 +18,16 @@ public class DownloadUtil {
 	@Path("/{file}")
 	public Response serve(@PathParam("file") String filename, @Context HttpServletResponse res) {
 		
+		if(filename.equals("audio.vxml")) {
+			String resp = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> "
+					+ "<vxml xmlns=\"http://www.w3.org/2001/vxml\" version=\"2.1\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.w3.org/2001/vxml http://www.w3.org/TR/2007/REC-voicexml21-20070619/vxml.xsd\">"
+					+ "<form>" + "<block>"
+					+ "<var name=\"response\" expr=\"'SUCCESS'\"/>"
+					+ "<return namelist=\"response\"/>" + "</block>"
+					+ "</form>" + "</vxml>";
+			return Response.ok(resp).build();
+		}
+		
 		MyBlobStore store = new MyBlobStore();
 		BlobKey key = store.getUploadedBlob(filename);
 		if(key==null)

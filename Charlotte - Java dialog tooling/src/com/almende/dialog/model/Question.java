@@ -35,6 +35,7 @@ public class Question implements QuestionIntf {
 	static final ObjectMapper om =ParallelInit.getObjectMapper();
 	
 	public static final int DEFAULT_MAX_QUESTION_LOAD = 5;
+	public static final String MEDIA_PROPERTIES = "media_properties";
 	private static HashMap<String, Integer> questionRetryCounter = new HashMap<String, Integer>();
 	
 	QuestionIntf question;
@@ -322,6 +323,7 @@ public class Question implements QuestionIntf {
         Client client = ParallelInit.getClient();
         WebResource webResource = client.resource( answer.getCallback() );
         AnswerPost ans = new AnswerPost( this.getQuestion_id(), answer.getAnswer_id(), answer_input, responder );
+        ans.getExtras().put( "adapterId", adapterID );
         // Check if answer.callback gives new question for this dialog
         try
         {

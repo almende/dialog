@@ -190,6 +190,7 @@ abstract public class TextServlet extends HttpServlet {
         Map<String, String> addressCcNameMap, Map<String, String> addressBccNameMap, String url, String senderName,
         String subject, AdapterConfig config ) throws Exception
     {
+        senderName = senderName != null ? senderName : "Ask-Fast";
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
         Map<String, String> formattedAddressNameToMap = new HashMap<String, String>();
         if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
@@ -219,7 +220,7 @@ abstract public class TextServlet extends HttpServlet {
         Question question = Question.fromURL( url, config.getConfigId(), loadAddress );
         //store the extra information
         Map<String, Object> extras = new HashMap<String, Object>();
-        extras.put( "media_properties", question.getMedia_properties() );
+        extras.put( Question.MEDIA_PROPERTIES, question.getMedia_properties() );
         String preferred_language = StringStore.getString( loadAddress + "_language" );
         if ( preferred_language == null )
         {
@@ -279,7 +280,7 @@ abstract public class TextServlet extends HttpServlet {
         {
             senderName = fromName;
         }
-        subject = subject != null && !subject.isEmpty() ? subject : "Message from DH";
+        subject = subject != null && !subject.isEmpty() ? subject : "Message from Ask-Fast";
         //fix for bug: #15 https://github.com/almende/dialog/issues/15
         res.reply = URLDecoder.decode(res.reply);
         int count = broadcastMessage( res.reply, subject, localaddress, senderName, formattedAddressNameToMap, extras,
@@ -364,7 +365,7 @@ abstract public class TextServlet extends HttpServlet {
 		String body = msg.getBody();
 		String toName = msg.getRecipientName();
 		String keyword = msg.getKeyword();
-		String fromName="DH";
+		String fromName="Ask-Fast";
 		int count=0;
 		
 		Map<String, Object> extras = msg.getExtras();

@@ -1082,7 +1082,7 @@ public class VoiceXMLRESTProxy {
 				    // Fetch the upload url
 	                //String host = this.host.replace("rest/", "");
 	                String uuid = UUID.randomUUID().toString();
-	                String filename = uuid+".wav";
+	                String filename = uuid;
 				    String storedAudiofile = host+"download/"+filename;
 
 			        MyBlobStore store = new MyBlobStore();

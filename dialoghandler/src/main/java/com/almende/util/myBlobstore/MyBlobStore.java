@@ -84,6 +84,9 @@ public class MyBlobStore {
 				out.close();
 				
 				String filename = getFileName(part);
+				if(!filename.endsWith(".wav") && part.getContentType().equals("audio/wav")) {
+					filename = filename + ".wav";
+				}
 				
 				datastore.store(new FileContentType(blobKey.getUuid(), part
 						.getContentType(), filename));
@@ -111,7 +114,7 @@ public class MyBlobStore {
 	
 	public String createUploadUrl(String retpath) {
 		BlobKey blobKey = new BlobKey();
-		String res = "/dialoghandler/rest/blob/" + blobKey.getUuid() + "?retPath=";
+		String res = "blob/" + blobKey.getUuid() + "?retPath=";
 		
 		try {
 			res += URLEncoder.encode(retpath, "UTF-8");

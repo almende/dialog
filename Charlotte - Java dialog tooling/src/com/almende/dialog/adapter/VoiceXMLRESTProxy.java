@@ -139,7 +139,7 @@ public class VoiceXMLRESTProxy {
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
 
         // If it is a broadcast don't provide the remote address because it is deceiving.
-        String loadAddress = null;
+        String loadAddress = "";
         if(addressNameMap.size()==1)
             loadAddress = addressNameMap.keySet().iterator().next();
 

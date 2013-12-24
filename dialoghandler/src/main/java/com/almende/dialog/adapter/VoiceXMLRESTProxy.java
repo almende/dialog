@@ -1086,7 +1086,7 @@ public class VoiceXMLRESTProxy {
 				    String storedAudiofile = host+"download/"+filename;
 
 			        MyBlobStore store = new MyBlobStore();
-			        String uploadURL = store.createUploadUrl("/dialoghandler/download/audio.vxml");
+			        String uploadURL = store.createUploadUrl("/dialoghandler/rest/download/audio.vxml");
 			        
 				    outputter.startTag("form");
                         outputter.attribute("id", "ComposeMessage");

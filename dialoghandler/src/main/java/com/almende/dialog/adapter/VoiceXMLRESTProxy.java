@@ -1082,7 +1082,7 @@ public class VoiceXMLRESTProxy {
 				    // Fetch the upload url
 	                //String host = this.host.replace("rest/", "");
 	                String uuid = UUID.randomUUID().toString();
-	                String filename = uuid;
+	                String filename = uuid+".wav";
 				    String storedAudiofile = host+"download/"+filename;
 
 			        MyBlobStore store = new MyBlobStore();
@@ -1091,7 +1091,7 @@ public class VoiceXMLRESTProxy {
 				    outputter.startTag("form");
                         outputter.attribute("id", "ComposeMessage");
                         outputter.startTag("record");
-                            outputter.attribute("name", "file");
+                            outputter.attribute("name", filename);
                             outputter.attribute("beep", voiceMailBeep);
                             outputter.attribute("maxtime", voiceMessageLengthProperty);
                             outputter.attribute("dtmfterm", dtmfTerm);
@@ -1119,14 +1119,14 @@ public class VoiceXMLRESTProxy {
                         outputter.endTag();
                         
                         outputter.startTag("subdialog");
-                            outputter.attribute("name", filename);
+                            outputter.attribute("name", "saveWav");
                             outputter.attribute("src", uploadURL);
-                            outputter.attribute("namelist", "file");
+                            outputter.attribute("namelist", filename);
                             outputter.attribute("method", "post");
                             outputter.attribute("enctype", "multipart/form-data");
                             outputter.startTag("filled");
                                 outputter.startTag("if");
-                                    outputter.attribute("cond", filename+".response='SUCCESS'");
+                                    outputter.attribute("cond", "saveWav.response='SUCCESS'");
                                     outputter.startTag("goto");
                                         outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answer_input="+URLEncoder.encode(storedAudiofile, "UTF-8"));
                                     outputter.endTag();

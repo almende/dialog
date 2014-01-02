@@ -80,7 +80,7 @@ public class UploadServlet extends HttpServlet {
 			w.print("<!DOCTYPE html>" + "<html>" + "<head>"
 					+ "<meta charset=\"UTF-8\" />" + "<title>!" + path
 					+ "</title>" + "</head>" + "<body>" + "<form action=\""
-					+ store.createUploadUrl(prefix + path + query)
+					+ store.createUploadUrl(path, prefix + path + query)
 					+ "\" method=\"post\" enctype=\"multipart/form-data\">"
 					+ "<input type=\"file\" name=\"file\" />" + "<hr />"
 					+ "<input type=\"button\" value=\"cancel\""
@@ -94,7 +94,7 @@ public class UploadServlet extends HttpServlet {
 			res.setContentType("text/html");
 			res.setCharacterEncoding("UTF-8");
 			PrintWriter w = res.getWriter();
-			w.print(store.createUploadUrl(prefix + path + query));
+			w.print(store.createUploadUrl(path, prefix + path + query));
 			
 		} else {
 			

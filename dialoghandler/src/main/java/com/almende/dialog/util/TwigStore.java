@@ -29,8 +29,8 @@ public class TwigStore {
 		return datastore.load( Item.class, path );
 	}
 	
-	public String createUploadUrl( String retpath ) {
-		return blobstore.createUploadUrl( retpath );
+	public String createUploadUrl( String filename, String retpath ) {
+		return blobstore.createUploadUrl( retpath, filename );
 	}
 	
 	public void handleUpload( String path, HttpServletRequest req ) {

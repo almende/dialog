@@ -23,4 +23,28 @@ public class FileContentType implements Serializable {
 	public FileContentType() {
 		this(null, null, null);
 	}
+	
+	public String getUuid() {
+		return uuid;
+	}
+	
+	public void setUuid(String uuid) {
+		this.uuid = uuid;
+	}
+	
+	public String getContentType() {
+		return contentType;
+	}
+	
+	public void setContentType(String contentType) {
+		this.contentType = contentType;
+	}
+	
+	public String getFileName() {
+		return fileName;
+	}
+	
+	public void setFileName(String fileName) {
+		this.fileName = fileName;
+	}
 }

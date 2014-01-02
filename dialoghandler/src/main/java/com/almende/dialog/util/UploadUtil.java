@@ -27,7 +27,7 @@ public class UploadUtil {
 		MyBlobStore store = new MyBlobStore();
 		String html = "<!DOCTYPE html>" + "<html>" + "<head>"
 				+ "<meta charset=\"UTF-8\" />" + "<title> Upload file </title>" + "</head>" + "<body>" + "<form action=\""
-				+ store.createUploadUrl("/dialoghandler/rest/download/"+filename)
+				+ store.createUploadUrl(filename, "/dialoghandler/rest/download/"+filename)
 				+ "\" method=\"post\" enctype=\"multipart/form-data\">"
 				+ "<input type=\"file\" name=\""+filename+"\" />" + "<hr />"
 				+ "<input type=\"submit\" value=\"submit\" />" + "</form>"

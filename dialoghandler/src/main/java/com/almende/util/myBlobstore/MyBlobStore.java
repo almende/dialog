@@ -38,6 +38,7 @@ import org.apache.wink.common.model.multipart.InPart;
 
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
+import com.almende.util.uuid.UUID;
 
 @Path("/blob/{key}")
 public class MyBlobStore {
@@ -83,13 +84,12 @@ public class MyBlobStore {
 				out.flush();
 				out.close();
 				
-				String filename = getFileName(part);
-				if(!filename.endsWith(".wav") && part.getContentType().equals("audio/wav")) {
-					filename = filename + ".wav";
-				}
+				//String filename = getFileName(part);
 				
-				datastore.store(new FileContentType(blobKey.getUuid(), part
-						.getContentType(), filename));
+				FileContentType fct = datastore.load(FileContentType.class, blobKey.getUuid());
+				fct.setContentType(part.getContentType());
+				
+				datastore.update(fct);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -100,6 +100,12 @@ public class MyBlobStore {
 			res.sendRedirect(uri.toString());
 		} catch(Exception e){}
 		
+	}
+
+	public String getFileName(BlobKey key) {
+		FileContentType fct = datastore.load(FileContentType.class,
+				key.getUuid());
+		return fct.fileName;
 	}
 	
 	private String getFileName(InPart part) {
@@ -112,9 +118,11 @@ public class MyBlobStore {
 	    return null;
 	}
 	
-	public String createUploadUrl(String retpath) {
-		BlobKey blobKey = new BlobKey();
-		String res = "/dialoghandler/rest/blob/" + blobKey.getUuid() + "?retPath=";
+	public String createUploadUrl(String fileName, String retpath) {
+		FileContentType fct = new FileContentType(new UUID().toString(), null, fileName);
+		datastore.store(fct);
+		
+		String res = "/dialoghandler/rest/blob/" + fct.getUuid() + "?retPath=";
 		
 		try {
 			res += URLEncoder.encode(retpath, "UTF-8");

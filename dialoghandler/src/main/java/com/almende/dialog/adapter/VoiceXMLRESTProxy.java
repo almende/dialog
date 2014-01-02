@@ -1091,7 +1091,7 @@ public class VoiceXMLRESTProxy {
 				    outputter.startTag("form");
                         outputter.attribute("id", "ComposeMessage");
                         outputter.startTag("record");
-                            outputter.attribute("name", filename);
+                            outputter.attribute("name", "file");
                             outputter.attribute("beep", voiceMailBeep);
                             outputter.attribute("maxtime", voiceMessageLengthProperty);
                             outputter.attribute("dtmfterm", dtmfTerm);
@@ -1121,7 +1121,7 @@ public class VoiceXMLRESTProxy {
                         outputter.startTag("subdialog");
                             outputter.attribute("name", "saveWav");
                             outputter.attribute("src", uploadURL);
-                            outputter.attribute("namelist", filename);
+                            outputter.attribute("namelist", "file");
                             outputter.attribute("method", "post");
                             outputter.attribute("enctype", "multipart/form-data");
                             outputter.startTag("filled");

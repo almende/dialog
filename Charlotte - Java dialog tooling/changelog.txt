@@ -1,6 +1,15 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+7-1-2014, version 0..9
+- feature: updated cron job for twitter improve: removed scribe old jar
+- feature: add adapterId in the answerPost. useful for responding to dif
+- feature: twitter direct messages. updated tokens fix: issue with null
+- fix : Changed DH to Ask-Fast. fix: increased URL read timeout from 10s
+- fix: fixed twitter adapter. feature: implemented direct message twitte
+- fix: CMStatus entity update. Twig doesnt fetch null fields
+- fix: small fixes in CM SR callback
+ 
 12-12-2013, version 0.8.3
 - fix: changed GET query param recipient to "to"
 

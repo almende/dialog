@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Access(AccessType.PUBLIC)
 public class DialogAgent extends Agent {
-	
 	private static final Logger	log	= Logger.getLogger(DialogAgent.class
 											.getName());
 	
@@ -92,8 +91,7 @@ public class DialogAgent extends Agent {
 	public HashMap<String, String> outboundCall(
 			@Name("address") String address,
 			@Name("senderName") @Optional String senderName,
-			@Name("subject") @Optional String subject,
-			@Name("url") String url,
+			@Name("subject") @Optional String subject, @Name("url") String url,
 			@Name("adapterType") @Optional String adapterType,
 			@Name("adapterID") @Optional String adapterID,
 			@Name("accountID") String accountID,
@@ -112,15 +110,14 @@ public class DialogAgent extends Agent {
 	public HashMap<String, String> outboundCallWithList(
 			@Name("addressList") Collection<String> addressList,
 			@Name("senderName") @Optional String senderName,
-			@Name("subject") @Optional String subject,
-			@Name("url") String url,
+			@Name("subject") @Optional String subject, @Name("url") String url,
 			@Name("adapterType") @Optional String adapterType,
 			@Name("adapterID") @Optional String adapterID,
 			@Name("accountID") String accountID,
 			@Name("bearerToken") String bearerToken) throws Exception {
 		Map<String, String> addressNameMap = ServerUtils.putCollectionAsKey(
 				addressList, "");
-		return outboundCallWithMap(addressNameMap, senderName, subject, url,
+		return outboundCallWithMap(addressNameMap, null, null, senderName, subject, url,
 				adapterType, adapterID, accountID, bearerToken);
 	}
 	
@@ -134,9 +131,10 @@ public class DialogAgent extends Agent {
 	 */
 	public HashMap<String, String> outboundCallWithMap(
 			@Name("addressMap") Map<String, String> addressMap,
+			@Name("addressCcMap") @Optional Map<String, String> addressCcMap,
+			@Name("addressBccMap") @Optional Map<String, String> addressBccMap,
 			@Name("senderName") @Optional String senderName,
-			@Name("subject") @Optional String subject,
-			@Name("url") String url,
+			@Name("subject") @Optional String subject, @Name("url") String url,
 			@Name("adapterType") @Optional String adapterType,
 			@Name("adapterID") @Optional String adapterID,
 			@Name("accountID") String accountId,
@@ -153,7 +151,8 @@ public class DialogAgent extends Agent {
 		// Check accountID/bearer Token against OAuth KeyServer
 		if (Settings.KEYSERVER != null) {
 			if (!KeyServerLib.checkAccount(accountId, bearerToken)) {
-				throw new JSONRPCException(CODE.INVALID_REQUEST,"Invalid token given");
+				throw new JSONRPCException(CODE.INVALID_REQUEST,
+						"Invalid token given");
 			}
 		}
 		log.info("KeyServer says ok!");
@@ -182,10 +181,12 @@ public class DialogAgent extends Agent {
 					config.getConfigId(), config.getAdapterType()));
 			adapterType = config.getAdapterType();
 			try {
-				/*if (adapterType.toUpperCase().equals("XMPP")) {
-					resultSessionMap = new XMPPServlet().startDialog(
-							addressMap, url, senderName, subject, config);
-				} else*/ 
+				/*
+				 * if (adapterType.toUpperCase().equals("XMPP")) {
+				 * resultSessionMap = new XMPPServlet().startDialog(
+				 * addressMap, url, senderName, subject, config);
+				 * } else
+				 */
 				if (adapterType.toUpperCase().equals("BROADSOFT")) {
 					// fetch the first address in the map
 					if (!addressMap.keySet().isEmpty()) {
@@ -196,24 +197,27 @@ public class DialogAgent extends Agent {
 								"Address should not be empty to setup a call");
 					}
 				} else if (adapterType.toUpperCase().equals("MAIL")) {
-					resultSessionMap = new MailServlet().startDialog(
-							addressMap, url, senderName, subject, config);
+					resultSessionMap = new MailServlet().startDialog( addressMap, addressCcMap, addressBccMap, url,
+		                    senderName, subject, config );
 				} else if (adapterType.toUpperCase().equals("SMS")) {
 					resultSessionMap = new MBSmsServlet().startDialog(
-							addressMap, url, senderName, subject, config);
+							addressMap, null, null, url, senderName, subject, config);
 				} else if (adapterType.toUpperCase().equals("CM")) {
 					resultSessionMap = new CMSmsServlet().startDialog(
-							addressMap, url, senderName, subject, config);
+							addressMap, null, null, url, senderName, subject, config);
 				} else if (adapterType.toUpperCase().equals("TWITTER")) {
 					resultSessionMap = new TwitterServlet().startDialog(
-							addressMap, url, senderName, subject, config);
+							addressMap, null, null, url, senderName, subject, config);
 				} else {
 					throw new Exception(
-							"Unknown type given: either broadsoft or phone or mail:"+adapterType.toUpperCase());
+							"Unknown type given: either broadsoft or phone or mail:"
+									+ adapterType.toUpperCase());
 				}
 			} catch (Exception e) {
-				JSONRPCException jse = new JSONRPCException(CODE.REMOTE_EXCEPTION,"Failed to call out!",e);
-				log.log(Level.WARNING,"OutboundCallWithMap, failed to call out!",e);
+				JSONRPCException jse = new JSONRPCException(
+						CODE.REMOTE_EXCEPTION, "Failed to call out!", e);
+				log.log(Level.WARNING,
+						"OutboundCallWithMap, failed to call out!", e);
 				throw jse;
 			}
 		} else {

@@ -16,7 +16,7 @@ public class ClientConThread extends Thread implements java.lang.Runnable {
 		cc.getProperties().put(ClientConfig.PROPERTY_THREADPOOL_SIZE,10);
 		ParallelInit.client = Client.create(cc);
 		ParallelInit.client.setConnectTimeout(1000);
-		ParallelInit.client.setReadTimeout(15000);
+		ParallelInit.client.setReadTimeout(30000);
 		ParallelInit.clientActive = true;
 //		log.warning("ClientConThread took: "+(new Date().getTime()-ParallelInit.startTime)+" ms");
 	}

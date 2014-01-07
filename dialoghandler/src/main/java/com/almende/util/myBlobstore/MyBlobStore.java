@@ -108,16 +108,6 @@ public class MyBlobStore {
 		return fct.fileName;
 	}
 	
-	private String getFileName(InPart part) {
-	    for (String content : part.getHeaders().getFirst("content-disposition").split(";")) {
-	        if (content.trim().startsWith("name")) {
-	            return content.substring(
-	                    content.indexOf('=') + 1).trim().replace("\"", "");
-	        }
-	    }
-	    return null;
-	}
-	
 	public String createUploadUrl(String fileName, String retpath) {
 		FileContentType fct = new FileContentType(new UUID().toString(), null, fileName);
 		datastore.store(fct);

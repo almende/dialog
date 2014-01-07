@@ -1,8 +1,11 @@
 package com.almende.dialog.adapter.tools;
 
 import java.io.ByteArrayInputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -18,6 +21,7 @@ import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
+import com.thetransactioncompany.cors.HTTPMethod;
 
 public class Broadsoft {
 	
@@ -35,6 +39,8 @@ public class Broadsoft {
 	private HTTPBasicAuthFilter auth = null;
 	private Client client = null;
 	private AdapterConfig config = null;
+	private static HashMap<String, Integer> retryCounter = new HashMap<String, Integer>();
+	private static Integer MAX_RETRY_COUNT = 3;
 	
 	public Broadsoft(AdapterConfig config) {
 		
@@ -45,91 +51,145 @@ public class Broadsoft {
 		client = ParallelInit.getClient();
 	}
 	
-	public String startCall(String address) {
+    public String startCall( String address )
+    {
+        String formattedAddress = new String( address );
+        WebResource webResource = client.resource( XSI_URL + XSI_ACTIONS + user + XSI_START_CALL );
+        webResource.addFilter( this.auth );
 		
-	    String formattedAddress = new String(address);
-	    WebResource webResource = client.resource(XSI_URL+XSI_ACTIONS+user+XSI_START_CALL);
-		webResource.addFilter(this.auth);
-		try {
-			String result = webResource.queryParam("address", URLEncoder.encode(formattedAddress, "UTF-8")).type("text/plain").post(String.class);
-			
-			log.info("Result from BroadSoft: "+result);
-			dialogLog.info(config.getConfigId(), "Start outbound call to: "+ formattedAddress);
-			
-			return getCallId(result);
-		} catch (Exception e) {
-			log.severe("Problems dialing out:"+e.getMessage());
-			dialogLog.severe(config.getConfigId(), "Failed to start call to: "+formattedAddress+" Error: "+e.getMessage());
+        if(retryCounter.get( webResource.toString() ) == null)
+        {
+            retryCounter.put( webResource.toString(), 0 );
+        }
+        HashMap<String, String> queryKeyValue = new HashMap<String, String>();
+        try
+        {
+            queryKeyValue.put( "address", URLEncoder.encode( formattedAddress, "UTF-8" ) );
+        }
+        catch ( UnsupportedEncodingException ex )
+        {
+            log.severe( "Problems dialing out:" + ex.getMessage() );
+            dialogLog.severe( config.getConfigId(),
+                "Failed to start call to: " + formattedAddress + " Error: " + ex.getMessage() );
 		}
 		
+        while ( retryCounter.get( webResource.toString() ) != null && retryCounter.get( webResource.toString() ) < MAX_RETRY_COUNT )
+        {
+            try
+            {
+                String result = sendRequestWithRetry(webResource, queryKeyValue, HTTPMethod.POST, null);
+                log.info( "Result from BroadSoft: " + result );
+                dialogLog.info( config.getConfigId(), "Start outbound call to: " + formattedAddress );
+                //flush retryCount
+                retryCounter.remove( webResource.toString() );
+                return getCallId( result );
+            }
+            catch ( Exception ex )
+            {
+                Integer retry = retryCounter.get( webResource.toString() );
+                log.severe( "Problems dialing out:" + ex.getMessage() );
+                dialogLog.severe(
+                    config.getConfigId(),
+                    String.format( "Failed to start call to: %s Error: %s. Retrying! Count: %s", formattedAddress,
+                        ex.getMessage(), retry ) );
+                retryCounter.put( webResource.toString(), ++retry );
+            }
+        }
 		return null;
 	}
 	
-	public String startSubscription() {
-		
+    public String startSubscription()
+    {
 		// Extend the current subscription
-		if(config.getXsiSubscription()!=null && !config.getXsiSubscription().equals("")) {
+        if ( config.getXsiSubscription() != null && !config.getXsiSubscription().equals( "" ) )
+        {
 			String subId = updateSubscription();
-			if(subId!=null)
+            if ( subId != null )
 				return subId;
 		}
 
 		// If there is no subscription or the extending failed, create a new one.
-		WebResource webResource = client.resource(XSI_URL+XSI_EVENTS+"user/"+user);
-		webResource.addFilter(this.auth);
-		final String EVENT_LEVEL="Advanced Call 2";
-		try {
-			String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> " + 
-						 "<Subscribe xmlns=\"http://schema.broadsoft.com/xsi-events\"> " + 
-						 "  <event>"+EVENT_LEVEL+"</event> " + 
-						 "  <contact transport=\"http\"> " + 
-						 "    <uri>http://"+Settings.HOST+"/vxml/cc</uri> " + 
-						 "  </contact> " + 
-						 "  <expires>100</expires> " + 
-						 "  <applicationId>cc</applicationId> " + 
-						 "</Subscribe> ";
-			String result = webResource.type("text/plain").post(String.class, xml);
+        WebResource webResource = client.resource( XSI_URL + XSI_EVENTS + "user/" + user );
+        webResource.addFilter( this.auth );
+        final String EVENT_LEVEL = "Advanced Call 2";
+        String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> "
+            + "<Subscribe xmlns=\"http://schema.broadsoft.com/xsi-events\"> " + "  <event>" + EVENT_LEVEL + "</event> "
+            + "  <contact transport=\"http\"> " + "    <uri>http://" + Settings.HOST + "/vxml/cc</uri> "
+            + "  </contact> " + "  <expires>100</expires> " + "  <applicationId>cc</applicationId> " + "</Subscribe> ";
 
-			log.info("Subscription result from BroadSoft: "+result);
-			
-			String subId = getSubscriptionId(result);
-			if(subId!=null) {
-				if(AdapterConfig.updateSubscription(config.getConfigId(), subId))
+        if ( retryCounter.get( webResource.toString() ) == null )
+        {
+            retryCounter.put( webResource.toString(), 0 );
+        }
+        HashMap<String, String> queryKeyValue = new HashMap<String, String>();
+
+        while ( retryCounter.get( webResource.toString() ) != null
+            && retryCounter.get( webResource.toString() ) < MAX_RETRY_COUNT )
+        {
+            try
+            {
+                String result = sendRequestWithRetry( webResource, queryKeyValue, HTTPMethod.POST, xml );
+                log.info( "Subscription result from BroadSoft: " + result );
+                //flush retryCount
+                retryCounter.remove( webResource.toString() );
+                String subId = getSubscriptionId( result );
+                if ( subId != null )
+                {
+                    if ( AdapterConfig.updateSubscription( config.getConfigId(), subId ) )
 					return subId;
 			}
-			
-			return null;
-		} catch (Exception e) {
-			log.severe("Problems dialing out:"+e.getMessage());
+                break;
+            }
+            catch ( Exception ex )
+            {
+                log.severe( "Problems dialing out:" + ex.getMessage() );
+                Integer retry = retryCounter.get( webResource.toString() );
+                retryCounter.put( webResource.toString(), ++retry );
+            }
 		}
-		
 		return null;
 	}
 	
-	public String updateSubscription() {
-		
-		WebResource webResource = client.resource(XSI_URL+XSI_EVENTS+"subscription/"+config.getXsiSubscription());
-		webResource.addFilter(this.auth);
-		try {
-			String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> " + 
-						 "<SubscriptionUpdate xmlns=\"http://schema.broadsoft.com/xsi-events\"> " +
-						 "  <expires>3600</expires> " +
-						 "</SubscriptionUpdate>";
-			String result = webResource.type("text/plain").put(String.class, xml);
+    public String updateSubscription()
+    {
+        WebResource webResource = client
+            .resource( XSI_URL + XSI_EVENTS + "subscription/" + config.getXsiSubscription() );
+        webResource.addFilter( this.auth );
+        String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> "
+            + "<SubscriptionUpdate xmlns=\"http://schema.broadsoft.com/xsi-events\"> " + "  <expires>3600</expires> "
+            + "</SubscriptionUpdate>";
+        if ( retryCounter.get( webResource.toString() ) == null )
+        {
+            retryCounter.put( webResource.toString(), 0 );
+        }
+        HashMap<String, String> queryKeyValue = new HashMap<String, String>();
 
-			log.info("Subscription result from BroadSoft: "+result);
-			
-			String subId = getSubscriptionId(result);
-			if(subId!=null) {
-				if(AdapterConfig.updateSubscription(config.getConfigId(), subId))
+        while ( retryCounter.get( webResource.toString() ) != null
+            && retryCounter.get( webResource.toString() ) < MAX_RETRY_COUNT )
+        {
+            try
+            {
+                String result = sendRequestWithRetry( webResource, queryKeyValue, HTTPMethod.PUT, xml );
+                log.info( "Subscription result from BroadSoft: " + result );
+                //flush retryCount
+                retryCounter.remove( webResource.toString() );
+                log.info( "Subscription result from BroadSoft: " + result );
+
+                String subId = getSubscriptionId( result );
+                if ( subId != null )
+                {
+                    if ( AdapterConfig.updateSubscription( config.getConfigId(), subId ) )
 					return subId;
 			}
-			
-			return null;
-		} catch (Exception e) {
-			log.severe("Problems updating subscription:"+e.getMessage());
+                break;
+            }
+            catch ( Exception ex )
+            {
+                log.severe( "Problems updating subscription:" + ex.getMessage() );
+                Integer retry = retryCounter.get( webResource.toString() );
+                retryCounter.put( webResource.toString(), ++retry );
+            }
 		}
-		
 		return null;
 	}
 	
@@ -268,4 +328,43 @@ public class Broadsoft {
 		
 		return ids;
 	}
+	
+    private String sendRequestWithRetry( WebResource webResource, Map<String, String> queryKeyValue, HTTPMethod method, String payload )
+    throws UnsupportedEncodingException
+    {
+        for ( String queryKey : queryKeyValue.keySet() )
+        {
+            webResource = webResource.queryParam( queryKey, queryKeyValue.get( queryKey ) );
+        }
+        String result = null;
+        switch ( method )
+        {
+            case POST:
+                if(payload != null)
+                {
+                    result = webResource.type( "text/plain" ).post( String.class, payload );
+                }
+                else
+                {
+                    result = webResource.type( "text/plain" ).post( String.class );
+                }
+                break;
+            case PUT:
+                if(payload != null)
+                {
+                    result = webResource.type( "text/plain" ).put( String.class, payload );
+                }
+                else
+                {
+                    result = webResource.type( "text/plain" ).put( String.class );
+                }
+                break;
+            case GET:
+                result = webResource.type( "text/plain" ).get( String.class );
+                break;
+            default:
+                break;
+        }
+        return result;
+    }
 }

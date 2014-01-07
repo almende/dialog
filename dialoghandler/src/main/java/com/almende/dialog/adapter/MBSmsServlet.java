@@ -28,22 +28,23 @@ public class MBSmsServlet extends TextServlet {
 	private static final boolean USE_KEYWORDS = false;
 	
 	@Override
-	protected int sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName, AdapterConfig config) throws Exception {
+    protected int sendMessage( String message, String subject, String from, String fromName, String to, String toName,
+        Map<String, Object> extras, AdapterConfig config ) throws Exception
+    {
 		
-		String[] tokens = config.getAccessToken().split("\\|");
+        String[] tokens = config.getAccessToken().split( "\\|" );
 		
-		CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
-		return cm.sendMessage(message, subject, from, fromName, to, toName, config);
+        CM cm = new CM( tokens[0], tokens[1], config.getAccessTokenSecret() );
+        return cm.sendMessage( message, subject, from, fromName, to, toName, extras, config );
 	}
 	
     @Override
     protected int broadcastMessage( String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, AdapterConfig config ) throws Exception
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
         String[] tokens = config.getAccessToken().split( "\\|" );
         CM cm = new CM( tokens[0], tokens[1], config.getAccessTokenSecret() );
-        return cm.broadcastMessage( message, subject, from, senderName, addressNameMap, config );
+        return cm.broadcastMessage( message, subject, from, senderName, addressNameMap, extras, config );
     }
 
 	@Override

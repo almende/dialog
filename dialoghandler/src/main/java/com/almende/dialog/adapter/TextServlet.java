@@ -16,13 +16,17 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.tools.CM;
+import com.almende.dialog.adapter.tools.CMStatus;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
+import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.RequestUtil;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 
 @SuppressWarnings("serial")
@@ -41,7 +45,7 @@ abstract public class TextServlet extends HttpServlet {
 	@Deprecated
 	protected abstract int sendMessage(String message, String subject,
 			String from, String fromName, String to, String toName,
-			AdapterConfig config) throws Exception;
+			Map<String, Object> extras, AdapterConfig config) throws Exception;
 	
 	/**
 	 * update to the sendMessage function to cater broadcast functionality
@@ -53,7 +57,7 @@ abstract public class TextServlet extends HttpServlet {
 	 */
 	protected abstract int broadcastMessage(String message, String subject,
 			String from, String senderName, Map<String, String> addressNameMap,
-			AdapterConfig config) throws Exception;
+			Map<String, Object> extras, AdapterConfig config) throws Exception;
 	
 	protected abstract TextMessage receiveMessage(HttpServletRequest req,
 			HttpServletResponse resp) throws Exception;
@@ -159,7 +163,7 @@ abstract public class TextServlet extends HttpServlet {
 		sessionKey = getAdapterType() + "|" + localaddress + "|" + address;
 		Session session = Session.getSession(sessionKey, config.getKeyword());
 		if (session == null) {
-			log.severe("TextServlet couldn't start new outbound Dialog, adapterConfig not found? "
+			log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
 					+ sessionKey);
 			return "";
 		}
@@ -180,14 +184,20 @@ abstract public class TextServlet extends HttpServlet {
 		question.setPreferred_language(preferred_language);
 		Return res = formQuestion(question, config.getConfigId(), address);
 		String fromName = getNickname(res.question);
+		
+		Map<String, Object> extras = null;
 		if (res.question != null) {
 			StringStore.storeString("question_" + address + "_" + localaddress,
 					res.question.toJSON());
 		}
+		if (question != null) {
+			extras = storeSMSRelatedData(address, localaddress, config,
+					question, res.reply, extras);
+		}
 		
 		DDRWrapper.log(question, session, "Start", config);
 		int count = sendMessage(res.reply, "Message from DH", localaddress,
-				fromName, address, "", config);
+				fromName, address, "", extras, config);
 		for (int i = 0; i < count; i++) {
 			DDRWrapper.log(question, session, "Send", config);
 		}
@@ -200,19 +210,25 @@ abstract public class TextServlet extends HttpServlet {
 	 * @throws Exception
 	 */
 	public HashMap<String, String> startDialog(
-			Map<String, String> addressNameMap, String url, String senderName,
-			String subject, AdapterConfig config) throws Exception {
-		Map<String, String> formattedAddressNameMap = new HashMap<String, String>();
+			Map<String, String> addressNameMap,
+			Map<String, String> addressCcNameMap,
+			Map<String, String> addressBccNameMap, String url,
+			String senderName, String subject, AdapterConfig config)
+			throws Exception {
+		senderName = senderName != null ? senderName : "Ask-Fast";
+		addressNameMap = addressNameMap != null ? addressNameMap
+				: new HashMap<String, String>();
+		Map<String, String> formattedAddressNameToMap = new HashMap<String, String>();
 		if (config.getAdapterType().equals("CM")
 				|| config.getAdapterType().equals("SMS")) {
 			for (String address : addressNameMap.keySet()) {
 				String formattedAddress = PhoneNumberUtils.formatNumber(
 						address, null);
-				formattedAddressNameMap.put(formattedAddress,
+				formattedAddressNameToMap.put(formattedAddress,
 						addressNameMap.get(address));
 			}
 		} else {
-			formattedAddressNameMap = addressNameMap;
+			formattedAddressNameToMap = addressNameMap;
 		}
 		String localaddress = config.getMyAddress();
 		url = encodeURLParams(url);
@@ -223,11 +239,15 @@ abstract public class TextServlet extends HttpServlet {
 		// If it is a broadcast don't provide the remote address because it is
 		// deceiving.
 		String loadAddress = null;
-		if (formattedAddressNameMap.size() == 1) loadAddress = formattedAddressNameMap
+		if (formattedAddressNameToMap.size() == 1) loadAddress = formattedAddressNameToMap
 				.keySet().iterator().next();
 		
 		// fetch question
-		Question question = Question.fromURL(url, config.getConfigId(), loadAddress);
+		Question question = Question.fromURL(url, config.getConfigId(),
+				loadAddress);
+		// store the extra information
+		Map<String, Object> extras = new HashMap<String, Object>();
+		extras.put(Question.MEDIA_PROPERTIES, question.getMedia_properties());
 		String preferred_language = StringStore.getString(loadAddress
 				+ "_language");
 		if (preferred_language == null) {
@@ -235,14 +255,25 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		question.setPreferred_language(preferred_language);
 		Return res = formQuestion(question, config.getConfigId(), loadAddress);
-		for (String address : formattedAddressNameMap.keySet()) {
+		// add addresses in cc and bcc map
+		HashMap<String, String> fullAddressMap = new HashMap<String, String>(
+				addressNameMap);
+		if (addressCcNameMap != null) {
+			fullAddressMap.putAll(addressCcNameMap);
+			extras.put(MailServlet.CC_ADDRESS_LIST_KEY, addressCcNameMap);
+		}
+		if (addressBccNameMap != null) {
+			fullAddressMap.putAll(addressBccNameMap);
+			extras.put(MailServlet.BCC_ADDRESS_LIST_KEY, addressBccNameMap);
+		}
+		for (String address : fullAddressMap.keySet()) {
 			// store the session first
 			String sessionKey = getAdapterType() + "|" + localaddress + "|"
 					+ address;
 			Session session = Session.getSession(sessionKey,
 					config.getKeyword());
 			if (session == null) {
-				log.severe("TextServlet couldn't start new outbound Dialog, adapterConfig not found? "
+				log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
 						+ sessionKey);
 				return null;
 			}
@@ -258,6 +289,10 @@ abstract public class TextServlet extends HttpServlet {
 				StringStore.storeString("question_" + address + "_"
 						+ localaddress, res.question.toJSON());
 			}
+			if (question != null) {
+				extras = storeSMSRelatedData(address, localaddress, config,
+						question, res.reply, extras);
+			}
 			DDRWrapper.log(question, session, "Start", config);
 		}
 		String fromName = getNickname(res.question);
@@ -271,11 +306,12 @@ abstract public class TextServlet extends HttpServlet {
 		} else {
 			senderName = fromName;
 		}
-
 		subject = subject != null && !subject.isEmpty() ? subject
-				: "Message from DH";
+				: "Message from Ask-Fast";
+		// fix for bug: #15 https://github.com/almende/dialog/issues/15
+		res.reply = URLDecoder.decode(res.reply, "UTF-8");
 		int count = broadcastMessage(res.reply, subject, localaddress,
-				senderName, formattedAddressNameMap, config);
+				senderName, formattedAddressNameToMap, extras, config);
 		
 		for (Session session : sessions) {
 			for (int i = 0; i < count; i++) {
@@ -330,6 +366,15 @@ abstract public class TextServlet extends HttpServlet {
 		}
 	}
 	
+	/**
+	 * processes any message (based on a Dialog) and takes actions like sending,
+	 * broadcasting corresponding messages.
+	 * 
+	 * @param msg
+	 * @param extras
+	 * @return
+	 * @throws Exception
+	 */
 	protected int processMessage(TextMessage msg) throws Exception {
 		String localaddress = msg.getLocalAddress();
 		String address = msg.getAddress();
@@ -337,9 +382,10 @@ abstract public class TextServlet extends HttpServlet {
 		String body = msg.getBody();
 		String toName = msg.getRecipientName();
 		String keyword = msg.getKeyword();
-		String fromName = "DH";
+		String fromName = "Ask-Fast";
 		int count = 0;
 		
+		Map<String, Object> extras = msg.getExtras();
 		AdapterConfig config;
 		Session session = Session.getSession(getAdapterType() + "|"
 				+ localaddress + "|" + address, keyword);
@@ -348,8 +394,10 @@ abstract public class TextServlet extends HttpServlet {
 			log.info("No session so retrieving config");
 			config = AdapterConfig.findAdapterConfig(getAdapterType(),
 					localaddress);
+			extras = storeSMSRelatedData(address, localaddress, config, null,
+					getNoConfigMessage(), extras);
 			count = sendMessage(getNoConfigMessage(), subject, localaddress,
-					fromName, address, toName, config);
+					fromName, address, toName, extras, config);
 			// Create new session to store the send in the ddr.
 			session = new Session();
 			session.setDirection("inbound");
@@ -372,9 +420,13 @@ abstract public class TextServlet extends HttpServlet {
 				config = AdapterConfig.findAdapterConfig(getAdapterType(),
 						localaddress);
 				try {
+					extras = storeSMSRelatedData(address, localaddress, config,
+							null, getNoConfigMessage(), extras);
 					count = sendMessage(getNoConfigMessage(), subject,
-							localaddress, fromName, address, toName, config);
+							localaddress, fromName, address, toName, extras,
+							config);
 				} catch (Exception ex) {
+					log.severe(ex.getLocalizedMessage());
 				}
 				for (int i = 0; i < count; i++) {
 					DDRWrapper.log(null, null, session, "Send", config);
@@ -394,12 +446,6 @@ abstract public class TextServlet extends HttpServlet {
 		escapeInput.preferred_language = preferred_language;
 		escapeInput.reply = "I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
 		
-		/*
-		 * if (!KeyServerLib.checkCredits( config.getPublicKey() ) ){
-		 * escapeInput.reply = "Not enough credits to return an answer";
-		 * escapeInput.skip = true;
-		 * }
-		 */
 		if (!escapeInput.skip
 				&& escapeInput.body.toLowerCase().trim().charAt(0) == '/') {
 			count = processEscapeInputCommand(msg, fromName, config,
@@ -407,7 +453,6 @@ abstract public class TextServlet extends HttpServlet {
 			log.info(escapeInput.toString());
 		}
 		if (!escapeInput.skip) {
-			
 			if (escapeInput.preferred_language == null) {
 				escapeInput.preferred_language = "nl";
 			}
@@ -449,6 +494,8 @@ abstract public class TextServlet extends HttpServlet {
 				question = replystr.question;
 				fromName = getNickname(question);
 				
+				extras = storeSMSRelatedData(address, localaddress, config,
+						question, escapeInput.reply, extras);
 				if (question == null) {
 					StringStore.dropString("question_" + address + "_"
 							+ localaddress);
@@ -460,12 +507,19 @@ abstract public class TextServlet extends HttpServlet {
 					session.storeSession();
 					DDRWrapper.log(question, session, "Answer", config);
 				}
+			} else {
+				log.severe(String
+						.format("Question is null. Couldnt fetch Question from JSON %s, nor initialAgentURL: %s nor from demoDialog",
+								json, config.getInitialAgentURL(), this.host
+										+ DEMODIALOG));
 			}
 		}
 		try {
 			count = sendMessage(escapeInput.reply, subject, localaddress,
-					fromName, address, toName, config);
+					fromName, address, toName, extras, config);
 		} catch (Exception ex) {
+			log.severe("Message sending failed. Message: "
+					+ ex.getLocalizedMessage());
 		}
 		for (int i = 0; i < count; i++) {
 			DDRWrapper.log(null, null, session, "Send", config);
@@ -500,8 +554,12 @@ abstract public class TextServlet extends HttpServlet {
 			HashMap<String, String> addressNameMap = new HashMap<String, String>(
 					1);
 			addressNameMap.put(msg.getAddress(), msg.getRecipientName());
+			Map<String, Object> extras = storeSMSRelatedData(msg.getAddress(),
+					msg.getLocalAddress(), config, null, escapeInput.reply,
+					null);
 			result = broadcastMessage(escapeInput.reply, msg.getSubject(),
-					msg.getLocalAddress(), fromName, addressNameMap, config);
+					msg.getLocalAddress(), fromName, addressNameMap, extras,
+					config);
 		} else if (cmd.startsWith("reset")) {
 			StringStore.dropString("question_" + msg.getAddress() + "_"
 					+ msg.getLocalAddress());
@@ -534,6 +592,53 @@ abstract public class TextServlet extends HttpServlet {
 	
 	protected String getNoConfigMessage() {
 		return "Sorry, I can't find the account associated with this chat address...";
+	}
+	
+	/**
+	 * @param address
+	 * @param config
+	 * @param localaddress
+	 * @param res
+	 * @param extras
+	 * @throws Exception
+	 */
+	protected Map<String, Object> storeSMSRelatedData(String address,
+			String localaddress, AdapterConfig config, Question question,
+			String smsText, Map<String, Object> extras) throws Exception {
+		extras = extras != null ? extras : new HashMap<String, Object>();
+		// check if SMS delivery notification is requested
+		if (config.getAdapterType().equals("CM")
+				|| config.getAdapterType().equals("SMS")) {
+			String smsStatusKey = generateSMSReferenceKey(config.getConfigId(),
+					localaddress, address);
+			EventCallback deliveryEventCallback = question != null ? question
+					.getEventCallback("delivered") : null;
+			CMStatus cmStatus = new CMStatus();
+			cmStatus.setAdapterID(config.getConfigId());
+			cmStatus.setLocalAddress(localaddress);
+			cmStatus.setRemoteAddress(address);
+			cmStatus.setReference(smsStatusKey);
+			cmStatus.setSms(smsText);
+			extras.put(CM.SMS_DELIVERY_STATUS_KEY, smsStatusKey);
+			if (deliveryEventCallback != null) {
+				cmStatus.setCallback(deliveryEventCallback.getCallback());
+			}
+			cmStatus.store();
+		}
+		return extras;
+	}
+	
+	/**
+	 * generates a reference key used to track delivery status of an SMS
+	 * 
+	 * @param localaddress
+	 * @param address
+	 * @return
+	 */
+	protected static String generateSMSReferenceKey(String adapterId,
+			String localaddress, String address) {
+		return "CM-Status_" + adapterId + "_" + localaddress + "_" + address
+				+ "_" + ServerUtils.getServerCurrentTimeInMillis();
 	}
 	
 	private String getNickname(Question question) {

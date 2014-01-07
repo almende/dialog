@@ -36,7 +36,7 @@ public class MediaProperty
 
     public enum MediumType
     {
-        BROADSOFT, GTALK, SKYPE, SMS;
+        BROADSOFT, GTALK, SKYPE, SMS, TWITTER;
         
         @JsonCreator
         public static MediumType fromJson(String name) {

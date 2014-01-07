@@ -1,5 +1,8 @@
 package com.almende.dialog.agent.tools;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class TextMessage {
 
 	private String localAddress="";
@@ -8,8 +11,8 @@ public class TextMessage {
 	private String body="";
 	private String recipientName="";
 	private String keyword=null;
-	
 	private boolean extractKeyword = false;
+	private Map<String, Object> extras = null;
 	
 	public TextMessage(){}
 	
@@ -61,6 +64,17 @@ public class TextMessage {
 	public String getKeyword() {
 		return keyword;
 	}
+	
+    public Map<String, Object> getExtras()
+    {
+        extras = extras != null ? extras : new HashMap<String, Object>();
+        return extras;
+    }
+
+    public void setExtras( Map<String, Object> extras )
+    {
+        this.extras = extras;
+    }
 	
 	private void extractKeyword() {
 		

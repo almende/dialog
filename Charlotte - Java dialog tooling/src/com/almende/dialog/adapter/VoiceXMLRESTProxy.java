@@ -1480,7 +1480,8 @@ public class VoiceXMLRESTProxy {
      */
     private String getTTSURL( String textForSpeech, String language, String contentType, String speed, String format )
     {
-        speed = (speed != null && !speed.isEmpty()) ? speed : "0"; 
+        speed = (speed != null && !speed.isEmpty()) ? speed : "0";
+        contentType = (contentType != null && !contentType.isEmpty()) ? contentType : "wav";
         format = (format != null && !format.isEmpty()) ? format : "8khz_8bit_mono";
         try
         {

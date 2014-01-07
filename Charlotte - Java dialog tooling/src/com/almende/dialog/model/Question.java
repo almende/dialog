@@ -35,6 +35,7 @@ public class Question implements QuestionIntf {
 	static final ObjectMapper om =ParallelInit.getObjectMapper();
 	
 	public static final int DEFAULT_MAX_QUESTION_LOAD = 5;
+	public static final String MEDIA_PROPERTIES = "media_properties";
 	private static HashMap<String, Integer> questionRetryCounter = new HashMap<String, Integer>();
 	
 	QuestionIntf question;
@@ -322,6 +323,7 @@ public class Question implements QuestionIntf {
         Client client = ParallelInit.getClient();
         WebResource webResource = client.resource( answer.getCallback() );
         AnswerPost ans = new AnswerPost( this.getQuestion_id(), answer.getAnswer_id(), answer_input, responder );
+        ans.getExtras().put( "adapterId", adapterID );
         // Check if answer.callback gives new question for this dialog
         try
         {
@@ -555,25 +557,47 @@ public class Question implements QuestionIntf {
     @JSON(include = false)
     @JsonIgnore
     public Map<MediaPropertyKey, String> getMediaPropertyByType( MediumType type ) {
-
-        if(this.media_properties!=null) {
-            for ( MediaProperty mediaProperties : this.media_properties )
+        return getMediaPropertyByType( this.media_properties, type );
+    }
+    
+    public String getMediaPropertyValue( MediumType type, MediaPropertyKey key) {
+        return getMediaPropertyValue( this.media_properties, type, key );
+    }
+    
+    /**
+     * fetches the first MediaProperty value from teh collection of media_properties based on the type and key 
+     * @param media_properties
+     * @param type
+     * @param key
+     * @return
+     */
+    public static String getMediaPropertyValue( Collection<MediaProperty> media_properties, MediumType type,
+        MediaPropertyKey key )
+    {
+        Map<MediaPropertyKey, String> properties = getMediaPropertyByType( media_properties, type );
+        if ( properties != null )
+        {
+            if ( properties.containsKey( key ) )
             {
-                if ( mediaProperties.getMedium().equals(type) )
-                {
-                    return mediaProperties.getProperties();
-                }
+                return properties.get( key );
             }
         }
         return null;
     }
     
-    public String getMediaPropertyValue( MediumType type, MediaPropertyKey key) {
-
-        Map<MediaPropertyKey, String> properties = getMediaPropertyByType(type);
-        if(properties!=null) {
-            if(properties.containsKey(key)) {
-                return properties.get( key );
+    @JSON( include = false )
+    @JsonIgnore
+    public static Map<MediaPropertyKey, String> getMediaPropertyByType( Collection<MediaProperty> media_properties,
+        MediumType type )
+    {
+        if ( media_properties != null )
+        {
+            for ( MediaProperty mediaProperties : media_properties )
+            {
+                if ( mediaProperties.getMedium().equals( type ) )
+                {
+                    return mediaProperties.getProperties();
+                }
             }
         }
         return null;

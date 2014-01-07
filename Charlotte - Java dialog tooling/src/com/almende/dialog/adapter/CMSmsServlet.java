@@ -54,7 +54,7 @@ public class CMSmsServlet extends TextServlet {
     @Override
     public void service( HttpServletRequest req, HttpServletResponse res ) throws IOException
     {
-        if ( req.getRequestURI().endsWith( "/sms/cm/deliveryStatus" ))
+        if ( req.getRequestURI().startsWith( "/sms/cm/deliveryStatus" ))
         {
             if ( req.getMethod().equals( "POST" ) )
             {
@@ -67,7 +67,8 @@ public class CMSmsServlet extends TextServlet {
                     {
                         jb.append( line );
                     }
-                    handleDeliveryStatusReport( jb.toString() );
+                    CMStatus cmStatus = handleDeliveryStatusReport( jb.toString() );
+                    res.getWriter().println(ServerUtils.serializeWithoutException( cmStatus ));
                 }
                 catch ( Exception e )
                 {
@@ -79,10 +80,11 @@ public class CMSmsServlet extends TextServlet {
             {
                 try
                 {
-                    handleDeliveryStatusReport( req.getParameter( "reference" ), req.getParameter( "sent" ),
+                    CMStatus cmStatus = handleDeliveryStatusReport( req.getParameter( "reference" ), req.getParameter( "sent" ),
                         req.getParameter( "received" ), req.getParameter( "to" ),
                         req.getParameter( "statuscode" ), req.getParameter( "errorcode" ),
                         req.getParameter( "errordescription" ) );
+                    res.getWriter().println(ServerUtils.serializeWithoutException( cmStatus ));
                 }
                 catch ( Exception e )
                 {
@@ -134,6 +136,7 @@ public class CMSmsServlet extends TextServlet {
     {
         try
         {
+            log.info( "payload seen: "+ payload );
             DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
             DocumentBuilder newDocumentBuilder = newInstance.newDocumentBuilder();
             Document parse = newDocumentBuilder.parse( new ByteArrayInputStream(payload.getBytes("UTF-8")) );
@@ -178,6 +181,9 @@ public class CMSmsServlet extends TextServlet {
     private CMStatus handleDeliveryStatusReport( String reference, String sent, String received, String to,
         String code, String errorCode, String errorDescription ) throws Exception
     {
+        log.info( String.format(
+            "CM SR: reference: %s, sent: %s, received: %s, to: %s, statusCode: %s errorCode: %s, errorDesc: %s",
+            reference, sent, received, to, code, errorCode, errorDescription ) );
         if ( reference != null )
         {
             CMStatus cmStatus = CMStatus.fetch( reference );
@@ -185,6 +191,7 @@ public class CMSmsServlet extends TextServlet {
             {
                 log.warning( "CM status not found for reference: " + reference );
                 cmStatus = new CMStatus();
+                cmStatus.setReference( reference );
                 String[] referenceArray = reference.split( "_" );
                 if ( referenceArray.length == 5 )
                 {
@@ -220,7 +227,7 @@ public class CMSmsServlet extends TextServlet {
             {
                 cmStatus.setErrorDescription( errorDescription );
             }
-            else
+            else if(errorCode != null && !errorCode.isEmpty())
             {
                 cmStatus.setErrorDescription( erroCodeMapping(Integer.parseInt( errorCode )) );
             }
@@ -234,7 +241,7 @@ public class CMSmsServlet extends TextServlet {
                     {
                         String callbackPayload = ServerUtils.serialize( cmStatus );
                         webResource.type( "text/plain" ).post( String.class, callbackPayload );
-                        dialogLog.debug(
+                        dialogLog.info(
                             cmStatus.getAdapterID(),
                             String.format( "POST request with payload %s sent to: %s", callbackPayload,
                                 cmStatus.getCallback() ) );
@@ -249,6 +256,11 @@ public class CMSmsServlet extends TextServlet {
                     TestFramework.fetchResponse( HTTPMethod.POST, cmStatus.getCallback(),
                         ServerUtils.serialize( cmStatus ) );
                 }
+            }
+            else
+            {
+                log.info( "Reference: " + reference + ". No delivered callback found." );
+                dialogLog.info( cmStatus.getAdapterID(), "No delivered callback found for reference: "+ reference );
             }
             cmStatus.store();
             return cmStatus;

@@ -38,7 +38,7 @@ import com.google.appengine.api.taskqueue.TaskOptions.Method;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
-	protected static final Logger log = Logger.getLogger(TextServlet.class.getSimpleName());
+    protected static final Logger log = Logger.getLogger(TextServlet.class.getSimpleName());
 	protected static final int LOOP_DETECTION=10;
 	protected static final String DEMODIALOG = "/charlotte/";
 	protected String sessionKey = null;
@@ -190,6 +190,7 @@ abstract public class TextServlet extends HttpServlet {
         Map<String, String> addressCcNameMap, Map<String, String> addressBccNameMap, String url, String senderName,
         String subject, AdapterConfig config ) throws Exception
     {
+        senderName = senderName != null ? senderName : "Ask-Fast";
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
         Map<String, String> formattedAddressNameToMap = new HashMap<String, String>();
         if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
@@ -217,6 +218,9 @@ abstract public class TextServlet extends HttpServlet {
 
         //fetch question
         Question question = Question.fromURL( url, config.getConfigId(), loadAddress );
+        //store the extra information
+        Map<String, Object> extras = new HashMap<String, Object>();
+        extras.put( Question.MEDIA_PROPERTIES, question.getMedia_properties() );
         String preferred_language = StringStore.getString( loadAddress + "_language" );
         if ( preferred_language == null )
         {
@@ -224,8 +228,6 @@ abstract public class TextServlet extends HttpServlet {
         }
         question.setPreferred_language( preferred_language );
         Return res = formQuestion( question, config.getConfigId(), loadAddress );
-        //store the extra information
-        Map<String, Object> extras = new HashMap<String, Object>();
         //add addresses in cc and bcc map
         HashMap<String, String> fullAddressMap = new HashMap<String, String>(addressNameMap);
         if(addressCcNameMap != null)
@@ -278,7 +280,7 @@ abstract public class TextServlet extends HttpServlet {
         {
             senderName = fromName;
         }
-        subject = subject != null && !subject.isEmpty() ? subject : "Message from DH";
+        subject = subject != null && !subject.isEmpty() ? subject : "Message from Ask-Fast";
         //fix for bug: #15 https://github.com/almende/dialog/issues/15
         res.reply = URLDecoder.decode(res.reply);
         int count = broadcastMessage( res.reply, subject, localaddress, senderName, formattedAddressNameToMap, extras,
@@ -339,15 +341,22 @@ abstract public class TextServlet extends HttpServlet {
 
         try
         {
-            processMessage(msg);
+            processMessage( msg );
         }
-        catch (Exception e)
+        catch ( Exception e )
         {
-            log.severe(e.getLocalizedMessage());
+            log.severe( e.getLocalizedMessage() );
             e.printStackTrace();
         }
     }
 	
+	/**
+	 * processes any message (based on a Dialog) and takes actions like sending, broadcasting corresponding messages. 
+	 * @param msg
+	 * @param extras
+	 * @return
+	 * @throws Exception
+	 */
 	protected int processMessage(TextMessage msg) throws  Exception
     {
 		String localaddress = msg.getLocalAddress();
@@ -356,10 +365,10 @@ abstract public class TextServlet extends HttpServlet {
 		String body = msg.getBody();
 		String toName = msg.getRecipientName();
 		String keyword = msg.getKeyword();
-		String fromName="DH";
+		String fromName="Ask-Fast";
 		int count=0;
 		
-		Map<String, Object> extras = new HashMap<String, Object>();		
+		Map<String, Object> extras = msg.getExtras();
 		AdapterConfig config;
 		Session session = Session.getSession(getAdapterType()+"|"+localaddress+"|"+address, keyword);
 		// If session is null it means the adapter is not found.
@@ -487,6 +496,7 @@ abstract public class TextServlet extends HttpServlet {
 		} 
 		catch(Exception ex) 
 		{
+		    log.severe( "Message sending failed. Message: "+ ex.getLocalizedMessage() );
 		}
 		for(int i=0;i<count;i++) 
 		{ 

@@ -12,28 +12,27 @@ import com.google.code.twig.annotation.Type;
 public class CMStatus implements Serializable
 {
     private static final long serialVersionUID = 3674394844170200281L;
-    private static AnnotationObjectDatastore datastore = null;
     private static final Logger log = Logger.getLogger( CMStatus.class.getSimpleName() );
     
     @Id
     private String reference;
     @Type(Text.class)
-    private String sms;
-    private String adapterID;
-    private String callback;
-    private String remoteAddress;
-    private String localAddress;
-    private String sentTimeStamp;
-    private String deliveredTimeStamp;
-    private String code;
-    private String errorCode;
-    private String errorDescription;
+    private String sms = "";
+    private String adapterID = "";
+    private String callback = "";
+    private String remoteAddress = "";
+    private String localAddress = "";
+    private String sentTimeStamp = "";
+    private String deliveredTimeStamp = "";
+    private String code = "";
+    private String errorCode = "";
+    private String errorDescription = "";
     
     public void store()
     {
         if ( reference != null )
         {
-            datastore = datastore != null ? datastore : new AnnotationObjectDatastore();
+            AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
             sentTimeStamp = sentTimeStamp == null ? ServerUtils.getServerCurrentTime().toString() : sentTimeStamp;
             datastore.store( this );
             log.info( "CM status saved: " + ServerUtils.serializeWithoutException( this ) );
@@ -42,7 +41,7 @@ public class CMStatus implements Serializable
     
     public static CMStatus fetch(String reference)
     {
-        datastore = datastore != null ? datastore : new AnnotationObjectDatastore();
+        AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
         return datastore.load( CMStatus.class, reference );
     }
     

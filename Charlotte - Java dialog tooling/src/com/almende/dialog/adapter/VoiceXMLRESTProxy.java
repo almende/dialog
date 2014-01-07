@@ -139,7 +139,7 @@ public class VoiceXMLRESTProxy {
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
 
         // If it is a broadcast don't provide the remote address because it is deceiving.
-        String loadAddress = null;
+        String loadAddress = "";
         if(addressNameMap.size()==1)
             loadAddress = addressNameMap.keySet().iterator().next();
 
@@ -1480,7 +1480,8 @@ public class VoiceXMLRESTProxy {
      */
     private String getTTSURL( String textForSpeech, String language, String contentType, String speed, String format )
     {
-        speed = (speed != null && !speed.isEmpty()) ? speed : "0"; 
+        speed = (speed != null && !speed.isEmpty()) ? speed : "0";
+        contentType = (contentType != null && !contentType.isEmpty()) ? contentType : "wav";
         format = (format != null && !format.isEmpty()) ? format : "8khz_8bit_mono";
         try
         {

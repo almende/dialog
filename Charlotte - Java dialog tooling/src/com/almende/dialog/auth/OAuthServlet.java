@@ -84,10 +84,10 @@ public class OAuthServlet extends HttpServlet {
 				return;
 			} else {
 				
-				obtainAccessToken(req, service);
-				
+				AdapterConfig adapterConfig = obtainAccessToken(req, service);
 				printPageStart(out);
 				printSuccess(out, success);
+				printAddInitialAgent( adapterConfig.getConfigId(), out );
 				printPageEnd(out);
 				return;
 			}
@@ -145,7 +145,7 @@ public class OAuthServlet extends HttpServlet {
 		log.info("Set service to "+service);
 	}
 	
-	private void obtainAccessToken(HttpServletRequest req, String service) {
+	private AdapterConfig obtainAccessToken(HttpServletRequest req, String service) {
 		
 		if(service.equals("twitter")) {
 			
@@ -160,7 +160,7 @@ public class OAuthServlet extends HttpServlet {
 			Verifier v = new Verifier(oauthVerifier);
 			Token accessToken = this.service.getAccessToken(requestToken, v);
 			
-			OAuthRequest request = new OAuthRequest(Verb.GET, "http://api.twitter.com/1/account/verify_credentials.json");
+			OAuthRequest request = new OAuthRequest(Verb.GET, "http://api.twitter.com/1.1/account/verify_credentials.json");
 			this.service.signRequest(accessToken, request);
 			Response response = request.send();
 			
@@ -172,7 +172,7 @@ public class OAuthServlet extends HttpServlet {
 				log.warning("Unable to parse result");
 			}
 			
-			storeAccount(accessToken, "@"+res.get("screen_name").asText(), service.toUpperCase());
+			return storeAccount(accessToken, "@"+res.get("screen_name").asText(), service.toUpperCase());
 			
 		} else if(service.equals("facebook")) {
 			
@@ -194,8 +194,9 @@ public class OAuthServlet extends HttpServlet {
 			
 			log.info(res.toString());
 			
-			storeAccount(accessToken, res.get("id").asText(), service.toUpperCase());
+			return storeAccount(accessToken, res.get("id").asText(), service.toUpperCase());
 		}
+		return null;
 	}
 	
 	private String createAuthorizationUrl() throws IOException {
@@ -259,11 +260,20 @@ public class OAuthServlet extends HttpServlet {
 		out.print("<p>Agent is succesfully authorized.</p>");
 	}
 	
+    private void printAddInitialAgent( String adapterId, PrintWriter out )
+    {
+        out.print( "<form action='/twitter/changeAgent?adapterId="+ adapterId +"' method='POST'>"
+            + "<p>You can configure your first agent now. Agent URL: "
+            + "<input id='agentURL' name='agentURL' type='text' placeholder='Agent URL' style='min-width: 300px;'>"
+            + "<input type='submit' value='Submit'> </p>"
+            + "</form>");
+    }
+	
 	private void printError(PrintWriter out, String error) {
 		out.print("<p>An error occurred</p>");			
 	}
 	
-	private void storeAccount(Token accessToken, String myAddress, String type) {
+	private AdapterConfig storeAccount(Token accessToken, String myAddress, String type) {
 		
 		AnnotationObjectDatastore datastore = new AnnotationObjectDatastore();
 		AdapterConfig config = AdapterConfig.findAdapterConfig(type, myAddress, null);
@@ -283,5 +293,6 @@ public class OAuthServlet extends HttpServlet {
 		log.info("New token: "+config.getAccessToken()+" for: "+config.getMyAddress());
 		
 		datastore.store(config);
+		return config;
 	}
 }

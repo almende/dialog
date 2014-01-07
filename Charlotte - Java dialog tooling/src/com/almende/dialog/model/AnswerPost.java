@@ -1,6 +1,8 @@
 package com.almende.dialog.model;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AnswerPost implements Serializable {
 	private static final long serialVersionUID = -5739888017486408094L;
@@ -9,7 +11,8 @@ public class AnswerPost implements Serializable {
 	String answer_id;
 	String answer_text;
 	String responder;
-
+	Map<String, Object> extras;  
+	
 	public AnswerPost(){}
 	public AnswerPost(String question_id,String answer_id,String answer_text,String responder){
 		this.question_id = question_id;
@@ -41,4 +44,15 @@ public class AnswerPost implements Serializable {
 	public void setResponder(String responder) {
 		this.responder = responder;
 	}
+    
+	public Map<String, Object> getExtras()
+    {
+	    extras = extras != null ? extras : new HashMap<String, Object>();
+        return extras;
+    }
+	
+    public void setExtras( Map<String, Object> extras )
+    {
+        this.extras = extras;
+    }
 }

@@ -83,7 +83,7 @@ public class CMServletTest extends TestFramework
     @Test
     public void outBoundSMSCallSenderNameNullTest() throws Exception
     {
-        String myAddress = "ASK";
+        String myAddress = "Ask-Fast";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, myAddress, TEST_PRIVATE_KEY );
 

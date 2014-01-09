@@ -1,12 +1,10 @@
 package com.almende.util;
 
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.DB;
 import com.mongodb.MongoClient;
 import com.sun.jersey.api.client.Client;
-
 
 public class ParallelInit {
 	public static Boolean loadingRequest=true;

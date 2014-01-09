@@ -172,6 +172,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		</auth-constraint> </security-constraint> -->
 	<security-constraint>
 		<web-resource-collection>
+		    <web-resource-name>xmpp</web-resource-name>
 			<url-pattern>/_ah/xmpp/*</url-pattern>
 		</web-resource-collection>
 		<auth-constraint>
@@ -181,6 +182,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 
 	<security-constraint>
 		<web-resource-collection>
+		    <web-resource-name>mail</web-resource-name>
 			<url-pattern>/_ah/mail/*</url-pattern>
 		</web-resource-collection>
 		<auth-constraint>
@@ -190,6 +192,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 
 	<security-constraint>
 		<web-resource-collection>
+		    <web-resource-name>cron</web-resource-name>
 			<url-pattern>/cron/*</url-pattern>
 		</web-resource-collection>
 		<auth-constraint>

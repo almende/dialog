@@ -7,9 +7,6 @@ import com.mongodb.DB;
 import com.mongodb.MongoClient;
 import com.sun.jersey.api.client.Client;
 
-import de.flapdoodle.embed.mongo.MongodExecutable;
-import de.flapdoodle.embed.mongo.MongodProcess;
-
 
 public class ParallelInit {
 	public static Boolean loadingRequest=true;
@@ -20,8 +17,6 @@ public class ParallelInit {
 	public static Thread conThread = new ClientConThread();
 
 	public static DB datastore = null;
-	public static MongodExecutable mongodExecutable = null;
-    public static MongodProcess mongod;
     public static MongoClient mongo;
 	public static boolean datastoreActive = false;
 	public static Thread datastoreThread = new DatastoreThread();

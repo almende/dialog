@@ -243,85 +243,94 @@ abstract public class TextServlet extends HttpServlet {
 				.keySet().iterator().next();
 		
 		// fetch question
-		Question question = Question.fromURL(url, config.getConfigId(),
-				loadAddress);
-		// store the extra information
-		Map<String, Object> extras = new HashMap<String, Object>();
-		extras.put(Question.MEDIA_PROPERTIES, question.getMedia_properties());
-		String preferred_language = StringStore.getString(loadAddress
-				+ "_language");
-		if (preferred_language == null) {
-			preferred_language = config.getPreferred_language();
-		}
-		question.setPreferred_language(preferred_language);
-		Return res = formQuestion(question, config.getConfigId(), loadAddress);
-		// add addresses in cc and bcc map
-		HashMap<String, String> fullAddressMap = new HashMap<String, String>(
-				addressNameMap);
-		if (addressCcNameMap != null) {
-			fullAddressMap.putAll(addressCcNameMap);
-			extras.put(MailServlet.CC_ADDRESS_LIST_KEY, addressCcNameMap);
-		}
-		if (addressBccNameMap != null) {
-			fullAddressMap.putAll(addressBccNameMap);
-			extras.put(MailServlet.BCC_ADDRESS_LIST_KEY, addressBccNameMap);
-		}
-		for (String address : fullAddressMap.keySet()) {
-			// store the session first
-			String sessionKey = getAdapterType() + "|" + localaddress + "|"
-					+ address;
-			Session session = Session.getSession(sessionKey,
-					config.getKeyword());
-			if (session == null) {
-				log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
-						+ sessionKey);
-				return null;
-			}
-			session.setPubKey(config.getPublicKey());
-			session.setDirection("outbound");
-			session.storeSession();
-			
-			// Add key to the map (for the return)
-			sessionKeyMap.put(address, sessionKey);
-			sessions.add(session);
-			
-			if (res.question != null) {
-				StringStore.storeString("question_" + address + "_"
-						+ localaddress, res.question.toJSON());
-			}
-			if (question != null) {
-				extras = storeSMSRelatedData(address, localaddress, config,
-						question, res.reply, extras);
-			}
-			DDRWrapper.log(question, session, "Start", config);
-		}
-		String fromName = getNickname(res.question);
-		log.info(String.format("fromName: %s senderName %s", fromName,
-				senderName));
-		// assign senderName with localAdress, if senderName is missing
-		// priority is as: nickname >> senderName >> myAddress
-		if (fromName == null || fromName.isEmpty()) {
-			senderName = senderName != null && !senderName.isEmpty() ? senderName
-					: localaddress;
-		} else {
-			senderName = fromName;
-		}
-		subject = subject != null && !subject.isEmpty() ? subject
-				: "Message from Ask-Fast";
-		// fix for bug: #15 https://github.com/almende/dialog/issues/15
-		res.reply = URLDecoder.decode(res.reply, "UTF-8");
-		int count = broadcastMessage(res.reply, subject, localaddress,
-				senderName, formattedAddressNameToMap, extras, config);
-		
-		for (Session session : sessions) {
-			for (int i = 0; i < count; i++) {
-				DDRWrapper.log(question, session, "Send", config);
-			}
-		}
-		if (count < 1) {
-			log.severe("Error generating XML");
-			
-		}
+        Question question = Question.fromURL( url, config.getConfigId(), loadAddress );
+        if ( question != null )
+        {
+            // store the extra information
+            Map<String, Object> extras = new HashMap<String, Object>();
+            extras.put( Question.MEDIA_PROPERTIES, question.getMedia_properties() );
+            String preferred_language = StringStore.getString( loadAddress + "_language" );
+            if ( preferred_language == null )
+            {
+                preferred_language = config.getPreferred_language();
+            }
+            question.setPreferred_language( preferred_language );
+            Return res = formQuestion( question, config.getConfigId(), loadAddress );
+            // add addresses in cc and bcc map
+            HashMap<String, String> fullAddressMap = new HashMap<String, String>( addressNameMap );
+            if ( addressCcNameMap != null )
+            {
+                fullAddressMap.putAll( addressCcNameMap );
+                extras.put( MailServlet.CC_ADDRESS_LIST_KEY, addressCcNameMap );
+            }
+            if ( addressBccNameMap != null )
+            {
+                fullAddressMap.putAll( addressBccNameMap );
+                extras.put( MailServlet.BCC_ADDRESS_LIST_KEY, addressBccNameMap );
+            }
+            for ( String address : fullAddressMap.keySet() )
+            {
+                // store the session first
+                String sessionKey = getAdapterType() + "|" + localaddress + "|" + address;
+                Session session = Session.getSession( sessionKey, config.getKeyword() );
+                if ( session == null )
+                {
+                    log.severe( "XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
+                        + sessionKey );
+                    return null;
+                }
+                session.setPubKey( config.getPublicKey() );
+                session.setDirection( "outbound" );
+                session.storeSession();
+
+                // Add key to the map (for the return)
+                sessionKeyMap.put( address, sessionKey );
+                sessions.add( session );
+
+                if ( res.question != null )
+                {
+                    StringStore.storeString( "question_" + address + "_" + localaddress, res.question.toJSON() );
+                }
+                if ( question != null )
+                {
+                    extras = storeSMSRelatedData( address, localaddress, config, question, res.reply, extras );
+                }
+                DDRWrapper.log( question, session, "Start", config );
+            }
+            String fromName = getNickname( res.question );
+            log.info( String.format( "fromName: %s senderName %s", fromName, senderName ) );
+            // assign senderName with localAdress, if senderName is missing
+            // priority is as: nickname >> senderName >> myAddress
+            if ( fromName == null || fromName.isEmpty() )
+            {
+                senderName = senderName != null && !senderName.isEmpty() ? senderName : localaddress;
+            }
+            else
+            {
+                senderName = fromName;
+            }
+            subject = subject != null && !subject.isEmpty() ? subject : "Message from Ask-Fast";
+            // fix for bug: #15 https://github.com/almende/dialog/issues/15
+            res.reply = URLDecoder.decode( res.reply, "UTF-8" );
+            int count = broadcastMessage( res.reply, subject, localaddress, senderName, formattedAddressNameToMap,
+                extras, config );
+
+            for ( Session session : sessions )
+            {
+                for ( int i = 0; i < count; i++ )
+                {
+                    DDRWrapper.log( question, session, "Send", config );
+                }
+            }
+            if ( count < 1 )
+            {
+                log.severe( "Error generating XML" );
+            }
+        }
+        else 
+        {
+            sessionKeyMap.put( "Ërror", "Question JSON not found in url: "+ url );
+        }
 		return sessionKeyMap;
 	}
 	

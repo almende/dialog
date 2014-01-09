@@ -17,6 +17,7 @@ import org.w3c.dom.Node;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.CMStatus;
+import com.almende.dialog.agent.TestServlet;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
@@ -52,37 +53,37 @@ public class CMSmsServlet extends TextServlet {
     @Override
     public void service( HttpServletRequest req, HttpServletResponse res ) throws IOException
     {
-        if ( req.getRequestURI().startsWith( "/sms/cm/deliveryStatus" ))
+        if ( req.getRequestURI().startsWith( "/sms/cm/deliveryStatus" ) )
         {
             if ( req.getMethod().equals( "POST" ) )
-        {
-            StringBuffer jb = new StringBuffer();
-            String line = null;
-            try
             {
-                BufferedReader reader = req.getReader();
-                while ( ( line = reader.readLine() ) != null )
+                StringBuffer jb = new StringBuffer();
+                String line = null;
+                try
                 {
-                    jb.append( line );
-                }
+                    BufferedReader reader = req.getReader();
+                    while ( ( line = reader.readLine() ) != null )
+                    {
+                        jb.append( line );
+                    }
                     CMStatus cmStatus = handleDeliveryStatusReport( jb.toString() );
-                    res.getWriter().println(ServerUtils.serializeWithoutException( cmStatus ));
+                    res.getWriter().println( ServerUtils.serializeWithoutException( cmStatus ) );
+                }
+                catch ( Exception e )
+                {
+                    log.severe( "POST payload retrieval failed. Message: " + e.getLocalizedMessage() );
+                    return;
+                }
             }
-            catch ( Exception e )
-            {
-                log.severe( "POST payload retrieval failed. Message: " + e.getLocalizedMessage() );
-                return;
-            }
-        }
-            else if(req.getMethod().equals( "GET" ))
+            else if ( req.getMethod().equals( "GET" ) )
             {
                 try
                 {
-                    CMStatus cmStatus = handleDeliveryStatusReport( req.getParameter( "reference" ), req.getParameter( "sent" ),
-                        req.getParameter( "received" ), req.getParameter( "to" ),
+                    CMStatus cmStatus = handleDeliveryStatusReport( req.getParameter( "reference" ),
+                        req.getParameter( "sent" ), req.getParameter( "received" ), req.getParameter( "to" ),
                         req.getParameter( "statuscode" ), req.getParameter( "errorcode" ),
                         req.getParameter( "errordescription" ) );
-                    res.getWriter().println(ServerUtils.serializeWithoutException( cmStatus ));
+                    res.getWriter().println( ServerUtils.serializeWithoutException( cmStatus ) );
                 }
                 catch ( Exception e )
                 {
@@ -185,90 +186,86 @@ public class CMSmsServlet extends TextServlet {
         if ( reference != null )
         {
             CMStatus cmStatus = CMStatus.fetch( reference );
-                if ( cmStatus == null )
-                {
+            if ( cmStatus == null )
+            {
                 log.warning( "CM status not found for reference: " + reference );
-                    cmStatus = new CMStatus();
+                cmStatus = new CMStatus();
                 cmStatus.setReference( reference );
                 String[] referenceArray = reference.split( "_" );
                 if ( referenceArray.length == 5 )
-                    {
-                        cmStatus.setAdapterID( referenceArray[1] );
-                        cmStatus.setLocalAddress( referenceArray[2] );
-                    }
+                {
+                    cmStatus.setAdapterID( referenceArray[1] );
+                    cmStatus.setLocalAddress( referenceArray[2] );
                 }
+            }
             if ( sent != null )
-                {
-                cmStatus.setSentTimeStamp( sent );
-                }
-            if ( received != null )
-                {
-                cmStatus.setDeliveredTimeStamp( received );
-                }
-            if ( to != null )
-                {
-                if ( !to.equals( cmStatus.getRemoteAddress() ) )
-                    {
-                        log.warning( "To address dont match between entity and status callback from CM !!" );
-                    }
-                cmStatus.setRemoteAddress( to );
-                }
-            if ( code != null )
-                {
-                cmStatus.setCode( code );
-                }
-            if ( errorCode != null )
-                {
-                cmStatus.setErrorCode( errorCode );
-                }
-            if ( errorDescription != null )
-                {
-                cmStatus.setErrorDescription( errorDescription );
-                }
-            else if(errorCode != null && !errorCode.isEmpty())
             {
-                cmStatus.setErrorDescription( erroCodeMapping(Integer.parseInt( errorCode )) );
+                cmStatus.setSentTimeStamp( sent );
+            }
+            if ( received != null )
+            {
+                cmStatus.setDeliveredTimeStamp( received );
+            }
+            if ( to != null )
+            {
+                if ( !to.equals( cmStatus.getRemoteAddress() ) )
+                {
+                    log.warning( "To address dont match between entity and status callback from CM !!" );
+                }
+                cmStatus.setRemoteAddress( to );
+            }
+            if ( code != null )
+            {
+                cmStatus.setCode( code );
+            }
+            if ( errorCode != null )
+            {
+                cmStatus.setErrorCode( errorCode );
+            }
+            if ( errorDescription != null )
+            {
+                cmStatus.setErrorDescription( errorDescription );
+            }
+            else if ( errorCode != null && !errorCode.isEmpty() )
+            {
+                cmStatus.setErrorDescription( erroCodeMapping( Integer.parseInt( errorCode ) ) );
             }
             if ( cmStatus.getCallback() != null && cmStatus.getCallback().startsWith( "http" ) )
+            {
+                Client client = ParallelInit.getClient();
+                WebResource webResource = client.resource( cmStatus.getCallback() );
+                try
                 {
-                    if ( !ServerUtils.isInUnitTestingEnvironment() )
+                    String callbackPayload = ServerUtils.serialize( cmStatus );
+                    if(ServerUtils.isInUnitTestingEnvironment())
                     {
-                        Client client = ParallelInit.getClient();
-                        WebResource webResource = client.resource( cmStatus.getCallback() );
-                        try
-                        {
-                            String callbackPayload = ServerUtils.serialize( cmStatus );
-                            webResource.type( "text/plain" ).post( String.class, callbackPayload );
-                        dialogLog.info(
-                            cmStatus.getAdapterID(),
-                            String.format( "POST request with payload %s sent to: %s", callbackPayload,
-                                cmStatus.getCallback() ) );
-                        }
-                        catch ( Exception ex )
-                        {
-                            log.severe( "Callback failed. Message: " + ex.getLocalizedMessage() );
-                        }
+                        TestServlet.logForTest( cmStatus );
                     }
-                    else
-                    {
-//                        TestFramework.fetchResponse( HTTPMethod.POST, cmStatus.getCallback(),
-//                            ServerUtils.serialize( cmStatus ) );
-                    }
+                    webResource.type( "text/plain" ).post( String.class, callbackPayload );
+                    dialogLog.info(
+                        cmStatus.getAdapterID(),
+                        String.format( "POST request with payload %s sent to: %s", callbackPayload,
+                            cmStatus.getCallback() ) );
                 }
+                catch ( Exception ex )
+                {
+                    log.severe( "Callback failed. Message: " + ex.getLocalizedMessage() );
+                }
+            }
             else
             {
                 log.info( "Reference: " + reference + ". No delivered callback found." );
-                dialogLog.info( cmStatus.getAdapterID(), "No delivered callback found for reference: "+ reference );
+                dialogLog.info( cmStatus.getAdapterID(), "No delivered callback found for reference: " + reference );
             }
-                cmStatus.store();
-                return cmStatus;
-            }
-            else
-            {
-                log.severe( "Reference code cannot be null" );
-            return null;
-            }
+            cmStatus.store();
+            return cmStatus;
         }
+        else
+        {
+            log.severe( "Reference code cannot be null" );
+            return null;
+        }
+    }
     
     /**
      * gives a mapping of the error code to the error description according to 

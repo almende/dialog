@@ -141,7 +141,7 @@ public class ServerUtils
 
     public static boolean isInUnitTestingEnvironment()
     {
-        return Settings.environment() == null;
+        return (Settings.environment() == null || ParallelInit.isTest);
     }
     
     /**

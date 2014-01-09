@@ -4,7 +4,11 @@ package com.almende.util;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.DB;
+import com.mongodb.MongoClient;
 import com.sun.jersey.api.client.Client;
+
+import de.flapdoodle.embed.mongo.MongodExecutable;
+import de.flapdoodle.embed.mongo.MongodProcess;
 
 
 public class ParallelInit {
@@ -12,13 +16,23 @@ public class ParallelInit {
 	
 	public static Client client = null;
 	public static boolean clientActive = false;
+	public static boolean isTest = false;
 	public static Thread conThread = new ClientConThread();
 
 	public static DB datastore = null;
+	public static MongodExecutable mongodExecutable = null;
+    public static MongodProcess mongod;
+    public static MongoClient mongo;
 	public static boolean datastoreActive = false;
 	public static Thread datastoreThread = new DatastoreThread();
 	
 	public static ObjectMapper om = new ObjectMapper();
+	
+	public ParallelInit(boolean isTest)
+    {
+	    ParallelInit.isTest = isTest;
+	    datastoreThread = new DatastoreThread( isTest );
+    }
 	
 	public static boolean startThreads(){
 		synchronized(conThread){
@@ -35,6 +49,7 @@ public class ParallelInit {
 		}
 		return false;
 	}
+	
 	public static Client getClient(){
 		startThreads();
 		while (!clientActive){
@@ -45,6 +60,7 @@ public class ParallelInit {
 		}
 		return client;
 	}
+	
 	public static DB getDatastore(){
 		startThreads();
 		while (!datastoreActive){
@@ -55,6 +71,7 @@ public class ParallelInit {
 		}
 		return datastore;
 	}
+	
 	public static ObjectMapper getObjectMapper(){
 		startThreads();
 		om.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);

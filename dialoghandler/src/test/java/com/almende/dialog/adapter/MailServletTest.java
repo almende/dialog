@@ -21,9 +21,9 @@ import org.junit.Test;
 
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.TestServlet;
+import com.almende.dialog.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.test.TestServlet;
-import com.almende.dialog.test.TestServlet.QuestionInRequest;
 import com.almende.dialog.util.ServerUtils;
 
 public class MailServletTest extends TestFramework
@@ -206,7 +206,7 @@ public class MailServletTest extends TestFramework
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( remoteAddressEmail, "Test" );
         String url = TestServlet.TEST_SERVLET_PATH + TestServlet.OPEN_QUESTION_URL_WITH_SPACES + "/"
-            + URLEncoder.encode( textMessage, "UTF-8");
+            + URLEncoder.encode( textMessage, "UTF-8" );
         
         MailServlet mailServlet = new MailServlet();
         mailServlet.startDialog( addressNameMap, null, null, url, "test", "sendDummyMessageTest", adapterConfig );
@@ -264,22 +264,22 @@ public class MailServletTest extends TestFramework
         return textMessage;
     }
 
-    private void assertOutgoingTextMessage(TextMessage textMessage) throws Exception
+    private void assertOutgoingTextMessage( TextMessage textMessage ) throws Exception
     {
-        javax.mail.Message messageFromDetails = getMessageFromDetails(textMessage.getAddress(), textMessage.getLocalAddress(), 
-                                                                      responseQuestionString.get(), "");
-        assertTrue(logObject.get() instanceof javax.mail.Message);
-        javax.mail.Message messageLogged = (javax.mail.Message) logObject.get();
-        assertArrayEquals(messageFromDetails.getFrom(), messageLogged.getFrom());
-        assertArrayEquals(messageFromDetails.getAllRecipients(), messageLogged.getAllRecipients());
-        assertEquals(messageFromDetails.getSubject(), messageLogged.getSubject().replaceAll("RE:|null","").trim());
-        assertEquals(messageFromDetails.getContent().toString(), messageLogged.getContent().toString());
+        javax.mail.Message messageFromDetails = getMessageFromDetails( textMessage.getAddress(),
+            textMessage.getLocalAddress(), TestServlet.responseQuestionString, "" );
+        assertTrue( TestServlet.getLogObject() instanceof javax.mail.Message );
+        javax.mail.Message messageLogged = (javax.mail.Message) TestServlet.getLogObject();
+        assertArrayEquals( messageFromDetails.getFrom(), messageLogged.getFrom() );
+        assertArrayEquals( messageFromDetails.getAllRecipients(), messageLogged.getAllRecipients() );
+        assertEquals( messageFromDetails.getSubject(), messageLogged.getSubject().replaceAll( "RE:|null", "" ).trim() );
+        assertEquals( messageFromDetails.getContent().toString(), messageLogged.getContent().toString() );
     }
     
     private void assertOutgoingTextMessage(Message message) throws Exception
     {
-        assertTrue(logObject.get() instanceof javax.mail.Message);
-        javax.mail.Message messageLogged = (javax.mail.Message) logObject.get();
+        assertTrue(TestServlet.getLogObject() instanceof javax.mail.Message);
+        javax.mail.Message messageLogged = (javax.mail.Message) TestServlet.getLogObject();
         assertArrayEquals(message.getFrom(), messageLogged.getFrom());
         assertArrayEquals(message.getAllRecipients(), messageLogged.getAllRecipients());
         assertEquals(message.getSubject(), messageLogged.getSubject().replaceAll("RE:|null","").trim());

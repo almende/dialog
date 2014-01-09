@@ -14,7 +14,7 @@ public class CMStatus implements Serializable
     private static final Logger log = Logger.getLogger( CMStatus.class.getSimpleName() );
     
     @Id
-    private String reference;
+    public String reference;
     private String sms = "";
     private String adapterID = "";
     private String callback = "";
@@ -32,7 +32,7 @@ public class CMStatus implements Serializable
         {
         	TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
             sentTimeStamp = sentTimeStamp == null ? ServerUtils.getServerCurrentTime().toString() : sentTimeStamp;
-            datastore.store( this );
+            datastore.storeOrUpdate( this );
             log.info( "CM status saved: " + ServerUtils.serializeWithoutException( this ) );
         }
     }

@@ -7,7 +7,6 @@ import java.util.logging.Logger;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.intf.QuestionIntf;
-import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -128,16 +127,8 @@ public class Q_fields implements QuestionIntf {
 		String text = "";
         try
         {
-            if(!ServerUtils.isInUnitTestingEnvironment())
-            {
-                WebResource webResource = client.resource(url);
-                text = webResource.type( "text/plain" ).get( String.class );
-            }
-            else
-            {
-                  //TODO: fix TestFramework dependency (Maven doesn't include it during normal builds)
-//                text = TestFramework.fetchResponse( HttpMethod.GET, url, null );
-            }
+            WebResource webResource = client.resource( url );
+            text = webResource.type( "text/plain" ).get( String.class );
         }
         catch ( Exception e )
         {

@@ -12,8 +12,6 @@ import javax.mail.internet.InternetHeaders;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
-import javax.ws.rs.HttpMethod;
-import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -22,16 +20,12 @@ import org.junit.Before;
 import org.w3c.dom.Document;
 
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.TestServlet;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.test.TestServlet;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.util.DatastoreThread;
 import com.almende.util.ParallelInit;
-import com.meterware.httpunit.GetMethodWebRequest;
-import com.meterware.httpunit.PostMethodWebRequest;
-import com.meterware.httpunit.WebRequest;
-import com.meterware.httpunit.WebResponse;
 import com.meterware.servletunit.ServletRunner;
-import com.meterware.servletunit.ServletUnitClient;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 
@@ -52,16 +46,17 @@ public class TestFramework
     protected static final String TEST_PRIVATE_KEY = "test_private_key";
     
     public static ThreadLocal<ServletRunner> servletRunner = new ThreadLocal<ServletRunner>();
-    protected static ThreadLocal<Object> logObject = new ThreadLocal<Object>();
-    protected static ThreadLocal<String> responseQuestionString = new ThreadLocal<String>();
-
+    
     @Before
     public void setup()
     {
+        new ParallelInit( true );
+        ParallelInit.getDatastore();
+        if(ParallelInit.mongo != null)
+        {
+            ParallelInit.mongo.dropDatabase( DatastoreThread.TEST_DB_NAME );
+        }
         servletRunner.remove();
-        logObject.remove();
-        responseQuestionString.remove();
-//        helper.setUp();
         if(servletRunner.get() == null)
         {
             servletRunner.set( setupTestServlet() );
@@ -71,54 +66,55 @@ public class TestFramework
     @After
     public void tearDown()
     {
-//        helper.tearDown();
+        if(ParallelInit.mongo != null)
+        {
+            ParallelInit.mongo.dropDatabase( DatastoreThread.TEST_DB_NAME );
+        }
         servletRunner.remove();
-        logObject.remove();
-        responseQuestionString.remove();
     }
     
     public static String fetchResponse( String httpMethods, String url, String payload )
     {
         String result = "";
-        if(url.startsWith( TestServlet.TEST_SERVLET_PATH ))
+        //        if(url.startsWith( TestServlet.TEST_SERVLET_PATH ))
+        //        {
+        //            ServletUnitClient newClient = servletRunner.get().newClient();
+        //            WebRequest request = null;
+        //            switch ( httpMethods )
+        //            {
+        //                case HttpMethod.GET:
+        //                    request = new GetMethodWebRequest( url );
+        //                    break;
+        //                case HttpMethod.POST:
+        //                    request = new PostMethodWebRequest( url, payload != null ? new ByteArrayInputStream( payload.getBytes() ) : null, 
+        //                                                        MediaType.APPLICATION_JSON );
+        //                    break;
+        //                default:
+        //                    break;
+        //            }
+        //            try
+        //            {
+        //                WebResponse response = newClient.getResponse( request );
+        //                result = response.getText();
+        //            }
+        //            catch ( Exception e )
+        //            {
+        //                e.printStackTrace();
+        //            }
+        //        }
+        //        else 
+        //        {
+        Client client = ParallelInit.getClient();
+        WebResource webResource = client.resource( url );
+        try
         {
-            ServletUnitClient newClient = servletRunner.get().newClient();
-            WebRequest request = null;
-            switch ( httpMethods )
-            {
-                case HttpMethod.GET:
-                    request = new GetMethodWebRequest( url );
-                    break;
-                case HttpMethod.POST:
-                    request = new PostMethodWebRequest( url, payload != null ? new ByteArrayInputStream( payload.getBytes() ) : null, 
-                                                        MediaType.APPLICATION_JSON );
-                    break;
-                default:
-                    break;
-            }
-            try
-            {
-                WebResponse response = newClient.getResponse( request );
-                result = response.getText();
-            }
-            catch ( Exception e )
-            {
-                e.printStackTrace();
-            }
+            result = webResource.type( "text/plain" ).get( String.class );
         }
-        else 
+        catch ( Exception e )
         {
-            Client client = ParallelInit.getClient();
-            WebResource webResource = client.resource(url);
-            try
-            {
-                result = webResource.type( "text/plain" ).get( String.class );
-            }
-            catch ( Exception e )
-            {
-                e.printStackTrace();
-            }
+            e.printStackTrace();
         }
+        //        }
         return result;
     }
     
@@ -262,19 +258,6 @@ public class TestFramework
         return parse;
     }
 
-    public static void log(Object log)
-    {
-        logObject.set(log);
-    }
-
-    public static void storeResponseQuestionInThread(String questionText)
-    {
-        if(questionText != null && !questionText.isEmpty())
-        {
-            responseQuestionString.set(questionText);
-        }
-    }
-
     protected javax.mail.Message getMessageFromDetails(String remoteAddress, String localAddress, String messageText, 
         String subject) throws Exception
     {
@@ -285,5 +268,4 @@ public class TestFramework
         mimeMessage.setText(messageText);
         return mimeMessage;
     }
-
 }

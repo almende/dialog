@@ -55,93 +55,80 @@ public class Question implements QuestionIntf {
 		return fromURL(url, adapterID, remoteID, "");
 	}
 	
-	public static String getJSONFromURL(String url, String adapterID,
-			String remoteID, String fromID) {
-		Client client = ParallelInit.getClient();
-		WebResource webResource;
-		try {
-			webResource = client
-					.resource(url)
-					.queryParam("responder",
-							URLEncoder.encode(remoteID, "UTF-8"))
-					.queryParam("requester", fromID);
-			return webResource.type("text/plain").get(String.class);
-		} catch (UnsupportedEncodingException e) {
-			log.severe(e.toString());
-			dialogLog.severe(adapterID,
-					"ERROR loading question: " + e.toString());
-		}
-		return null;
-	}
+    public static String getJSONFromURL( String url, String adapterID, String remoteID, String fromID )
+    {
+        Client client = ParallelInit.getClient();
+        WebResource webResource;
+        try
+        {
+            webResource = client.resource( url ).queryParam( "responder", URLEncoder.encode( remoteID, "UTF-8" ) )
+                .queryParam( "requester", fromID );
+            return webResource.type( "text/plain" ).get( String.class );
+        }
+        catch ( UnsupportedEncodingException e )
+        {
+            log.severe( e.toString() );
+            dialogLog.severe( adapterID, "ERROR loading question: " + e.toString() );
+        }
+        return null;
+    }
 	
-	@JsonIgnore
-	public static Question fromURL(String url, String adapterID,
-			String remoteID, String fromID) {
-		log.info(String
-				.format("Trying to parse Question from URL: %s with remoteId: %s and fromId: %s",
-						url, remoteID, fromID));
-		if (remoteID == null) remoteID = "";
-		String json = "";
-		if (url != null && !url.trim().isEmpty()) {
-			if (!ServerUtils.isInUnitTestingEnvironment()) {
-				Client client = ParallelInit.getClient();
-				WebResource webResource = client.resource(url);
-				try {
-					webResource = webResource.queryParam("responder",
-							URLEncoder.encode(remoteID, "UTF-8")).queryParam(
-							"requester", URLEncoder.encode(fromID, "UTF-8"));
-					dialogLog.info(adapterID, "Loading new question from: "
-							+ webResource.toString());
-					json = webResource.type("text/plain").get(String.class);
-					dialogLog.info(adapterID, "Received new question: " + json);
-				} catch (Exception e) {
-					log.severe(e.toString());
-					dialogLog.severe(adapterID,
-							"ERROR loading question: " + e.toString());
-					if (questionRetryCounter.get(url) == null) {
-						questionRetryCounter.put(url, 0);
-					}
-					while (questionRetryCounter.get(url) != null
-							&& questionRetryCounter.get(url) < DEFAULT_MAX_QUESTION_LOAD) {
-						try {
-							dialogLog
-									.info(adapterID,
-											String.format(
-													"Fetch question from URL: %s failed. Trying again (Count: %s) ",
-													webResource.toString(),
-													questionRetryCounter
-															.get(url)));
-							json = webResource.type("text/plain").get(
-									String.class);
-							dialogLog.info(adapterID, "Received new question: "
-									+ json);
-							break;
-						} catch (Exception ex) {
-							Integer retryCount = questionRetryCounter.get(url);
-							questionRetryCounter.put(url, ++retryCount);
-						}
-					}
-				}
-				questionRetryCounter.remove(url);
-			} else {
-				try {
-					url = ServerUtils.getURLWithQueryParams(url, "responder",
-							URLEncoder.encode(remoteID, "UTF-8"));
-					url = ServerUtils.getURLWithQueryParams(url, "requester",
-							URLEncoder.encode(fromID, "UTF-8"));
-					// TODO: fix TestFramework dependency (Maven doesn't include
-					// it during normal builds)
-					// json = TestFramework.fetchResponse( HttpMethod.GET, url,
-					// null );
-				} catch (UnsupportedEncodingException e) {
-					log.severe(e.toString());
-				}
-			}
-			return fromJSON(json, adapterID);
-		} else {
-			return null;
-		}
-	}
+    @JsonIgnore
+    public static Question fromURL( String url, String adapterID, String remoteID, String fromID )
+    {
+        log.info( String.format( "Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url,
+            remoteID, fromID ) );
+        if ( remoteID == null )
+            remoteID = "";
+        String json = "";
+        if ( url != null && !url.trim().isEmpty() )
+        {
+            Client client = ParallelInit.getClient();
+            WebResource webResource = client.resource( url );
+            try
+            {
+                webResource = webResource.queryParam( "responder", URLEncoder.encode( remoteID, "UTF-8" ) ).queryParam(
+                    "requester", URLEncoder.encode( fromID, "UTF-8" ) );
+                dialogLog.info( adapterID, "Loading new question from: " + webResource.toString() );
+                json = webResource.type( "text/plain" ).get( String.class );
+                dialogLog.info( adapterID, "Received new question: " + json );
+            }
+            catch ( Exception e )
+            {
+                log.severe( e.toString() );
+                dialogLog.severe( adapterID, "ERROR loading question: " + e.toString() );
+                if ( questionRetryCounter.get( url ) == null )
+                {
+                    questionRetryCounter.put( url, 0 );
+                }
+                while ( questionRetryCounter.get( url ) != null
+                    && questionRetryCounter.get( url ) < DEFAULT_MAX_QUESTION_LOAD )
+                {
+                    try
+                    {
+                        dialogLog.info(
+                            adapterID,
+                            String.format( "Fetch question from URL: %s failed. Trying again (Count: %s) ",
+                                webResource.toString(), questionRetryCounter.get( url ) ) );
+                        json = webResource.type( "text/plain" ).get( String.class );
+                        dialogLog.info( adapterID, "Received new question: " + json );
+                        break;
+                    }
+                    catch ( Exception ex )
+                    {
+                        Integer retryCount = questionRetryCounter.get( url );
+                        questionRetryCounter.put( url, ++retryCount );
+                    }
+                }
+            }
+            questionRetryCounter.remove( url );
+            return fromJSON( json, adapterID );
+        }
+        else
+        {
+            return null;
+        }
+    }
 	
 	@JsonIgnore
 	public static Question fromJSON(String json, String adapterID) {
@@ -301,15 +288,7 @@ public class Question implements QuestionIntf {
 			String post = om.writeValueAsString(ans);
 			log.info("Going to send: " + post);
 			String newQuestionJSON = null;
-			if (!ServerUtils.isInUnitTestingEnvironment()) {
-				newQuestionJSON = webResource.type("application/json").post(
-						String.class, post);
-			} else {
-				// TODO: fix TestFramework dependency (Maven doesn't include it
-				// during normal builds)
-				// newQuestionJSON = TestFramework.fetchResponse(
-				// HttpMethod.POST, answer.getCallback(), post );
-			}
+            newQuestionJSON = webResource.type( "application/json" ).post( String.class, post );
 			
 			log.info("Received new question (answer): " + newQuestionJSON);
 			dialogLog.info(adapterID, "Received new question (answer): "

@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 import org.znerd.xmlenc.XMLOutputter;
 
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.TestServlet;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
@@ -199,9 +200,7 @@ public class CM {
         //perform some unit by logging the XML generated
         if ( ServerUtils.isInUnitTestingEnvironment() )
         {
-            //TODO: fix TestFramework dependency (Maven doesn't include it during normal builds)
-//            TestFramework.log(sw.toString());
-
+            TestServlet.logForTest( sw.toString() );
         }
         return sw;
     }

@@ -2,6 +2,7 @@ package com.almende.dialog.adapter;
 
 import java.io.UnsupportedEncodingException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
@@ -21,8 +22,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.TestServlet;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.util.TypeUtil;
 
 
 public class MailServlet extends TextServlet {
@@ -103,38 +106,6 @@ public class MailServlet extends TextServlet {
     		return msg;
         }
 
-//        private String trimOldReplies( String body, String localAddress )
-//        {
-//            String result = "";
-//            ArrayList<String> nonNullMessageLines = new ArrayList<String>();
-//            String[] bodyLines = body.split( "\n" );
-//            for ( String bodyLine : bodyLines )
-//            {
-//                if(!bodyLine.trim().isEmpty())
-//                {
-//                    nonNullMessageLines.add( bodyLine.trim() );
-//                }
-//            }
-//            boolean foundReplyHeader = false;
-//            //parse the nonNullMessage lines
-//            for ( String nonNullMessageLine : nonNullMessageLines )
-//            {
-//                if(foundReplyHeader && nonNullMessageLine.contains( ">" ))
-//                {
-//                    break;
-//                }
-//                else if( !nonNullMessageLine.contains( "<"+localAddress+">" ))
-//                {
-//                    result += nonNullMessageLine;
-//                }
-//                else
-//                {
-//                    foundReplyHeader = true;
-//                }
-//            }
-//            return result;
-//        }
-
         @Deprecated
         /**
          * @Deprecated use broadcastMessage instead
@@ -145,8 +116,9 @@ public class MailServlet extends TextServlet {
 		Properties props = new Properties();
         javax.mail.Session session = javax.mail.Session.getDefaultInstance(props, null);
 
+        Message msg = null;
 		try {
-            Message msg = new MimeMessage(session);
+            msg = new MimeMessage(session);
             msg.setFrom(new InternetAddress(from));
             if(fromName!=null)
                 msg.setFrom(new InternetAddress(from, fromName));
@@ -158,11 +130,6 @@ public class MailServlet extends TextServlet {
             
             String logString = String.format( "Email sent:\n" + "From: %s<%s>\n" + "To: %s<%s>\n" + "Subject: %s\n" + "Body: %s",
                                               fromName, from, toName, to, subject, message );
-            if(ServerUtils.isInUnitTestingEnvironment())
-            {
-                //TODO: fix TestFramework dependency (Maven doesn't include it during normal builds)
-//                TestFramework.log( msg );
-            }
             log.info( logString );
             log.info("Send reply to mail post: "+(new Date().getTime()));
 
@@ -173,6 +140,14 @@ public class MailServlet extends TextServlet {
         } catch (UnsupportedEncodingException e) {
         	log.warning("Failed to send message, because encoding: "+e.getLocalizedMessage());
 		}
+        finally
+        {
+            if ( ServerUtils.isInUnitTestingEnvironment() )
+            {
+                TestServlet.logForTest( msg );
+                TestServlet.responseQuestionString = message;
+            }
+        }
 		return 1;		
 	}
 	
@@ -229,8 +204,9 @@ public class MailServlet extends TextServlet {
             {
                 if(extras.get( CC_ADDRESS_LIST_KEY ) instanceof Map)
                 {
-                    @SuppressWarnings("unchecked")
-					Map<String, String> ccAddressNameMap = (Map<String, String>)extras.get( CC_ADDRESS_LIST_KEY );
+                    TypeUtil<HashMap<String, String>> injector = new TypeUtil<HashMap<String, String>>() {
+                    };
+                    HashMap<String, String> ccAddressNameMap = injector.inject(extras.get( CC_ADDRESS_LIST_KEY ));
                     for ( String address : ccAddressNameMap.keySet() )
                     {
                         String toName = ccAddressNameMap.get( address ) != null ? ccAddressNameMap.get( address ) : address;
@@ -266,8 +242,7 @@ public class MailServlet extends TextServlet {
             msg.setContent( message, "text/html; charset=utf-8" );
             if(ServerUtils.isInUnitTestingEnvironment())
             {
-                //TODO: fix TestFramework dependency (Maven doesn't include it during normal builds)
-//                TestFramework.log( msg );
+                TestServlet.logForTest( msg );
             }
             Transport.send( msg );
 

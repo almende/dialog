@@ -23,13 +23,13 @@ import org.w3c.dom.Node;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy.Return;
+import com.almende.dialog.agent.TestServlet;
+import com.almende.dialog.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
-import com.almende.dialog.test.TestServlet;
-import com.almende.dialog.test.TestServlet.QuestionInRequest;
 import com.almende.dialog.util.ServerUtils;
 
 public class VoiceXMLServletTest extends TestFramework {
@@ -196,9 +196,8 @@ public class VoiceXMLServletTest extends TestFramework {
         assertEquals(COMMENT_QUESTION_AUDIO, prompt.getFirstChild()
                 .getAttributes().getNamedItem("src").getNodeValue());
 
-        assertEquals("/vxml/answer?question_id=" + COMMENT_QUESTION_ID
-                + "&sessionKey=" + sessionKey, _goto.getAttributes()
-                .getNamedItem("next").getNodeValue());
+        assertEquals( "answer?question_id=" + COMMENT_QUESTION_ID + "&sessionKey=" + sessionKey, _goto.getAttributes()
+            .getNamedItem( "next" ).getNodeValue() );
     }
 
     @Test
@@ -232,7 +231,7 @@ public class VoiceXMLServletTest extends TestFramework {
         
         String result = renderQuestion(question, adapter, sessionKey);
         
-        log(result);
+        TestServlet.logForTest( COMMENT_QUESTION_AUDIO );
         
         Document doc = getXMLDocumentBuilder(result);
         Node vxml = doc.getFirstChild();

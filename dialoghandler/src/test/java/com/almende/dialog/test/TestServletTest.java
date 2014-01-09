@@ -6,8 +6,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.almende.dialog.TestFramework;
+import com.almende.dialog.agent.TestServlet;
+import com.almende.dialog.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Question;
-import com.almende.dialog.test.TestServlet.QuestionInRequest;
 import com.almende.dialog.util.ServerUtils;
 
 public class TestServletTest extends TestFramework

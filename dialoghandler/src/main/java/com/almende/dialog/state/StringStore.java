@@ -37,7 +37,7 @@ public class StringStore {
 		entity.setId(id);
 		entity.setString(text);
 		
-		datastore.store(entity);
+		datastore.storeOrUpdate( entity);
 		log.info(String.format("String with id: %s and text: %s saved", id,
 				text));
 	}

@@ -1,4 +1,5 @@
-package com.almende.dialog.test;
+package com.almende.dialog.agent;
+
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -7,6 +8,7 @@ import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -16,24 +18,33 @@ import javax.ws.rs.core.MediaType;
 
 import org.junit.Assert;
 
-import com.almende.dialog.TestFramework;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.util.ServerUtils;
 
+/**
+ * this Servlet is used in the unit tests
+ * @author Shravan
+ */
 public class TestServlet extends HttpServlet
 {
     private static final long serialVersionUID = 1L;
-    public static final String TEST_SERVLET_PATH = "http://localhost:9000/unitTestServlet";
+    public static final String TEST_SERVLET_PATH = "http://localhost:8082/dialoghandler/unitTestServlet";
     public static final String APPOINTMENT_MAIN_QUESTION = "Are you available today?";
     public static final String OPEN_QUESTION_URL_WITH_SPACES = "/URL WITH SPACES";
-    public static final String PLAIN_TEXT_QUESTION = "/PLAIN TEXT";
+    public static final String PLAIN_TEXT_QUESTION = "/PLAIN%20TEXT";
     public static final String APPOINTMENT_YES_ANSWER = "Yup";
     public static final String APPOINTMENT_NO_ANSWER = "Nope";
     public static final String APPOINTMENT_FREE_ANSWER = "Free";
     public static final String APPOINTMENT_SECOND_QUESION = "How long are you available? (in mins)";
     public static final String APPOINTMENT_REJECT_RESPONSE = "Thanks for responding to the invitation!";
     public static final String APPOINTMENT_ACCEPTANCE_RESPONSE = "Thanks for accepting the invitation!";
+    
+    //used for local caching of question for testing
+    public static String responseQuestionString = "" ;
+    protected static Object logObject = new Object();
+    
+    private static final Logger log = Logger.getLogger( TestServlet.class.getSimpleName() );
     
     /**
      * simple enum to generate different questions formats
@@ -77,7 +88,7 @@ public class TestServlet extends HttpServlet
         {
             try
             {
-                TestFramework.storeResponseQuestionInThread(getResponseQuestionWithOptionsInString(result));
+                storeResponseQuestionInThread(getResponseQuestionWithOptionsInString(result));
             }
             catch ( Exception e )
             {
@@ -85,15 +96,19 @@ public class TestServlet extends HttpServlet
             }
         }
         if ( result == null || result.isEmpty()
-            && req.getPathInfo().startsWith( OPEN_QUESTION_URL_WITH_SPACES ) )
+            && req.getPathInfo().startsWith( URLDecoder.decode( OPEN_QUESTION_URL_WITH_SPACES, "UTF-8" ) ) )
         {
-            String message = req.getPathInfo().substring( OPEN_QUESTION_URL_WITH_SPACES.length() + 1 );
-            result = getJsonSimpleOpenQuestion( TEST_SERVLET_PATH + PLAIN_TEXT_QUESTION + "/" + message);
+            String message = req.getPathInfo().substring(
+                URLDecoder.decode( OPEN_QUESTION_URL_WITH_SPACES, "UTF-8" ).length() + 1 );
+            result = getJsonSimpleOpenQuestion( TEST_SERVLET_PATH + PLAIN_TEXT_QUESTION + "/" + message );
         }
-        else if ( result == null || result.isEmpty() && req.getPathInfo().startsWith( PLAIN_TEXT_QUESTION ) )
+        else if ( result == null || result.isEmpty()
+            && req.getPathInfo().startsWith( URLDecoder.decode( PLAIN_TEXT_QUESTION, "UTF-8" ) ) )
         {
-            result = req.getPathInfo().substring( PLAIN_TEXT_QUESTION.length() + 1 );
+            result = URLDecoder.decode(
+                req.getPathInfo().substring( URLDecoder.decode( PLAIN_TEXT_QUESTION, "UTF-8" ).length() + 1 ), "UTF-8" );
         }
+        TestServlet.logForTest( result );
         resp.getWriter().write( result );
         resp.setHeader( "Content-Type", MediaType.APPLICATION_JSON );
     }
@@ -110,7 +125,7 @@ public class TestServlet extends HttpServlet
             //store all the questions loaded in the TestFramework
             try
             {
-                TestFramework.storeResponseQuestionInThread(getResponseQuestionWithOptionsInString(result));
+                storeResponseQuestionInThread(getResponseQuestionWithOptionsInString(result));
             }
             catch ( Exception e )
             {
@@ -133,7 +148,7 @@ public class TestServlet extends HttpServlet
                     jb.append( line );
                 }
                 result = jb.toString();
-                TestFramework.log( result );
+                TestServlet.logForTest( result );
             }
             catch ( Exception e )
             {
@@ -166,6 +181,29 @@ public class TestServlet extends HttpServlet
             Assert.fail( e.getLocalizedMessage() );
         }
         return question.toJSON();
+    }
+    
+    public static void storeResponseQuestionInThread(String questionText)
+    {
+        if(questionText != null && !questionText.isEmpty())
+        {
+            responseQuestionString = questionText;
+        }
+    }
+    
+    /**
+     * cache stuff for local unit testing
+     * @param log
+     */
+    public static void logForTest(Object log)
+    {
+        TestServlet.log.info( "LogForTest: "+ log.toString() );
+        logObject = log;
+    }
+    
+    public static Object getLogObject()
+    {
+        return logObject;
     }
     
     private String getJsonSimpleOpenQuestionWithoutAnswers( String questionText )
@@ -273,36 +311,6 @@ public class TestServlet extends HttpServlet
     }
     
     /**
-     * @param appointmentTag
-     * @return
-     */
-    private String getAppointmentQuestion( String appointmentTag )
-    {
-        String result;
-        if ( appointmentTag.equals( "start" ) )
-        {
-            result = getJsonAppointmentQuestion();
-        }
-        else if ( appointmentTag.equals( APPOINTMENT_YES_ANSWER ) )
-        {
-            result = getJsonAppointmentYesQuestion();
-        }
-        else if ( appointmentTag.equals( APPOINTMENT_NO_ANSWER ) )
-        {
-            result = getJsonAppointmentNoQuestion();
-        }
-        else if ( appointmentTag.equals( APPOINTMENT_FREE_ANSWER ) )
-        {
-            result = getJsonAppointmentFreeQuestion();
-        }
-        else
-        {
-            result = getJsonAppointmentQuestion();
-        }
-        return result;
-    }
-
-    /**
      * returns a String format of a question. used for testing.
      * E.g. Are you available today?
             [ Yup | Nope  ]
@@ -336,5 +344,35 @@ public class TestServlet extends HttpServlet
         {
             return questionJSON;
         }
+    }
+    
+    /**
+     * @param appointmentTag
+     * @return
+     */
+    private String getAppointmentQuestion( String appointmentTag )
+    {
+        String result;
+        if ( appointmentTag.equals( "start" ) )
+        {
+            result = getJsonAppointmentQuestion();
+        }
+        else if ( appointmentTag.equals( APPOINTMENT_YES_ANSWER ) )
+        {
+            result = getJsonAppointmentYesQuestion();
+        }
+        else if ( appointmentTag.equals( APPOINTMENT_NO_ANSWER ) )
+        {
+            result = getJsonAppointmentNoQuestion();
+        }
+        else if ( appointmentTag.equals( APPOINTMENT_FREE_ANSWER ) )
+        {
+            result = getJsonAppointmentFreeQuestion();
+        }
+        else
+        {
+            result = getJsonAppointmentQuestion();
+        }
+        return result;
     }
 }

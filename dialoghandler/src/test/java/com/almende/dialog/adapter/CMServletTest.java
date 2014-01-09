@@ -8,16 +8,19 @@ import static org.junit.Assert.assertTrue;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.codehaus.plexus.util.StringInputStream;
+import org.codehaus.plexus.util.StringOutputStream;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.w3c.dom.Document;
@@ -27,9 +30,9 @@ import org.w3c.dom.NodeList;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CMStatus;
+import com.almende.dialog.agent.TestServlet;
+import com.almende.dialog.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.test.TestServlet;
-import com.almende.dialog.test.TestServlet.QuestionInRequest;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 
@@ -181,7 +184,7 @@ public class CMServletTest extends TestFramework
         //initiate session with a new message
         ReceiveAppointmentExistingSessionYesMessageTest();
 
-        //respond with a "yes" message
+        //respond with a "30" as mins free message
         TextMessage textMessage = smsAppointmentInteraction( "30" );
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( textMessage.getAddress(), textMessage.getRecipientName() );
@@ -219,7 +222,7 @@ public class CMServletTest extends TestFramework
         //send an outbound SMS
         ReceiveAppointmentNewSessionMessageTest();
         
-        String smsRequestXML = logObject.get().toString();
+        String smsRequestXML = TestServlet.getLogObject().toString();
         //fetch the sms reference
         DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
         DocumentBuilder newDocumentBuilder = newInstance.newDocumentBuilder();
@@ -234,17 +237,18 @@ public class CMServletTest extends TestFramework
         //mimic a POST call to /sms/cm/deliveryStatus
         CMSmsServlet cmSmsServlet = new CMSmsServlet();
         HttpServletRequest httpServletRequest = Mockito.mock( HttpServletRequest.class );
+        HttpServletResponse httpServletResponse = Mockito.mock( HttpServletResponse.class );
         Mockito.when( httpServletRequest.getRequestURI() ).thenReturn( "/sms/cm/deliveryStatus" );
         Mockito.when( httpServletRequest.getMethod() ).thenReturn( "POST" );
         Mockito.when( httpServletRequest.getReader() ).thenReturn(
             new BufferedReader( new InputStreamReader( new StringInputStream( getTestSMSStatusXML( remoteAddressVoice,
                 referenceNode.getTextContent() ) ) ) ) );
-        cmSmsServlet.service( httpServletRequest, null );
+        Mockito.when( httpServletResponse.getWriter() ).thenReturn( new PrintWriter( new StringOutputStream(), true ) );
+        cmSmsServlet.service( httpServletRequest, httpServletResponse );
         
         //assert that a POST call was performd on the callback
-        String callbackPayload = logObject.get().toString();
-        assertTrue( callbackPayload != null );
-        CMStatus smsPayload = ServerUtils.deserialize( callbackPayload, false, CMStatus.class);
+        assertTrue( TestServlet.getLogObject() instanceof CMStatus);
+        CMStatus smsPayload = (CMStatus) TestServlet.getLogObject();
         assertTrue( smsPayload != null );
         assertEquals( "Are you available today?\n[ Yup | Nope  ]", smsPayload.getSms() );
         assertEquals( "2009-06-15T13:45:30", smsPayload.getSentTimeStamp() );
@@ -311,7 +315,7 @@ public class CMServletTest extends TestFramework
         String simpleQuestion, String senderName, String subject ) throws Exception
     {
         //fetch the xml generated
-        Document builder = getXMLDocumentBuilder( logObject.get().toString() );
+        Document builder = getXMLDocumentBuilder( TestServlet.getLogObject().toString() );
         NodeList messageNodeList = builder.getElementsByTagName( "MESSAGES" );
         NodeList customerNodeList = builder.getElementsByTagName( "CUSTOMER" );
         NodeList userNodeList = builder.getElementsByTagName( "USER" );

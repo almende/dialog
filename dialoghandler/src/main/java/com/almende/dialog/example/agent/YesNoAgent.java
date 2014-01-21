@@ -1,4 +1,4 @@
-package com.almende.dialog.agent;
+package com.almende.dialog.example.agent;
 
 import java.io.Serializable;
 import java.net.URLDecoder;

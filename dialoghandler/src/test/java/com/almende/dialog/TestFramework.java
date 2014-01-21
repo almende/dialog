@@ -20,7 +20,7 @@ import org.junit.Before;
 import org.w3c.dom.Document;
 
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.agent.TestServlet;
+import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.DatastoreThread;

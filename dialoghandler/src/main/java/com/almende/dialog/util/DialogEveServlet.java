@@ -8,7 +8,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.almende.dialog.adapter.DialogAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.agent.AgentHost;
 import com.almende.eve.rpc.jsonrpc.JSONRPC;

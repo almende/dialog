@@ -1,4 +1,4 @@
-package com.almende.dialog.adapter;
+package com.almende.dialog.agent;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +11,11 @@ import java.util.logging.Logger;
 
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.CMSmsServlet;
+import com.almende.dialog.adapter.MBSmsServlet;
+import com.almende.dialog.adapter.MailServlet;
+import com.almende.dialog.adapter.TwitterServlet;
+import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.ServerUtils;

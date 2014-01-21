@@ -16,7 +16,7 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
 import com.almende.dialog.Settings;
-import com.almende.dialog.adapter.DialogAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.type.TypeReference;

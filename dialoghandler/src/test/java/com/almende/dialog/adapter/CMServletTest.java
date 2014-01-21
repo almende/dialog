@@ -30,9 +30,10 @@ import org.w3c.dom.NodeList;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CMStatus;
-import com.almende.dialog.agent.TestServlet;
-import com.almende.dialog.agent.TestServlet.QuestionInRequest;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 

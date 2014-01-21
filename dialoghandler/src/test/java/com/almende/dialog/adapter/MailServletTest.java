@@ -21,9 +21,9 @@ import org.junit.Test;
 
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.agent.TestServlet;
-import com.almende.dialog.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.util.ServerUtils;
 
 public class MailServletTest extends TestFramework

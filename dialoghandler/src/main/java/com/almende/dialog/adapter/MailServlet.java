@@ -22,8 +22,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.agent.TestServlet;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.TypeUtil;
 

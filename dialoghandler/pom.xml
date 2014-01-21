@@ -32,6 +32,7 @@
 		<slf4j.version>1.7.5</slf4j.version>
 		<eve.version>2.1.0-SNAPSHOT</eve.version>
 		<hamcrest.version>1.3</hamcrest.version>
+		<askfast.version>0.0.1-SNAPSHOT</askfast.version>
 	</properties>
 
 	<organization>
@@ -139,7 +140,11 @@
 			<artifactId>hamcrest-all</artifactId>
 			<version>${hamcrest.version}</version>
 		</dependency>
-
+		<dependency>
+			<groupId>com.askfast</groupId>
+			<artifactId>askfast-commons</artifactId>
+			<version>${askfast.version}</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -208,7 +213,7 @@
 							</systemProperty>
 						</systemProperties>
 						<stopKey>myAgents</stopKey>
-						<stopPort>9999</stopPort>
+						<stopPort>9992</stopPort>
 					</configuration>
 
 					<executions>
@@ -318,7 +323,7 @@
 								</systemProperty>
 							</systemProperties>
 							<stopKey>myAgents</stopKey>
-							<stopPort>9999</stopPort>
+							<stopPort>9992</stopPort>
 						</configuration>
 
 						<executions>

@@ -4,6 +4,30 @@
 	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
 http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 	version="2.5">
+	
+    <context-param>
+		<description>eve configuration (yaml file)</description>
+		<param-name>eve_config</param-name>
+		<param-value>eve.yaml</param-value>
+	</context-param>
+	<listener>
+		<listener-class>com.almende.eve.transport.http.AgentListener</listener-class>
+	</listener>
+
+	<servlet>
+		<servlet-name>AgentServlet</servlet-name>
+		<servlet-class>com.almende.eve.transport.http.AgentServlet</servlet-class>
+		<init-param>
+			<param-name>servlet_url</param-name>
+			<param-value>http://localhost:8082/dialoghandler/agents/</param-value>
+		</init-param>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>AgentServlet</servlet-name>
+		<url-pattern>/agents/*</url-pattern>
+	</servlet-mapping>
+    
 	<servlet>
 		<servlet-name>RESTServlet</servlet-name>
 		<servlet-class>org.apache.wink.server.internal.servlet.RestServlet</servlet-class>
@@ -17,6 +41,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<servlet-name>RESTServlet</servlet-name>
 		<url-pattern>/rest/*</url-pattern>
 	</servlet-mapping>
+	
 	<filter>
 		<filter-name>CORS</filter-name>
 		<filter-class>com.thetransactioncompany.cors.CORSFilter</filter-class>
@@ -37,6 +62,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<filter-name>CORS</filter-name>
 		<url-pattern>/*</url-pattern>
 	</filter-mapping>
+	
 	<servlet>
 		<servlet-name>SingleAgentServlet</servlet-name>
 		<servlet-class>com.almende.dialog.util.DialogEveServlet</servlet-class>
@@ -137,7 +163,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 
 	<servlet>
 		<servlet-name>unitTestServlet</servlet-name>
-		<servlet-class>com.almende.dialog.agent.TestServlet</servlet-class>
+		<servlet-class>com.almende.dialog.example.agent.TestServlet</servlet-class>
 		<init-param>
 			<param-name>servlet_url</param-name>
 			<param-value>http://localhost:8082/unitTestServlet/</param-value>

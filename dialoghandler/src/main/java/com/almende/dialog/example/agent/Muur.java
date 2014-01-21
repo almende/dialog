@@ -1,4 +1,4 @@
-package com.almende.dialog.agent;
+package com.almende.dialog.example.agent;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -14,9 +14,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-@Path("/kastje/")
-public class Kastje {
-	private static final String URL="http://"+Settings.HOST+"/kastje/";
+@Path("/muur/")
+public class Muur {
+	private static final String URL="http://"+Settings.HOST+"/muur/";
 	static final ObjectMapper om =ParallelInit.getObjectMapper();
 	
 	private String getQuestion(String question_no){
@@ -25,7 +25,7 @@ public class Kastje {
 		node.put("question_text",URL+"questions/"+question_no);
 		if (question_no.equals("10")){
 			node.put("type", "referral");
-			node.put("url", "http://"+Settings.HOST+"/muur/");
+			node.put("url", "http://"+Settings.HOST+"/kastje/");
 		} else {
 			node.put("type", "open");
 			ArrayNode answers = node.putArray("answers");
@@ -44,13 +44,14 @@ public class Kastje {
 		ObjectNode node= om.createObjectNode();
 		node.put("url", URL);
 		if (preferred_language != null && preferred_language.startsWith("en")){
-			node.put("nickname", "Pillar");			
+			node.put("nickname", "Post");			
 		} else {
-			node.put("nickname", "Kastje");
+			node.put("nickname", "Muur");
 		}
 		return Response.ok(node.toString()).build();
 	}
 
+	
 	@GET
 	@Produces("application/json")
 	public Response firstQuestion(@QueryParam("preferred_medium") String preferred_medium){
@@ -74,13 +75,13 @@ public class Kastje {
 		if (preferred_language != null && preferred_language.startsWith("en")){
 			switch (questionNo){
 				case 0: result="Hi, please ask me a question!"; break;
-				case 10: result="Sorry, I haven't got a clue...! Maybe 'Post' knows something about that, let me pass you on!"; break;
+				case 10: result="Sorry, I haven't got a clue...! Maybe 'pillar' knows something about that, let me pass you on!"; break;
 				default: result="Eehhh??!?";
 			}
 		} else{
 			switch (questionNo){
 				case 0: result="Hoi, stel me maar een vraag!"; break;
-				case 10: result="Oei, daar weet ik niets van, maar misschien 'Muur' wel, ik stuur je door!"; break;
+				case 10: result="Oei, daar weet ik niets van, maar misschien 'Kastje' wel, ik stuur je door!"; break;
 				default: result="Eehhh??!?";
 			}
 		}

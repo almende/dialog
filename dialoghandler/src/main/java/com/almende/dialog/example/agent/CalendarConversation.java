@@ -1,4 +1,4 @@
-package com.almende.dialog.agent;
+package com.almende.dialog.example.agent;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Path("/calendar/")
 public class CalendarConversation {
-	private static final Logger log = Logger.getLogger(com.almende.dialog.agent.CalendarConversation.class.getName()); 	
+	private static final Logger log = Logger.getLogger(com.almende.dialog.example.agent.CalendarConversation.class.getName()); 	
 	private static final String URL="http://"+Settings.HOST+"/calendar/";
 	//private static final String USERAGENT = "https://agentplatform.appspot.com/agents/UserAgent/12d3c692-2138-4b4d-bcb2-f29058f21819";
 	private static final String CALENDARAGENT = "https://eveagents.appspot.com/agents/GoogleCalendarAgent/647fe772-918d-44a8-a199-657a6a8f07c6";

@@ -1,0 +1,35 @@
+# Eve configuration
+
+# environment specific settings
+environment:
+  Development:
+    # development specific settings...
+  Production:
+    # production specific settings...
+
+# transport services
+transport_services:
+- class: HttpService
+  servlet_url: http://localhost:8082/dialoghandler/agents/
+
+# state settings
+# the state is used to persist the agents state.
+state:
+  class: FileStateFactory
+  path: .eveagents
+  json: true
+cookies:
+  class: FileStateFactory
+  path: .evecookies
+tokens:
+  class: FileStateFactory
+  path: .evecookies
+
+# scheduler settings
+scheduler:
+  class: ClockSchedulerFactory
+
+bootstrap:
+  agents:
+    dialog: com.almende.dialog.agent.DialogAgent
+    adapter: com.almende.dialog.agent.AdapterAgent

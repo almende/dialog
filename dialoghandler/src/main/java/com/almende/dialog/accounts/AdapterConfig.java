@@ -27,7 +27,6 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.almende.util.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -44,20 +43,25 @@ public class AdapterConfig {
 	String adapterType = "";
 	String preferred_language = "nl";
 	String initialAgentURL = "";
+	String address = "";
 	String myAddress = "";
 	String keyword = null;
 	String status = "";
 	// Broadsoft:
-	String xsiURL = "";
-	String xsiUser = "";
-	String xsiPasswd = "";
-	String xsiSubscription = "";
+	private String xsiURL = "";
+	private String xsiUser = "";
+	private String xsiPasswd = "";
+	private String xsiSubscription = "";
 	//OAuth
-	String accessToken="";
-	String accessTokenSecret="";
-	boolean anonymous=false;
+	private String accessToken="";
+	private String accessTokenSecret="";
+	Boolean anonymous=false;
+	
+	String owner=null;
+	List<String> accounts=null;
 
 	public AdapterConfig() {
+		accounts = new ArrayList<String>();
 	};
 
 	@POST
@@ -108,18 +112,11 @@ public class AdapterConfig {
 	@JsonIgnore
 	public Response updateConfig(@PathParam("uuid") String configid, String json) {
 		try {
-			TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-			
-			AdapterConfig oldConfig = datastore.load(AdapterConfig.class, configid);
+			AdapterConfig oldConfig = getAdapterConfig(configid);
 			
 			om.readerForUpdating(oldConfig).readValue(json);
 			// TODO Check if fields myAddress, type and keyword have not been changed.
-			datastore.update(oldConfig);
-			
-			if(oldConfig.getAdapterType().equals("broadsoft")) {
-				Broadsoft bs = new Broadsoft(oldConfig);
-				bs.hideCallerId(oldConfig.isAnonymous());
-			}
+			oldConfig.update();
 			
 			return Response.ok(om.writeValueAsString(oldConfig)).build();
 		} catch (Exception e) {
@@ -175,6 +172,17 @@ public class AdapterConfig {
 			e.printStackTrace();
 		}
 		return Response.status(Status.BAD_REQUEST).build();
+	}
+	
+	public void update() {
+		
+		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+		datastore.update(this);
+		
+		if(this.getAdapterType().equals("broadsoft")) {
+			Broadsoft bs = new Broadsoft(this);
+			bs.hideCallerId(this.isAnonymous());
+		}
 	}
 	
 	public static AdapterConfig getAdapterConfig(String adapterID) {
@@ -323,6 +331,42 @@ public class AdapterConfig {
 		return adapters;
 	}
 	
+	public static ArrayList<AdapterConfig> findAdapterByOwner(String owner) {
+		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+		
+		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
+				AdapterConfig.class);
+
+		cmd.addFilter("owner", FilterOperator.EQUAL, owner);
+
+		Iterator<AdapterConfig> config = cmd.now();
+
+		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+		while (config.hasNext()) {
+			adapters.add(config.next());
+		}
+
+		return adapters;
+	}
+	
+	public static ArrayList<AdapterConfig> findAdapterByOwnerList(List<String> owners) {
+		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+		
+		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
+				AdapterConfig.class);
+
+		cmd.addFilter("owner", FilterOperator.IN, owners);
+
+		Iterator<AdapterConfig> config = cmd.now();
+
+		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+		while (config.hasNext()) {
+			adapters.add(config.next());
+		}
+
+		return adapters;
+	}
+	
 	public static ArrayList<AdapterConfig> findAdaptersByList(Collection<String> adapterIDs)
 	{
 		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
@@ -338,6 +382,25 @@ public class AdapterConfig {
             }
         }
         return adapters;
+	}
+	
+	public static ArrayList<AdapterConfig> findAdapterByAccount(String accountId) {
+		
+		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
+				AdapterConfig.class);
+
+		if (accountId != null)
+			cmd.addFilter("accounts", FilterOperator.IN, accountId);
+
+		Iterator<AdapterConfig> config = cmd.now();
+
+		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+		while (config.hasNext()) {
+			adapters.add(config.next());
+		}
+
+		return adapters;
 	}
 
 	public static boolean adapterExists(String adapterType, String myAddress, String keyword) {
@@ -417,6 +480,14 @@ public class AdapterConfig {
 	public void setInitialAgentURL(String initialAgentURL) {
 		this.initialAgentURL = initialAgentURL;
 	}
+	
+	public String getAddress() {
+		return address;
+	}
+	
+	public void setAddress(String address) {
+		this.address = address;
+	}
 
 	public String getMyAddress() {
 		return myAddress;
@@ -426,12 +497,10 @@ public class AdapterConfig {
 		this.myAddress = myAddress;
 	}
 	
-	@JsonIgnore
 	public String getKeyword() {
 		return keyword;
 	}
 	
-	@JsonProperty
 	public void setKeyword(String keyword) {
 		this.keyword = keyword;
 	}
@@ -444,12 +513,10 @@ public class AdapterConfig {
 		return status;
 	}
 	
-	@JsonIgnore
 	public String getXsiURL() {
 		return xsiURL;
 	}
 
-	@JsonProperty
 	public void setXsiURL(String xsiURL) {
 		this.xsiURL = xsiURL;
 	}
@@ -462,12 +529,10 @@ public class AdapterConfig {
 		this.xsiUser = xsiUser;
 	}
 
-	@JsonIgnore
 	public String getXsiPasswd() {
 		return xsiPasswd;
 	}
 
-	@JsonProperty
 	public void setXsiPasswd(String xsiPasswd) {
 		this.xsiPasswd = xsiPasswd;
 	}
@@ -488,21 +553,40 @@ public class AdapterConfig {
 		this.accessToken = accessToken;
 	}
 	
-	@JsonIgnore
 	public String getAccessTokenSecret() {
 		return accessTokenSecret;
 	}
 	
-	@JsonProperty
 	public void setAccessTokenSecret(String accessTokenSecret) {
 		this.accessTokenSecret = accessTokenSecret;
 	}
 	
-	public boolean isAnonymous() {
+	public String getOwner() {
+		return owner;
+	}
+	
+	public void setOwner(String owner) {
+		this.owner = owner;
+	}
+	
+	public List<String> getAccounts() {
+		return accounts;
+	}
+	
+	public void addAccount(String accountId) {
+		if(accountId!=null)
+			accounts.add(accountId);
+	}
+	
+	public void setAccounts(List<String> accounts) {
+		this.accounts = accounts;
+	}
+	
+	public Boolean isAnonymous() {
 		return anonymous;
 	}
 	
-	public void setAnonymous(boolean anonymous) {
+	public void setAnonymous(Boolean anonymous) {
 		this.anonymous = anonymous;
 	}
 }

@@ -10,7 +10,7 @@ environment:
 # transport services
 transport_services:
 - class: HttpService
-  servlet_url: http://localhost:8082/dialoghandler/agents/
+  servlet_url: http://keyserver.ask-fast.com/dialoghandler/agents/
 
 # state settings
 # the state is used to persist the agents state.

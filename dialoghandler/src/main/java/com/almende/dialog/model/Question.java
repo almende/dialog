@@ -342,7 +342,7 @@ public class Question implements QuestionIntf {
 				TypeUtil<HashMap<String, String>> injector = new TypeUtil<HashMap<String, String>>() {
 				};
 				HashMap<String, String> extrasMap = injector.inject(extras);
-				retryLoadingQuestion(null, null, extrasMap.get("sessionKey"));
+				return retryLoadingQuestion(null, null, extrasMap.get("sessionKey"));
 			} else {
 				log.warning("Unguardedly repeating question!");
 				return this;

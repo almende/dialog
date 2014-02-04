@@ -331,13 +331,21 @@ public class AdapterConfig {
 		return adapters;
 	}
 	
-	public static ArrayList<AdapterConfig> findAdapterByOwner(String owner) {
+	public static ArrayList<AdapterConfig> findAdapterByOwner(String owner,
+															String adapterType,
+															String address) {
 		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 		
 		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
 				AdapterConfig.class);
 
 		cmd.addFilter("owner", FilterOperator.EQUAL, owner);
+		
+		if (adapterType != null)
+			cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType);
+
+		if (address != null)
+			cmd.addFilter("address", FilterOperator.EQUAL, address);
 
 		Iterator<AdapterConfig> config = cmd.now();
 

@@ -29,10 +29,11 @@ import com.almende.eve.rpc.jsonrpc.JSONRPCException.CODE;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
+import com.askfast.commons.agent.intf.DialogAgentInterface;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Access(AccessType.PUBLIC)
-public class DialogAgent extends Agent {
+public class DialogAgent extends Agent implements DialogAgentInterface {
 	private static final Logger	log	= Logger.getLogger(DialogAgent.class
 											.getName());
 	

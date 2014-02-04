@@ -188,9 +188,11 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return config;
 	}
 	
-	public ArrayNode getAdapters(@Name("accoutId") String accountId) {
+	public ArrayNode getAdapters(@Name("accoutId") String accountId,
+								@Name("adapterType") @Optional String adapterType,
+								@Name("address") @Optional String address) {
 		
-		List<AdapterConfig> adapters = AdapterConfig.findAdapterByOwner(accountId);
+		List<AdapterConfig> adapters = AdapterConfig.findAdapterByOwner(accountId, adapterType, address);
 		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
 	}
 	
@@ -201,8 +203,9 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
 	}
 	
-	public ArrayNode findFreeAdapters() {
-		ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapterByOwner(null);
+	public ArrayNode findFreeAdapters(@Name("adapterType") @Optional String adapterType,
+			@Name("address") @Optional String address) {
+		ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapterByOwner(null, adapterType, address);
 		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
 	}
 	

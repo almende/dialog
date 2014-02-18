@@ -187,6 +187,7 @@ public class AdapterConfig {
 				for(AdapterConfig adapter : adapters) {
 					adapter.setOwner(null);
 					adapter.setAccounts(null);
+					adapter.update();
 				}
 				return Response.ok(om.writeValueAsString(adapters)).build();
 			} catch (Exception e) {

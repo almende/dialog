@@ -63,6 +63,8 @@ public class AdapterConfig {
 	public AdapterConfig() {
 		accounts = new ArrayList<String>();
 	};
+	
+	
 
 	@POST
 	@Consumes("application/json")
@@ -170,6 +172,27 @@ public class AdapterConfig {
 		} catch (Exception e) {
 			log.severe("getConfig: Failed to read config");
 			e.printStackTrace();
+		}
+		return Response.status(Status.BAD_REQUEST).build();
+	}
+	
+	@GET
+	@Path("reset")
+	@Produces("application/json")
+	@JsonIgnore
+	public Response resetConfigs(@QueryParam("password") String password ) {
+		if(password.equals("ikweethetzeker")) {
+			try {
+				ArrayList<AdapterConfig> adapters = findAdapters(null, null, null);
+				for(AdapterConfig adapter : adapters) {
+					adapter.setOwner(null);
+					adapter.setAccounts(null);
+				}
+				return Response.ok(om.writeValueAsString(adapters)).build();
+			} catch (Exception e) {
+				log.severe("getConfig: Failed to read config");
+				e.printStackTrace();
+			}
 		}
 		return Response.status(Status.BAD_REQUEST).build();
 	}

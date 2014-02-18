@@ -186,7 +186,7 @@ public class AdapterConfig {
 				ArrayList<AdapterConfig> adapters = findAdapters(null, null, null);
 				for(AdapterConfig adapter : adapters) {
 					adapter.setOwner(null);
-					adapter.setAccounts(null);
+					adapter.setAccounts(new ArrayList<String>());
 					adapter.update();
 				}
 				return Response.ok(om.writeValueAsString(adapters)).build();

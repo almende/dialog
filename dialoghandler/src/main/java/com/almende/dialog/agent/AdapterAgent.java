@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	
 	private static final String ADAPTER_TYPE_BROADSOFT = "broadsoft";
-	private static final String ADAPTER_TYPE_SMS = "sms";
+	private static final String ADAPTER_TYPE_SMS = "SMS";
 	private static final String ADAPTER_TYPE_EMAIL = "email";
 	private static final String ADAPTER_TYPE_XMPP = "xmpp";
 	private static final String ADAPTER_TYPE_TWITTER = "twitter";	
@@ -39,8 +39,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	 * @throws Exception 
 	 */
 	public String createBroadSoftAdapter(@Name("address") String address,
-										@Name("externalAddress") String externalAddress,
-										@Name("username") String username,
+										@Name("username") @Optional String username,
 										@Name("password") String password,
 										@Name("preferredLanguage") @Optional String preferredLanguage,
 										@Name("accountId") @Optional String accountId,
@@ -48,9 +47,16 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		
 		preferredLanguage = (preferredLanguage==null ? "nl" : preferredLanguage);
 		
+		String normAddress = address.replaceFirst("^0", "").replace("+31", "");;
+		String myAddress = "+31" +normAddress; 
+		String externalAddress = "0"+normAddress+"@ask.ask.voipit.nl";
+		
+		if(username==null)
+			username = externalAddress;
+		
 		AdapterConfig config = new AdapterConfig();
 		config.setAdapterType(ADAPTER_TYPE_BROADSOFT);
-		config.setMyAddress(address);
+		config.setMyAddress(myAddress);
 		config.setAddress(externalAddress);
 		config.setXsiUser(username);
 		config.setXsiPasswd(password);

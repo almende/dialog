@@ -177,8 +177,8 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 			}
 		}
 		if (config != null) {
-			if (config.getPublicKey() != null
-					&& !config.getPublicKey().equals(accountId)) {
+			if (config.getOwner() != null
+					&& !config.getOwner().equals(accountId)) {
 				throw new JSONRPCException(
 						"You are not allowed to use this adapter!");
 			}

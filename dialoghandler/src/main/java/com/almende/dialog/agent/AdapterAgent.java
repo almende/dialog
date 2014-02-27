@@ -81,8 +81,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.setAdapterType( ADAPTER_TYPE_EMAIL );
         //by default create gmail account adapter
         String connectionSettings = ( protocol != null ? protocol : MailServlet.GMAIL_SENDING_PROTOCOL ) + ":"
-            + ( sendingPort != null ? sendingPort : MailServlet.GMAIL_SENDING_PORT ) + ":"
-            + ( sendingHost != null ? sendingHost : MailServlet.GMAIL_SENDING_HOST );
+            + ( sendingHost != null ? sendingHost : MailServlet.GMAIL_SENDING_HOST ) + ":"
+            + ( sendingPort != null ? sendingPort : MailServlet.GMAIL_SENDING_PORT );
         config.setXsiURL( connectionSettings );
         config.setMyAddress( name );
         config.setAddress( name );

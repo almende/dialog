@@ -1,7 +1,6 @@
 package com.almende.dialog.adapter;
 
 import java.io.UnsupportedEncodingException;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -12,7 +11,6 @@ import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.Session;
 import javax.mail.Transport;
-import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.InternetHeaders;
 import javax.mail.internet.MimeBodyPart;
@@ -23,13 +21,15 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.TypeUtil;
 
 
 public class MailServlet extends TextServlet {
-	
+
+    public static final String GMAIL_SENDING_PORT = "465";
+    public static final String GMAIL_SENDING_HOST = "smtp.gmail.com";
+    public static final String GMAIL_SENDING_PROTOCOL = "smtps";
     public static final String CC_ADDRESS_LIST_KEY = "cc_email";
     public static final String BCC_ADDRESS_LIST_KEY = "bcc_email";
 	private static final long serialVersionUID = 6892283600126803780L;
@@ -106,159 +106,114 @@ public class MailServlet extends TextServlet {
     		return msg;
         }
 
-        @Deprecated
-        /**
-         * @Deprecated use broadcastMessage instead
-         */
-	@Override
-	protected int sendMessage(String message, String subject, String from, String fromName,
-			String to, String toName, Map<String, Object> extras, AdapterConfig config) {
-		Properties props = new Properties();
-        javax.mail.Session session = javax.mail.Session.getDefaultInstance(props, null);
-
-        Message msg = null;
-		try {
-            msg = new MimeMessage(session);
-            msg.setFrom(new InternetAddress(from));
-            if(fromName!=null)
-                msg.setFrom(new InternetAddress(from, fromName));
-            msg.addRecipient(Message.RecipientType.TO,
-                             new InternetAddress(to, toName));
-            msg.setSubject(subject);
-            msg.setContent( message, "text/html; charset=utf-8" );
-            Transport.send(msg);
-            
-            String logString = String.format( "Email sent:\n" + "From: %s<%s>\n" + "To: %s<%s>\n" + "Subject: %s\n" + "Body: %s",
-                                              fromName, from, toName, to, subject, message );
-            log.info( logString );
-            log.info("Send reply to mail post: "+(new Date().getTime()));
-
-        } catch (AddressException e) {
-            log.warning("Failed to send message, because wrong address: "+e.getLocalizedMessage());
-        } catch (MessagingException e) {
-        	log.warning("Failed to send message, because message: "+e.getLocalizedMessage());
-        } catch (UnsupportedEncodingException e) {
-        	log.warning("Failed to send message, because encoding: "+e.getLocalizedMessage());
-		}
-        finally
-        {
-            if ( ServerUtils.isInUnitTestingEnvironment() )
-            {
-                TestServlet.logForTest( msg );
-                TestServlet.responseQuestionString = message;
-            }
-        }
-		return 1;		
-	}
+    @Deprecated
+    /**
+     * @Deprecated use broadcastMessage instead
+     */
+    @Override
+    protected int sendMessage( String message, String subject, String from, String fromName, String to, String toName,
+        Map<String, Object> extras, AdapterConfig config )
+    {
+        HashMap<String, String> addressNameMap = new HashMap<>( 1 );
+        addressNameMap.put( to, toName );
+        return broadcastMessage( message, subject, fromName, fromName, addressNameMap, extras, config );
+    }
 	
     @Override
     protected int broadcastMessage( String message, String subject, String from, String senderName,
         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config )
     {
-//        final String userName = config.getXsiUser();
-//        final String pass = config.getXsiPasswd();
-//        Authenticator authenticator = null;
-        Properties properties = new Properties();
-//        log.info( "user: " + userName + " " + pass.length() );
-//        if ( userName != null && !userName.isEmpty() && pass != null && !pass.isEmpty() )
-//        {
-//            properties.put( "mail.smtp.auth", true );
-//            authenticator = new Authenticator()
-//            {
-//                private PasswordAuthentication pa = new PasswordAuthentication( userName, pass );
-//
-//                @Override
-//                public PasswordAuthentication getPasswordAuthentication()
-//                {
-//                    return pa;
-//                }
-//            };
-//        }
-        Session session = Session.getDefaultInstance( properties, null );
+        //xsiURL is of the form <email protocol>: <sending host>: <sending port> 
+        String[] connectionSettingsArray = config.getXsiURL().split( ":" );
+        String sendingHost = connectionSettingsArray.length == 3 ? connectionSettingsArray[1] : "smtp.gmail.com";
+        String sendingPort = connectionSettingsArray.length == 3 ? connectionSettingsArray[2] : "465";
+        Properties props = new Properties();
+        props.put( "mail.smtp.host", sendingHost );
+        props.put( "mail.smtp.port", sendingPort );
+        props.put( "mail.smtp.user", config.getXsiUser() );
+        props.put( "mail.smtp.password", config.getXsiPasswd() );
+        props.put( "mail.smtp.auth", "true" );
+        Session session = Session.getDefaultInstance( props );
+        Message simpleMessage = new MimeMessage( session );
         try
         {
-            Message msg = new MimeMessage( session );
-            if(senderName!=null)
-            {
-                msg.setFrom( new InternetAddress( from, senderName ) );
-                //add the senderName to the reply list if its an emailId
-                if ( senderName.contains( "@" ) )
-                {
-                    Address[] addresses = new InternetAddress[1];
-                    addresses[0] = new InternetAddress( senderName );
-                    msg.setReplyTo( addresses );
-                }
-            }
-            else
-            {
-                msg.setFrom( new InternetAddress( from ) );
-            }
+            simpleMessage.setFrom( new InternetAddress( from,
+                senderName != null && !senderName.isEmpty() ? senderName : config.getXsiUser() ) );
             //add to list
             for ( String address : addressNameMap.keySet() )
             {
                 String toName = addressNameMap.get( address ) != null ? addressNameMap.get( address ) : address;
-                msg.addRecipient( Message.RecipientType.TO, new InternetAddress( address, toName ) );
+                simpleMessage.addRecipient( Message.RecipientType.TO, new InternetAddress( address, toName ) );
             }
-            //add cc list
-            if ( extras.get( CC_ADDRESS_LIST_KEY ) != null )
+            if ( extras != null )
             {
-                if(extras.get( CC_ADDRESS_LIST_KEY ) instanceof Map)
+                //add cc list
+                if ( extras.get( CC_ADDRESS_LIST_KEY ) != null )
                 {
-                    TypeUtil<HashMap<String, String>> injector = new TypeUtil<HashMap<String, String>>() {
-                    };
-                    HashMap<String, String> ccAddressNameMap = injector.inject(extras.get( CC_ADDRESS_LIST_KEY ));
-                    for ( String address : ccAddressNameMap.keySet() )
+                    if ( extras.get( CC_ADDRESS_LIST_KEY ) instanceof Map )
                     {
-                        String toName = ccAddressNameMap.get( address ) != null ? ccAddressNameMap.get( address ) : address;
-                        msg.addRecipient( Message.RecipientType.CC, new InternetAddress( address, toName ) );
+                        TypeUtil<HashMap<String, String>> injector = new TypeUtil<HashMap<String, String>>()
+                        {
+                        };
+                        HashMap<String, String> ccAddressNameMap = injector.inject( extras.get( CC_ADDRESS_LIST_KEY ) );
+                        for ( String address : ccAddressNameMap.keySet() )
+                        {
+                            String toName = ccAddressNameMap.get( address ) != null ? ccAddressNameMap.get( address )
+                                                                                   : address;
+                            simpleMessage
+                                .addRecipient( Message.RecipientType.CC, new InternetAddress( address, toName ) );
+                        }
+                    }
+                    else
+                    {
+                        log.severe( String.format( "CC list seen but not of Map type: %s",
+                            ServerUtils.serializeWithoutException( extras.get( CC_ADDRESS_LIST_KEY ) ) ) );
                     }
                 }
-                else
+                //add bcc list
+                if ( extras.get( BCC_ADDRESS_LIST_KEY ) != null )
                 {
-                    log.severe( String.format( "CC list seen but not of Map type: %s",
-                        ServerUtils.serializeWithoutException( extras.get( CC_ADDRESS_LIST_KEY ) ) ) );
-                }
-            }
-            //add bcc list
-            if ( extras.get( BCC_ADDRESS_LIST_KEY ) != null )
-            {
-                if(extras.get( BCC_ADDRESS_LIST_KEY ) instanceof Map)
-                {
-                    @SuppressWarnings("unchecked")
-					Map<String, String> bccAddressNameMap = (Map<String, String>)extras.get( BCC_ADDRESS_LIST_KEY );
-                    for ( String address : bccAddressNameMap.keySet() )
+                    if ( extras.get( BCC_ADDRESS_LIST_KEY ) instanceof Map )
                     {
-                        String toName = bccAddressNameMap.get( address ) != null ? bccAddressNameMap.get( address ) : address;
-                        msg.addRecipient( Message.RecipientType.BCC, new InternetAddress( address, toName ) );
+                        @SuppressWarnings( "unchecked" )
+                        Map<String, String> bccAddressNameMap = (Map<String, String>) extras.get( BCC_ADDRESS_LIST_KEY );
+                        for ( String address : bccAddressNameMap.keySet() )
+                        {
+                            String toName = bccAddressNameMap.get( address ) != null ? bccAddressNameMap.get( address )
+                                                                                    : address;
+                            simpleMessage.addRecipient( Message.RecipientType.BCC,
+                                new InternetAddress( address, toName ) );
+                        }
+                    }
+                    else
+                    {
+                        log.severe( String.format( "BCC list seen but not of Map type: %s",
+                            ServerUtils.serializeWithoutException( extras.get( BCC_ADDRESS_LIST_KEY ) ) ) );
                     }
                 }
-                else
-                {
-                    log.severe( String.format( "BCC list seen but not of Map type: %s",
-                        ServerUtils.serializeWithoutException( extras.get( BCC_ADDRESS_LIST_KEY ) ) ) );
-                }
             }
-            msg.setSubject( subject );
-            msg.setContent( message, "text/html; charset=utf-8" );
-            if(ServerUtils.isInUnitTestingEnvironment())
-            {
-                TestServlet.logForTest( msg );
-            }
-            Transport.send( msg );
-
-            log.info( "Send reply to mail post: " + ( new Date().getTime() ) );
+            simpleMessage.setSubject( subject );
+            simpleMessage.setText( message );
+            //sometimes Transport.send(simpleMessage); is used, but for gmail it's different
+            Transport transport = session.getTransport( connectionSettingsArray[0] );
+            transport.connect( sendingHost, Integer.parseInt( sendingPort ), 
+                config.getXsiUser(), config.getXsiPasswd() );
+            transport.sendMessage( simpleMessage, simpleMessage.getAllRecipients() );
+            transport.close();
         }
         catch ( MessagingException e )
         {
-            log.warning( "Failed to send message, because message: " + e.getLocalizedMessage() );
+            e.printStackTrace();
+            log.warning( "Failed to send message, because encoding: " + e.getLocalizedMessage() );
         }
         catch ( UnsupportedEncodingException e )
         {
+            e.printStackTrace();
             log.warning( "Failed to send message, because encoding: " + e.getLocalizedMessage() );
         }
         return 1;
     }
-
+    
 	@Override
 	protected String getServletPath() {
 		return servletPath;

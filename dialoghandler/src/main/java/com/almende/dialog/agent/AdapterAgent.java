@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.MailServlet;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.exception.ConflictException;
 import com.almende.eve.agent.Agent;
@@ -47,7 +48,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		
 		preferredLanguage = (preferredLanguage==null ? "nl" : preferredLanguage);
 		
-		String normAddress = address.replaceFirst("^0", "").replace("+31", "");;
+		String normAddress = address.replaceFirst("^0", "").replace("+31", "");
 		String myAddress = "+31" +normAddress; 
 		String externalAddress = "0"+normAddress+"@ask.ask.voipit.nl";
 		
@@ -66,14 +67,36 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		config.addAccount(accountId);
 		config.setAnonymous(anonymous);
 		AdapterConfig newConfig = createAdapter(config);
-		
 		return newConfig.getConfigId();
 	}
 	
-	public String createEmailAdapter() {
-		// TODO: implement
-		return null;
-	}
+    public String createEmailAdapter( @Name( "emailAddress" ) String emailAddress,
+        @Name( "name" ) @Optional String name, @Name( "password" ) String password,
+        @Name( "preferredLanguage" ) @Optional String preferredLanguage,
+        @Name( "sendingPort" ) @Optional String sendingPort, @Name( "sendingHost" ) @Optional String sendingHost,
+        @Name( "sendingProtocol" ) @Optional String protocol, @Name( "accountId" ) @Optional String accountId )
+    throws Exception
+    {
+        preferredLanguage = ( preferredLanguage == null ? "nl" : preferredLanguage );
+        AdapterConfig config = new AdapterConfig();
+        config.setAdapterType( ADAPTER_TYPE_EMAIL );
+        //by default create gmail account adapter
+        String connectionSettings = ( protocol != null ? protocol : MailServlet.GMAIL_SENDING_PROTOCOL ) + ":"
+            + ( sendingPort != null ? sendingPort : MailServlet.GMAIL_SENDING_PORT ) + ":"
+            + ( sendingHost != null ? sendingHost : MailServlet.GMAIL_SENDING_HOST );
+        config.setXsiURL( connectionSettings );
+        config.setMyAddress( emailAddress );
+        config.setAddress( emailAddress );
+        config.setXsiUser( name );
+        config.setXsiPasswd( password );
+        config.setPreferred_language( preferredLanguage );
+        config.setPublicKey( accountId );
+        config.setOwner( accountId );
+        config.addAccount( accountId );
+        config.setAnonymous( false );
+        AdapterConfig newConfig = createAdapter( config );
+        return newConfig.getConfigId();
+    }
 	
 	public String createXmppAdapter() {
 		// TODO: implement

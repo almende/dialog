@@ -21,6 +21,7 @@ import javax.ws.rs.core.Response.Status;
 
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
@@ -86,8 +87,8 @@ public class AdapterConfig {
 			}
 			
 			//change the casing to lower in case adatertype if email or xmpp
-			if(newConfig.getAdapterType().toUpperCase().equals( "MAIL" ) || 
-			    newConfig.getAdapterType().toUpperCase().equals( "XMPP" ))
+			if(newConfig.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_EMAIL ) || 
+			    newConfig.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_XMPP ))
 			{
 			    newConfig.setMyAddress( newConfig.getMyAddress() != null ? newConfig.getMyAddress().toLowerCase() 
 			                                                               : null );

@@ -22,11 +22,11 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 @Access(AccessType.PUBLIC)
 public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	
-	private static final String ADAPTER_TYPE_BROADSOFT = "broadsoft";
-	private static final String ADAPTER_TYPE_SMS = "SMS";
-	private static final String ADAPTER_TYPE_EMAIL = "email";
-	private static final String ADAPTER_TYPE_XMPP = "xmpp";
-	private static final String ADAPTER_TYPE_TWITTER = "twitter";	
+	public static final String ADAPTER_TYPE_BROADSOFT = "broadsoft";
+	public static final String ADAPTER_TYPE_SMS = "SMS";
+	public static final String ADAPTER_TYPE_EMAIL = "email";
+	public static final String ADAPTER_TYPE_XMPP = "xmpp";
+	public static final String ADAPTER_TYPE_TWITTER = "twitter";	
 	
 	/**
 	 *  Adds a new broadsoft adapter
@@ -250,8 +250,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		}
 		
 		//change the casing to lower in case adatertype if email or xmpp
-		if(config.getMyAddress() != null && (config.getAdapterType().toUpperCase().equals( "MAIL" ) || 
-		    config.getAdapterType().toUpperCase().equals( "XMPP" )) )
+		if(config.getMyAddress() != null && (config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_EMAIL ) || 
+		    config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_XMPP )) )
 		{
 		    config.setMyAddress( config.getMyAddress().toLowerCase() );
 		}

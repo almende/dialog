@@ -193,7 +193,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 				 * addressMap, url, senderName, subject, config);
 				 * } else
 				 */
-				if (adapterType.toUpperCase().equals("BROADSOFT")) {
+				if (adapterType.toUpperCase().equals(AdapterAgent.ADAPTER_TYPE_BROADSOFT.toUpperCase())) {
 					// fetch the first address in the map
 					if (!addressMap.keySet().isEmpty()) {
 						resultSessionMap = VoiceXMLRESTProxy.dial(addressMap,
@@ -202,16 +202,16 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 						throw new Exception(
 								"Address should not be empty to setup a call");
 					}
-				} else if (adapterType.toUpperCase().equals("MAIL")) {
+				} else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_EMAIL)) {
 					resultSessionMap = new MailServlet().startDialog( addressMap, addressCcMap, addressBccMap, url,
 		                    senderName, subject, config );
-				} else if (adapterType.toUpperCase().equals("SMS")) {
+				} else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_SMS)) {
 					resultSessionMap = new MBSmsServlet().startDialog(
 							addressMap, null, null, url, senderName, subject, config);
 				} else if (adapterType.toUpperCase().equals("CM")) {
 					resultSessionMap = new CMSmsServlet().startDialog(
 							addressMap, null, null, url, senderName, subject, config);
-				} else if (adapterType.toUpperCase().equals("TWITTER")) {
+				} else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_TWITTER)) {
 					resultSessionMap = new TwitterServlet().startDialog(
 							addressMap, null, null, url, senderName, subject, config);
 				} else {

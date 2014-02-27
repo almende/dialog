@@ -20,6 +20,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.TypeUtil;
@@ -34,7 +35,6 @@ public class MailServlet extends TextServlet {
     public static final String BCC_ADDRESS_LIST_KEY = "bcc_email";
 	private static final long serialVersionUID = 6892283600126803780L;
 	private static final String servletPath = "/_ah/mail/";
-	private static final String adapterType = "MAIL";
 	
 	public void doErrorPost(HttpServletRequest req, HttpServletResponse res) {}
 	
@@ -221,6 +221,6 @@ public class MailServlet extends TextServlet {
 	
 	@Override
 	protected String getAdapterType() {
-		return adapterType;
+		return AdapterAgent.ADAPTER_TYPE_EMAIL;
 	}
 }

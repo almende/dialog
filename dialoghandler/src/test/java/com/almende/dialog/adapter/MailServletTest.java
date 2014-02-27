@@ -21,6 +21,7 @@ import org.junit.Test;
 
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
@@ -37,7 +38,8 @@ public class MailServletTest extends TestFramework
     {
         String testMessage = "testMessage";
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY, localAddressMail, "" );
+        AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
+            localAddressMail, "" );
         //create session
         getOrCreateSession( adapterConfig, remoteAddressEmail );
         
@@ -65,7 +67,8 @@ public class MailServletTest extends TestFramework
         initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "question", "start" );
         
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY, localAddressMail, initialAgentURL );
+        AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
+            localAddressMail, initialAgentURL );
         //create session
         getOrCreateSession( adapterConfig, remoteAddressEmail );
         
@@ -96,7 +99,8 @@ public class MailServletTest extends TestFramework
     public void MailServletReceiveHelpMessageTest() throws Exception
     {
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY, localAddressMail, "" );
+        AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
+            localAddressMail, "" );
         //create session
         getOrCreateSession( adapterConfig, remoteAddressEmail );
 
@@ -131,7 +135,7 @@ public class MailServletTest extends TestFramework
             QuestionInRequest.APPOINTMENT.name() );
         initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "question", "start" );
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY,
+        AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
                                                            localAddressMail, initialAgentURL );
         //create session
         getOrCreateSession( adapterConfig, remoteAddressEmail );
@@ -198,7 +202,8 @@ public class MailServletTest extends TestFramework
     {
         String textMessage = "How are you doing?";
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "MAIL", TEST_PUBLIC_KEY, localAddressMail, "" );
+        AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
+            localAddressMail, "" );
         //create session
         getOrCreateSession( adapterConfig, remoteAddressEmail );
 

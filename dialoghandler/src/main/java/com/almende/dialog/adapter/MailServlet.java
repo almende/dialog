@@ -130,7 +130,7 @@ public class MailServlet extends TextServlet {
         Properties props = new Properties();
         props.put( "mail.smtp.host", sendingHost );
         props.put( "mail.smtp.port", sendingPort );
-        props.put( "mail.smtp.user", config.getXsiUser() );
+        props.put( "mail.smtp.user", config.getMyAddress() );
         props.put( "mail.smtp.password", config.getXsiPasswd() );
         props.put( "mail.smtp.auth", "true" );
         Session session = Session.getDefaultInstance( props );

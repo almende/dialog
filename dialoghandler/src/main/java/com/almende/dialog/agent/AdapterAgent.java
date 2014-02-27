@@ -70,9 +70,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return newConfig.getConfigId();
 	}
 	
-    public String createEmailAdapter( @Name( "emailAddress" ) String emailAddress,
-        @Name( "name" ) @Optional String name, @Name( "password" ) String password,
-        @Name( "preferredLanguage" ) @Optional String preferredLanguage,
+    public String createEmailAdapter( @Name( "emailAddress" ) String emailAddress, @Name( "password" ) String password,
+        @Name( "name" ) @Optional String name, @Name( "preferredLanguage" ) @Optional String preferredLanguage,
         @Name( "sendingPort" ) @Optional String sendingPort, @Name( "sendingHost" ) @Optional String sendingHost,
         @Name( "sendingProtocol" ) @Optional String protocol, @Name( "accountId" ) @Optional String accountId )
     throws Exception

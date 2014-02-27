@@ -1,13 +1,11 @@
 package com.almende.dialog.adapter;
 
-import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
 import javax.mail.Address;
 import javax.mail.Message;
-import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.Session;
 import javax.mail.Transport;
@@ -137,6 +135,9 @@ public class MailServlet extends TextServlet {
         Message simpleMessage = new MimeMessage( session );
         try
         {
+            log.info( String.format(
+                "sending email from: %s senderName: %s to: %s with params: host: %s port: %s user: %s ", from, senderName,
+                ServerUtils.serialize( addressNameMap ), sendingHost, sendingPort, config.getXsiUser() ) );
             simpleMessage.setFrom( new InternetAddress( from,
                 senderName != null && !senderName.isEmpty() ? senderName : config.getMyAddress() ) );
             //add to list
@@ -201,12 +202,7 @@ public class MailServlet extends TextServlet {
             transport.sendMessage( simpleMessage, simpleMessage.getAllRecipients() );
             transport.close();
         }
-        catch ( MessagingException e )
-        {
-            e.printStackTrace();
-            log.warning( "Failed to send message, because encoding: " + e.getLocalizedMessage() );
-        }
-        catch ( UnsupportedEncodingException e )
+        catch ( Exception e )
         {
             e.printStackTrace();
             log.warning( "Failed to send message, because encoding: " + e.getLocalizedMessage() );

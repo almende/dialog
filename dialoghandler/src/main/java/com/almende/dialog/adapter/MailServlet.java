@@ -130,7 +130,7 @@ public class MailServlet extends TextServlet {
         Properties props = new Properties();
         props.put( "mail.smtp.host", sendingHost );
         props.put( "mail.smtp.port", sendingPort );
-        props.put( "mail.smtp.user", config.getMyAddress() );
+        props.put( "mail.smtp.user", config.getXsiUser() );
         props.put( "mail.smtp.password", config.getXsiPasswd() );
         props.put( "mail.smtp.auth", "true" );
         Session session = Session.getDefaultInstance( props );
@@ -138,7 +138,7 @@ public class MailServlet extends TextServlet {
         try
         {
             simpleMessage.setFrom( new InternetAddress( from,
-                senderName != null && !senderName.isEmpty() ? senderName : config.getXsiUser() ) );
+                senderName != null && !senderName.isEmpty() ? senderName : config.getMyAddress() ) );
             //add to list
             for ( String address : addressNameMap.keySet() )
             {
@@ -196,8 +196,8 @@ public class MailServlet extends TextServlet {
             simpleMessage.setText( message );
             //sometimes Transport.send(simpleMessage); is used, but for gmail it's different
             Transport transport = session.getTransport( connectionSettingsArray[0] );
-            transport.connect( sendingHost, Integer.parseInt( sendingPort ), 
-                config.getXsiUser(), config.getXsiPasswd() );
+            transport.connect( sendingHost, Integer.parseInt( sendingPort ), config.getXsiUser(), 
+                config.getXsiPasswd() );
             transport.sendMessage( simpleMessage, simpleMessage.getAllRecipients() );
             transport.close();
         }

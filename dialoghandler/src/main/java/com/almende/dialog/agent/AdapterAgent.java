@@ -84,7 +84,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             + ( sendingHost != null ? sendingHost : MailServlet.GMAIL_SENDING_HOST ) + ":"
             + ( sendingPort != null ? sendingPort : MailServlet.GMAIL_SENDING_PORT );
         config.setXsiURL( connectionSettings );
-        config.setMyAddress( name );
+        config.setMyAddress( emailAddress );
         config.setAddress( name );
         config.setXsiUser( emailAddress );
         config.setXsiPasswd( password );

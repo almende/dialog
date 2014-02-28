@@ -110,7 +110,7 @@ public class MailServlet extends TextServlet {
      */
     @Override
     protected int sendMessage( String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config )
+        Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
         HashMap<String, String> addressNameMap = new HashMap<>( 1 );
         addressNameMap.put( to, toName );
@@ -119,27 +119,29 @@ public class MailServlet extends TextServlet {
 	
     @Override
     protected int broadcastMessage( String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config )
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
         //xsiURL is of the form <email protocol>: <sending host>: <sending port> 
         String[] connectionSettingsArray = config.getXsiURL().split( ":" );
         String sendingHost = connectionSettingsArray.length == 3 ? connectionSettingsArray[1] : "smtp.gmail.com";
         String sendingPort = connectionSettingsArray.length == 3 ? connectionSettingsArray[2] : "465";
+        final String username = config.getXsiUser();
+        final String password = config.getXsiPasswd();
         Properties props = new Properties();
         props.put( "mail.smtp.host", sendingHost );
         props.put( "mail.smtp.port", sendingPort );
-        props.put( "mail.smtp.user", config.getXsiUser() );
-        props.put( "mail.smtp.password", config.getXsiPasswd() );
+        props.put( "mail.smtp.user", username );
+        props.put( "mail.smtp.password", password );
         props.put( "mail.smtp.auth", "true" );
         Session session = Session.getDefaultInstance( props );
         Message simpleMessage = new MimeMessage( session );
         try
         {
             log.info( String.format(
-                "sending email from: %s senderName: %s to: %s with params: host: %s port: %s user: %s ", from, senderName,
-                ServerUtils.serialize( addressNameMap ), sendingHost, sendingPort, config.getXsiUser() ) );
+                "sending email from: %s senderName: %s to: %s with params: host: %s port: %s user: %s ", from,
+                senderName, ServerUtils.serialize( addressNameMap ), sendingHost, sendingPort, username ) );
             simpleMessage.setFrom( new InternetAddress( from,
-                senderName != null && !senderName.isEmpty() ? senderName : config.getMyAddress() ) );
+                senderName != null && !senderName.isEmpty() ? senderName : config.getAddress() ) );
             //add to list
             for ( String address : addressNameMap.keySet() )
             {
@@ -197,8 +199,7 @@ public class MailServlet extends TextServlet {
             simpleMessage.setText( message );
             //sometimes Transport.send(simpleMessage); is used, but for gmail it's different
             Transport transport = session.getTransport( connectionSettingsArray[0] );
-            transport.connect( sendingHost, Integer.parseInt( sendingPort ), config.getXsiUser(), 
-                config.getXsiPasswd() );
+            transport.connect( sendingHost, Integer.parseInt( sendingPort ), username, password );
             transport.sendMessage( simpleMessage, simpleMessage.getAllRecipients() );
             transport.close();
         }
@@ -206,6 +207,7 @@ public class MailServlet extends TextServlet {
         {
             e.printStackTrace();
             log.warning( "Failed to send message, because encoding: " + e.getLocalizedMessage() );
+            throw e;
         }
         return 1;
     }

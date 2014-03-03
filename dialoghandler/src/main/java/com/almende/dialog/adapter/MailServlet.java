@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.TypeUtil;
 
@@ -257,26 +258,33 @@ public class MailServlet extends TextServlet implements Runnable {
                 Folder folder = store.getFolder( "INBOX" );
                 folder.open( Folder.READ_ONLY );
                 Message message[] = folder.getMessages();
+                String lastEmailTimestamp = StringStore.getString( "lastEmailRead_" + adapterConfig.getConfigId() );
                 for ( int i = 0; i < message.length; i++ )
                 {
-                    try
+                    if ( lastEmailTimestamp == null
+                        || Long.parseLong( lastEmailTimestamp ) < message[i].getReceivedDate().getTime() )
                     {
-                        MimeMessage mimeMessage = new MimeMessage( session, message[i].getInputStream() );
-                        mimeMessage.setFrom( message[i].getFrom()[0] );
-                        mimeMessage.setSubject( message[i].getSubject() );
-                        mimeMessage.setContent( message[i].getContent(), message[i].getContentType() );
-                        TextMessage receiveMessage = receiveMessage( mimeMessage, adapterConfig.getMyAddress() );
-                        processMessage( receiveMessage );
+                        try
+                        {
+                            MimeMessage mimeMessage = new MimeMessage( session, message[i].getInputStream() );
+                            mimeMessage.setFrom( message[i].getFrom()[0] );
+                            mimeMessage.setSubject( message[i].getSubject() );
+                            mimeMessage.setContent( message[i].getContent(), message[i].getContentType() );
+                            TextMessage receiveMessage = receiveMessage( mimeMessage, adapterConfig.getMyAddress() );
+                            processMessage( receiveMessage );
+                        }
+                        catch ( Exception e )
+                        {
+                            log.warning( String.format(
+                                "Adapter: %s of type: %s threw exception: %s while reading inboundEmail scedule",
+                                adapterConfig.getConfigId(), adapterConfig.getAdapterType(), e.getLocalizedMessage() ) );
+                        }
                     }
-                    catch ( Exception e )
-                    {
-                        log.warning( String.format(
-                            "Adapter: %s of type: %s threw exception: %s while reading inboundEmail scedule",
-                            adapterConfig.getConfigId(), adapterConfig.getAdapterType(), e.getLocalizedMessage() ) );
-                    }
+                    lastEmailTimestamp = String.valueOf( message[i].getReceivedDate().getTime() );
                 }
                 folder.close( true );
                 store.close();
+                StringStore.storeString( "lastEmailRead_"+ adapterConfig.getConfigId(), lastEmailTimestamp );
             }
             catch ( Exception e )
             {

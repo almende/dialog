@@ -57,7 +57,7 @@ public class OAuthServlet extends HttpServlet {
 		log.info("Got request on: "+req.getRequestURL());
 		
 		String[] parts = req.getRequestURI().substring(1).split("/");
-		if(parts.length==1) {
+		if(parts.length==2) {
 		
 			// directly redirect to Google authorization page if an agents URL is provided
 			if (this.service != null) {
@@ -114,7 +114,7 @@ public class OAuthServlet extends HttpServlet {
 	
 	private void setService(String host, String service) {
 		
-		String callbackURL = host+"/oauth/callback";
+		String callbackURL = host+"/dialoghandler/oauth/callback";
 		
 		if(service==null || service.equals("")) {
 			this.service = null;
@@ -201,7 +201,7 @@ public class OAuthServlet extends HttpServlet {
 	
 	private String createAuthorizationUrl() throws IOException {
 		
-		return "/oauth";
+		return "/dialoghandler/oauth";
 	}
 	
 	private void printPageStart(PrintWriter out) {

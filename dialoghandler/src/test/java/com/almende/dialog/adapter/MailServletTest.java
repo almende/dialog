@@ -26,6 +26,7 @@ import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.util.uuid.UUID;
 
 public class MailServletTest extends TestFramework
 {
@@ -34,12 +35,13 @@ public class MailServletTest extends TestFramework
      * @throws Exception 
      */
     @Test
+    @Ignore
     public void sendDummyMessageTest() throws Exception
     {
         String testMessage = "testMessage";
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
-            localAddressMail, "" );
+        AdapterConfig adapterConfig = createEmailAdapter( "askfasttest@gmail.com", "askask2times", null, null, null,
+            null, null, null, null, new UUID().toString(), null );
         //create session
         getOrCreateSession( adapterConfig, remoteAddressEmail );
         
@@ -50,10 +52,28 @@ public class MailServletTest extends TestFramework
         url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
         
         MailServlet mailServlet = new MailServlet();
-        mailServlet.startDialog( addressNameMap, null, null, url, "test", "sendDummyMessageTest", adapterConfig );
-        
+        mailServlet.broadcastMessage( testMessage, "Test", adapterConfig.getXsiUser(), "Test message", addressNameMap,
+            null, adapterConfig );
         Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, testMessage, "sendDummyMessageTest" );
         assertOutgoingTextMessage( message );
+    }
+    
+    /**
+     * test if an incoming email is received by the MailServlet 
+     * @throws Exception 
+     */
+    @Test
+    @Ignore
+    public void receiveDummyMessageTest() throws Exception
+    {
+        String testMessage = "testMessage";
+        //create mail adapter
+        String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType", QuestionInRequest.SIMPLE_COMMENT.name() );
+        url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
+        createEmailAdapter( "askfasttest@gmail.com", "askask2times", null, null, null, null, null, null, null,
+            new UUID().toString(), url );
+        //fetch and invoke the receieveMessage method
+        new AdapterAgent().checkInBoundEmails();
     }
     
     /**

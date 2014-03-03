@@ -20,6 +20,7 @@ import org.junit.Before;
 import org.w3c.dom.Document;
 
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
@@ -147,6 +148,15 @@ public class TestFramework
         String adapterConfigString = adapterConfig.createConfig( ServerUtils.serialize( adapterConfig ) ).getEntity()
             .toString();
         return ServerUtils.deserialize( adapterConfigString, AdapterConfig.class );
+    }
+    
+    public static AdapterConfig createEmailAdapter( String emailAddress, String password, String name,
+        String preferredLanguage, String sendingPort, String sendingHost, String protocol, String receivingHost,
+        String receivingProtocol, String accountId, String initialAgentURL ) throws Exception
+    {
+        String emailAdapterId = new AdapterAgent().createEmailAdapter( emailAddress, password, name, preferredLanguage,
+            sendingPort, sendingHost, protocol, receivingProtocol, receivingHost, accountId, initialAgentURL );
+        return AdapterConfig.getAdapterConfig( emailAdapterId );
     }
     
     public static Method fetchMethodByReflection( String methodName, Class<?> class1, Class<?> parameterType )

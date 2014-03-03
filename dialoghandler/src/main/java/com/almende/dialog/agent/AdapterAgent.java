@@ -2,6 +2,7 @@ package com.almende.dialog.agent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.MailServlet;
@@ -12,6 +13,7 @@ import com.almende.eve.rpc.annotation.Access;
 import com.almende.eve.rpc.annotation.AccessType;
 import com.almende.eve.rpc.annotation.Name;
 import com.almende.eve.rpc.annotation.Optional;
+import com.almende.eve.rpc.jsonrpc.JSONRequest;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.uuid.UUID;
@@ -27,6 +29,70 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	public static final String ADAPTER_TYPE_EMAIL = "email";
 	public static final String ADAPTER_TYPE_XMPP = "xmpp";
 	public static final String ADAPTER_TYPE_TWITTER = "twitter";	
+	public static final int SCHEDULER_INTERVAL = 30 * 1000; //30seconds
+	private static final Logger log = Logger.getLogger( AdapterAgent.class.getSimpleName() );
+	
+    @Override
+    protected void onCreate()
+    {
+        startAllInboundSceduler();
+    }
+
+    /**
+     * starts scedulers for all inbound services such as Email, Twitter, XMPP etc
+     */
+    public void startAllInboundSceduler()
+    {
+        startEmailInboundSceduler();
+    }
+    
+    /**
+     * start scheduler for email only
+     */
+    public void startEmailInboundSceduler()
+    {
+        String id = getState().get( "emailScedulerTaskId", String.class );
+        if ( id == null )
+        {
+            try
+            {
+                JSONRequest req = new JSONRequest( "checkInBoundEmails" );
+                getState().put( "emailScedulerTaskId", getScheduler().createTask( req, SCHEDULER_INTERVAL, true, true ) );
+            }
+            catch ( Exception e )
+            {
+                e.printStackTrace();
+                log.warning( "Exception in scheduler creation: "+ e.getLocalizedMessage() );
+            }
+        }
+        else
+        {
+            log.warning( "Task already running" );
+        }
+    }
+
+    /**
+     * check inbound email
+     */
+    public void checkInBoundEmails()
+    {
+        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( ADAPTER_TYPE_EMAIL, null, null );
+        for ( AdapterConfig adapterConfig : adapters )
+        {
+            Runnable mailServlet = new MailServlet( adapterConfig );
+            Thread mailServletThread = new Thread( mailServlet );
+            mailServletThread.run();
+            try
+            {
+                mailServletThread.join();
+            }
+            catch ( InterruptedException e )
+            {
+                e.printStackTrace();
+                log.warning( "Failed to join the thread. Message" + e.getLocalizedMessage() );
+            }
+        }
+    }
 	
 	/**
 	 *  Adds a new broadsoft adapter
@@ -72,17 +138,21 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	
     public String createEmailAdapter( @Name( "emailAddress" ) String emailAddress, @Name( "password" ) String password,
         @Name( "name" ) @Optional String name, @Name( "preferredLanguage" ) @Optional String preferredLanguage,
-        @Name( "sendingPort" ) @Optional String sendingPort, @Name( "sendingHost" ) @Optional String sendingHost,
-        @Name( "sendingProtocol" ) @Optional String protocol, @Name( "accountId" ) @Optional String accountId )
-    throws Exception
+        @Name( "sendingProtocol" ) @Optional String sendingProtocol,
+        @Name( "sendingHost" ) @Optional String sendingHost, @Name( "sendingPort" ) @Optional String sendingPort,
+        @Name( "receivingProtocol" ) @Optional String receivingProtocol,
+        @Name( "receivingHost" ) @Optional String receivingHost, @Name( "accountId" ) @Optional String accountId,
+        @Name( "initialAgentURL" ) @Optional String initialAgentURL ) throws Exception
     {
         preferredLanguage = ( preferredLanguage == null ? "nl" : preferredLanguage );
         AdapterConfig config = new AdapterConfig();
         config.setAdapterType( ADAPTER_TYPE_EMAIL );
         //by default create gmail account adapter
-        String connectionSettings = ( protocol != null ? protocol : MailServlet.GMAIL_SENDING_PROTOCOL ) + ":"
-            + ( sendingHost != null ? sendingHost : MailServlet.GMAIL_SENDING_HOST ) + ":"
-            + ( sendingPort != null ? sendingPort : MailServlet.GMAIL_SENDING_PORT );
+        String connectionSettings = ( sendingProtocol != null ? sendingProtocol : MailServlet.GMAIL_SENDING_PROTOCOL )
+            + ":" + ( sendingHost != null ? sendingHost : MailServlet.GMAIL_SENDING_HOST ) + ":"
+            + ( sendingPort != null ? sendingPort : MailServlet.GMAIL_SENDING_PORT ) + "\n"
+            + ( receivingProtocol != null ? receivingProtocol : MailServlet.GMAIL_RECEIVING_PROTOCOL ) + ":"
+            + ( receivingHost != null ? receivingHost : MailServlet.GMAIL_RECEIVING_HOST );
         config.setXsiURL( connectionSettings );
         config.setMyAddress( emailAddress );
         config.setAddress( name );
@@ -93,6 +163,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.setOwner( accountId );
         config.addAccount( accountId );
         config.setAnonymous( false );
+        config.setInitialAgentURL( initialAgentURL );
         AdapterConfig newConfig = createAdapter( config );
         return newConfig.getConfigId();
     }

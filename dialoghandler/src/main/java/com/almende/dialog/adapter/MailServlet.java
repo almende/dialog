@@ -136,10 +136,9 @@ public class MailServlet extends TextServlet implements Runnable {
         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
         //xsiURL is of the form <email protocol>: <sending host>: <sending port>
-        final String sendingConnectionSettings = config.getXsiURL() != null ? config.getXsiURL().split( "\n" )[0]
-                                                                           : GMAIL_SENDING_PROTOCOL + ":"
-                                                                               + GMAIL_SENDING_HOST + ":"
-                                                                               + GMAIL_SENDING_PORT; 
+        final String sendingConnectionSettings = config.getXsiURL() != null && !config.getXsiURL().isEmpty() ? config
+            .getXsiURL().split( "\n" )[0] : GMAIL_SENDING_PROTOCOL + ":" + GMAIL_SENDING_HOST + ":"
+            + GMAIL_SENDING_PORT; 
         String[] connectionSettingsArray = sendingConnectionSettings.split( ":" );
         String sendingHost = connectionSettingsArray.length == 3 ? connectionSettingsArray[1] : GMAIL_SENDING_HOST;
         String sendingPort = connectionSettingsArray.length == 3 ? connectionSettingsArray[2] : GMAIL_SENDING_PORT;
@@ -261,13 +260,17 @@ public class MailServlet extends TextServlet implements Runnable {
                 String lastEmailTimestamp = StringStore.getString( "lastEmailRead_" + adapterConfig.getConfigId() );
                 for ( int i = 0; i < message.length; i++ )
                 {
+                    InternetAddress fromAddress = ( (InternetAddress) message[i].getFrom()[0] );
+                    //skip if the address contains no-reply as its address
                     if ( lastEmailTimestamp == null
-                        || Long.parseLong( lastEmailTimestamp ) < message[i].getReceivedDate().getTime() )
+                        || Long.parseLong( lastEmailTimestamp ) < message[i].getReceivedDate().getTime()
+                        && !fromAddress.toString().contains( "no-reply" )
+                        && !fromAddress.toString().contains( "noreply" ) )
                     {
                         try
                         {
                             MimeMessage mimeMessage = new MimeMessage( session, message[i].getInputStream() );
-                            mimeMessage.setFrom( message[i].getFrom()[0] );
+                            mimeMessage.setFrom( fromAddress );
                             mimeMessage.setSubject( message[i].getSubject() );
                             mimeMessage.setContent( message[i].getContent(), message[i].getContentType() );
                             TextMessage receiveMessage = receiveMessage( mimeMessage, adapterConfig.getMyAddress() );

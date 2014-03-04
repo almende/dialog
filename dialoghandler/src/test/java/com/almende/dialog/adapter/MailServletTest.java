@@ -59,24 +59,6 @@ public class MailServletTest extends TestFramework
     }
     
     /**
-     * test if an incoming email is received by the MailServlet 
-     * @throws Exception 
-     */
-    @Test
-    @Ignore
-    public void receiveDummyMessageTest() throws Exception
-    {
-        String testMessage = "testMessage";
-        //create mail adapter
-        String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType", QuestionInRequest.SIMPLE_COMMENT.name() );
-        url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
-        createEmailAdapter( "askfasttest@gmail.com", "askask2times", null, null, null, null, null, null, null,
-            new UUID().toString(), url );
-        //fetch and invoke the receieveMessage method
-        new AdapterAgent().checkInBoundEmails();
-    }
-    
-    /**
      * test if a "dummy" TextMessage is generated and processed properly by MailServlet 
      * @throws Exception 
      */

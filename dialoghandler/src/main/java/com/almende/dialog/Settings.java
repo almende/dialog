@@ -18,6 +18,7 @@ public class Settings {
 	public static final String	HOST		= "ask-charlotte.appspot.com";
 	//public static String		KEYSERVER	= "http://localhost:8080/oauth";
 	public static String		KEYSERVER	= "http://localhost:8081/oauth";
+	public static String       DIALOG_HANDLER   = "http://localhost:8082/dialoghandler";
 	
 	// public static String
 	// KEYSERVER="http://www.ask-fast.com/askAnywaysServices";

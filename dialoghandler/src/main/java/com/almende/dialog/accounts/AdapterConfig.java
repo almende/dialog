@@ -382,6 +382,23 @@ public class AdapterConfig {
 		return adapters;
 	}
 	
+	/**
+	 * this returns the AdapterConfig if it is associated with the supplied ownerId.
+	 * Else returns null
+	 * @param adapterId
+	 * @param ownerId
+	 * @return
+	 */
+	public static AdapterConfig getAdapterForOwner(String adapterId, String ownerId)
+	{
+	    AdapterConfig adapterConfig = getAdapterConfig( adapterId );
+	    if(adapterConfig != null && adapterConfig.getOwner().equalsIgnoreCase( ownerId ))
+	    {
+	        return adapterConfig;
+	    }
+	    return null;
+	}
+	
 	public static ArrayList<AdapterConfig> findAdapterByOwnerList(List<String> owners) {
 		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 		
@@ -607,8 +624,9 @@ public class AdapterConfig {
 	}
 	
 	public void addAccount(String accountId) {
-		if(accountId!=null)
+		if(accountId!=null && !accounts.contains( accountId )){
 			accounts.add(accountId);
+		}
 	}
 	
 	public void setAccounts(List<String> accounts) {

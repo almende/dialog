@@ -6,13 +6,18 @@ import java.util.logging.Logger;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.MailServlet;
+import com.almende.dialog.adapter.TwitterServlet;
+import com.almende.dialog.adapter.TwitterServlet.TwitterEndpoint;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.exception.ConflictException;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.rpc.annotation.Access;
 import com.almende.eve.rpc.annotation.AccessType;
 import com.almende.eve.rpc.annotation.Name;
 import com.almende.eve.rpc.annotation.Optional;
+import com.almende.eve.rpc.jsonrpc.JSONRPCException;
+import com.almende.eve.rpc.jsonrpc.JSONRPCException.CODE;
 import com.almende.eve.rpc.jsonrpc.JSONRequest;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
@@ -29,7 +34,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	public static final String ADAPTER_TYPE_EMAIL = "email";
 	public static final String ADAPTER_TYPE_XMPP = "xmpp";
 	public static final String ADAPTER_TYPE_TWITTER = "twitter";	
-	public static final int SCHEDULER_INTERVAL = 30 * 1000; //30seconds
+	public static final int EMAIL_SCHEDULER_INTERVAL = 30 * 1000; //30seconds
+	public static final int TWITTER_SCHEDULER_INTERVAL = 60 * 1000; //60seconds
 	private static final Logger log = Logger.getLogger( AdapterAgent.class.getSimpleName() );
 	
     @Override
@@ -44,6 +50,16 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
     public void startAllInboundSceduler()
     {
         startEmailInboundSceduler();
+        startTwitterInboundSceduler();
+    }
+    
+    /**
+     * stops scedulers for all inbound services such as Email, Twitter, XMPP etc
+     */
+    public void stopAllInboundSceduler()
+    {
+        stopEmailInboundSceduler();
+        stopTwitterInboundSceduler();
     }
     
     /**
@@ -56,8 +72,9 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         {
             try
             {
-                JSONRequest req = new JSONRequest( "checkInBoundEmails" );
-                getState().put( "emailScedulerTaskId", getScheduler().createTask( req, SCHEDULER_INTERVAL, true, true ) );
+                JSONRequest req = new JSONRequest( "checkInBoundEmails", null );
+                getState().put( "emailScedulerTaskId",
+                    getScheduler().createTask( req, EMAIL_SCHEDULER_INTERVAL, true, true ) );
             }
             catch ( Exception e )
             {
@@ -69,6 +86,49 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         {
             log.warning( "Task already running" );
         }
+    }
+    
+    /**
+     * stops the scheduler which checks for inbound emails
+     */
+    public void stopEmailInboundSceduler()
+    {
+        getScheduler().cancelTask(getState().get("emailScedulerTaskId", String.class));
+        getState().remove( "emailScedulerTaskId" );
+    }
+    
+    /**
+     * start scheduler for twitter only
+     */
+    public void startTwitterInboundSceduler()
+    {
+        String id = getState().get( "twitterScedulerTaskId", String.class );
+        if ( id == null )
+        {
+            try
+            {
+                JSONRequest req = new JSONRequest( "checkInBoundTwitterPosts", null );
+                getState().put( "twitterScedulerTaskId", getScheduler().createTask( req, TWITTER_SCHEDULER_INTERVAL, true, true ) );
+            }
+            catch ( Exception e )
+            {
+                e.printStackTrace();
+                log.warning( "Exception in scheduler creation: "+ e.getLocalizedMessage() );
+            }
+        }
+        else
+        {
+            log.warning( "Task already running" );
+        }
+    }
+    
+    /**
+     * stops the scheduler which checks for inbound twitter updates
+     */
+    public void stopTwitterInboundSceduler()
+    {
+        getScheduler().cancelTask(getState().get("twitterScedulerTaskId", String.class));
+        getState().remove( "twitterScedulerTaskId" );
     }
 
     /**
@@ -85,6 +145,33 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             try
             {
                 mailServletThread.join();
+            }
+            catch ( InterruptedException e )
+            {
+                e.printStackTrace();
+                log.warning( "Failed to join the thread. Message" + e.getLocalizedMessage() );
+            }
+        }
+    }
+    
+    /**
+     * check inbound twitter updates
+     */
+    public void checkInBoundTwitterPosts()
+    {
+        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( ADAPTER_TYPE_TWITTER, null, null );
+        for ( AdapterConfig adapterConfig : adapters )
+        {
+            Runnable twitterDirectMessageServlet = new TwitterServlet( adapterConfig, TwitterEndpoint.DIRECT_MESSAGE );
+            Thread twitterDirectMessageThread = new Thread( twitterDirectMessageServlet );
+            Runnable twitterTweetMentionServlet = new TwitterServlet( adapterConfig, TwitterEndpoint.MENTIONS );
+            Thread twitterTweetMentionThread = new Thread( twitterTweetMentionServlet );
+            twitterDirectMessageThread.run();
+            twitterTweetMentionThread.run();
+            try
+            {
+                twitterDirectMessageThread.join();
+                twitterTweetMentionThread.join();
             }
             catch ( InterruptedException e )
             {
@@ -222,10 +309,33 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return newConfig.getConfigId();
 	}
 	
-	public String createTwitterAdapter() {
-		// TODO: implement
-		return null;
-	}
+    public String attachTwitterAdapterToUser( @Name( "adapterID" ) @Optional String adapterID,
+        @Name( "twitterUserName" ) @Optional String twitterUserName, @Name( "accountId" ) String accountId )
+    throws Exception
+    {
+        AdapterConfig adapterConfig = null;
+        if ( adapterID != null && !adapterID.trim().isEmpty() )
+        {
+            adapterConfig = AdapterConfig.getAdapterConfig( adapterID.trim() );
+        }
+        if ( adapterConfig == null && twitterUserName != null && !twitterUserName.trim().isEmpty() )
+        {
+            twitterUserName = twitterUserName.startsWith( "@" ) ? twitterUserName : "@" + twitterUserName;
+            ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters( ADAPTER_TYPE_TWITTER,
+                twitterUserName, null );
+            adapterConfig = !adapterConfigs.isEmpty() ? adapterConfigs.iterator().next() : null;
+        }
+        if ( adapterConfig != null )
+        {
+            adapterConfig.addAccount( accountId );
+            adapterConfig.update();
+            return ServerUtils.serialize( adapterConfig );
+        }
+        else
+        {
+            throw new JSONRPCException( CODE.INVALID_PARAMS, "Adapter not found" );
+        }
+    }
 	
 	public String createFacebookAdapter() {
 		// TODO: implement

@@ -27,7 +27,7 @@ tokens:
 
 # scheduler settings
 scheduler:
-  class: ClockSchedulerFactory
+  class: RunnableSchedulerFactory
 
 bootstrap:
   agents:

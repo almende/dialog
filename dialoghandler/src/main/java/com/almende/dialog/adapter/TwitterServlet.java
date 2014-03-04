@@ -24,8 +24,10 @@ import org.scribe.model.Token;
 import org.scribe.model.Verb;
 import org.scribe.oauth.OAuthService;
 
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Twitter;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
@@ -39,8 +41,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.base.Splitter;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.WebResource;
 
-public class TwitterServlet extends TextServlet {
+public class TwitterServlet extends TextServlet implements Runnable {
 	
 	private static final long	serialVersionUID	= 6657877430445328774L;
 	private static final Logger	log					= Logger.getLogger(TwitterServlet.class
@@ -48,7 +52,37 @@ public class TwitterServlet extends TextServlet {
 	public static final String	STATUS_ID_KEY		= "inReptyTweetID";
 	public static final String	TWEET_TYPE			= "tweetType";
 	
-	@Override
+	private AdapterConfig adapterConfig = null;
+	private TwitterEndpoint twitterEndpoint = null;
+	public enum TwitterEndpoint
+	{
+	    DIRECT_MESSAGE ( "/direct_messages"),
+	    MENTIONS("/mentions");
+
+	    String url;
+	    private TwitterEndpoint(String url)
+	    {
+	        this.url = url;
+	    }
+	    
+	    public String getUrl()
+        {
+            return url;
+        }
+	}
+	
+	public TwitterServlet()
+	{
+	    
+	}
+	
+	public TwitterServlet( AdapterConfig adapterConfig, TwitterEndpoint endpoint )
+    {
+	    this.adapterConfig = adapterConfig;
+	    this.twitterEndpoint = endpoint;
+    }
+
+    @Override
 	public void service(HttpServletRequest req, HttpServletResponse res)
 			throws IOException {
 		if ("GET".equalsIgnoreCase(req.getMethod())) {
@@ -83,109 +117,111 @@ public class TwitterServlet extends TextServlet {
 				getAdapterType(), null, null);
 		boolean isDirectMessageCall = false;
 		String tweedOrDirectMesssageId = null;
-		for (AdapterConfig config : adapters) {
-			Token accessToken = new Token(config.getAccessToken(),
-					config.getAccessTokenSecret());
-			String url = null;
-			if (req.getRequestURI().startsWith("/twitter/direct_messages")) {
-				// make sure that the user follows the one, for whom the direct
-				// message is intended for
-				tweedOrDirectMesssageId = StringStore
-						.getString("lastdirectmessage_" + config.getConfigId());
-				url = "https://api.twitter.com/1.1/direct_messages.json";
-				if (tweedOrDirectMesssageId != null
-						&& !tweedOrDirectMesssageId.equals("0")) url += "?since_id="
-						+ tweedOrDirectMesssageId;
-				isDirectMessageCall = true;
-			} else {
-				tweedOrDirectMesssageId = StringStore.getString("lasttweet_"
-						+ config.getConfigId());
-				url = "https://api.twitter.com/1.1/statuses/mentions_timeline.json";
-				if (tweedOrDirectMesssageId != null
-						&& !tweedOrDirectMesssageId.equals("0")) url += "?since_id="
-						+ tweedOrDirectMesssageId;
-			}
-			OAuthRequest request = new OAuthRequest(Verb.GET, url);
-			service.signRequest(accessToken, request);
-			Response response = request.send();
-			ObjectMapper om = ParallelInit.getObjectMapper();
-			
-			try {
-				String format = "EEE MMM dd HH:mm:ss ZZZZZ yyyy";
-				DateTime date = null;
-				ArrayNode res = om.readValue(response.getBody(),
-						ArrayNode.class);
-				if (tweedOrDirectMesssageId == null) {
-					for (JsonNode tweet : res) {
-						String msgDate = tweet.get("created_at").asText();
-						SimpleDateFormat sf = new SimpleDateFormat(format,
-								Locale.ENGLISH);
-						sf.setLenient(true);
-						Date newDate = sf.parse(msgDate);
-						if (date == null || date.isBefore(newDate.getTime())) {
-							tweedOrDirectMesssageId = tweet.get("id_str")
-									.asText();
-							date = new DateTime(newDate.getTime());
-						}
-					}
-				} else {
-					String userKeyInResponseJSON = isDirectMessageCall ? "sender"
-							: "user";
-					for (JsonNode tweet : res) {
-						String message = tweet.get("text").asText();
-						message = message.replace(config.getMyAddress(), "");
-						
-						TextMessage msg = new TextMessage();
-						msg.setAddress("@"
-								+ tweet.get(userKeyInResponseJSON)
-										.get("screen_name").asText());
-						msg.setRecipientName(tweet.get(userKeyInResponseJSON)
-								.get("name").asText());
-						msg.setBody(message.trim());
-						msg.setLocalAddress(config.getMyAddress());
-						msg.getExtras().put(STATUS_ID_KEY, tweet.get("id"));
-						if (isDirectMessageCall) {
-							MediaProperty mediaProperty = new MediaProperty();
-							mediaProperty.setMedium(MediumType.TWITTER);
-							mediaProperty.addProperty(MediaPropertyKey.TYPE,
-									"direct");
-							msg.getExtras().put(Question.MEDIA_PROPERTIES,
-									Arrays.asList(mediaProperty));
-						}
-						processMessage(msg);
-						
-						String msgDate = tweet.get("created_at").asText();
-						SimpleDateFormat sf = new SimpleDateFormat(format,
-								Locale.ENGLISH);
-						sf.setLenient(true);
-						Date newDate = sf.parse(msgDate);
-						if (date == null || date.isBefore(newDate.getTime())) {
-							date = new DateTime(newDate.getTime());
-							tweedOrDirectMesssageId = tweet.get("id_str")
-									.asText();
-						}
-					}
-				}
-				log.info("Set date: " + config.getConfigId() + " to: "
-						+ tweedOrDirectMesssageId);
-				if (tweedOrDirectMesssageId != null) {
-					if (req.getRequestURI().startsWith(
-							"/twitter/direct_messages")) {
-						StringStore.storeString(
-								"lastdirectmessage_" + config.getConfigId(),
-								tweedOrDirectMesssageId + "");
-					} else {
-						StringStore.storeString(
-								"lasttweet_" + config.getConfigId(),
-								tweedOrDirectMesssageId + "");
-					}
-				}
-			} catch (Exception ex) {
-				log.warning("Failed to parse result");
-				out.print(response.getBody());
-				out.close();
-			}
-			out.print(response.getBody());
+        for ( AdapterConfig config : adapters )
+        {
+            if ( config.getInitialAgentURL() != null && !config.getInitialAgentURL().isEmpty() )
+            {
+                Token accessToken = new Token( config.getAccessToken(), config.getAccessTokenSecret() );
+                String url = null;
+
+                if ( req.getPathInfo().equals( TwitterEndpoint.DIRECT_MESSAGE.getUrl() ) )
+                {
+                    // make sure that the user follows the one, for whom the direct
+                    // message is intended for
+                    tweedOrDirectMesssageId = StringStore.getString( "lastdirectmessage_" + config.getConfigId() );
+                    url = "https://api.twitter.com/1.1/direct_messages.json";
+                    if ( tweedOrDirectMesssageId != null && !tweedOrDirectMesssageId.equals( "0" ) )
+                        url += "?since_id=" + tweedOrDirectMesssageId;
+                    isDirectMessageCall = true;
+                }
+                else
+                {
+                    tweedOrDirectMesssageId = StringStore.getString( "lasttweet_" + config.getConfigId() );
+                    url = "https://api.twitter.com/1.1/statuses/mentions_timeline.json";
+                    if ( tweedOrDirectMesssageId != null && !tweedOrDirectMesssageId.equals( "0" ) )
+                        url += "?since_id=" + tweedOrDirectMesssageId;
+                }
+                OAuthRequest request = new OAuthRequest( Verb.GET, url );
+                service.signRequest( accessToken, request );
+                Response response = request.send();
+                ObjectMapper om = ParallelInit.getObjectMapper();
+
+                try
+                {
+                    String format = "EEE MMM dd HH:mm:ss ZZZZZ yyyy";
+                    DateTime date = null;
+                    ArrayNode res = om.readValue( response.getBody(), ArrayNode.class );
+                    if ( tweedOrDirectMesssageId == null )
+                    {
+                        for ( JsonNode tweet : res )
+                        {
+                            String msgDate = tweet.get( "created_at" ).asText();
+                            SimpleDateFormat sf = new SimpleDateFormat( format, Locale.ENGLISH );
+                            sf.setLenient( true );
+                            Date newDate = sf.parse( msgDate );
+                            if ( date == null || date.isBefore( newDate.getTime() ) )
+                            {
+                                tweedOrDirectMesssageId = tweet.get( "id_str" ).asText();
+                                date = new DateTime( newDate.getTime() );
+                            }
+                        }
+                    }
+                    else
+                    {
+                        String userKeyInResponseJSON = isDirectMessageCall ? "sender" : "user";
+                        for ( JsonNode tweet : res )
+                        {
+                            String message = tweet.get( "text" ).asText();
+                            message = message.replace( config.getMyAddress(), "" );
+
+                            TextMessage msg = new TextMessage();
+                            msg.setAddress( "@" + tweet.get( userKeyInResponseJSON ).get( "screen_name" ).asText() );
+                            msg.setRecipientName( tweet.get( userKeyInResponseJSON ).get( "name" ).asText() );
+                            msg.setBody( message.trim() );
+                            msg.setLocalAddress( config.getMyAddress() );
+                            msg.getExtras().put( STATUS_ID_KEY, tweet.get( "id" ) );
+                            if ( isDirectMessageCall )
+                            {
+                                MediaProperty mediaProperty = new MediaProperty();
+                                mediaProperty.setMedium( MediumType.TWITTER );
+                                mediaProperty.addProperty( MediaPropertyKey.TYPE, "direct" );
+                                msg.getExtras().put( Question.MEDIA_PROPERTIES, Arrays.asList( mediaProperty ) );
+                            }
+                            processMessage( msg );
+
+                            String msgDate = tweet.get( "created_at" ).asText();
+                            SimpleDateFormat sf = new SimpleDateFormat( format, Locale.ENGLISH );
+                            sf.setLenient( true );
+                            Date newDate = sf.parse( msgDate );
+                            if ( date == null || date.isBefore( newDate.getTime() ) )
+                            {
+                                date = new DateTime( newDate.getTime() );
+                                tweedOrDirectMesssageId = tweet.get( "id_str" ).asText();
+                            }
+                        }
+                    }
+                    log.info( "Set date: " + config.getConfigId() + " to: " + tweedOrDirectMesssageId );
+                    if ( tweedOrDirectMesssageId != null )
+                    {
+                        if ( req.getPathInfo().equals( TwitterEndpoint.DIRECT_MESSAGE.getUrl() ) )
+                        {
+                            StringStore.storeString( "lastdirectmessage_" + config.getConfigId(),
+                                tweedOrDirectMesssageId + "" );
+                        }
+                        else
+                        {
+                            StringStore.storeString( "lasttweet_" + config.getConfigId(), tweedOrDirectMesssageId + "" );
+                        }
+                    }
+                }
+                catch ( Exception ex )
+                {
+                    log.warning( "Failed to parse result" );
+                    out.print( response.getBody() );
+                    out.close();
+                }
+                out.print( response.getBody() );
+            }
 		}
 		out.close();
 	}
@@ -331,7 +367,7 @@ public class TwitterServlet extends TextServlet {
 	
 	@Override
 	protected String getAdapterType() {
-		return "TWITTER";
+		return AdapterAgent.ADAPTER_TYPE_TWITTER;
 	}
 	
 	@Override
@@ -339,4 +375,20 @@ public class TwitterServlet extends TextServlet {
 			throws IOException {
 		// TODO Auto-generated method stub
 	}
+
+    @Override
+    public void run()
+    {
+        Client client = ParallelInit.getClient();
+        WebResource webResource;
+        try
+        {
+            webResource = client.resource( Settings.DIALOG_HANDLER + getServletPath() + twitterEndpoint.getUrl() );
+            webResource.type( "text/plain" ).get( String.class );
+        }
+        catch ( Exception e )
+        {
+            log.severe( String.format( "adapterId is: %s" + adapterConfig, "ERROR loading question: " + e.toString() ) );
+        }
+    }
 }

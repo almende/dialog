@@ -136,6 +136,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
      */
     public void checkInBoundEmails()
     {
+        log.info( "starting email scheduler check for inbound emails..." );
         ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( ADAPTER_TYPE_EMAIL, null, null );
         for ( AdapterConfig adapterConfig : adapters )
         {
@@ -159,6 +160,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
      */
     public void checkInBoundTwitterPosts()
     {
+        log.info( "starting twitter scheduler check for mentions and direct messages..." );
         ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( ADAPTER_TYPE_TWITTER, null, null );
         for ( AdapterConfig adapterConfig : adapters )
         {

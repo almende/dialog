@@ -258,6 +258,7 @@ public class MailServlet extends TextServlet implements Runnable {
                 folder.open( Folder.READ_ONLY );
                 Message message[] = folder.getMessages();
                 String lastEmailTimestamp = StringStore.getString( "lastEmailRead_" + adapterConfig.getConfigId() );
+                String updatedLastEmailTimestamp = null;
                 for ( int i = 0; i < message.length; i++ )
                 {
                     InternetAddress fromAddress = ( (InternetAddress) message[i].getFrom()[0] );
@@ -283,11 +284,14 @@ public class MailServlet extends TextServlet implements Runnable {
                                 adapterConfig.getConfigId(), adapterConfig.getAdapterType(), e.getLocalizedMessage() ) );
                         }
                     }
-                    lastEmailTimestamp = String.valueOf( message[i].getReceivedDate().getTime() );
+                    updatedLastEmailTimestamp = String.valueOf( message[i].getReceivedDate().getTime() );
                 }
                 folder.close( true );
                 store.close();
-                StringStore.storeString( "lastEmailRead_"+ adapterConfig.getConfigId(), lastEmailTimestamp );
+                if(updatedLastEmailTimestamp != null && updatedLastEmailTimestamp != lastEmailTimestamp)
+                {
+                    StringStore.storeString( "lastEmailRead_"+ adapterConfig.getConfigId(), lastEmailTimestamp );
+                }
             }
             catch ( Exception e )
             {

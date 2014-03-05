@@ -8,6 +8,7 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.MailServlet;
 import com.almende.dialog.adapter.TwitterServlet;
 import com.almende.dialog.adapter.TwitterServlet.TwitterEndpoint;
+import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.exception.ConflictException;
 import com.almende.dialog.util.ServerUtils;
@@ -257,10 +258,37 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         return newConfig.getConfigId();
     }
 	
-	public String createXmppAdapter() {
-		// TODO: implement
-		return null;
-	}
+    public String createXMPPAdapter( @Name( "xmppAddress" ) String xmppAddress, @Name( "password" ) String password,
+        @Name( "name" ) @Optional String name, @Name( "preferredLanguage" ) @Optional String preferredLanguage,
+        @Name( "host" ) @Optional String host, @Name( "port" ) @Optional String port,
+        @Name( "service" ) @Optional String service, @Name( "accountId" ) @Optional String accountId,
+        @Name( "initialAgentURL" ) @Optional String initialAgentURL ) throws Exception
+    {
+        preferredLanguage = ( preferredLanguage == null ? "nl" : preferredLanguage );
+        AdapterConfig config = new AdapterConfig();
+        config.setAdapterType( ADAPTER_TYPE_XMPP );
+        //by default create gmail account adapter
+        String connectionSettings = ( host != null ? host : XMPPServlet.DEFAULT_XMPP_HOST ) + ":"
+            + ( port != null ? port : XMPPServlet.DEFAULT_XMPP_PORT ) + ":"
+            + ( service != null ? service : XMPPServlet.DEFAULT_XMPP_SERVICE );
+        config.setXsiURL( connectionSettings );
+        config.setMyAddress( xmppAddress );
+        config.setAddress( name );
+        config.setXsiUser( xmppAddress );
+        config.setXsiPasswd( password );
+        config.setPreferred_language( preferredLanguage );
+        config.setPublicKey( accountId );
+        config.setOwner( accountId );
+        config.addAccount( accountId );
+        config.setAnonymous( false );
+        config.setInitialAgentURL( initialAgentURL );
+        AdapterConfig newConfig = createAdapter( config );
+        //set for incoming requests
+        XMPPServlet xmppServlet = new XMPPServlet();
+        xmppServlet.listenForRosterChanges( newConfig );
+        xmppServlet.listenForIncomingChats( newConfig );
+        return newConfig.getConfigId();
+    }
 	
 	public String createMBAdapter(@Name("address") String address,
 			@Name("keyword") @Optional String keyword,

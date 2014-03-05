@@ -133,6 +133,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<servlet-name>twitterservlet</servlet-name>
 		<url-pattern>/twitter/*</url-pattern>
 	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>xmppservlet</servlet-name>
+		<servlet-class>com.almende.dialog.adapter.XMPPServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>xmppservlet</servlet-name>
+		<url-pattern>/xmpp/*</url-pattern>
+	</servlet-mapping>
 
 	<servlet>
 		<servlet-name>facebookprivateservlet</servlet-name>
@@ -179,6 +188,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<welcome-file>ask-bootstrap/public/index.html</welcome-file>
 	</welcome-file-list>
 
+
 	<mime-mapping>
 		<extension>ccxml</extension>
 		<mime-type>application/ccxml+xml</mime-type>
@@ -197,10 +207,6 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		</web-resource-collection> <auth-constraint> <role-name>admin</role-name> 
 		</auth-constraint> </security-constraint> -->
 	<security-constraint>
-		<web-resource-collection>
-		    <web-resource-name>xmpp</web-resource-name>
-			<url-pattern>/_ah/xmpp/*</url-pattern>
-		</web-resource-collection>
 		<auth-constraint>
 			<role-name>admin</role-name>
 		</auth-constraint>
@@ -210,16 +216,6 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<web-resource-collection>
 		    <web-resource-name>mail</web-resource-name>
 			<url-pattern>/_ah/mail/*</url-pattern>
-		</web-resource-collection>
-		<auth-constraint>
-			<role-name>admin</role-name>
-		</auth-constraint>
-	</security-constraint>
-
-	<security-constraint>
-		<web-resource-collection>
-		    <web-resource-name>cron</web-resource-name>
-			<url-pattern>/cron/*</url-pattern>
 		</web-resource-collection>
 		<auth-constraint>
 			<role-name>admin</role-name>

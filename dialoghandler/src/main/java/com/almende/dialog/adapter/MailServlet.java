@@ -71,52 +71,57 @@ public class MailServlet extends TextServlet implements Runnable {
 		return receiveMessage( message, recipient );
 	}
 
-        /** method separated from the original @link{MailServlet#receiveMessage(HttpServletRequest, HttpServletResponse)}
-         * so that it can be tested without any data mock-ups.
-         * @since  3/09/2013
-         */
-        private TextMessage receiveMessage( MimeMessage message, String recipient )
-        throws Exception
+    /**
+     * method separated from the original
+     * @link{MailServlet#receiveMessage(HttpServletRequest,
+     * HttpServletResponse)} so that it can be tested without any data mock-ups.
+     * @since 3/09/2013
+     */
+    private TextMessage receiveMessage( MimeMessage message, String recipient ) throws Exception
+    {
+        TextMessage msg = new TextMessage();
+        msg.setSubject( "RE: " + message.getSubject() );
+        if ( recipient != null && !recipient.equals( "" ) )
         {
-            TextMessage msg = new TextMessage();
-            msg.setSubject("RE: "+message.getSubject());
-            if (recipient != null && !recipient.equals("")){
-    			msg.setLocalAddress(recipient.toString());
-    		} else {
-    			
-    			Address[] recipients = message.getAllRecipients();
-    			if (recipients.length>0){
-    				InternetAddress recip= (InternetAddress)recipients[0];
-    				msg.setLocalAddress(recip.getAddress());
-    			} else
-    				throw new Exception("MailServlet: Can't determine local address! (Dev)");
-    			
-    		}
-    		
-    		Address[] senders = message.getFrom();
-    		if(senders != null && senders.length>0) {
-    			InternetAddress sender = (InternetAddress) senders[0];
-    			msg.setAddress(sender.getAddress());
-    			msg.setRecipientName(sender.getPersonal());
-    		}
-    		
-            Multipart mp = null;
-            if(message.getContent() instanceof Multipart)
-            {
-                mp = (Multipart) message.getContent();
-            }
-            else 
-            {
-                mp = new MimeMultipart();
-                mp.addBodyPart( new MimeBodyPart(new InternetHeaders(), message.getContent().toString().getBytes()) ); 
-            }
-            if ( mp.getCount() > 0 )
-            {
-                msg.setBody( mp.getBodyPart( 0 ).getContent().toString() );
-                log.info( "Receive mail: " + msg.getBody() );
-            }
-    		return msg;
+            msg.setLocalAddress( recipient.toString() );
         }
+        else
+        {
+            Address[] recipients = message.getAllRecipients();
+            if ( recipients.length > 0 )
+            {
+                InternetAddress recip = (InternetAddress) recipients[0];
+                msg.setLocalAddress( recip.getAddress() );
+            }
+            else
+                throw new Exception( "MailServlet: Can't determine local address! (Dev)" );
+        }
+
+        Address[] senders = message.getFrom();
+        if ( senders != null && senders.length > 0 )
+        {
+            InternetAddress sender = (InternetAddress) senders[0];
+            msg.setAddress( sender.getAddress() );
+            msg.setRecipientName( sender.getPersonal() );
+        }
+
+        Multipart mp = null;
+        if ( message.getContent() instanceof Multipart )
+        {
+            mp = (Multipart) message.getContent();
+        }
+        else
+        {
+            mp = new MimeMultipart();
+            mp.addBodyPart( new MimeBodyPart( new InternetHeaders(), message.getContent().toString().getBytes() ) );
+        }
+        if ( mp.getCount() > 0 )
+        {
+            msg.setBody( mp.getBodyPart( 0 ).getContent().toString() );
+            log.info( "Receive mail: " + msg.getBody() );
+        }
+        return msg;
+    }
 
     @Deprecated
     /**
@@ -135,7 +140,7 @@ public class MailServlet extends TextServlet implements Runnable {
     protected int broadcastMessage( String message, String subject, String from, String senderName,
         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
-        //xsiURL is of the form <email protocol>: <sending host>: <sending port>
+        //xsiURL is of the form <email sending protocol>: <sending host>: <sending port> \n <receiving protocol> : <receiving host> 
         final String sendingConnectionSettings = config.getXsiURL() != null && !config.getXsiURL().isEmpty() ? config
             .getXsiURL().split( "\n" )[0] : GMAIL_SENDING_PROTOCOL + ":" + GMAIL_SENDING_HOST + ":"
             + GMAIL_SENDING_PORT; 
@@ -288,9 +293,9 @@ public class MailServlet extends TextServlet implements Runnable {
                 }
                 folder.close( true );
                 store.close();
-                if(updatedLastEmailTimestamp != null && updatedLastEmailTimestamp != lastEmailTimestamp)
+                if ( updatedLastEmailTimestamp != null && !updatedLastEmailTimestamp.equals( lastEmailTimestamp ) )
                 {
-                    StringStore.storeString( "lastEmailRead_"+ adapterConfig.getConfigId(), lastEmailTimestamp );
+                    StringStore.storeString( "lastEmailRead_" + adapterConfig.getConfigId(), lastEmailTimestamp );
                 }
             }
             catch ( Exception e )

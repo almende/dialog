@@ -114,7 +114,7 @@ public class Broadsoft {
         final String EVENT_LEVEL = "Advanced Call 2";
         String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?> "
             + "<Subscribe xmlns=\"http://schema.broadsoft.com/xsi-events\"> " + "  <event>" + EVENT_LEVEL + "</event> "
-            + "  <contact transport=\"http\"> " + "    <uri>http://" + Settings.HOST + "/vxml/cc</uri> "
+            + "  <contact transport=\"http\"> " + "    <uri>http://" + Settings.HOST + "/dialoghandler/rest/vxml/cc</uri> "
             + "  </contact> " + "  <expires>100</expires> " + "  <applicationId>cc</applicationId> " + "</Subscribe> ";
 
         if ( retryCounter.get( webResource.toString() ) == null )

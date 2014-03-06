@@ -273,6 +273,10 @@ public class MailServlet extends TextServlet implements Runnable {
                         && !fromAddress.toString().contains( "no-reply" )
                         && !fromAddress.toString().contains( "noreply" ) )
                     {
+                        log.info( String.format(
+                                "Email from: %s with subject: %s received at: %s is being responded. Last email timestamp was: %s",
+                                fromAddress.getAddress(), message[i].getSubject(), message[i].getReceivedDate()
+                                    .getTime(), lastEmailTimestamp ) );
                         try
                         {
                             MimeMessage mimeMessage = new MimeMessage( session, message[i].getInputStream() );
@@ -295,7 +299,7 @@ public class MailServlet extends TextServlet implements Runnable {
                 store.close();
                 if ( updatedLastEmailTimestamp != null && !updatedLastEmailTimestamp.equals( lastEmailTimestamp ) )
                 {
-                    StringStore.storeString( "lastEmailRead_" + adapterConfig.getConfigId(), lastEmailTimestamp );
+                    StringStore.storeString( "lastEmailRead_" + adapterConfig.getConfigId(), updatedLastEmailTimestamp );
                 }
             }
             catch ( Exception e )

@@ -292,8 +292,8 @@ public class MailServlet extends TextServlet implements Runnable {
                                 "Adapter: %s of type: %s threw exception: %s while reading inboundEmail scedule",
                                 adapterConfig.getConfigId(), adapterConfig.getAdapterType(), e.getLocalizedMessage() ) );
                         }
+                        updatedLastEmailTimestamp = String.valueOf( message[i].getReceivedDate().getTime() );
                     }
-                    updatedLastEmailTimestamp = String.valueOf( message[i].getReceivedDate().getTime() );
                 }
                 folder.close( true );
                 store.close();

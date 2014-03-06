@@ -4,8 +4,8 @@
 	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
 http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 	version="2.5">
-	
-    <context-param>
+
+	<context-param>
 		<description>eve configuration (yaml file)</description>
 		<param-name>eve_config</param-name>
 		<param-value>eve.yaml</param-value>
@@ -13,7 +13,9 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 	<listener>
 		<listener-class>com.almende.eve.transport.http.AgentListener</listener-class>
 	</listener>
-
+	<listener>
+		<listener-class>com.almende.dialog.adapter.ServletListner</listener-class>
+	</listener>
 	<servlet>
 		<servlet-name>AgentServlet</servlet-name>
 		<servlet-class>com.almende.eve.transport.http.AgentServlet</servlet-class>
@@ -27,7 +29,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<servlet-name>AgentServlet</servlet-name>
 		<url-pattern>/agents/*</url-pattern>
 	</servlet-mapping>
-    
+
 	<servlet>
 		<servlet-name>RESTServlet</servlet-name>
 		<servlet-class>org.apache.wink.server.internal.servlet.RestServlet</servlet-class>
@@ -41,7 +43,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<servlet-name>RESTServlet</servlet-name>
 		<url-pattern>/rest/*</url-pattern>
 	</servlet-mapping>
-	
+
 	<filter>
 		<filter-name>CORS</filter-name>
 		<filter-class>com.thetransactioncompany.cors.CORSFilter</filter-class>
@@ -62,7 +64,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<filter-name>CORS</filter-name>
 		<url-pattern>/*</url-pattern>
 	</filter-mapping>
-	
+
 	<servlet>
 		<servlet-name>SingleAgentServlet</servlet-name>
 		<servlet-class>com.almende.dialog.util.DialogEveServlet</servlet-class>
@@ -133,7 +135,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<servlet-name>twitterservlet</servlet-name>
 		<url-pattern>/twitter/*</url-pattern>
 	</servlet-mapping>
-	
+
 	<servlet>
 		<servlet-name>xmppservlet</servlet-name>
 		<servlet-class>com.almende.dialog.adapter.XMPPServlet</servlet-class>
@@ -161,14 +163,9 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<url-pattern>/facebook_wall/*</url-pattern>
 	</servlet-mapping>
 
-	<!-- <servlet>
-		<servlet-name>upload</servlet-name>
-		<servlet-class>com.almende.dialog.util.NewUploadServlet</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>upload</servlet-name>
-		<url-pattern>/upload/*</url-pattern>
-	</servlet-mapping>-->
+	<!-- <servlet> <servlet-name>upload</servlet-name> <servlet-class>com.almende.dialog.util.NewUploadServlet</servlet-class> 
+		</servlet> <servlet-mapping> <servlet-name>upload</servlet-name> <url-pattern>/upload/*</url-pattern> 
+		</servlet-mapping> -->
 
 	<servlet>
 		<servlet-name>unitTestServlet</servlet-name>
@@ -214,7 +211,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 
 	<security-constraint>
 		<web-resource-collection>
-		    <web-resource-name>mail</web-resource-name>
+			<web-resource-name>mail</web-resource-name>
 			<url-pattern>/_ah/mail/*</url-pattern>
 		</web-resource-collection>
 		<auth-constraint>

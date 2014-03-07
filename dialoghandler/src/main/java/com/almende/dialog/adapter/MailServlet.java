@@ -151,12 +151,12 @@ public class MailServlet extends TextServlet implements Runnable {
     protected int broadcastMessage( String message, String subject, String from, String senderName,
         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
-        final String sendingHost = adapterConfig.getExtras().get( SENDING_HOST_KEY ) != null ? adapterConfig
-            .getExtras().get( SENDING_HOST_KEY ).toString() : GMAIL_SENDING_HOST;
-        final String sendingPort = adapterConfig.getExtras().get( SENDING_PORT_KEY ) != null ? adapterConfig
-            .getExtras().get( SENDING_PORT_KEY ).toString() : GMAIL_SENDING_PORT;
-        final String sendingProtocol = adapterConfig.getExtras().get( SENDING_PROTOCOL_KEY ) != null ? adapterConfig
-            .getExtras().get( SENDING_PROTOCOL_KEY ).toString() : GMAIL_SENDING_PROTOCOL;
+        final String sendingHost = adapterConfig.getProperties().get( SENDING_HOST_KEY ) != null ? adapterConfig
+            .getProperties().get( SENDING_HOST_KEY ).toString() : GMAIL_SENDING_HOST;
+        final String sendingPort = adapterConfig.getProperties().get( SENDING_PORT_KEY ) != null ? adapterConfig
+            .getProperties().get( SENDING_PORT_KEY ).toString() : GMAIL_SENDING_PORT;
+        final String sendingProtocol = adapterConfig.getProperties().get( SENDING_PROTOCOL_KEY ) != null ? adapterConfig
+            .getProperties().get( SENDING_PROTOCOL_KEY ).toString() : GMAIL_SENDING_PROTOCOL;
         final String username = config.getXsiUser();
         final String password = config.getXsiPasswd();
         Properties props = new Properties();
@@ -248,10 +248,10 @@ public class MailServlet extends TextServlet implements Runnable {
     {
         if ( adapterConfig.getInitialAgentURL() != null && !adapterConfig.getInitialAgentURL().isEmpty() )
         {
-            String receivingProtocol = adapterConfig.getExtras().get( RECEIVING_PROTOCOL_KEY ) != null ? adapterConfig
-                .getExtras().get( RECEIVING_PROTOCOL_KEY ).toString() : GMAIL_RECEIVING_PROTOCOL;
-            String receivingHost = adapterConfig.getExtras().get( RECEIVING_HOST_KEY ) != null ? adapterConfig
-                .getExtras().get( RECEIVING_HOST_KEY ).toString() : GMAIL_RECEIVING_HOST;
+            String receivingProtocol = adapterConfig.getProperties().get( RECEIVING_PROTOCOL_KEY ) != null ? adapterConfig
+                .getProperties().get( RECEIVING_PROTOCOL_KEY ).toString() : GMAIL_RECEIVING_PROTOCOL;
+            String receivingHost = adapterConfig.getProperties().get( RECEIVING_HOST_KEY ) != null ? adapterConfig
+                .getProperties().get( RECEIVING_HOST_KEY ).toString() : GMAIL_RECEIVING_HOST;
 
             final String username = adapterConfig.getXsiUser();
             final String password = adapterConfig.getXsiPasswd();
@@ -265,9 +265,9 @@ public class MailServlet extends TextServlet implements Runnable {
                 //if no lastEmailTimestamp is seen, default it to when the adapter was created
                 if ( lastEmailTimestamp == null )
                 {
-                    if ( adapterConfig.getExtras().get( AdapterConfig.ADAPTER_CREATION_TIME_KEY ) != null )
+                    if ( adapterConfig.getProperties().get( AdapterConfig.ADAPTER_CREATION_TIME_KEY ) != null )
                     {
-                        lastEmailTimestamp = adapterConfig.getExtras().get( AdapterConfig.ADAPTER_CREATION_TIME_KEY )
+                        lastEmailTimestamp = adapterConfig.getProperties().get( AdapterConfig.ADAPTER_CREATION_TIME_KEY )
                             .toString();
                     }
                     else

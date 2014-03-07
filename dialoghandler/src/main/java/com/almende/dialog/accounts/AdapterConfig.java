@@ -64,7 +64,7 @@ public class AdapterConfig {
 	String owner=null;
 	List<String> accounts=null;
 	//store adapter specific data
-	Map<String, Object> extras = null;
+	Map<String, Object> properties = null;
 
 	public AdapterConfig() {
 		accounts = new ArrayList<String>();
@@ -96,7 +96,7 @@ public class AdapterConfig {
 			    newConfig.setMyAddress( newConfig.getMyAddress() != null ? newConfig.getMyAddress().toLowerCase() 
 			                                                               : null );
 			}
-			newConfig.getExtras().put( ADAPTER_CREATION_TIME_KEY, ServerUtils.getServerCurrentTimeInMillis() );
+			newConfig.getProperties().put( ADAPTER_CREATION_TIME_KEY, ServerUtils.getServerCurrentTimeInMillis() );
 			TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 			datastore.store(newConfig);
 			
@@ -645,14 +645,14 @@ public class AdapterConfig {
 		this.anonymous = anonymous;
 	}
 
-    public Map<String, Object> getExtras()
+    public Map<String, Object> getProperties()
     {
-        extras = extras != null ? extras : new HashMap<String, Object>(); 
-        return extras;
+        properties = properties != null ? properties : new HashMap<String, Object>(); 
+        return properties;
     }
 
-    public void setExtras( Map<String, Object> extras )
+    public void setProperties( Map<String, Object> extras )
     {
-        this.extras = extras;
+        this.properties = extras;
     }
 }

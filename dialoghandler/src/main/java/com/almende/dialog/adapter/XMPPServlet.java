@@ -142,11 +142,11 @@ public class XMPPServlet extends TextServlet implements MessageListener, RosterL
     
     private XMPPConnection getXMPPConnection(AdapterConfig adapterConfig, boolean performLogin) throws XMPPException
     {
-        final String host = adapterConfig.getExtras().get( XMPP_HOST_KEY ) != null ? adapterConfig.getExtras()
+        final String host = adapterConfig.getProperties().get( XMPP_HOST_KEY ) != null ? adapterConfig.getProperties()
             .get( XMPP_HOST_KEY ).toString() : DEFAULT_XMPP_HOST;
-        final int port = adapterConfig.getExtras().get( XMPP_PORT_KEY ) != null ? Integer.parseInt( adapterConfig
-            .getExtras().get( XMPP_PORT_KEY ).toString() ) : DEFAULT_XMPP_PORT;
-        final String service = adapterConfig.getExtras().get( XMPP_SERVICE_KEY ) != null ? adapterConfig.getExtras()
+        final int port = adapterConfig.getProperties().get( XMPP_PORT_KEY ) != null ? Integer.parseInt( adapterConfig
+            .getProperties().get( XMPP_PORT_KEY ).toString() ) : DEFAULT_XMPP_PORT;
+        final String service = adapterConfig.getProperties().get( XMPP_SERVICE_KEY ) != null ? adapterConfig.getProperties()
             .get( XMPP_PORT_KEY ).toString() : DEFAULT_XMPP_SERVICE; 
         //create new xmppConnection
         xmppConnection = xmppConnection != null ? xmppConnection : new ThreadLocal<XMPPConnection>();

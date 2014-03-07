@@ -265,6 +265,8 @@ public class MailServlet extends TextServlet implements Runnable {
                 //if no lastEmailTimestamp is seen, default it to when the adapter was created
                 if ( lastEmailTimestamp == null )
                 {
+                    log.info( String.format( "initial EMail timestamp for adapterId: %s is: %s",
+                        adapterConfig.getConfigId(), lastEmailTimestamp ) );
                     if ( adapterConfig.getProperties().get( AdapterConfig.ADAPTER_CREATION_TIME_KEY ) != null )
                     {
                         lastEmailTimestamp = adapterConfig.getProperties().get( AdapterConfig.ADAPTER_CREATION_TIME_KEY )
@@ -294,6 +296,8 @@ public class MailServlet extends TextServlet implements Runnable {
                 {
                     messages = folder.getMessages();
                 }
+                log.info( String.format( "%s emails fetched matching timestamp: %s", messages != null ? messages.length: 0,
+                    lastEmailTimestamp ) );
                 for ( int i = 0; messages != null && i < messages.length; i++ )
                 {
                     InternetAddress fromAddress = ( (InternetAddress) messages[i].getFrom()[0] );

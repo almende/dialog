@@ -293,7 +293,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                 
                 Store store = session.getStore( receivingProtocol );
                 store.connect( receivingHost, username, password );
-                Folder folder = store.getDefaultFolder();
+                Folder folder = store.getFolder( "INBOX" );
                 folder.open( Folder.READ_ONLY );
                 Message messages[] = null;
                 if(lastEmailTimestamp != null)

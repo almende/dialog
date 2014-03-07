@@ -580,7 +580,7 @@ public class VoiceXMLRESTProxy {
             Document dom = db.parse(new ByteArrayInputStream(xml.getBytes("UTF-8")));
             Node subscriberId = dom.getElementsByTagName("subscriberId").item(0);
             
-            AdapterConfig config = AdapterConfig.findAdapterConfigByUsername(subscriberId.getNodeValue());
+            AdapterConfig config = AdapterConfig.findAdapterConfigByUsername(subscriberId.getTextContent());
             
             Node eventData = dom.getElementsByTagName("eventData").item(0);
             // check if incall event
@@ -630,14 +630,14 @@ public class VoiceXMLRESTProxy {
                 if(callState!=null && callState.getNodeName().equals("callState")) {
 
                     // Check if call
-                    if ( callState.getNodeValue().equals( "Released" )
-                        || callState.getNodeValue().equals( "Active" ) )
+                    if ( callState.getTextContent().equals( "Released" )
+                        || callState.getTextContent().equals( "Active" ) )
                     {
-                        String startTimeString = startTime != null ? startTime.getNodeValue()
+                        String startTimeString = startTime != null ? startTime.getTextContent()
                                                                   : null;
-                        String answerTimeString = answerTime != null ? answerTime.getNodeValue()
+                        String answerTimeString = answerTime != null ? answerTime.getTextContent()
                                                                     : null;
-                        String releaseTimeString = releaseTime != null ? releaseTime.getNodeValue()
+                        String releaseTimeString = releaseTime != null ? releaseTime.getTextContent()
                                                                       : null;
 
                         // Check if a sip or network call
@@ -647,9 +647,9 @@ public class VoiceXMLRESTProxy {
                         for(int i=0; i<remoteParty.getChildNodes().getLength();i++) {
                             Node rpChild = remoteParty.getChildNodes().item(i);
                             if(rpChild.getNodeName().equals("address")) {
-                                address=rpChild.getNodeValue();
+                                address=rpChild.getTextContent();
                             } else if(rpChild.getNodeName().equals("callType")) {
-                                type=rpChild.getNodeValue();
+                                type=rpChild.getTextContent();
                             }
                         }
                         
@@ -672,7 +672,7 @@ public class VoiceXMLRESTProxy {
                             
                             log.info("Session key: "+sessionKey);
                             String direction="inbound";
-                            if ( personality.getNodeValue().equals( "Originator" )
+                            if ( personality.getTextContent().equals( "Originator" )
                                 && !address.contains( "outbound" ) )
                             {
                                 //address += "@outbound";
@@ -681,12 +681,12 @@ public class VoiceXMLRESTProxy {
 
                                 //when the receiver hangs up, an active callstate is also triggered. 
                                 // but the releaseCause is also set to Temporarily Unavailable
-                                if ( callState.getNodeValue().equals( "Active" ) )
+                                if ( callState.getTextContent().equals( "Active" ) )
                                 {
                                     if ( releaseCause == null
                                         || ( releaseCause != null
-                                            && !releaseCause.getNodeValue().equalsIgnoreCase(
-                                                "Temporarily Unavailable" ) && !releaseCause.getNodeValue()
+                                            && !releaseCause.getTextContent().equalsIgnoreCase(
+                                                "Temporarily Unavailable" ) && !releaseCause.getTextContent()
                                             .equalsIgnoreCase( "User Not Found" ) ) )
                                     {
                                         answered( direction, address, config.getMyAddress(), startTimeString,
@@ -694,21 +694,21 @@ public class VoiceXMLRESTProxy {
                                     }
                                 }
                             }
-                            else if ( personality.getNodeValue().equals( "Originator" ) )
+                            else if ( personality.getTextContent().equals( "Originator" ) )
                             {
                                 log.info( "Outbound detected?????" );
                                 direction = "outbound";
                             }
-                            else if ( personality.getNodeValue().equals( "Click-to-Dial" ) )
+                            else if ( personality.getTextContent().equals( "Click-to-Dial" ) )
                             {
                                 log.info( "CTD hangup detected?????" );
                                 direction = "outbound";
 
                                 //TODO: move this to internal mechanism to check if call is started!
-                                if ( releaseCause.getNodeValue().equals( "Server Failure" ) )
+                                if ( releaseCause.getTextContent().equals( "Server Failure" ) )
                                 {
                                     log.severe( "Need to restart the call!!!! ReleaseCause: "
-                                        + releaseCause.getNodeValue() );
+                                        + releaseCause.getTextContent() );
 
                                     String retryKey = sessionKey + "_retry";
                                     int retry = ( StringStore.getString( retryKey ) == null ? 0 : Integer
@@ -730,10 +730,10 @@ public class VoiceXMLRESTProxy {
                                         StringStore.dropString( retryKey );
                                     }
                                 }
-                                else if ( releaseCause.getNodeValue().equals( "Request Failure" ) )
+                                else if ( releaseCause.getTextContent().equals( "Request Failure" ) )
                                 {
                                     log.severe( "Restart call?? ReleaseCause: "
-                                        + releaseCause.getNodeValue() );
+                                        + releaseCause.getTextContent() );
 
                                     String retryKey = sessionKey + "_retry";
                                     int retry = ( StringStore.getString( retryKey ) == null ? 0 : Integer
@@ -755,10 +755,10 @@ public class VoiceXMLRESTProxy {
                                 }
                             }
                             
-                            if ( callState.getNodeValue().equals( "Released" ) )
+                            if ( callState.getTextContent().equals( "Released" ) )
                             {
                                 if ( ses != null && direction != "transfer"
-                                    && !personality.getNodeValue().equals( "Terminator" )
+                                    && !personality.getTextContent().equals( "Terminator" )
                                     && fullAddress.startsWith( "tel:" ) )
                                 {
                                     log.info( "SESSSION FOUND!! SEND HANGUP!!!" );
@@ -767,19 +767,19 @@ public class VoiceXMLRESTProxy {
                                 }
                                 else
                                 {
-                                    if ( personality.getNodeValue().equals( "Originator" )
+                                    if ( personality.getTextContent().equals( "Originator" )
                                         && fullAddress.startsWith( "sip:" ) )
                                     {
                                         log.info( "Probably a disconnect of a sip. call hangup event" );
                                     }
-                                    else if ( personality.getNodeValue().equals( "Originator" )
+                                    else if ( personality.getTextContent().equals( "Originator" )
                                         && fullAddress.startsWith( "tel:" ) )
                                     {
                                         log.info( "Probably a disconnect of a redirect. call hangup event" );
                                         hangup( direction, address, config.getMyAddress(), startTimeString,
                                             answerTimeString, releaseTimeString, null );
                                     }
-                                    else if ( personality.getNodeValue().equals( "Terminator" ) )
+                                    else if ( personality.getTextContent().equals( "Terminator" ) )
                                     {
                                         log.info( "No session for this inbound?????" );
                                     }
@@ -798,7 +798,7 @@ public class VoiceXMLRESTProxy {
                 }
             } else {
                 Node eventName = dom.getElementsByTagName("eventName").item(0);
-                if(eventName!=null && eventName.getNodeValue().equals("SubscriptionTerminatedEvent")) {
+                if(eventName!=null && eventName.getTextContent().equals("SubscriptionTerminatedEvent")) {
                     
                     Broadsoft bs = new Broadsoft(config);
                     bs.startSubscription();

@@ -8,10 +8,19 @@ import java.util.Properties;
 import javax.mail.Address;
 import javax.mail.Folder;
 import javax.mail.Message;
+import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.Transport;
+import javax.mail.event.ConnectionEvent;
+import javax.mail.event.ConnectionListener;
+import javax.mail.event.MessageChangedEvent;
+import javax.mail.event.MessageChangedListener;
+import javax.mail.event.MessageCountEvent;
+import javax.mail.event.MessageCountListener;
+import javax.mail.event.StoreEvent;
+import javax.mail.event.StoreListener;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.InternetHeaders;
 import javax.mail.internet.MimeBodyPart;
@@ -32,7 +41,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.util.TypeUtil;
 
 
-public class MailServlet extends TextServlet implements Runnable {
+public class MailServlet extends TextServlet implements Runnable, MessageChangedListener, MessageCountListener, ConnectionListener, StoreListener {
 
     public static final String SENDING_PROTOCOL_KEY = "SENDING_PROTOCOL";
     public static final String SENDING_HOST_KEY = "SENDING_HOST";
@@ -262,11 +271,10 @@ public class MailServlet extends TextServlet implements Runnable {
             {
                 //fetch the last Email timestamp read
                 String lastEmailTimestamp = StringStore.getString( "lastEmailRead_" + adapterConfig.getConfigId() );
+                String updatedLastEmailTimestamp = null;
                 //if no lastEmailTimestamp is seen, default it to when the adapter was created
                 if ( lastEmailTimestamp == null )
                 {
-                    log.info( String.format( "initial EMail timestamp for adapterId: %s is: %s",
-                        adapterConfig.getConfigId(), lastEmailTimestamp ) );
                     if ( adapterConfig.getProperties().get( AdapterConfig.ADAPTER_CREATION_TIME_KEY ) != null )
                     {
                         lastEmailTimestamp = adapterConfig.getProperties().get( AdapterConfig.ADAPTER_CREATION_TIME_KEY )
@@ -280,53 +288,57 @@ public class MailServlet extends TextServlet implements Runnable {
                         lastEmailTimestamp = String.valueOf( currentTime.getMillis() );
                     }
                 }
-                String updatedLastEmailTimestamp = null;
+                log.info( String.format( "initial EMail timestamp for adapterId: %s is: %s",
+                    adapterConfig.getConfigId(), lastEmailTimestamp ) );
                 
                 Store store = session.getStore( receivingProtocol );
                 store.connect( receivingHost, username, password );
-                Folder folder = store.getFolder( "INBOX" );
+                Folder folder = store.getDefaultFolder();
                 folder.open( Folder.READ_ONLY );
                 Message messages[] = null;
                 if(lastEmailTimestamp != null)
                 {
-                    ReceivedDateTerm receivedDateTerm = new ReceivedDateTerm( ComparisonTerm.EQ,  new Date( Long.parseLong( lastEmailTimestamp ) ));
+                    ReceivedDateTerm receivedDateTerm = new ReceivedDateTerm( ComparisonTerm.GT,  new Date( Long.parseLong( lastEmailTimestamp ) ));
                     messages = folder.search( receivedDateTerm );
                 }
                 else
                 {
                     messages = folder.getMessages();
                 }
-                log.info( String.format( "%s emails fetched matching timestamp: %s", messages != null ? messages.length: 0,
-                    lastEmailTimestamp ) );
+                log.info( String.format( "%s emails fetched with timestamp greater than: %s",
+                    messages != null ? messages.length : 0, lastEmailTimestamp ) );
                 for ( int i = 0; messages != null && i < messages.length; i++ )
                 {
-                    InternetAddress fromAddress = ( (InternetAddress) messages[i].getFrom()[0] );
-                    //skip if the address contains no-reply as its address
-                    if ( lastEmailTimestamp == null
-                        || Long.parseLong( lastEmailTimestamp ) < messages[i].getReceivedDate().getTime()
-                        && !fromAddress.toString().contains( "no-reply" )
-                        && !fromAddress.toString().contains( "noreply" ) )
+                    if ( messages[i].getReceivedDate().getTime() > Long.parseLong( lastEmailTimestamp ) )
                     {
-                        log.info( String.format(
-                                "Email from: %s with subject: %s received at: %s is being responded. Last email timestamp was: %s",
-                                fromAddress.getAddress(), messages[i].getSubject(), messages[i].getReceivedDate()
-                                    .getTime(), lastEmailTimestamp ) );
-                        try
+                        InternetAddress fromAddress = ( (InternetAddress) messages[i].getFrom()[0] );
+                        //skip if the address contains no-reply as its address
+                        if ( !fromAddress.toString().contains( "no-reply" )
+                            && !fromAddress.toString().contains( "noreply" ) )
                         {
-                            MimeMessage mimeMessage = new MimeMessage( session, messages[i].getInputStream() );
-                            mimeMessage.setFrom( fromAddress );
-                            mimeMessage.setSubject( messages[i].getSubject() );
-                            mimeMessage.setContent( messages[i].getContent(), messages[i].getContentType() );
-                            TextMessage receiveMessage = receiveMessage( mimeMessage, adapterConfig.getMyAddress() );
-                            processMessage( receiveMessage );
+                            log.info( String
+                                .format(
+                                    "Email from: %s with subject: %s received at: %s is being responded. Last email timestamp was: %s",
+                                    fromAddress.getAddress(), messages[i].getSubject(), messages[i].getReceivedDate()
+                                        .getTime(), lastEmailTimestamp ) );
+                            try
+                            {
+                                MimeMessage mimeMessage = new MimeMessage( session, messages[i].getInputStream() );
+                                mimeMessage.setFrom( fromAddress );
+                                mimeMessage.setSubject( messages[i].getSubject() );
+                                mimeMessage.setContent( messages[i].getContent(), messages[i].getContentType() );
+                                TextMessage receiveMessage = receiveMessage( mimeMessage, adapterConfig.getMyAddress() );
+                                processMessage( receiveMessage );
+                            }
+                            catch ( Exception e )
+                            {
+                                log.warning( String.format(
+                                    "Adapter: %s of type: %s threw exception: %s while reading inboundEmail scedule",
+                                    adapterConfig.getConfigId(), adapterConfig.getAdapterType(),
+                                    e.getLocalizedMessage() ) );
+                            }
+                            updatedLastEmailTimestamp = String.valueOf( messages[i].getReceivedDate().getTime() );
                         }
-                        catch ( Exception e )
-                        {
-                            log.warning( String.format(
-                                "Adapter: %s of type: %s threw exception: %s while reading inboundEmail scedule",
-                                adapterConfig.getConfigId(), adapterConfig.getAdapterType(), e.getLocalizedMessage() ) );
-                        }
-                        updatedLastEmailTimestamp = String.valueOf( messages[i].getReceivedDate().getTime() );
                     }
                 }
                 folder.close( true );
@@ -345,6 +357,32 @@ public class MailServlet extends TextServlet implements Runnable {
         }
     }
     
+    public void listenForIncomingEmails() throws MessagingException
+    {
+        Folder emailFolder = getEmailStore( adapterConfig );
+        emailFolder.addMessageChangedListener( this );
+        emailFolder.addMessageCountListener( this );
+        emailFolder.addConnectionListener( this );
+    }
+    
+    private Folder getEmailStore(AdapterConfig adapterConfig) throws MessagingException
+    {
+        String receivingProtocol = adapterConfig.getProperties().get( RECEIVING_PROTOCOL_KEY ) != null ? adapterConfig
+            .getProperties().get( RECEIVING_PROTOCOL_KEY ).toString() : GMAIL_RECEIVING_PROTOCOL;
+        String receivingHost = adapterConfig.getProperties().get( RECEIVING_HOST_KEY ) != null ? adapterConfig
+            .getProperties().get( RECEIVING_HOST_KEY ).toString() : GMAIL_RECEIVING_HOST;
+        Properties props = new Properties();
+        props.setProperty( "mail.store.protocol", receivingProtocol );
+        Session session = Session.getDefaultInstance(props, null);
+        Store store = session.getStore( receivingProtocol );
+        store.connect( receivingHost, adapterConfig.getXsiUser(), adapterConfig.getXsiPasswd() );
+        Folder folder = store.getFolder( "INBOX" );
+        folder.open( Folder.READ_WRITE );
+        store.addStoreListener( this );
+        folder.close( false );
+        return folder;
+    }
+    
 	@Override
 	protected String getServletPath() {
 		return servletPath;
@@ -359,5 +397,75 @@ public class MailServlet extends TextServlet implements Runnable {
     public void run()
     {
         readInboundEmail( adapterConfig );
+    }
+
+    @Override
+    public void messageChanged( MessageChangedEvent messageChangedEvent )
+    {
+        log.info( "messageChanged" + messageChangedEvent.toString() );
+        String subject = null;
+        Address fromAddress = null;
+        try
+        {
+            Message message = messageChangedEvent.getMessage();
+            subject = message.getSubject();
+            fromAddress = message.getFrom()[0];
+            if ( !fromAddress.toString().contains( "no-reply" ) && !fromAddress.toString().contains( "noreply" ) )
+            {
+                Session session = Session.getDefaultInstance( new Properties(), null );
+                MimeMessage mimeMessage = new MimeMessage( session, message.getInputStream() );
+                mimeMessage.setFrom( message.getFrom()[0] );
+                mimeMessage.setSubject( subject );
+                mimeMessage.setContent( message.getContent(), message.getContentType() );
+                TextMessage receiveMessage = receiveMessage( mimeMessage, adapterConfig.getMyAddress() );
+                processMessage( receiveMessage );
+            }
+        }
+        catch ( Exception ex )
+        {
+            ex.printStackTrace();
+            if ( subject != null && fromAddress != null )
+            {
+                log.severe( String.format(
+                    "Error seen while trying to process the message. Subject: %s from: %s to: %s", subject,
+                    fromAddress, adapterConfig.getMyAddress() ) );
+            }
+        }
+    }
+
+    @Override
+    public void messagesAdded( MessageCountEvent e )
+    {
+        log.info( "messagesAdded" + e.toString() );
+    }
+
+    @Override
+    public void messagesRemoved( MessageCountEvent e )
+    {
+        log.info( "messagesRemoved" + e.toString() );
+    }
+
+    @Override
+    public void opened( ConnectionEvent e )
+    {
+        log.info( "opened" + e.toString() );
+    }
+
+    @Override
+    public void disconnected( ConnectionEvent e )
+    {
+        log.info( "disconnected" + e.toString() );
+    }
+
+    @Override
+    public void closed( ConnectionEvent e )
+    {
+        log.info( e.toString() );
+    }
+
+    @Override
+    public void notification( StoreEvent e )
+    {
+        log.info( "notification" + e.toString() );
     }
 }

@@ -3,6 +3,7 @@ package com.almende.dialog.adapter;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
+import javax.mail.MessagingException;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
@@ -35,6 +36,21 @@ public class ServletListner implements ServletContextListener
             catch ( XMPPException e )
             {
                 log.severe( "Exception thrown while trying to register inbound XMPP service for: "
+                    + adapterConfig.getMyAddress() );
+            }
+        }
+        log.info( "registering to all inbound Email messages.. ");
+        adapters = AdapterConfig.findAdapters( AdapterAgent.ADAPTER_TYPE_EMAIL, null, null );
+        for ( AdapterConfig adapterConfig : adapters )
+        {
+            MailServlet mailServlet = new MailServlet(adapterConfig);
+            try
+            {
+                mailServlet.listenForIncomingEmails();
+            }
+            catch ( MessagingException e )
+            {
+                log.severe( "Exception thrown while trying to register inbound Email service for: "
                     + adapterConfig.getMyAddress() );
             }
         }

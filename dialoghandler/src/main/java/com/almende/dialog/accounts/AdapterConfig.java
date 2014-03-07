@@ -2,6 +2,7 @@ package com.almende.dialog.accounts;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ import javax.ws.rs.core.Response.Status;
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
@@ -37,6 +39,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 public class AdapterConfig {
 	static final Logger log = Logger.getLogger(AdapterConfig.class.getName());
 	static final ObjectMapper om = new ObjectMapper();
+	public static final String ADAPTER_CREATION_TIME_KEY = "ADAPTER_CREATION_TIME";
 
 	@Id
 	public String configId;
@@ -60,13 +63,13 @@ public class AdapterConfig {
 	
 	String owner=null;
 	List<String> accounts=null;
+	//store adapter specific data
+	Map<String, Object> extras = null;
 
 	public AdapterConfig() {
 		accounts = new ArrayList<String>();
 	};
 	
-	
-
 	@POST
 	@Consumes("application/json")
 	@Produces("application/json")
@@ -93,6 +96,7 @@ public class AdapterConfig {
 			    newConfig.setMyAddress( newConfig.getMyAddress() != null ? newConfig.getMyAddress().toLowerCase() 
 			                                                               : null );
 			}
+			newConfig.getExtras().put( ADAPTER_CREATION_TIME_KEY, ServerUtils.getServerCurrentTimeInMillis() );
 			TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 			datastore.store(newConfig);
 			
@@ -640,4 +644,15 @@ public class AdapterConfig {
 	public void setAnonymous(Boolean anonymous) {
 		this.anonymous = anonymous;
 	}
+
+    public Map<String, Object> getExtras()
+    {
+        extras = extras != null ? extras : new HashMap<String, Object>(); 
+        return extras;
+    }
+
+    public void setExtras( Map<String, Object> extras )
+    {
+        this.extras = extras;
+    }
 }

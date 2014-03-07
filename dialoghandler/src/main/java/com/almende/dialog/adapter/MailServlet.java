@@ -1,5 +1,6 @@
 package com.almende.dialog.adapter;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -16,8 +17,12 @@ import javax.mail.internet.InternetHeaders;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
+import javax.mail.search.ComparisonTerm;
+import javax.mail.search.ReceivedDateTerm;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import org.joda.time.DateTime;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
@@ -29,6 +34,12 @@ import com.almende.util.TypeUtil;
 
 public class MailServlet extends TextServlet implements Runnable {
 
+    public static final String SENDING_PROTOCOL_KEY = "SENDING_PROTOCOL";
+    public static final String SENDING_HOST_KEY = "SENDING_HOST";
+    public static final String SENDING_PORT_KEY = "SENDING_PORT";
+    public static final String RECEIVING_PROTOCOL_KEY = "RECEIVING_PROTOCOL";
+    public static final String RECEIVING_HOST_KEY = "RECEIVING_HOST";
+    
     public static final String GMAIL_SENDING_PORT = "465";
     public static final String GMAIL_SENDING_HOST = "smtp.gmail.com";
     public static final String GMAIL_SENDING_PROTOCOL = "smtps";
@@ -140,15 +151,12 @@ public class MailServlet extends TextServlet implements Runnable {
     protected int broadcastMessage( String message, String subject, String from, String senderName,
         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
-        //xsiURL is of the form <email sending protocol>: <sending host>: <sending port> \n <receiving protocol> : <receiving host> 
-        final String sendingConnectionSettings = config.getXsiURL() != null && !config.getXsiURL().isEmpty() ? config
-            .getXsiURL().split( "\n" )[0] : GMAIL_SENDING_PROTOCOL + ":" + GMAIL_SENDING_HOST + ":"
-            + GMAIL_SENDING_PORT; 
-        String[] connectionSettingsArray = sendingConnectionSettings.split( ":" );
-        String sendingHost = connectionSettingsArray.length == 3 ? connectionSettingsArray[1] : GMAIL_SENDING_HOST;
-        String sendingPort = connectionSettingsArray.length == 3 ? connectionSettingsArray[2] : GMAIL_SENDING_PORT;
-        String sendingProtocol = connectionSettingsArray[0] != null ? connectionSettingsArray[0]
-                                                                   : GMAIL_SENDING_PROTOCOL; 
+        final String sendingHost = adapterConfig.getExtras().get( SENDING_HOST_KEY ) != null ? adapterConfig
+            .getExtras().get( SENDING_HOST_KEY ).toString() : GMAIL_SENDING_HOST;
+        final String sendingPort = adapterConfig.getExtras().get( SENDING_PORT_KEY ) != null ? adapterConfig
+            .getExtras().get( SENDING_PORT_KEY ).toString() : GMAIL_SENDING_PORT;
+        final String sendingProtocol = adapterConfig.getExtras().get( SENDING_PROTOCOL_KEY ) != null ? adapterConfig
+            .getExtras().get( SENDING_PROTOCOL_KEY ).toString() : GMAIL_SENDING_PROTOCOL;
         final String username = config.getXsiUser();
         final String password = config.getXsiPasswd();
         Properties props = new Properties();
@@ -240,15 +248,10 @@ public class MailServlet extends TextServlet implements Runnable {
     {
         if ( adapterConfig.getInitialAgentURL() != null && !adapterConfig.getInitialAgentURL().isEmpty() )
         {
-            final String receivingConnectionSettings = adapterConfig.getXsiURL() != null
-                && adapterConfig.getXsiURL().split( "\n" ).length > 1 ? adapterConfig.getXsiURL().split( "\n" )[1]
-                                                                     : GMAIL_RECEIVING_PROTOCOL + ":"
-                                                                         + GMAIL_RECEIVING_HOST;
-            String[] connectionSettingsArray = receivingConnectionSettings.split( ":" );
-            String receivingProtocol = connectionSettingsArray[0] != null ? connectionSettingsArray[0]
-                                                                         : GMAIL_RECEIVING_PROTOCOL;
-            String receivingHost = connectionSettingsArray.length == 3 ? connectionSettingsArray[1]
-                                                                      : GMAIL_RECEIVING_HOST;
+            String receivingProtocol = adapterConfig.getExtras().get( RECEIVING_PROTOCOL_KEY ) != null ? adapterConfig
+                .getExtras().get( RECEIVING_PROTOCOL_KEY ).toString() : GMAIL_RECEIVING_PROTOCOL;
+            String receivingHost = adapterConfig.getExtras().get( RECEIVING_HOST_KEY ) != null ? adapterConfig
+                .getExtras().get( RECEIVING_HOST_KEY ).toString() : GMAIL_RECEIVING_HOST;
 
             final String username = adapterConfig.getXsiUser();
             final String password = adapterConfig.getXsiPasswd();
@@ -257,32 +260,59 @@ public class MailServlet extends TextServlet implements Runnable {
             Session session = Session.getDefaultInstance(props, null);
             try
             {
+                //fetch the last Email timestamp read
+                String lastEmailTimestamp = StringStore.getString( "lastEmailRead_" + adapterConfig.getConfigId() );
+                //if no lastEmailTimestamp is seen, default it to when the adapter was created
+                if ( lastEmailTimestamp == null )
+                {
+                    if ( adapterConfig.getExtras().get( AdapterConfig.ADAPTER_CREATION_TIME_KEY ) != null )
+                    {
+                        lastEmailTimestamp = adapterConfig.getExtras().get( AdapterConfig.ADAPTER_CREATION_TIME_KEY )
+                            .toString();
+                    }
+                    else
+                    //default it from this morning 00:00:00
+                    {
+                        DateTime currentTime = ServerUtils.getServerCurrentTime();
+                        currentTime = currentTime.minusMillis( currentTime.getMillisOfDay() );
+                        lastEmailTimestamp = String.valueOf( currentTime.getMillis() );
+                    }
+                }
+                String updatedLastEmailTimestamp = null;
+                
                 Store store = session.getStore( receivingProtocol );
                 store.connect( receivingHost, username, password );
                 Folder folder = store.getFolder( "INBOX" );
                 folder.open( Folder.READ_ONLY );
-                Message message[] = folder.getMessages();
-                String lastEmailTimestamp = StringStore.getString( "lastEmailRead_" + adapterConfig.getConfigId() );
-                String updatedLastEmailTimestamp = null;
-                for ( int i = 0; i < message.length; i++ )
+                Message messages[] = null;
+                if(lastEmailTimestamp != null)
                 {
-                    InternetAddress fromAddress = ( (InternetAddress) message[i].getFrom()[0] );
+                    ReceivedDateTerm receivedDateTerm = new ReceivedDateTerm( ComparisonTerm.EQ,  new Date( Long.parseLong( lastEmailTimestamp ) ));
+                    messages = folder.search( receivedDateTerm );
+                }
+                else
+                {
+                    messages = folder.getMessages();
+                }
+                for ( int i = 0; messages != null && i < messages.length; i++ )
+                {
+                    InternetAddress fromAddress = ( (InternetAddress) messages[i].getFrom()[0] );
                     //skip if the address contains no-reply as its address
                     if ( lastEmailTimestamp == null
-                        || Long.parseLong( lastEmailTimestamp ) < message[i].getReceivedDate().getTime()
+                        || Long.parseLong( lastEmailTimestamp ) < messages[i].getReceivedDate().getTime()
                         && !fromAddress.toString().contains( "no-reply" )
                         && !fromAddress.toString().contains( "noreply" ) )
                     {
                         log.info( String.format(
                                 "Email from: %s with subject: %s received at: %s is being responded. Last email timestamp was: %s",
-                                fromAddress.getAddress(), message[i].getSubject(), message[i].getReceivedDate()
+                                fromAddress.getAddress(), messages[i].getSubject(), messages[i].getReceivedDate()
                                     .getTime(), lastEmailTimestamp ) );
                         try
                         {
-                            MimeMessage mimeMessage = new MimeMessage( session, message[i].getInputStream() );
+                            MimeMessage mimeMessage = new MimeMessage( session, messages[i].getInputStream() );
                             mimeMessage.setFrom( fromAddress );
-                            mimeMessage.setSubject( message[i].getSubject() );
-                            mimeMessage.setContent( message[i].getContent(), message[i].getContentType() );
+                            mimeMessage.setSubject( messages[i].getSubject() );
+                            mimeMessage.setContent( messages[i].getContent(), messages[i].getContentType() );
                             TextMessage receiveMessage = receiveMessage( mimeMessage, adapterConfig.getMyAddress() );
                             processMessage( receiveMessage );
                         }
@@ -292,7 +322,7 @@ public class MailServlet extends TextServlet implements Runnable {
                                 "Adapter: %s of type: %s threw exception: %s while reading inboundEmail scedule",
                                 adapterConfig.getConfigId(), adapterConfig.getAdapterType(), e.getLocalizedMessage() ) );
                         }
-                        updatedLastEmailTimestamp = String.valueOf( message[i].getReceivedDate().getTime() );
+                        updatedLastEmailTimestamp = String.valueOf( messages[i].getReceivedDate().getTime() );
                     }
                 }
                 folder.close( true );

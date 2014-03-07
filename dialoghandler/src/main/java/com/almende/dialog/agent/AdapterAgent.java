@@ -238,12 +238,11 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         AdapterConfig config = new AdapterConfig();
         config.setAdapterType( ADAPTER_TYPE_EMAIL );
         //by default create gmail account adapter
-        String connectionSettings = ( sendingProtocol != null ? sendingProtocol : MailServlet.GMAIL_SENDING_PROTOCOL )
-            + ":" + ( sendingHost != null ? sendingHost : MailServlet.GMAIL_SENDING_HOST ) + ":"
-            + ( sendingPort != null ? sendingPort : MailServlet.GMAIL_SENDING_PORT ) + "\n"
-            + ( receivingProtocol != null ? receivingProtocol : MailServlet.GMAIL_RECEIVING_PROTOCOL ) + ":"
-            + ( receivingHost != null ? receivingHost : MailServlet.GMAIL_RECEIVING_HOST );
-        config.setXsiURL( connectionSettings );
+        config.getExtras().put( MailServlet.SENDING_PROTOCOL_KEY, sendingProtocol != null ? sendingProtocol : MailServlet.GMAIL_SENDING_PROTOCOL );
+        config.getExtras().put( MailServlet.SENDING_HOST_KEY, sendingHost != null ? sendingHost : MailServlet.GMAIL_SENDING_HOST );
+        config.getExtras().put( MailServlet.SENDING_PORT_KEY, sendingPort != null ? sendingPort : MailServlet.GMAIL_SENDING_PORT );
+        config.getExtras().put( MailServlet.RECEIVING_PROTOCOL_KEY, receivingProtocol != null ? receivingProtocol : MailServlet.GMAIL_RECEIVING_PROTOCOL );
+        config.getExtras().put( MailServlet.RECEIVING_HOST_KEY, receivingHost != null ? receivingHost : MailServlet.GMAIL_RECEIVING_HOST );
         config.setMyAddress( emailAddress );
         config.setAddress( name );
         config.setXsiUser( emailAddress );
@@ -267,11 +266,10 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         preferredLanguage = ( preferredLanguage == null ? "nl" : preferredLanguage );
         AdapterConfig config = new AdapterConfig();
         config.setAdapterType( ADAPTER_TYPE_XMPP );
-        //by default create gmail account adapter
-        String connectionSettings = ( host != null ? host : XMPPServlet.DEFAULT_XMPP_HOST ) + ":"
-            + ( port != null ? port : XMPPServlet.DEFAULT_XMPP_PORT ) + ":"
-            + ( service != null ? service : XMPPServlet.DEFAULT_XMPP_SERVICE );
-        config.setXsiURL( connectionSettings );
+        //by default create gmail xmpp adapter
+        config.getExtras().put( XMPPServlet.XMPP_HOST_KEY, host != null ? host : XMPPServlet.DEFAULT_XMPP_HOST );
+        config.getExtras().put( XMPPServlet.XMPP_PORT_KEY, port != null ? port : XMPPServlet.DEFAULT_XMPP_PORT );
+        config.getExtras().put( XMPPServlet.XMPP_SERVICE_KEY, service != null ? service : XMPPServlet.DEFAULT_XMPP_SERVICE );
         config.setMyAddress( xmppAddress );
         config.setAddress( name );
         config.setXsiUser( xmppAddress );
@@ -458,7 +456,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		{
 		    config.configId = new UUID().toString();
 		}
-		
+		//add creation timestamp to the adapter
+        config.getExtras().put( AdapterConfig.ADAPTER_CREATION_TIME_KEY, ServerUtils.getServerCurrentTimeInMillis() );
 		//change the casing to lower in case adatertype if email or xmpp
 		if(config.getMyAddress() != null && (config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_EMAIL ) || 
 		    config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_XMPP )) )

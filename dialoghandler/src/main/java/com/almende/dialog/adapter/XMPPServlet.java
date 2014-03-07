@@ -30,8 +30,11 @@ import com.almende.dialog.util.ServerUtils;
 public class XMPPServlet extends TextServlet implements MessageListener, RosterListener, ChatManagerListener 
 {
     private static final long serialVersionUID = 10291032309680299L;
+    public static final String XMPP_HOST_KEY = "XMPP_HOST";
+    public static final String XMPP_PORT_KEY = "XMPP_PORT";
+    public static final String XMPP_SERVICE_KEY = "XMPP_SERVICE";
     public static final String DEFAULT_XMPP_HOST = "talk.google.com";
-    public static final String DEFAULT_XMPP_PORT = "5222";
+    public static final int DEFAULT_XMPP_PORT = 5222;
     public static final String DEFAULT_XMPP_SERVICE = "gmail.com";
     private static ThreadLocal<XMPPConnection> xmppConnection = null;
     private static final String servletPath = "/xmpp";
@@ -139,14 +142,12 @@ public class XMPPServlet extends TextServlet implements MessageListener, RosterL
     
     private XMPPConnection getXMPPConnection(AdapterConfig adapterConfig, boolean performLogin) throws XMPPException
     {
-          //xsiURL is of the form <xmpp host>: <sending port> : <service name>
-        final String connectionSettings = adapterConfig.getXsiURL() != null 
-                && !adapterConfig.getXsiURL().isEmpty() ? adapterConfig.getXsiURL() : DEFAULT_XMPP_HOST+ ":" 
-                    + DEFAULT_XMPP_PORT + ":" + DEFAULT_XMPP_SERVICE;
-        String[] connectionSettingsArray = connectionSettings.split( ":" );
-        final String host = connectionSettingsArray[0];
-        final int port = Integer.parseInt( connectionSettingsArray[1] );
-        final String service = connectionSettingsArray[2];
+        final String host = adapterConfig.getExtras().get( XMPP_HOST_KEY ) != null ? adapterConfig.getExtras()
+            .get( XMPP_HOST_KEY ).toString() : DEFAULT_XMPP_HOST;
+        final int port = adapterConfig.getExtras().get( XMPP_PORT_KEY ) != null ? Integer.parseInt( adapterConfig
+            .getExtras().get( XMPP_PORT_KEY ).toString() ) : DEFAULT_XMPP_PORT;
+        final String service = adapterConfig.getExtras().get( XMPP_SERVICE_KEY ) != null ? adapterConfig.getExtras()
+            .get( XMPP_PORT_KEY ).toString() : DEFAULT_XMPP_SERVICE; 
         //create new xmppConnection
         xmppConnection = xmppConnection != null ? xmppConnection : new ThreadLocal<XMPPConnection>();
         if ( xmppConnection.get() == null || !xmppConnection.get().getHost().equals( host )

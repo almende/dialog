@@ -24,7 +24,7 @@ public class DialogEveServlet extends HttpServlet {
 	static Agent agent = null;
 	static {
 		agent = new DialogAgent();
-		agent.constr(host, new MemoryState());
+		agent.constr(host, new MemoryState("dialog"));
 	}
 
 	public void doPost(HttpServletRequest req, HttpServletResponse resp)

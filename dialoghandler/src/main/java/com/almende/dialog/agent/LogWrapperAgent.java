@@ -1,4 +1,4 @@
-package com.almende.dialog;
+package com.almende.dialog.agent;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,23 +12,38 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
+import com.almende.dialog.Log;
+import com.almende.dialog.LogLevel;
+import com.almende.dialog.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.eve.agent.Agent;
+import com.almende.eve.rpc.annotation.Access;
+import com.almende.eve.rpc.annotation.AccessType;
 import com.almende.util.ParallelInit;
+import com.askfast.commons.agent.intf.LogAgentInterface;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.ClientResponse.Status;
 
 @Path("log")
-public class LogWrapper {
+@Access(AccessType.PUBLIC)
+public class LogWrapperAgent extends Agent implements LogAgentInterface
+{
 	
-	public LogWrapper() {
+	public LogWrapperAgent() {
 	}
+	
+    @Override
+    public String getLogs( String accountId, String adapterID, String adapterType, String level, Long endTime,
+        Integer offset, Integer limit ) throws Exception
+    {
+        LogLevel logLevel = LogLevel.fromJson( level );
+        return getLogs( accountId, adapterID, adapterType, logLevel, endTime, offset, limit ).getEntity().toString();
+    }
 	
 	@GET
 	@Produces("application/json")
 	public Response getLogs(@QueryParam("accountID") String accountId,
-			@QueryParam("bearerToken") String bearerToken,
 			@QueryParam("id") String adapterID,
 			@QueryParam("type") String adapterType,
 			@QueryParam("level") LogLevel level,
@@ -36,17 +51,11 @@ public class LogWrapper {
 			@QueryParam("offset") Integer offset,
 			@QueryParam("limit") Integer limit) throws Exception {
 		
-		// Check accountID/bearer Token against OAuth KeyServer
-		if (Settings.KEYSERVER != null) {
-			if (!KeyServerLib.checkAccount(accountId, bearerToken)) {
-				throw new Exception("Invalid token given");
-			}
-		}
 		ArrayList<AdapterConfig> list = AdapterConfig.findAdapters(null, null,
 				null);
 		Collection<String> adapterIDs = new HashSet<String>();
 		for (AdapterConfig config : list) {
-			if (config.getPublicKey().equals(accountId)) {
+			if (config.getOwner().equals(accountId)) {
 				adapterIDs.add(config.getConfigId());
 			}
 		}

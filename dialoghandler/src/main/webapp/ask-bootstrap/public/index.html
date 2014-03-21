@@ -82,17 +82,17 @@
         </div>
         <form class="well">
             <div class="container">
-                <div class="row">
-                    <div class="span5">
-                        <label id="pubKeyLabel" style="min-width: 80px;" class="span1">AccountId*</label>
-                        <input id="pubKey" type="text" placeholder="Public Key" style="min-width: 300px;" class="span3">
-                    </div>
-                    <div class="span5">
-                        <label id="priKeyLabel" style="min-width: 80px;" class="span1">Token*</label>
-                        <input id="priKey" type="text" placeholder="Private Key" style="min-width: 300px;"
-                               class="span3">
-                    </div>
-                </div>
+<!--                 <div class="row"> -->
+<!--                     <div class="span5"> -->
+<!--                         <label id="pubKeyLabel" style="min-width: 80px;" class="span1">AccountId*</label> -->
+<!--                         <input id="pubKey" type="text" placeholder="Public Key" style="min-width: 300px;" class="span3"> -->
+<!--                     </div> -->
+<!--                     <div class="span5"> -->
+<!--                         <label id="priKeyLabel" style="min-width: 80px;" class="span1">Token*</label> -->
+<!--                         <input id="priKey" type="text" placeholder="Private Key" style="min-width: 300px;" -->
+<!--                                class="span3"> -->
+<!--                     </div> -->
+<!--                 </div> -->
                 <div class="span9">
                     <!--<div class="accordion" id="accordion2">-->
                         <div class="accordion-group">
@@ -213,8 +213,8 @@
         //get localstorage values
         if(supports_html5_storage())
         {
-            $('#pubKey').val(localStorage.getItem("pubKey"));
-            $('#priKey').val(localStorage.getItem("priKey"));
+            //$('#pubKey').val(localStorage.getItem("pubKey"));
+            //$('#priKey').val(localStorage.getItem("priKey"));
             //optional parameters
             $('#adapterType').val(localStorage.getItem("adapterType"));
             $('#logLevel').val(localStorage.getItem("level"));
@@ -222,24 +222,24 @@
             $('#dp1').val(localStorage.getItem("dp1"));
         }
         //check if public and privatekeys are not empty
-        function checkKeys()
-        {
-            if ($('#pubKey').val() == '' || $('#priKey').val() == '') {
-                $('#search').attr('disabled', 'disabled');
-            }
-            else{
-                $('#search').removeAttr('disabled');
-            }
-        }
-        checkKeys();
+        // function checkKeys()
+        // {
+        //     if ($('#pubKey').val() == '' || $('#priKey').val() == '') {
+        //         $('#search').attr('disabled', 'disabled');
+        //     }
+        //     else{
+        //         $('#search').removeAttr('disabled');
+        //     }
+        // }
+        // checkKeys();
 
-        $('#pubKey').keyup(function () {
-            checkKeys();
-        });
+        // $('#pubKey').keyup(function () {
+        //     checkKeys();
+        // });
 
-        $('#priKey').keyup(function () {
-            checkKeys();
-        });
+        // $('#priKey').keyup(function () {
+        //     checkKeys();
+        // });
 
         $('#search').click(function () {
             //flush the table
@@ -253,8 +253,8 @@
             //store the page values in local storage
             if(supports_html5_storage())
             {
-                localStorage.setItem("pubKey", $('#pubKey').val());
-                localStorage.setItem("priKey", $('#priKey').val());
+                // localStorage.setItem("pubKey", $('#pubKey').val());
+                // localStorage.setItem("priKey", $('#priKey').val());
                 //optional parameters
                 localStorage.setItem("adapterType", $('#adapterType').val());
                 localStorage.setItem("level", $('#logLevel').val());
@@ -262,30 +262,30 @@
                 localStorage.setItem("dp1", $('#dp1').val());
             }
             //validate if required fields are filled
-            if ($('#priKey').val() == '') {
-                $('#lookUpMessage').html('<div class="alert" style="text-align: center">' +
-                        '<strong style="color: #e2182d">Error! </strong><strong> Missing private key </strong></div>');
-                $('#priKey').focus();
-                $('#priKeyLabel').css("text-emphasis", "red");
-                return;
-            }
-            if ($('#pubKey').val() == '') {
-                $('#lookUpMessage').html('<div class="alert" style="text-align: center">' +
-                        '<strong style="color: #e2182d">Error! </strong><strong> Missing public key </strong></div>');
-                $('#pubKey').focus();
-                $('#pubKeyLabel').css("text-emphasis", "red");
-                return;
-            }
+            // if ($('#priKey').val() == '') {
+            //     $('#lookUpMessage').html('<div class="alert" style="text-align: center">' +
+            //             '<strong style="color: #e2182d">Error! </strong><strong> Missing private key </strong></div>');
+            //     $('#priKey').focus();
+            //     $('#priKeyLabel').css("text-emphasis", "red");
+            //     return;
+            // }
+            // if ($('#pubKey').val() == '') {
+            //     $('#lookUpMessage').html('<div class="alert" style="text-align: center">' +
+            //             '<strong style="color: #e2182d">Error! </strong><strong> Missing public key </strong></div>');
+            //     $('#pubKey').focus();
+            //     $('#pubKeyLabel').css("text-emphasis", "red");
+            //     return;
+            // }
 
             var queryData = '';
             var stringEndDate = $('#dp1').val();
-            queryData += 'bearerToken=';
-            queryData += $.trim($('#priKey').val()) != '' ? $('#priKey').val() : '';
-            queryData += '&accountID=';
-            queryData += $.trim($('#pubKey').val()) != '' ? $('#pubKey').val() : '';
-//            if ($.trim($('#adapterId').val()) != '') {
-//                queryData += '&id=' + $.trim($('#adapterId').val());
-//            }
+            // queryData += 'bearerToken=';
+            // queryData += $.trim($('#priKey').val()) != '' ? $('#priKey').val() : '';
+            // queryData += '&accountID=';
+            // queryData += $.trim($('#pubKey').val()) != '' ? $('#pubKey').val() : '';
+           if ($.trim($('#adapterId').val()) != '') {
+               queryData += '&id=' + $.trim($('#adapterId').val());
+           }
             if ($('#adapterType').val() != 'null') {
                 queryData += '&type=' + $('#adapterType').val();
             }

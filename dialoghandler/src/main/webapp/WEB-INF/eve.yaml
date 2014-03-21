@@ -33,3 +33,4 @@ bootstrap:
   agents:
     dialog: com.almende.dialog.agent.DialogAgent
     adapter: com.almende.dialog.agent.AdapterAgent
+    log: com.almende.dialog.agent.LogWrapperAgent

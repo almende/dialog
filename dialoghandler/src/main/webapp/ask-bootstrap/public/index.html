@@ -299,7 +299,7 @@
                 queryData += '&limit=' + $('#limit').val();
             }
             $.ajax({
-                url: 'rest/log/',
+                url: '../log/',
                 type: 'GET',
                 data: queryData,
                 success: showResult,

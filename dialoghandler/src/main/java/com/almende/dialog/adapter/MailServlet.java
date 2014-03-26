@@ -160,11 +160,11 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
     protected int broadcastMessage( String message, String subject, String from, String senderName,
         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
-        final String sendingHost = adapterConfig.getProperties().get( SENDING_HOST_KEY ) != null ? adapterConfig
-            .getProperties().get( SENDING_HOST_KEY ).toString() : GMAIL_SENDING_HOST;
-        final String sendingPort = adapterConfig.getProperties().get( SENDING_PORT_KEY ) != null ? adapterConfig
-            .getProperties().get( SENDING_PORT_KEY ).toString() : GMAIL_SENDING_PORT;
-        final String sendingProtocol = adapterConfig.getProperties().get( SENDING_PROTOCOL_KEY ) != null ? adapterConfig
+        final String sendingHost = config.getProperties().get( SENDING_HOST_KEY ) != null ? config.getProperties()
+            .get( SENDING_HOST_KEY ).toString() : GMAIL_SENDING_HOST;
+        final String sendingPort = config.getProperties().get( SENDING_PORT_KEY ) != null ? config.getProperties()
+            .get( SENDING_PORT_KEY ).toString() : GMAIL_SENDING_PORT;
+        final String sendingProtocol = config.getProperties().get( SENDING_PROTOCOL_KEY ) != null ? config
             .getProperties().get( SENDING_PROTOCOL_KEY ).toString() : GMAIL_SENDING_PROTOCOL;
         final String username = config.getXsiUser();
         final String password = config.getXsiPasswd();

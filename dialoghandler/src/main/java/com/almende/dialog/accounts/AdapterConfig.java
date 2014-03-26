@@ -633,6 +633,13 @@ public class AdapterConfig {
 		}
 	}
 	
+	public void removeAccount(String accountId) {
+		int idx = accounts.indexOf( accountId );
+		if(accountId!=null && idx!=-1) {
+			accounts.remove(idx);
+		}
+	}
+	
 	public void setAccounts(List<String> accounts) {
 		this.accounts = accounts;
 	}

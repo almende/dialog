@@ -425,6 +425,17 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return config;
 	}
 	
+	public void removeAccount(@Name("adapterId") String adapterId, @Name("accountId") String accountId) throws Exception {
+		
+		AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
+		if(config==null || !config.getOwner().equals(accountId))
+			throw new Exception("No adapter with this id owned by you");
+		
+		config.setOwner(null);
+		config.removeAccount(accountId);
+		config.update();
+	}
+	
 	public ArrayNode getAdapters(@Name("accoutId") String accountId,
 								@Name("adapterType") @Optional String adapterType,
 								@Name("address") @Optional String address) {

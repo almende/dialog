@@ -181,9 +181,22 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             log.info( String.format(
                 "sending email from: %s senderName: %s to: %s with params: host: %s port: %s user: %s ", from,
                 senderName, ServerUtils.serialize( addressNameMap ), sendingHost, sendingPort, username ) );
-            simpleMessage.setFrom( new InternetAddress( from,
-                senderName != null && !senderName.isEmpty() ? senderName : config.getAddress() ) );
             //add to list
+            if(senderName!=null)
+            {
+                simpleMessage.setFrom( new InternetAddress( from, senderName ) );
+                //add the senderName to the reply list if its an emailId
+                if ( senderName.contains( "@" ) )
+                {
+                    Address[] addresses = new InternetAddress[1];
+                    addresses[0] = new InternetAddress( senderName );
+                    simpleMessage.setReplyTo( addresses );
+                }
+            }
+            else
+            {
+                simpleMessage.setFrom( new InternetAddress( from ) );
+            }
             for ( String address : addressNameMap.keySet() )
             {
                 String toName = addressNameMap.get( address ) != null ? addressNameMap.get( address ) : address;

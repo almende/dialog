@@ -205,11 +205,11 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		preferredLanguage = (preferredLanguage==null ? "nl" : preferredLanguage);
 		
 		String normAddress = address.replaceFirst("^0", "").replace("+31", "");
-		String myAddress = "+31" +normAddress; 
-		String externalAddress = "0"+normAddress+"@ask.ask.voipit.nl";
+		String externalAddress = "+31" +normAddress; 
+		String myAddress = "0"+normAddress+"@ask.ask.voipit.nl";
 		
 		if(username==null)
-			username = externalAddress;
+			username = myAddress;
 		
 		AdapterConfig config = new AdapterConfig();
 		config.setAdapterType(ADAPTER_TYPE_BROADSOFT);

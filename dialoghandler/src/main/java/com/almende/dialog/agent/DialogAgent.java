@@ -16,6 +16,7 @@ import com.almende.dialog.adapter.MBSmsServlet;
 import com.almende.dialog.adapter.MailServlet;
 import com.almende.dialog.adapter.TwitterServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
+import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.ServerUtils;
@@ -187,13 +188,12 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 					config.getConfigId(), config.getAdapterType()));
 			adapterType = config.getAdapterType();
 			try {
-				/*
-				 * if (adapterType.toUpperCase().equals("XMPP")) {
-				 * resultSessionMap = new XMPPServlet().startDialog(
-				 * addressMap, url, senderName, subject, config);
-				 * } else
-				 */
-				if (adapterType.toUpperCase().equals(AdapterAgent.ADAPTER_TYPE_BROADSOFT.toUpperCase())) {
+                if ( adapterType.toUpperCase().equals( "XMPP" ) )
+                {
+                    resultSessionMap = new XMPPServlet().startDialog( addressMap, addressCcMap, addressBccMap, url,
+                        senderName, subject, config );
+                }
+                else if (adapterType.toUpperCase().equals(AdapterAgent.ADAPTER_TYPE_BROADSOFT.toUpperCase())) {
 					// fetch the first address in the map
 					if (!addressMap.keySet().isEmpty()) {
 						resultSessionMap = VoiceXMLRESTProxy.dial(addressMap,

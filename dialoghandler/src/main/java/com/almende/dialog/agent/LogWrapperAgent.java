@@ -20,6 +20,8 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.rpc.annotation.Access;
 import com.almende.eve.rpc.annotation.AccessType;
+import com.almende.eve.rpc.annotation.Name;
+import com.almende.eve.rpc.annotation.Optional;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.agent.intf.LogAgentInterface;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,8 +36,10 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
 	}
 	
     @Override
-    public String getLogs( String accountId, String adapterID, String adapterType, String level, Long endTime,
-        Integer offset, Integer limit ) throws Exception
+    public String getLogs( @Name( "accountId" ) String accountId, @Name( "adapterID" ) @Optional String adapterID,
+        @Name( "adapterType" ) @Optional String adapterType, @Name( "level" ) @Optional String level,
+        @Name( "endTime" ) @Optional Long endTime, @Name( "offset" ) @Optional Integer offset,
+        @Name( "limit" ) @Optional Integer limit ) throws Exception
     {
         LogLevel logLevel = LogLevel.fromJson( level );
         return getLogs( accountId, adapterID, adapterType, logLevel, endTime, offset, limit ).getEntity().toString();

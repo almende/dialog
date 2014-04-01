@@ -9,6 +9,6 @@ public enum LogLevel
     @JsonCreator
     public static LogLevel fromJson( String name )
     {
-        return valueOf( name.toUpperCase() );
+        return name != null && !name.isEmpty() ? valueOf( name.toUpperCase() ) : null;
     }
 }

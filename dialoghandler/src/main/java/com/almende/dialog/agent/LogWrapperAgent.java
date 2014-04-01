@@ -51,7 +51,7 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
 	
     @GET
     @Produces( "application/json" )
-    public Response getLogs( @QueryParam( "accountID" ) String accountId, @QueryParam( "id" ) String adapterID,
+    public Response getLogsResponse( @QueryParam( "accountID" ) String accountId, @QueryParam( "id" ) String adapterID,
         @QueryParam( "type" ) String adapterType, @QueryParam( "level" ) LogLevel level,
         @QueryParam( "end" ) Long endTime, @QueryParam( "offset" ) Integer offset, @QueryParam( "limit" ) Integer limit )
     throws Exception
@@ -105,9 +105,6 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
         }
 
         Logger logger = new Logger();
-        // TODO: remote this when logs have adapterType in them. As of now
-        // everything is null
-        adapterType = null;
         return logger.find( adapterIDs, getMinSeverityLogLevelFor( level ), adapterType, endTime, offset, limit );
     }
 	

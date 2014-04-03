@@ -269,10 +269,13 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         //by default create gmail xmpp adapter
         config.getProperties().put( XMPPServlet.XMPP_HOST_KEY, host != null ? host : XMPPServlet.DEFAULT_XMPP_HOST );
         config.getProperties().put( XMPPServlet.XMPP_PORT_KEY, port != null ? port : XMPPServlet.DEFAULT_XMPP_PORT );
-        config.getProperties().put( XMPPServlet.XMPP_SERVICE_KEY, service != null ? service : XMPPServlet.DEFAULT_XMPP_SERVICE );
+        if(service != null)
+        {
+            config.getProperties().put( XMPPServlet.XMPP_SERVICE_KEY, service );
+        }
         config.setMyAddress( xmppAddress );
         config.setAddress( name );
-        config.setXsiUser( xmppAddress );
+        config.setXsiUser( xmppAddress.split( "@" )[0] );
         config.setXsiPasswd( password );
         config.setPreferred_language( preferredLanguage );
         config.setPublicKey( accountId );
@@ -283,7 +286,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         AdapterConfig newConfig = createAdapter( config );
         //set for incoming requests
         XMPPServlet xmppServlet = new XMPPServlet();
-        xmppServlet.listenForRosterChanges( newConfig );
+//        xmppServlet.listenForRosterChanges( newConfig );
         xmppServlet.listenForIncomingChats( newConfig );
         return newConfig.getConfigId();
     }

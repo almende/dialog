@@ -20,11 +20,11 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.rpc.annotation.Access;
 import com.almende.eve.rpc.annotation.AccessType;
-import com.almende.eve.rpc.annotation.Name;
-import com.almende.eve.rpc.annotation.Optional;
+import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.agent.intf.LogAgentInterface;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.sun.jersey.api.client.ClientResponse.Status;
 
 @Path("log")
@@ -40,13 +40,12 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
 	private static final String NO_ADAPTER_MESSAGE = "This account has no adapters";
 	
     @Override
-    public List<Log> getLogs( @Name( "accountId" ) String accountId, @Name( "adapterID" ) @Optional String adapterID,
-        @Name( "adapterType" ) @Optional String adapterType, @Name( "level" ) @Optional String level,
-        @Name( "endTime" ) @Optional Long endTime, @Name( "offset" ) @Optional Integer offset,
-        @Name( "limit" ) @Optional Integer limit ) throws Exception
+    public ArrayNode getLogs( String accountId, String adapterID, String adapterType, String level, Long endTime,
+        Integer offset, Integer limit ) throws Exception
     {
         LogLevel logLevel = LogLevel.fromJson( level );
-        return getLogsAsList( accountId, adapterID, adapterType, logLevel, endTime, offset, limit );
+        List<Log> logs = getLogsAsList( accountId, adapterID, adapterType, logLevel, endTime, offset, limit );
+        return JOM.getInstance().convertValue(logs, ArrayNode.class);
     }
 	
     @GET
@@ -74,7 +73,7 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
         }
         catch ( Exception e )
         {
-            if ( e.getLocalizedMessage().equals( NO_ADAPTER_MESSAGE ) )
+            if ( e.getLocalizedMessage() != null && e.getLocalizedMessage().equals( NO_ADAPTER_MESSAGE ) )
             {
                 return Response.status( Status.BAD_REQUEST ).entity( "This account has no adapters" ).build();
             }
@@ -83,7 +82,7 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
         }
     }
 	
-    public List<Log> getLogsAsList( String accountId, String adapterID, String adapterType, LogLevel level,
+    private List<Log> getLogsAsList( String accountId, String adapterID, String adapterType, LogLevel level,
         Long endTime, Integer offset, Integer limit ) throws Exception
     {
         ArrayList<AdapterConfig> list = AdapterConfig.findAdapters( null, null, null );

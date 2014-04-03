@@ -31,7 +31,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	
 	public static final String ADAPTER_TYPE_BROADSOFT = "broadsoft";
-	public static final String ADAPTER_TYPE_SMS = "SMS";
+	public static final String ADAPTER_TYPE_SMS = "sms";
 	public static final String ADAPTER_TYPE_EMAIL = "email";
 	public static final String ADAPTER_TYPE_XMPP = "xmpp";
 	public static final String ADAPTER_TYPE_TWITTER = "twitter";	

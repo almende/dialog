@@ -371,10 +371,10 @@ public class AdapterConfig {
 		cmd.addFilter("owner", FilterOperator.EQUAL, owner);
 		
 		if (adapterType != null)
-			cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType);
+			cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
 
 		if (address != null)
-			cmd.addFilter("address", FilterOperator.EQUAL, address);
+			cmd.addFilter("address", FilterOperator.EQUAL, address.toLowerCase());
 
 		Iterator<AdapterConfig> config = cmd.now();
 

@@ -1,6 +1,7 @@
 package com.almende.dialog.adapter;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
@@ -12,6 +13,7 @@ import org.jivesoftware.smack.ConnectionConfiguration;
 import org.jivesoftware.smack.MessageListener;
 import org.jivesoftware.smack.Roster;
 import org.jivesoftware.smack.Roster.SubscriptionMode;
+import org.jivesoftware.smack.RosterListener;
 import org.jivesoftware.smack.SASLAuthentication;
 import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.XMPPException;
@@ -25,8 +27,9 @@ import com.almende.dialog.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.util.ServerUtils;
 
-public class XMPPServlet extends TextServlet implements MessageListener, ChatManagerListener //, RosterListener 
+public class XMPPServlet extends TextServlet implements MessageListener, ChatManagerListener, RosterListener 
 {
     private static final long serialVersionUID = 10291032309680299L;
     public static final String XMPP_HOST_KEY = "XMPP_HOST";
@@ -109,16 +112,16 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
         return AdapterAgent.ADAPTER_TYPE_XMPP;
     }
     
-//    /**
-//     * checks for changes in the contactList. if new users are added etc
-//     * @throws XMPPException 
-//     */
-//    public void listenForRosterChanges(AdapterConfig adapterConfig) throws XMPPException
-//    {
-//        XMPPConnection xmppConnection = getXMPPConnection( adapterConfig, true );
-//        Roster roster = xmppConnection.getRoster();
-//        roster.addRosterListener( this );
-//    }
+    /**
+     * checks for changes in the contactList. if new users are added etc
+     * @throws XMPPException 
+     */
+    public void listenForRosterChanges(AdapterConfig adapterConfig) throws XMPPException
+    {
+        XMPPConnection xmppConnection = getXMPPConnection( adapterConfig, true );
+        Roster roster = xmppConnection.getRoster();
+        roster.addRosterListener( this );
+    }
     
     /**
      * listens on any incoming messages to this adapterConfig
@@ -128,9 +131,9 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
     {
         XMPPConnection xmppConnection = getXMPPConnection( adapterConfig, true );
         Roster.setDefaultSubscriptionMode( SubscriptionMode.accept_all );
-        Presence presence = new Presence( Type.available );
-        presence.setMode( Mode.chat );
-        xmppConnection.sendPacket( presence );
+//        Presence presence = new Presence( Type.available );
+//        presence.setMode( Mode.chat );
+//        xmppConnection.sendPacket( presence );
         xmppConnection.getChatManager().addChatListener( this );
     }
 
@@ -199,32 +202,32 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
         return xmppConnection.get();
     }
 
-//    @Override
-//    public void entriesAdded( Collection<String> entries )
-//    {
-//        log.info( String.format( "Following users: %s are added to account : %s", ServerUtils
-//            .serializeWithoutException( entries ),
-//            xmppConnection != null && xmppConnection.get() != null ? xmppConnection.get().getUser() : null ) );
-//    }
-//
-//    @Override
-//    public void entriesDeleted( Collection<String> entries )
-//    {
-//        log.info( String.format( "Following users: %s are removed from account : %s", ServerUtils
-//            .serializeWithoutException( entries ),
-//            xmppConnection != null && xmppConnection.get() != null ? xmppConnection.get().getUser() : null ) );
-//    }
-//
-//    @Override
-//    public void entriesUpdated( Collection<String> entries )
-//    {
-//    }
-//
-//    @Override
-//    public void presenceChanged( Presence entries )
-//    {
-//    }
-//
+    @Override
+    public void entriesAdded( Collection<String> entries )
+    {
+        log.info( String.format( "Following users: %s are added to account : %s", ServerUtils
+            .serializeWithoutException( entries ),
+            xmppConnection != null && xmppConnection.get() != null ? xmppConnection.get().getUser() : null ) );
+    }
+
+    @Override
+    public void entriesDeleted( Collection<String> entries )
+    {
+        log.info( String.format( "Following users: %s are removed from account : %s", ServerUtils
+            .serializeWithoutException( entries ),
+            xmppConnection != null && xmppConnection.get() != null ? xmppConnection.get().getUser() : null ) );
+    }
+
+    @Override
+    public void entriesUpdated( Collection<String> entries )
+    {
+    }
+
+    @Override
+    public void presenceChanged( Presence entries )
+    {
+    }
+
     @Override
     public void chatCreated( Chat chat, boolean createdLocally )
     {

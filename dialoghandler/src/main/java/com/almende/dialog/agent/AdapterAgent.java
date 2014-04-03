@@ -286,7 +286,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         AdapterConfig newConfig = createAdapter( config );
         //set for incoming requests
         XMPPServlet xmppServlet = new XMPPServlet();
-//        xmppServlet.listenForRosterChanges( newConfig );
+        xmppServlet.listenForRosterChanges( newConfig );
         xmppServlet.listenForIncomingChats( newConfig );
         return newConfig.getConfigId();
     }

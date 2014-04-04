@@ -3,6 +3,7 @@ package com.almende.dialog;
 import java.io.Serializable;
 
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.annotations.Id;
 import com.almende.util.uuid.UUID;
 
@@ -29,7 +30,7 @@ public class Log implements Serializable {
 		if((adapterType == null || adapterType.isEmpty()) && adapterID != null )
 		{
 		    AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig( adapterID );
-		    adapterType = adapterConfig.getAdapterType();
+		    adapterType = adapterConfig != null ? adapterConfig.getAdapterType() : null;
 		}
 		this.adapterType = adapterType;
 		this.message = message;
@@ -57,9 +58,16 @@ public class Log implements Serializable {
 		this.adapterID = adapterID;
 	}
 	
-	public String getAdapterType() {
-		return adapterType;
-	}
+    public String getAdapterType()
+    {
+        if ( ( adapterType == null || adapterType.isEmpty() ) && adapterID != null )
+        {
+            AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig( adapterID );
+            adapterType = adapterConfig != null ? adapterConfig.getAdapterType() : null;
+            new TwigCompatibleMongoDatastore().storeOrUpdate( this );
+        }
+        return adapterType;
+    }
 	
 	public void setAdapterType(String adapterType) {
 		this.adapterType = adapterType;

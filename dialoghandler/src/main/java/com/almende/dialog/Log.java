@@ -2,6 +2,7 @@ package com.almende.dialog;
 
 import java.io.Serializable;
 
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.util.twigmongo.annotations.Id;
 import com.almende.util.uuid.UUID;
 
@@ -24,6 +25,12 @@ public class Log implements Serializable {
 		this.logId = new UUID().toString();
 		this.level = level;
 		this.adapterID = adapterID;
+		//fetch the adapter type if empty
+		if((adapterType == null || adapterType.isEmpty()) && adapterID != null )
+		{
+		    AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig( adapterID );
+		    adapterType = adapterConfig.getAdapterType();
+		}
 		this.adapterType = adapterType;
 		this.message = message;
 		this.timestamp = System.currentTimeMillis();

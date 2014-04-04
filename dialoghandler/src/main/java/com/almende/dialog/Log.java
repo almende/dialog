@@ -36,6 +36,11 @@ public class Log implements Serializable {
 		this.timestamp = System.currentTimeMillis();
 	}
 	
+    public Log( LogLevel level, AdapterConfig adapter, String message )
+    {
+        this( level, adapter.getConfigId(), adapter.getAdapterType(), message );
+    }
+	
 	public LogLevel getLevel() {
 		return level;
 	}

@@ -34,7 +34,7 @@ public class DDRWrapper {
                     node.put( "pubKey", config.getPublicKey() );
 		}
 		try {
-			ddr.ddr(config.getConfigId(),om.writeValueAsString(node));
+			ddr.ddr(config,om.writeValueAsString(node));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

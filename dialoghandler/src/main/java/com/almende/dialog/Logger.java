@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.SortDirection;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
@@ -21,31 +22,63 @@ public class Logger {
 	}
 	
 	public void severe(String adapterID, String message) {
-		this.log(LogLevel.SEVERE,adapterID,null,message);
+        severe( adapterID, null, message);
+    }
+	
+	public void severe(String adapterID, String adapterType, String message) {
+        this.log(LogLevel.SEVERE,adapterID,adapterType, message);
+    }
+	
+	public void severe(AdapterConfig adapter, String message) {
+		this.log(LogLevel.SEVERE,adapter,message);
 	}
-
+	
 	public void warning(String adapterID, String message) {
-		this.log(LogLevel.WARNING,adapterID,null,message);
+	    warning( adapterID, null, message);
+    }
+
+	public void warning(String adapterID, String adapterType, String message) {
+        this.log(LogLevel.WARNING,adapterID, adapterType,message);
+    }
+	
+	public void warning(AdapterConfig adapter, String message) {
+		this.log(LogLevel.WARNING,adapter,message);
 	}
 
 	public void info(String adapterID, String message) {
-		this.log(LogLevel.INFO,adapterID,null,message);
+	    info( adapterID, null, message);
+    }
+	
+	public void info(String adapterID, String adapterType, String message) {
+        this.log(LogLevel.INFO,adapterID, adapterType,message);
+    }
+	
+	public void info(AdapterConfig adapter, String message) {
+		this.log(LogLevel.INFO,adapter,message);
 	}
-
+	
 	public void debug(String adapterID, String message) {
-		this.log(LogLevel.DEBUG,adapterID,null,message);
+	    debug( adapterID, null, message);
+    }
+
+	public void debug(String adapterID, String adapterType, String message) {
+        this.log(LogLevel.DEBUG,adapterID, adapterType, message);
+    }
+	
+	public void debug(AdapterConfig adapter, String message) {
+		this.log(LogLevel.DEBUG,adapter,message);
 	}
 	
-	public void ddr(String adapterID, String message) {
-		this.log(LogLevel.DDR, adapterID, null, message);
+	public void ddr(AdapterConfig adapter, String message) {
+		this.log(LogLevel.DDR, adapter, message);
 	}
 	
-	public void log(LogLevel level, String adapterID, String message) {
-		this.log(level,adapterID,null,message);
-	}
+	public void log(LogLevel level, String adapterId, String adapterType, String message) {
+        datastore.store(new Log(level, adapterId, adapterType, message));
+    }
 	
-	public void log(LogLevel level, String adapterID, String adapterType, String message) {
-		datastore.store(new Log(level, adapterID, adapterType, message));
+	public void log(LogLevel level, AdapterConfig adapter, String message) {
+		datastore.store(new Log(level, adapter, message));
 	}
 	
 	public List<Log> find( Collection<String> adapters, Collection<LogLevel> levels, String adapterType, Long endTime, Integer offset, Integer limit)

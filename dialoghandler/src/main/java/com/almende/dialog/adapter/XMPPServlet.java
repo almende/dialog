@@ -54,8 +54,7 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
             if( !xmppRooster.contains( to ))
             {
                 xmppRooster.createEntry( to, toName, null );
-                dialogLog
-                    .warning( config.getConfigId(), String.format(
+                dialogLog.warning( config, String.format(
                         "Sending xmpp chat: %s to: %s might be incomplete. Contact just added in AddressBook", message,
                         to ) );
             }

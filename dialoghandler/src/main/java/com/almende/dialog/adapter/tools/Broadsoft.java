@@ -69,8 +69,7 @@ public class Broadsoft {
         catch ( UnsupportedEncodingException ex )
         {
             log.severe( "Problems dialing out:" + ex.getMessage() );
-            dialogLog.severe( config.getConfigId(),
-                "Failed to start call to: " + formattedAddress + " Error: " + ex.getMessage() );
+            dialogLog.severe( config, "Failed to start call to: " + formattedAddress + " Error: " + ex.getMessage() );
 		}
 		
         while ( retryCounter.get( webResource.toString() ) != null && retryCounter.get( webResource.toString() ) < MAX_RETRY_COUNT )
@@ -79,7 +78,7 @@ public class Broadsoft {
             {
                 String result = sendRequestWithRetry(webResource, queryKeyValue, HTTPMethod.POST, null);
                 log.info( "Result from BroadSoft: " + result );
-                dialogLog.info( config.getConfigId(), "Start outbound call to: " + formattedAddress );
+                dialogLog.info( config, "Start outbound call to: " + formattedAddress );
                 //flush retryCount
                 retryCounter.remove( webResource.toString() );
                 return getCallId( result );
@@ -88,8 +87,7 @@ public class Broadsoft {
             {
                 Integer retry = retryCounter.get( webResource.toString() );
                 log.severe( "Problems dialing out:" + ex.getMessage() );
-                dialogLog.severe(
-                    config.getConfigId(),
+                dialogLog.severe( config,
                     String.format( "Failed to start call to: %s Error: %s. Retrying! Count: %s", formattedAddress,
                         ex.getMessage(), retry ) );
                 retryCounter.put( webResource.toString(), ++retry );

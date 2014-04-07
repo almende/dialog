@@ -60,6 +60,7 @@ public class AdapterConfig {
 	private String accessToken="";
 	private String accessTokenSecret="";
 	Boolean anonymous=false;
+	private String dialogId = "";
 	
 	String owner=null;
 	List<String> accounts=null;
@@ -661,5 +662,15 @@ public class AdapterConfig {
     public void setProperties( Map<String, Object> extras )
     {
         this.properties = extras;
+    }
+
+    public String getDialogId()
+    {
+        return dialogId;
+    }
+
+    public void setDialogId( String dialogId )
+    {
+        this.dialogId = dialogId;
     }
 }

@@ -409,24 +409,33 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return config;
 	}
 	
-	public Object updateAdapter(@Name("accoutId") String accountId,
-			@Name("adapterId") String adapterId,
-			@Name("adapter") Adapter adapter) throws Exception {
-		
-		AdapterConfig config = (AdapterConfig) getAdapter(accountId,adapterId);
-		
-		if(adapter.getInitialAgentURL()!=null) {
-			config.setInitialAgentURL(adapter.getInitialAgentURL());
-		}
-		
-		if(adapter.isAnonymous()!=null) {
-			config.setAnonymous(adapter.isAnonymous());
-		}
-		
-		config.update();
-		
-		return config;
-	}
+    public Object updateAdapter( @Name( "accoutId" ) String accountId, @Name( "adapterId" ) String adapterId,
+        @Name( "adapter" ) Adapter adapter ) throws Exception
+    {
+        AdapterConfig config = (AdapterConfig) getAdapter( accountId, adapterId );
+        if ( config != null )
+        {
+            if ( adapter.getInitialAgentURL() != null )
+            {
+                config.setInitialAgentURL( adapter.getInitialAgentURL() );
+            }
+            if ( adapter.isAnonymous() != null )
+            {
+                config.setAnonymous( adapter.isAnonymous() );
+            }
+            if ( adapter.getDialogId() != null )
+            {
+                config.setDialogId( adapter.getDialogId() );
+            }
+            config.update();
+            return config;
+        }
+        else
+        {
+            throw new Exception( String.format( "Adapter: %s with address:%s probably does not belong to account: %s",
+                adapter, adapter.getMyAddress(), accountId ) );
+        }
+    }
 	
 	public void removeAccount(@Name("adapterId") String adapterId, @Name("accountId") String accountId) throws Exception {
 		

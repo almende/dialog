@@ -298,10 +298,11 @@ public class VoiceXMLRESTProxy {
     @Path( "answer" )
     @GET
     @Produces( "application/voicexml+xml" )
-    public Response answer( @QueryParam( "question_id" ) String question_id,
-        @QueryParam( "answer_id" ) String answer_id, @QueryParam( "answer_input" ) String answer_input,
-        @QueryParam( "sessionKey" ) String sessionKey, @Context UriInfo ui )
+    public Response answer( @QueryParam( "questionId" ) String question_id,
+        @QueryParam( "answerId" ) String answer_id, @QueryParam( "answerInput" ) String answer_input,
+        @QueryParam( "sessionKey" ) String sessionKey, @Context UriInfo ui, @Context HttpServletRequest req )
     {
+    	Map<String, String[]> parameterMap = req.getParameterMap();
         try
         {
             answer_input = answer_input != null ? URLDecoder.decode( answer_input, "UTF-8" ) : answer_input;
@@ -349,7 +350,7 @@ public class VoiceXMLRESTProxy {
     @Path( "timeout" )
     @GET
     @Produces( "application/voicexml+xml" )
-    public Response timeout( @QueryParam( "question_id" ) String question_id,
+    public Response timeout( @QueryParam( "questionId" ) String question_id,
         @QueryParam( "sessionKey" ) String sessionKey ) throws Exception
     {
         String reply = "<vxml><exit/></vxml>";
@@ -399,7 +400,7 @@ public class VoiceXMLRESTProxy {
 	@Path("exception")
 	@GET
 	@Produces("application/voicexml+xml")
-	public Response exception(@QueryParam("question_id") String question_id, @QueryParam("sessionKey") String sessionKey){
+	public Response exception(@QueryParam("questionId") String question_id, @QueryParam("sessionKey") String sessionKey){
 		String reply="<vxml><exit/></vxml>";
 		String json = StringStore.getString(question_id + "_" + sessionKey);
 		if (json != null){
@@ -848,7 +849,7 @@ public class VoiceXMLRESTProxy {
     @GET
     @Path( "retry" )
     public Response retryQuestion( @QueryParam( "sessionKey" ) String sessionKey,
-        @QueryParam( "question_id" ) String questionId ) throws Exception
+        @QueryParam( "questionId" ) String questionId ) throws Exception
     {
         String resultQuestion = "";
         Session session = Session.getSession( sessionKey );
@@ -971,18 +972,18 @@ public class VoiceXMLRESTProxy {
 									outputter.startTag("if");
 										outputter.attribute("cond", "thisCall=='noanswer'");
 										outputter.startTag("goto");
-											outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+											outputter.attribute("next", handleTimeoutURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
 										outputter.endTag();
 									outputter.startTag("elseif");
 										outputter.attribute("cond", "thisCall=='busy' || thisCall=='network_busy'");
 									outputter.endTag();
 										outputter.startTag("goto");
-											outputter.attribute("next", handleExceptionURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+											outputter.attribute("next", handleExceptionURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
 										outputter.endTag();	
 									outputter.startTag("else");
 									outputter.endTag();
 										outputter.startTag("goto");
-											outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+											outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
 										outputter.endTag();	
 									outputter.endTag();
 								outputter.endTag();
@@ -998,7 +999,7 @@ public class VoiceXMLRESTProxy {
 								}
 								if(question!=null) {
 									outputter.startTag("goto");
-										outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+										outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
 									outputter.endTag();
 								}
 							outputter.endTag();
@@ -1089,19 +1090,19 @@ public class VoiceXMLRESTProxy {
                         }
                         outputter.startTag( "choice" );
                         outputter.attribute( "dtmf", dtmfValue );
-                        outputter.attribute( "next", getAnswerUrl() + "?question_id=" + question.getQuestion_id()
-                            + "&answer_id=" + answers.get( cnt ).getAnswer_id() + "&answer_input=" + URLEncoder.encode( dtmfValue, "UTF-8" ) + "&sessionKey="
+                        outputter.attribute( "next", getAnswerUrl() + "?questionId=" + question.getQuestion_id()
+                            + "&answerId=" + answers.get( cnt ).getAnswer_id() + "&answerInput=" + URLEncoder.encode( dtmfValue, "UTF-8" ) + "&sessionKey="
                             + sessionKey );
                         outputter.endTag();
                     }
 					outputter.startTag("noinput");
 						outputter.startTag("goto");
-							outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+							outputter.attribute("next", handleTimeoutURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
 						outputter.endTag();
 					outputter.endTag();
 					outputter.startTag("nomatch");
 						outputter.startTag("goto");
-							outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&answer_id=-1&sessionKey="+sessionKey);
+							outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&answerId=-1&sessionKey="+sessionKey);
 						outputter.endTag();
 					outputter.endTag();
 				outputter.endTag();
@@ -1148,10 +1149,10 @@ public class VoiceXMLRESTProxy {
                         noAnswerTimeout += "s";
                     }
     				outputter.startTag("var");
-    					outputter.attribute("name","answer_input");
+    					outputter.attribute("name","answerInput");
     				outputter.endTag();
     				outputter.startTag("var");
-    					outputter.attribute("name","question_id");
+    					outputter.attribute("name","questionId");
     					outputter.attribute("expr", "'"+question.getQuestion_id()+"'");
     				outputter.endTag();
     				outputter.startTag("var");
@@ -1185,14 +1186,14 @@ public class VoiceXMLRESTProxy {
                                 {
                 
                                     outputter.attribute( "next", handleTimeoutURL + 
-                                        "?question_id=" + question.getQuestion_id() + "&sessionKey=" + sessionKey );
+                                        "?questionId=" + question.getQuestion_id() + "&sessionKey=" + sessionKey );
                                 }
                                 else
                                 {
                                     Integer retryCount = Question.getRetryCount( sessionKey );
                                     if ( retryCount < Integer.parseInt( retryLimit ) )
                                     {
-                                        outputter.attribute( "next", "/retry" + "?question_id=" + question.getQuestion_id()
+                                        outputter.attribute( "next", "/retry" + "?questionId=" + question.getQuestion_id()
                                             + "&sessionKey=" + sessionKey );
                                         Question.updateRetryCount( sessionKey );
                                     }
@@ -1206,15 +1207,15 @@ public class VoiceXMLRESTProxy {
     					
     						outputter.startTag("filled");
     							outputter.startTag("assign");
-    								outputter.attribute("name", "answer_input");
+    								outputter.attribute("name", "answerInput");
     								outputter.attribute("expr", "answer$.utterance.replace(' ','','g')");
     							outputter.endTag();
     							outputter.startTag("submit");
     								outputter.attribute("next", getAnswerUrl());
-    								outputter.attribute("namelist","answer_input question_id sessionKey");
+    								outputter.attribute("namelist","answerInput questionId sessionKey");
     							outputter.endTag();
     							outputter.startTag("clear");
-    								outputter.attribute("namelist", "answer_input answer");
+    								outputter.attribute("namelist", "answerInput answer");
     							outputter.endTag();
     						outputter.endTag();
     					outputter.endTag();
@@ -1302,7 +1303,7 @@ public class VoiceXMLRESTProxy {
                                 outputter.startTag("if");
                                     outputter.attribute("cond", "saveWav.response='SUCCESS'");
                                     outputter.startTag("goto");
-                                        outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answer_input="+URLEncoder.encode(storedAudiofile, "UTF-8"));
+                                        outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answerInput="+URLEncoder.encode(storedAudiofile, "UTF-8"));
                                     outputter.endTag();
                                 outputter.startTag("else");
                                 outputter.endTag();

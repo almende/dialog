@@ -300,9 +300,8 @@ public class VoiceXMLRESTProxy {
     @Produces( "application/voicexml+xml" )
     public Response answer( @QueryParam( "questionId" ) String question_id,
         @QueryParam( "answerId" ) String answer_id, @QueryParam( "answerInput" ) String answer_input,
-        @QueryParam( "sessionKey" ) String sessionKey, @Context UriInfo ui, @Context HttpServletRequest req )
+        @QueryParam( "sessionKey" ) String sessionKey, @Context UriInfo ui )
     {
-    	Map<String, String[]> parameterMap = req.getParameterMap();
         try
         {
             answer_input = answer_input != null ? URLDecoder.decode( answer_input, "UTF-8" ) : answer_input;

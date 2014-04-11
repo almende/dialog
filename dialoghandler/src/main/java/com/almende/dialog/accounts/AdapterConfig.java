@@ -51,6 +51,8 @@ public class AdapterConfig {
 	String myAddress = "";
 	String keyword = null;
 	String status = "";
+	private String dialogId = "";
+	   
 	// Broadsoft:
 	private String xsiURL = "";
 	private String xsiUser = "";
@@ -60,7 +62,6 @@ public class AdapterConfig {
 	private String accessToken="";
 	private String accessTokenSecret="";
 	Boolean anonymous=false;
-	private String dialogId = "";
 	
 	String owner=null;
 	List<String> accounts=null;
@@ -621,7 +622,7 @@ public class AdapterConfig {
 	}
 	
 	public void setOwner(String owner) {
-		this.owner = owner;
+		this.owner = owner != null && !owner.trim().isEmpty() ? owner : null ;
 	}
 	
 	public List<String> getAccounts() {

@@ -14,6 +14,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.sms.SmsMessage;
@@ -32,7 +33,6 @@ public class AskSmsServlet extends TextServlet {
 	private static ObjectMapper om = ParallelInit.getObjectMapper();
 	
 	private static final String servletPath = "/_ah/sms/ask/";
-	private static final String adapterType = "SMS";
 	
 	@Override
 	protected int sendMessage(String message, String subject, String from,
@@ -117,7 +117,7 @@ public class AskSmsServlet extends TextServlet {
 
 	@Override
 	protected String getAdapterType() {
-		return adapterType;
+		return AdapterAgent.ADAPTER_TYPE_SMS;
 	}
 
 	@Override

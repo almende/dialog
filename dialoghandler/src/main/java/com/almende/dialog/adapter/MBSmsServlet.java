@@ -13,6 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.util.PhoneNumberUtils;
 
@@ -24,7 +25,6 @@ public class MBSmsServlet extends TextServlet {
 	
 	// Info of MessageBird
 	private static final String servletPath = "/sms/mb/";
-	private static final String adapterType = "SMS";
 	private static final boolean USE_KEYWORDS = false;
 	
 	@Override
@@ -98,7 +98,7 @@ public class MBSmsServlet extends TextServlet {
 
 	@Override
 	protected String getAdapterType() {
-		return adapterType;
+		return AdapterAgent.ADAPTER_TYPE_SMS;
 	}
 
 	@Override

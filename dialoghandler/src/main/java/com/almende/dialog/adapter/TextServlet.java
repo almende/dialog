@@ -18,6 +18,7 @@ import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.CMStatus;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
@@ -220,7 +221,7 @@ abstract public class TextServlet extends HttpServlet {
 				: new HashMap<String, String>();
 		Map<String, String> formattedAddressNameToMap = new HashMap<String, String>();
 		if (config.getAdapterType().equals("CM")
-				|| config.getAdapterType().equals("SMS")) {
+				|| config.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_SMS)) {
 			for (String address : addressNameMap.keySet()) {
 				String formattedAddress = PhoneNumberUtils.formatNumber(
 						address, null);
@@ -380,7 +381,6 @@ abstract public class TextServlet extends HttpServlet {
 	 * broadcasting corresponding messages.
 	 * 
 	 * @param msg
-	 * @param extras
 	 * @return
 	 * @throws Exception
 	 */
@@ -473,7 +473,7 @@ abstract public class TextServlet extends HttpServlet {
 			if (json == null || json.equals("")) {
 				escapeInput.body = null; // Remove the body, because it is to
 											// start the question
-				if (config.getInitialAgentURL().equals("")) {
+				if (config.getInitialAgentURL() != null && config.getInitialAgentURL().equals("")) {
 					question = Question.fromURL(this.host + DEMODIALOG,
 							config.getConfigId(), address, localaddress);
 				} else {
@@ -538,66 +538,65 @@ abstract public class TextServlet extends HttpServlet {
 	
 	/**
 	 * processses any escape command entered by the user
-	 * 
 	 * @return
 	 */
 	private int processEscapeInputCommand(TextMessage msg, String fromName,
-			AdapterConfig config, EscapeInputCommand escapeInput)
-			throws Exception {
-		log.info(String.format("escape charecter seen.. input %s",
-				escapeInput.body));
-		int result = 0;
-		String cmd = escapeInput.body.toLowerCase().substring(1);
-		if (cmd.startsWith("language=")) {
-			escapeInput.preferred_language = cmd.substring(9);
-			if (escapeInput.preferred_language.indexOf(' ') != -1) escapeInput.preferred_language = escapeInput.preferred_language
-					.substring(0, escapeInput.preferred_language.indexOf(' '));
-			
-			StringStore.storeString(msg.getAddress() + "_language",
-					escapeInput.preferred_language);
-			
-			escapeInput.reply = "Ok, switched preferred language to:"
-					+ escapeInput.preferred_language;
-			escapeInput.body = "";
-			
-			HashMap<String, String> addressNameMap = new HashMap<String, String>(
-					1);
-			addressNameMap.put(msg.getAddress(), msg.getRecipientName());
-			Map<String, Object> extras = storeSMSRelatedData(msg.getAddress(),
-					msg.getLocalAddress(), config, null, escapeInput.reply,
-					null);
-			result = broadcastMessage(escapeInput.reply, msg.getSubject(),
-					msg.getLocalAddress(), fromName, addressNameMap, extras,
-					config);
-		} else if (cmd.startsWith("reset")) {
-			StringStore.dropString("question_" + msg.getAddress() + "_"
-					+ msg.getLocalAddress());
-		}
-		
-		else if (cmd.startsWith("help")) {
-			String[] command = cmd.split(" ");
-			if (command.length == 1) {
-				escapeInput.reply = "The following commands are understood:\n"
-						+ "/help <command>\n" + "/reset \n"
-						+ "/language=<lang_code>\n";
-			} else {
-				if (command[1].equals("reset")) {
-					escapeInput.reply = "/reset will return you to Charlotte's initial question.";
-				}
-				
-				if (command[1].equals("language")) {
-					escapeInput.reply = "/language=<lang_code>, switches the preferred language to the provided lang_code. (e.g. /language=nl)";
-				}
-				
-				if (command[1].equals("help")) {
-					escapeInput.reply = "/help <command>, provides a help text about the provided command (e.g. /help reset)";
-				}
-			}
-			
-			escapeInput.skip = true;
-		}
-		return result;
-	}
+            AdapterConfig config, EscapeInputCommand escapeInput)
+            throws Exception {
+        log.info(String.format("escape charecter seen.. input %s",
+                escapeInput.body));
+        int result = 0;
+        String cmd = escapeInput.body.toLowerCase().substring(1);
+        if (cmd.startsWith("language=")) {
+            escapeInput.preferred_language = cmd.substring(9);
+            if (escapeInput.preferred_language.indexOf(' ') != -1) escapeInput.preferred_language = escapeInput.preferred_language
+                    .substring(0, escapeInput.preferred_language.indexOf(' '));
+            
+            StringStore.storeString(msg.getAddress() + "_language",
+                    escapeInput.preferred_language);
+            
+            escapeInput.reply = "Ok, switched preferred language to:"
+                    + escapeInput.preferred_language;
+            escapeInput.body = "";
+            
+            HashMap<String, String> addressNameMap = new HashMap<String, String>(
+                    1);
+            addressNameMap.put(msg.getAddress(), msg.getRecipientName());
+            Map<String, Object> extras = storeSMSRelatedData(msg.getAddress(),
+                    msg.getLocalAddress(), config, null, escapeInput.reply,
+                    null);
+            result = broadcastMessage(escapeInput.reply, msg.getSubject(),
+                    msg.getLocalAddress(), fromName, addressNameMap, extras,
+                    config);
+        } else if (cmd.startsWith("reset")) {
+            StringStore.dropString("question_" + msg.getAddress() + "_"
+                    + msg.getLocalAddress());
+        }
+        
+        else if (cmd.startsWith("help")) {
+            String[] command = cmd.split(" ");
+            if (command.length == 1) {
+                escapeInput.reply = "The following commands are understood:\n"
+                        + "/help <command>\n" + "/reset \n"
+                        + "/language=<lang_code>\n";
+            } else {
+                if (command[1].equals("reset")) {
+                    escapeInput.reply = "/reset will return you to Charlotte's initial question.";
+                }
+                
+                if (command[1].equals("language")) {
+                    escapeInput.reply = "/language=<lang_code>, switches the preferred language to the provided lang_code. (e.g. /language=nl)";
+                }
+                
+                if (command[1].equals("help")) {
+                    escapeInput.reply = "/help <command>, provides a help text about the provided command (e.g. /help reset)";
+                }
+            }
+            
+            escapeInput.skip = true;
+        }
+        return result;
+    }
 	
 	protected String getNoConfigMessage() {
 		return "Sorry, I can't find the account associated with this chat address...";

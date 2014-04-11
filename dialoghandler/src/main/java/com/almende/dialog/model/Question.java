@@ -197,6 +197,7 @@ public class Question implements QuestionIntf {
 	@JsonIgnore
 	public Question answer(String responder, String adapterID,
 			String answer_id, String answer_input, String sessionKey) {
+	    log.info( "answerTest: "+ answer_input );
 		boolean answered = false;
 		Answer answer = null;
 		if (this.getType().equals("open")) {
@@ -285,6 +286,8 @@ public class Question implements QuestionIntf {
 		ans.getExtras().put("adapterId", adapterID);
 		// Check if answer.callback gives new question for this dialog
 		try {
+            log.info( String.format( "answerText: %s and answer: %s", answer_input, om.writeValueAsString( answer ) ) );
+		      
 			String post = om.writeValueAsString(ans);
 			log.info("Going to send: " + post);
 			String newQuestionJSON = null;
@@ -658,14 +661,9 @@ public class Question implements QuestionIntf {
 					.format("returning the same question as RetryCount: %s < RetryLoadLimit: %s",
 							retryCount, retryLoadLimit));
 			if (adapterID != null && answer_input != null) {
-				dialogLog
-						.warning(
-								adapterID,
-								String.format(
-										"Repeating question %s (count: %s) due to invalid answer: %s",
-										ServerUtils
-												.serializeWithoutException(this),
-										retryCount, answer_input));
+				dialogLog.warning( adapterID, 
+								String.format( "Repeating question %s (count: %s) due to invalid answer: %s",
+										ServerUtils.serializeWithoutException(this), retryCount, answer_input));
 			}
 			return this;
 		} else if (retryCount != null && retryCount < DEFAULT_MAX_QUESTION_LOAD) {

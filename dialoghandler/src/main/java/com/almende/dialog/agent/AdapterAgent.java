@@ -206,7 +206,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		
 		String normAddress = address.replaceFirst("^0", "").replace("+31", "");
 		String externalAddress = "+31" +normAddress; 
-		String myAddress = "0"+normAddress+"@ask.ask.voipit.nl";
+        String myAddress = "0"
+            + ( normAddress.contains( "@ask.ask.voipit.nl" ) ? normAddress : ( normAddress + "@ask.ask.voipit.nl" ) );
 		
 		if(username==null)
 			username = myAddress;

@@ -204,7 +204,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		
 		preferredLanguage = (preferredLanguage==null ? "nl" : preferredLanguage);
 		
-		String normAddress = address.replaceFirst("^0", "").replace("+31", "");
+		String normAddress = address.replaceFirst("^0", "").replace("+31", "").replace( "@ask.ask.voipit.nl", "" );
 		String externalAddress = "+31" +normAddress; 
         String myAddress = "0"
             + ( normAddress.contains( "@ask.ask.voipit.nl" ) ? normAddress : ( normAddress + "@ask.ask.voipit.nl" ) );

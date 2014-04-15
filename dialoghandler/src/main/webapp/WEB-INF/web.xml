@@ -203,13 +203,13 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 	<!-- <security-constraint> <web-resource-collection> <url-pattern>/adapters/*</url-pattern> 
 		</web-resource-collection> <auth-constraint> <role-name>admin</role-name> 
 		</auth-constraint> </security-constraint> -->
-	<security-constraint>
-		<auth-constraint>
-			<role-name>admin</role-name>
-		</auth-constraint>
-	</security-constraint>
+<!-- 	<security-constraint> -->
+<!-- 		<auth-constraint> -->
+<!-- 			<role-name>admin</role-name> -->
+<!-- 		</auth-constraint> -->
+<!-- 	</security-constraint> -->
 
-	<security-constraint>
+	<!-- <security-constraint>
 		<web-resource-collection>
 			<web-resource-name>mail</web-resource-name>
 			<url-pattern>/_ah/mail/*</url-pattern>
@@ -217,5 +217,5 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<auth-constraint>
 			<role-name>admin</role-name>
 		</auth-constraint>
-	</security-constraint>
+	</security-constraint> -->
 </web-app>

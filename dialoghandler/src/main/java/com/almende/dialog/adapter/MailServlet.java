@@ -169,8 +169,13 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             .get( SENDING_PORT_KEY ).toString() : GMAIL_SENDING_PORT;
         final String sendingProtocol = config.getProperties().get( SENDING_PROTOCOL_KEY ) != null ? config
             .getProperties().get( SENDING_PROTOCOL_KEY ).toString() : GMAIL_SENDING_PROTOCOL;
-        final String username = config.getXsiUser() != null ? config.getXsiUser() : DEFAULT_SENDER_EMAIL;
-        final String password = config.getXsiPasswd() != null ? config.getXsiPasswd() : DEFAULT_SENDER_EMAIL_PASSWORD;
+        
+        //set username and password if its found and if its not an appengine mail proxy, else use the default one
+        final String username = config.getXsiUser() != null && !config.getXsiUser().isEmpty()
+            && !config.getXsiUser().contains( "appspotmail.com" ) ? config.getXsiUser() : DEFAULT_SENDER_EMAIL;
+        final String password = config.getXsiPasswd() != null && !config.getXsiPasswd().isEmpty()
+            && !config.getXsiUser().contains( "appspotmail.com" ) ? config.getXsiPasswd()
+                                                                 : DEFAULT_SENDER_EMAIL_PASSWORD;
         Properties props = new Properties();
         props.put( "mail.smtp.host", sendingHost );
         props.put( "mail.smtp.port", sendingPort );

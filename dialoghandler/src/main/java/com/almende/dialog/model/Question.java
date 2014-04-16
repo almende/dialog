@@ -339,7 +339,7 @@ public class Question implements QuestionIntf {
 			// TODO: somewhat smarter behavior? Should dialog standard provide
 			// error handling?
 			if (eventType.equals("hangup") || eventType.equals("exception")
-					|| this.question.getType().equals("referral")) {
+					|| this.question.getType().equals("referral") || this.question.getType().equals("answered")) {
 				return null;
 			} else if (extras != null && extras instanceof Map) {
 				TypeUtil<HashMap<String, String>> injector = new TypeUtil<HashMap<String, String>>() {

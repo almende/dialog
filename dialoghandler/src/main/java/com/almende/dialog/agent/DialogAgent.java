@@ -171,7 +171,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 			final List<AdapterConfig> adapterConfigs = AdapterConfig
 					.findAdapters(adapterType, null, null);
 			for (AdapterConfig cfg : adapterConfigs) {
-				if (cfg.getPublicKey().equals(accountId)) {
+				if (cfg.getOwner().equals(accountId)) {
 					config = cfg;
 					break;
 				}

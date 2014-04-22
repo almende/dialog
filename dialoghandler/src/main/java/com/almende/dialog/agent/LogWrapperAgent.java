@@ -16,7 +16,6 @@ import com.almende.dialog.Log;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.rpc.annotation.Access;
 import com.almende.eve.rpc.annotation.AccessType;
@@ -37,6 +36,7 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
         ParallelInit.startThreads();
 	}
 	
+	private static final java.util.logging.Logger log = java.util.logging.Logger.getLogger( LogWrapperAgent.class.getSimpleName() );
 	private static final String NO_ADAPTER_MESSAGE = "This account has no adapters";
 	
     @Override
@@ -85,26 +85,33 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
     private List<Log> getLogsAsList( String accountId, String adapterID, String adapterType, LogLevel level,
         Long endTime, Integer offset, Integer limit ) throws Exception
     {
-        ArrayList<AdapterConfig> list = AdapterConfig.findAdapters( null, null, null );
+        ArrayList<AdapterConfig> ownerAdapters = new ArrayList<AdapterConfig>();
+        if(adapterID != null && !adapterID.isEmpty())
+        {
+            ownerAdapters.add( AdapterConfig.getAdapterConfig( adapterID ));
+        }
+        else
+        {
+            ownerAdapters = AdapterConfig.findAdapterByOwner( accountId, adapterType, null );
+        }
         Collection<String> adapterIDs = new HashSet<String>();
-        for ( AdapterConfig config : list )
+        for ( AdapterConfig config : ownerAdapters )
         {
             if ( config.getOwner() != null && config.getOwner().equals( accountId ) )
             {
                 adapterIDs.add( config.getConfigId() );
             }
         }
-        if ( ServerUtils.isInDeployedAppspotEnvironment() && adapterIDs.size() == 0 )
+        if ( adapterIDs != null && !adapterIDs.isEmpty() )
         {
-            throw new Exception( NO_ADAPTER_MESSAGE );
+            Logger logger = new Logger();
+            return logger.find( adapterIDs, getMinSeverityLogLevelFor( level ), adapterType, endTime, offset, limit );
         }
         else
         {
-            adapterIDs = null;
+            log.severe( NO_ADAPTER_MESSAGE );
+            return null;
         }
-
-        Logger logger = new Logger();
-        return logger.find( adapterIDs, getMinSeverityLogLevelFor( level ), adapterType, endTime, offset, limit );
     }
 	
 	private Collection<LogLevel> getMinSeverityLogLevelFor(LogLevel logLevel) {

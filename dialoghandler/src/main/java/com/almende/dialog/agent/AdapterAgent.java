@@ -558,9 +558,9 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         {
             config.getProperties().put( XMPPServlet.XMPP_SERVICE_KEY, service );
         }
-        config.setMyAddress( xmppAddress );
+        config.setMyAddress( xmppAddress.toLowerCase() );
         config.setAddress( name );
-        config.setXsiUser( xmppAddress.split( "@" )[0] );
+        config.setXsiUser( xmppAddress.toLowerCase().split( "@" )[0] );
         config.setXsiPasswd( password );
         config.setPreferred_language( preferredLanguage );
         config.setPublicKey( accountId );

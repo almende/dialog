@@ -43,15 +43,18 @@ public class ServletListner implements ServletContextListener
         adapters = AdapterConfig.findAdapters( AdapterAgent.ADAPTER_TYPE_EMAIL, null, null );
         for ( AdapterConfig adapterConfig : adapters )
         {
-            MailServlet mailServlet = new MailServlet(adapterConfig);
-            try
+            if ( !adapterConfig.getMyAddress().endsWith( "appspotmail.com" ) )
             {
-                mailServlet.listenForIncomingEmails();
-            }
-            catch ( MessagingException e )
-            {
-                log.severe( "Exception thrown while trying to register inbound Email service for: "
-                    + adapterConfig.getMyAddress() );
+                MailServlet mailServlet = new MailServlet( adapterConfig );
+                try
+                {
+                    mailServlet.listenForIncomingEmails();
+                }
+                catch ( MessagingException e )
+                {
+                    log.severe( "Exception thrown while trying to register inbound Email service for: "
+                        + adapterConfig.getMyAddress() );
+                }
             }
         }
     }

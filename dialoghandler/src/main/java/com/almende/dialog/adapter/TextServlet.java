@@ -148,7 +148,7 @@ abstract public class TextServlet extends HttpServlet {
 		return new Return(reply, question);
 	}
 	
-	/**
+    /**
 	 * @deprecated use
 	 *             {@link TextServlet#startDialog(Map, String, String, AdapterConfig)
 	 *             startDialog} instead.
@@ -471,8 +471,6 @@ abstract public class TextServlet extends HttpServlet {
 			json = StringStore.getString("question_" + address + "_"
 					+ localaddress);
 			if (json == null || json.equals("")) {
-				escapeInput.body = null; // Remove the body, because it is to
-											// start the question
 				if (config.getInitialAgentURL() != null && config.getInitialAgentURL().equals("")) {
 					question = Question.fromURL(this.host + DEMODIALOG,
 							config.getConfigId(), address, localaddress);
@@ -496,8 +494,7 @@ abstract public class TextServlet extends HttpServlet {
 					question = question.answer(address, config.getConfigId(),
 							null, escapeInput.body, null);
 				}
-				Return replystr = formQuestion(question, config.getConfigId(),
-						address);
+                Return replystr = formQuestion( question, config.getConfigId(), address );
 				// fix for bug: #15 https://github.com/almende/dialog/issues/15
 				escapeInput.reply = URLDecoder.decode(replystr.reply, "UTF-8");
 				question = replystr.question;
@@ -667,7 +664,6 @@ abstract public class TextServlet extends HttpServlet {
 					remoteURL.getHost(), remoteURL.getPort(),
 					remoteURL.getPath(), remoteURL.getQuery(),
 					remoteURL.getRef()).toString();
-			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

@@ -188,12 +188,12 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 					config.getConfigId(), config.getAdapterType()));
 			adapterType = config.getAdapterType();
 			try {
-                if ( adapterType.toUpperCase().equals( "XMPP" ) )
+                if ( adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_XMPP ) )
                 {
                     resultSessionMap = new XMPPServlet().startDialog( addressMap, addressCcMap, addressBccMap, url,
                         senderName, subject, config );
                 }
-                else if (adapterType.toUpperCase().equals(AdapterAgent.ADAPTER_TYPE_BROADSOFT.toUpperCase())) {
+                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
 					// fetch the first address in the map
 					if (!addressMap.keySet().isEmpty()) {
 						resultSessionMap = VoiceXMLRESTProxy.dial(addressMap,

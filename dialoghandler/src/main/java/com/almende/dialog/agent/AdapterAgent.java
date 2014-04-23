@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import org.jivesoftware.smack.XMPPException;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.MailServlet;
 import com.almende.dialog.adapter.TwitterServlet;
@@ -264,32 +266,55 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         @Name( "service" ) @Optional String service, @Name( "accountId" ) @Optional String accountId,
         @Name( "initialAgentURL" ) @Optional String initialAgentURL ) throws Exception
     {
-        preferredLanguage = ( preferredLanguage == null ? "nl" : preferredLanguage );
-        AdapterConfig config = new AdapterConfig();
-        config.setAdapterType( ADAPTER_TYPE_XMPP );
-        //by default create gmail xmpp adapter
-        config.getProperties().put( XMPPServlet.XMPP_HOST_KEY, host != null ? host : XMPPServlet.DEFAULT_XMPP_HOST );
-        config.getProperties().put( XMPPServlet.XMPP_PORT_KEY, port != null ? port : XMPPServlet.DEFAULT_XMPP_PORT );
-        if(service != null)
-        {
-            config.getProperties().put( XMPPServlet.XMPP_SERVICE_KEY, service );
-        }
-        config.setMyAddress( xmppAddress );
-        config.setAddress( name );
-        config.setXsiUser( xmppAddress.split( "@" )[0] );
-        config.setXsiPasswd( password );
-        config.setPreferred_language( preferredLanguage );
-        config.setPublicKey( accountId );
-        config.setOwner( accountId );
-        config.addAccount( accountId );
-        config.setAnonymous( false );
-        config.setInitialAgentURL( initialAgentURL );
-        AdapterConfig newConfig = createAdapter( config );
+        AdapterConfig newConfig = createSimpleXMPPAdapter( xmppAddress, password, name, preferredLanguage, host, port,
+            service, accountId, initialAgentURL );
         //set for incoming requests
         XMPPServlet xmppServlet = new XMPPServlet();
         xmppServlet.listenForRosterChanges( newConfig );
         xmppServlet.listenForIncomingChats( newConfig );
         return newConfig.getConfigId();
+    }
+
+    public String registerASKFastXMPPAdapter( @Name( "xmppAddress" ) String xmppAddress,
+        @Name( "password" ) String password, @Name( "name" ) @Optional String name,
+        @Name( "email" ) @Optional String email, @Name( "preferredLanguage" ) @Optional String preferredLanguage,
+        @Name( "accountId" ) @Optional String accountId, @Name( "initialAgentURL" ) @Optional String initialAgentURL )
+    throws Exception
+    {
+        xmppAddress = xmppAddress.endsWith( "@xmpp.ask-fast.com" ) ? xmppAddress
+                                                                  : ( xmppAddress + "@xmpp.ask-fast.com" );
+        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( ADAPTER_TYPE_XMPP, xmppAddress, null );
+        AdapterConfig newConfig = adapters != null && !adapters.isEmpty() ? adapters.iterator().next() : null;
+        //check if adapter exists
+        if ( newConfig == null )
+        {
+            newConfig = createSimpleXMPPAdapter( xmppAddress, password, name, preferredLanguage,
+                XMPPServlet.DEFAULT_XMPP_HOST, String.valueOf( XMPPServlet.DEFAULT_XMPP_PORT ), null, accountId,
+                initialAgentURL );
+        }
+        else if ( accountId != null && !accountId.isEmpty() && !accountId.equals( newConfig.getOwner() ) ) //check if the accountId owns this adapter
+        {
+            throw new Exception( String.format( "Adapter exists but AccountId: %s does not own it", accountId ) );
+        }
+        try
+        {
+            XMPPServlet.registerASKFastXMPPAccount( xmppAddress, password, name, email );
+            XMPPServlet xmppServlet = new XMPPServlet();
+            xmppServlet.listenForRosterChanges( newConfig );
+            xmppServlet.listenForIncomingChats( newConfig );
+        }
+        catch ( XMPPException e )
+        {
+            if(e.getXMPPError().getCode() == 409) //just listen to incoming chats if account already exists.
+            {
+                XMPPServlet xmppServlet = new XMPPServlet();
+                xmppServlet.listenForRosterChanges( newConfig );
+                xmppServlet.listenForIncomingChats( newConfig );
+            }
+            log.severe( "Error registering an ASK-Fast account. Error: "+ e.getLocalizedMessage() );
+            throw e;
+        }
+        return newConfig != null ? newConfig.getConfigId() : null;
     }
 	
 	public String createMBAdapter(@Name("address") String address,
@@ -470,6 +495,12 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
 	}
 	
+	/**
+	 * saves the AdapterConfig in the datastore
+	 * @param config
+	 * @return
+	 * @throws Exception
+	 */
 	private AdapterConfig createAdapter(AdapterConfig config) throws Exception {
 		
 		if (AdapterConfig.adapterExists(config.getAdapterType(), config.getMyAddress(), config.getKeyword()))
@@ -499,4 +530,45 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		
 		return config;
 	}
+	
+	/** creates a simple adapter of type XMPP. doesnt register and listen for messages
+     * @param xmppAddress
+     * @param password
+     * @param name
+     * @param preferredLanguage
+     * @param host
+     * @param port
+     * @param service
+     * @param accountId
+     * @param initialAgentURL
+     * @return
+     * @throws Exception
+     */
+    private AdapterConfig createSimpleXMPPAdapter( String xmppAddress, String password, String name,
+        String preferredLanguage, String host, String port, String service, String accountId, String initialAgentURL )
+    throws Exception
+    {
+        preferredLanguage = ( preferredLanguage == null ? "nl" : preferredLanguage );
+        AdapterConfig config = new AdapterConfig();
+        config.setAdapterType( ADAPTER_TYPE_XMPP );
+        //by default create gmail xmpp adapter
+        config.getProperties().put( XMPPServlet.XMPP_HOST_KEY, host != null ? host : XMPPServlet.GTALK_XMPP_HOST );
+        config.getProperties().put( XMPPServlet.XMPP_PORT_KEY, port != null ? port : XMPPServlet.DEFAULT_XMPP_PORT );
+        if(service != null)
+        {
+            config.getProperties().put( XMPPServlet.XMPP_SERVICE_KEY, service );
+        }
+        config.setMyAddress( xmppAddress );
+        config.setAddress( name );
+        config.setXsiUser( xmppAddress.split( "@" )[0] );
+        config.setXsiPasswd( password );
+        config.setPreferred_language( preferredLanguage );
+        config.setPublicKey( accountId );
+        config.setOwner( accountId );
+        config.addAccount( accountId );
+        config.setAnonymous( false );
+        config.setInitialAgentURL( initialAgentURL );
+        AdapterConfig newConfig = createAdapter( config );
+        return newConfig;
+    }
 }

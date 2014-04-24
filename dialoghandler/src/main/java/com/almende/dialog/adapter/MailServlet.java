@@ -258,7 +258,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                 }
             }
             simpleMessage.setSubject( subject );
-            simpleMessage.setText( message );
+            simpleMessage.setContent( message, "text/html; charset=utf-8" );
             /*
              * if appspotmail is used as the senderId/from, then send the email from the default account
              * and attach the sender as the replyTo option, to continue the dialog 

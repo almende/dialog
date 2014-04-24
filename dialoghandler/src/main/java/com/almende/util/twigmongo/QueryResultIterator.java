@@ -1,7 +1,9 @@
 package com.almende.util.twigmongo;
 
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import com.mongodb.DBCursor;
 
@@ -34,4 +36,25 @@ public class QueryResultIterator<E>  implements Iterator<E> {
 		cursor.remove();
 	}
 	
+	@SuppressWarnings( "unchecked" )
+    public List<E> toArray()
+	{
+	    try
+	    {
+	        return JOM.getInstance().convertValue(cursor.toArray(), List.class);
+	    }
+	    catch(Exception e)
+	    {
+	        List<E> result = new ArrayList<E>();
+	        while (hasNext()) 
+	        {
+	            E next = next();
+	            if(next != null)
+	            {
+	                result.add(next);
+	            }
+	        }
+	        return result;
+	    }
+	}
 }

@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.CMSmsServlet;
 import com.almende.dialog.adapter.MBSmsServlet;
 import com.almende.dialog.adapter.MailServlet;
@@ -31,6 +32,7 @@ import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.askfast.commons.agent.intf.DialogAgentInterface;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Access(AccessType.PUBLIC)
@@ -307,6 +309,48 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 		return adapterConfigs;
 	}
 	
+    public Dialog createDialog( @Name( "accountId" ) String accountId, @Name( "name" ) String name,
+        @Name( "url" ) String url ) throws Exception
+    {
+        Dialog dialog = new Dialog( name, url );
+        dialog.setOwner( accountId );
+        dialog.storeOrUpdate();
+        return dialog;
+    }
+    
+    public Dialog getDialog( @Name( "accountId" ) String accountId, @Name( "id" ) String id ) throws Exception
+    {
+        if ( accountId != null && id != null )
+        {
+            return Dialog.getDialog( id, accountId );
+        }
+        return null;
+    }
+    
+    public Object updateDialog( @Name( "accountId" ) String accountId, @Name( "id" ) String id,
+        @Name( "dialog" ) Object dialog ) throws Exception
+    {
+        Dialog oldDialog = Dialog.getDialog( id, accountId );
+        if ( oldDialog == null )
+            throw new Exception( "Dialog not found" );
+
+        String dialogString = JOM.getInstance().writeValueAsString( dialog );
+        JOM.getInstance().readerForUpdating( oldDialog ).readValue( dialogString );
+        oldDialog.storeOrUpdate();
+        return oldDialog;
+    }
+    
+    public void deleteDialog( @Name( "accountId" ) String accountId, @Name( "id" ) String id ) throws Exception
+    {
+        Dialog.deleteDialog( id, accountId );
+    }
+    
+    public ArrayNode getDialogs( @Name( "accountId" ) String accountId ) throws Exception
+    {
+        List<Dialog> dialogs = Dialog.getDialogs( accountId );
+        return JOM.getInstance().convertValue( dialogs, ArrayNode.class );
+    }
+	
 	@Override
 	public String getDescription() {
 		return "Dialog handling agent";
@@ -316,5 +360,4 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 	public String getVersion() {
 		return "0.4.1";
 	}
-	
 }

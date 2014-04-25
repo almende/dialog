@@ -316,6 +316,27 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         }
         return newConfig != null ? newConfig.getConfigId() : null;
     }
+    
+    public String deregisterASKFastXMPPAdapter( @Name( "xmppAddress" ) @Optional String xmppAddress,
+        @Name( "accountId" ) String accountId, 
+        @Name( "adapterId" ) @Optional String adapterId)
+    throws Exception
+    {
+        xmppAddress = xmppAddress.endsWith( "@xmpp.ask-fast.com" ) ? xmppAddress
+                                                                  : ( xmppAddress + "@xmpp.ask-fast.com" );
+        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( ADAPTER_TYPE_XMPP, xmppAddress, null );
+        AdapterConfig adapterConfig = adapters != null && !adapters.isEmpty() ? adapters.iterator().next() : null;
+        //check if adapter is owned by the accountId
+        if ( adapterConfig != null && accountId.equals( adapterConfig.getOwner() ))
+        {
+            XMPPServlet.deregisterASKFastXMPPAccount( adapterConfig );
+        }
+        else 
+        {
+            throw new Exception( String.format( "Adapter either doesnt exist or now owned by AccountId: %s", accountId ) );
+        }
+        return adapterConfig != null ? adapterConfig.getConfigId() : null;
+    }
 	
 	public String createMBAdapter(@Name("address") String address,
 			@Name("keyword") @Optional String keyword,

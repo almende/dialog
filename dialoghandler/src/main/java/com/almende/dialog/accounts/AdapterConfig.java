@@ -773,4 +773,18 @@ public class AdapterConfig {
         }
         return cachedDialog;
     }
+    
+    public static void delete( String configId )
+    {
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        AdapterConfig config = datastore.load( AdapterConfig.class, configId );
+        datastore.delete( config );
+    }
+    
+    public void delete()
+    {
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        AdapterConfig config = datastore.load( AdapterConfig.class, configId );
+        datastore.delete( config );
+    }
 }

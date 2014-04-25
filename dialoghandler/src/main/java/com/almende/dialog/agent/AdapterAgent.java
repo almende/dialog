@@ -330,6 +330,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         if ( adapterConfig != null && accountId.equals( adapterConfig.getOwner() ))
         {
             XMPPServlet.deregisterASKFastXMPPAccount( adapterConfig );
+            adapterConfig.delete();
         }
         else 
         {

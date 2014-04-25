@@ -263,4 +263,24 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
         }
         throw new Exception( "Invalid XMPP address for ASK-Fast" );
     }
+    
+    public static void deregisterASKFastXMPPAccount( AdapterConfig adapterConfig )
+    throws Exception
+    {
+        if ( adapterConfig != null && adapterConfig.getMyAddress() != null && adapterConfig.getMyAddress().endsWith( "@xmpp.ask-fast.com" ) )
+        {
+            try
+            {
+                XMPPConnection xmppConnection = getXMPPConnection( adapterConfig, true );
+                AccountManager accountManager = new AccountManager( xmppConnection );
+                accountManager.deleteAccount();
+            }
+            catch ( XMPPException e )
+            {
+                log.severe( "XMPP account deletion failed. Error: " + e.getLocalizedMessage() );
+                throw e;
+            }
+        }
+        throw new Exception( "Invalid XMPP address for ASK-Fast" );
+    }
 }

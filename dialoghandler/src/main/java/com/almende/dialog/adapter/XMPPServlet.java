@@ -249,7 +249,7 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
                 xmppConnection.connect();
                 AccountManager accountManager = new AccountManager( xmppConnection );
                 Map<String, String> attributes = new HashMap<String, String>();
-                attributes.put("username", username.replace( "xmpp.ask-fast.com", "" ));
+                attributes.put("username", username.replace( "@xmpp.ask-fast.com", "" ));
                 attributes.put("password", password);
                 attributes.put("email", email);
                 attributes.put("name", name);
@@ -261,7 +261,10 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
                 throw e;
             }
         }
-        throw new Exception( "Invalid XMPP address for ASK-Fast" );
+        else
+        {
+            throw new Exception( "Invalid XMPP address for ASK-Fast" );
+        }
     }
     
     public static void deregisterASKFastXMPPAccount( AdapterConfig adapterConfig )

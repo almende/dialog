@@ -29,9 +29,9 @@ import com.almende.eve.rpc.annotation.Optional;
 import com.almende.eve.rpc.jsonrpc.JSONRPCException;
 import com.almende.eve.rpc.jsonrpc.JSONRPCException.CODE;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
-import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.askfast.commons.agent.intf.DialogAgentInterface;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -39,11 +39,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class DialogAgent extends Agent implements DialogAgentInterface {
 	private static final Logger	log	= Logger.getLogger(DialogAgent.class
 											.getName());
-	
-	public DialogAgent() {
-		super();
-		ParallelInit.startThreads();
-	}
 	
 	public ArrayList<String> getActiveCalls(@Name("adapterID") String adapterID) {
 		
@@ -278,13 +273,13 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 			
 			log.info("Config found: " + config.getConfigId());
 			TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-			config.setInitialAgentURL(url);
+			config.setDialogWithURL( "Dialog Agent", url);
 			datastore.store(config);
 			
 			ObjectNode result = JOM.createObjectNode();
 			result.put("id", config.getConfigId());
 			result.put("type", config.getAdapterType());
-			result.put("url", config.getInitialAgentURL());
+            result.put( "url", config.getOrCreateDialog() != null ? config.getOrCreateDialog().getUrl() : null );
 			return result.toString();
 		} else {
 			throw new Exception("Invalid adapter found");
@@ -345,6 +340,15 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         Dialog.deleteDialog( id, accountId );
     }
     
+    public void deleteAllDialogs( @Name( "accountId" ) String accountId ) throws Exception
+    {
+        ArrayNode dialogs = getDialogs( accountId );
+        for ( JsonNode jsonNode : dialogs )
+        {
+            deleteDialog( accountId, jsonNode.get( "id" ).asText() );
+        }
+    }
+    
     public ArrayNode getDialogs( @Name( "accountId" ) String accountId ) throws Exception
     {
         List<Dialog> dialogs = Dialog.getDialogs( accountId );
@@ -358,6 +362,6 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 	
 	@Override
 	public String getVersion() {
-		return "0.4.1";
+		return "2.0.1";
 	}
 }

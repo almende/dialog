@@ -255,7 +255,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.setOwner( accountId );
         config.addAccount( accountId );
         config.setAnonymous( false );
-        config.setInitialAgentURL( initialAgentURL );
+        config.setDialogWithURL( "Agent for: "+ emailAddress, initialAgentURL );
         AdapterConfig newConfig = createAdapter( config );
         return newConfig.getConfigId();
     }
@@ -443,7 +443,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         {
             if ( adapter.getInitialAgentURL() != null )
             {
-                config.setInitialAgentURL( adapter.getInitialAgentURL() );
+                config.setDialogWithURL( "Agent for: "+ config.getMyAddress(), adapter.getInitialAgentURL() );
             }
             if ( adapter.isAnonymous() != null )
             {
@@ -567,7 +567,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.setOwner( accountId );
         config.addAccount( accountId );
         config.setAnonymous( false );
-        config.setInitialAgentURL( initialAgentURL );
+        config.setDialogWithURL( "Agent for: "+ xmppAddress, initialAgentURL );
         AdapterConfig newConfig = createAdapter( config );
         return newConfig;
     }

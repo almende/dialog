@@ -100,7 +100,14 @@ public class TwitterServlet extends TextServlet implements Runnable {
 			String agentURL = req.getParameter("agentURL");
 			if (adapterId != null && agentURL != null
 					&& agentURL.startsWith("http")) {
-				updateAgentURL(resp.getWriter(), adapterId, agentURL);
+				try
+                {
+                    updateAgentURL(resp.getWriter(), adapterId, agentURL);
+                }
+                catch ( Exception e )
+                {
+                    log.severe( String.format( "Update agent failed! Message: %s", e.getLocalizedMessage() ) );
+                }
 			}
 		}
 	}
@@ -312,9 +319,9 @@ public class TwitterServlet extends TextServlet implements Runnable {
 	 * @throws IOException
 	 */
 	protected void updateAgentURL(PrintWriter out, String adapterId,
-			String agentURL) throws IOException {
+			String agentURL) throws Exception {
 		AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
-		adapterConfig.setInitialAgentURL(agentURL);
+		adapterConfig.setDialogWithURL( "Twitter inbound Agent", agentURL );
 		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 		datastore.store(adapterConfig);
 		out.print("<html>"

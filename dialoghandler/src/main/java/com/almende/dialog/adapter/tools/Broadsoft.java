@@ -282,19 +282,17 @@ public class Broadsoft {
 			
 			Document dom = db.parse(new ByteArrayInputStream(xml.getBytes("UTF-8")));
 			Node root = dom.getDocumentElement();
-			
+			NodeList subscriptionIdNode = dom.getElementsByTagName("subscriptionId" );
 			if(root.getNodeName().equals("ErrorInfo")) {
 				return null;
 			}
-			
-			Node sub = root.getFirstChild();
-			
-			return sub.getNodeValue();
-			
+			else if( subscriptionIdNode != null && subscriptionIdNode.item(0 ) != null)
+			{
+			    return subscriptionIdNode.item(0 ).getTextContent();
+			}
 		} catch(Exception ex){
 			ex.printStackTrace();
 		}
-		
 		return null;
 	}
 	

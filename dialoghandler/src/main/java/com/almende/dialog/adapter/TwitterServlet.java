@@ -123,7 +123,7 @@ public class TwitterServlet extends TextServlet implements Runnable {
 		ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters(
 				getAdapterType(), null, null);
 		boolean isDirectMessageCall = false;
-		String tweedOrDirectMesssageId = null;
+		String tweetOrDirectMesssageId = null;
         for ( AdapterConfig config : adapters )
         {
             Token accessToken = new Token( config.getAccessToken(), config.getAccessTokenSecret() );
@@ -133,30 +133,32 @@ public class TwitterServlet extends TextServlet implements Runnable {
             {
                 // make sure that the user follows the one, for whom the direct
                 // message is intended for
-                tweedOrDirectMesssageId = StringStore.getString( "lastdirectmessage_" + config.getConfigId() );
+                tweetOrDirectMesssageId = StringStore.getString( "lastdirectmessage_" + config.getConfigId() );
                 url = "https://api.twitter.com/1.1/direct_messages.json";
-                if ( tweedOrDirectMesssageId != null && !tweedOrDirectMesssageId.equals( "0" ) )
-                    url += "?since_id=" + tweedOrDirectMesssageId;
+                if ( tweetOrDirectMesssageId != null && !tweetOrDirectMesssageId.equals( "0" ) )
+                    url += "?since_id=" + tweetOrDirectMesssageId;
                 isDirectMessageCall = true;
             }
             else
             {
-                tweedOrDirectMesssageId = StringStore.getString( "lasttweet_" + config.getConfigId() );
+                tweetOrDirectMesssageId = StringStore.getString( "lasttweet_" + config.getConfigId() );
                 url = "https://api.twitter.com/1.1/statuses/mentions_timeline.json";
-                if ( tweedOrDirectMesssageId != null && !tweedOrDirectMesssageId.equals( "0" ) )
-                    url += "?since_id=" + tweedOrDirectMesssageId;
+                if ( tweetOrDirectMesssageId != null && !tweetOrDirectMesssageId.equals( "0" ) )
+                    url += "?since_id=" + tweetOrDirectMesssageId;
             }
             OAuthRequest request = new OAuthRequest( Verb.GET, url );
             service.signRequest( accessToken, request );
             Response response = request.send();
             ObjectMapper om = ParallelInit.getObjectMapper();
-
+            
+            //initialize updatedTweetId with the previously seen one
+            String updatedTweedOrDirectMesssageId = tweetOrDirectMesssageId;
             try
             {
                 String format = "EEE MMM dd HH:mm:ss ZZZZZ yyyy";
                 DateTime date = null;
                 ArrayNode res = om.readValue( response.getBody(), ArrayNode.class );
-                if ( tweedOrDirectMesssageId == null )
+                if ( tweetOrDirectMesssageId == null )
                 {
                     for ( JsonNode tweet : res )
                     {
@@ -166,7 +168,7 @@ public class TwitterServlet extends TextServlet implements Runnable {
                         Date newDate = sf.parse( msgDate );
                         if ( date == null || date.isBefore( newDate.getTime() ) )
                         {
-                            tweedOrDirectMesssageId = tweet.get( "id_str" ).asText();
+                            tweetOrDirectMesssageId = tweet.get( "id_str" ).asText();
                             date = new DateTime( newDate.getTime() );
                         }
                     }
@@ -201,21 +203,21 @@ public class TwitterServlet extends TextServlet implements Runnable {
                         if ( date == null || date.isBefore( newDate.getTime() ) )
                         {
                             date = new DateTime( newDate.getTime() );
-                            tweedOrDirectMesssageId = tweet.get( "id_str" ).asText();
+                            updatedTweedOrDirectMesssageId = tweet.get( "id_str" ).asText();
                         }
                     }
                 }
-                log.info( "Set date: " + config.getConfigId() + " to: " + tweedOrDirectMesssageId );
-                if ( tweedOrDirectMesssageId != null )
+                if ( updatedTweedOrDirectMesssageId != null
+                    && !updatedTweedOrDirectMesssageId.equals( tweetOrDirectMesssageId ) )
                 {
                     if ( req.getPathInfo().equals( TwitterEndpoint.DIRECT_MESSAGE.getUrl() ) )
                     {
-                        StringStore.storeString( "lastdirectmessage_" + config.getConfigId(), tweedOrDirectMesssageId
-                            + "" );
+                        StringStore.storeString( "lastdirectmessage_" + config.getConfigId(),
+                            updatedTweedOrDirectMesssageId );
                     }
                     else
                     {
-                        StringStore.storeString( "lasttweet_" + config.getConfigId(), tweedOrDirectMesssageId + "" );
+                        StringStore.storeString( "lasttweet_" + config.getConfigId(), updatedTweedOrDirectMesssageId );
                     }
                 }
             }

@@ -209,8 +209,15 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 					resultSessionMap = new CMSmsServlet().startDialog(
 							addressMap, null, null, url, senderName, subject, config);
 				} else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_TWITTER)) {
-					resultSessionMap = new TwitterServlet().startDialog(
-							addressMap, null, null, url, senderName, subject, config);
+				    HashMap<String, String> formattedTwitterAddresses = new HashMap<String, String>( addressMap.size() );
+	                //convert all addresses to start with @
+	                for ( String address : addressMap.keySet() )
+	                {
+	                    String formattedTwitterAddress = address.startsWith( "@" ) ? address : ("@" + address);
+	                    formattedTwitterAddresses.put( formattedTwitterAddress, addressMap.get( address ) );
+	                }
+	                resultSessionMap = new TwitterServlet().startDialog( formattedTwitterAddresses, null, null, url,
+	                    senderName, subject, config );
 				} else {
 					throw new Exception(
 							"Unknown type given: either broadsoft or phone or mail:"

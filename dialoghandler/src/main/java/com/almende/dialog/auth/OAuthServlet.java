@@ -291,7 +291,7 @@ public class OAuthServlet extends HttpServlet {
             
             ObjectNode res = verifyTwitterAuthForToken( accessToken );
             
-            return storeAccount(accessToken, "@"+res.get("screen_name").asText(), service.toUpperCase());
+            return storeAccount(accessToken, "@"+res.get("screen_name").asText(), service.toLowerCase());
             
         } else if(service.equals("facebook")) {
             

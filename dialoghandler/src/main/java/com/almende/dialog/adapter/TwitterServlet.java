@@ -223,7 +223,7 @@ public class TwitterServlet extends TextServlet implements Runnable {
             }
             catch ( Exception ex )
             {
-                log.warning( "Failed to parse result" );
+                log.warning( "Failed to parse result. Error: "+ ex.getLocalizedMessage() );
                 out.print( response.getBody() );
                 out.close();
             }

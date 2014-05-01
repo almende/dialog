@@ -76,8 +76,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             try
             {
                 JSONRequest req = new JSONRequest( "checkInBoundEmails", null );
-                getState().put( "emailScedulerTaskId",
-                    getScheduler().createTask( req, EMAIL_SCHEDULER_INTERVAL, true, true ) );
+                id = getScheduler().createTask( req, EMAIL_SCHEDULER_INTERVAL, true, true );
+                getState().put( "emailScedulerTaskId", id );
             }
             catch ( Exception e )
             {
@@ -114,7 +114,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             try
             {
                 JSONRequest req = new JSONRequest( "checkInBoundTwitterPosts", null );
-                getState().put( "twitterScedulerTaskId", getScheduler().createTask( req, TWITTER_SCHEDULER_INTERVAL, true, true ) );
+                id = getScheduler().createTask( req, TWITTER_SCHEDULER_INTERVAL, true, true );
+                getState().put( "twitterScedulerTaskId", id );
             }
             catch ( Exception e )
             {

@@ -68,7 +68,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
     /**
      * start scheduler for email only
      */
-    public void startEmailInboundSceduler()
+    public String startEmailInboundSceduler()
     {
         String id = getState().get( "emailScedulerTaskId", String.class );
         if ( id == null )
@@ -89,21 +89,24 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         {
             log.warning( "Task already running" );
         }
+        return id;
     }
     
     /**
      * stops the scheduler which checks for inbound emails
      */
-    public void stopEmailInboundSceduler()
+    public String stopEmailInboundSceduler()
     {
-        getScheduler().cancelTask(getState().get("emailScedulerTaskId", String.class));
+        String schedulerId = getState().get("emailScedulerTaskId", String.class);
+        getScheduler().cancelTask(schedulerId);
         getState().remove( "emailScedulerTaskId" );
+        return schedulerId;
     }
     
     /**
      * start scheduler for twitter only
      */
-    public void startTwitterInboundSceduler()
+    public String startTwitterInboundSceduler()
     {
         String id = getState().get( "twitterScedulerTaskId", String.class );
         if ( id == null )
@@ -123,15 +126,18 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         {
             log.warning( "Task already running" );
         }
+        return id;
     }
     
     /**
      * stops the scheduler which checks for inbound twitter updates
      */
-    public void stopTwitterInboundSceduler()
+    public String stopTwitterInboundSceduler()
     {
-        getScheduler().cancelTask(getState().get("twitterScedulerTaskId", String.class));
+        String schedulerId = getState().get("twitterScedulerTaskId", String.class);
+        getScheduler().cancelTask(schedulerId);
         getState().remove( "twitterScedulerTaskId" );
+        return schedulerId;
     }
 
     /**

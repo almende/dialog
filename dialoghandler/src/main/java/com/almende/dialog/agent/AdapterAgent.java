@@ -404,8 +404,13 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
                 twitterUserName, null );
             adapterConfig = !adapterConfigs.isEmpty() ? adapterConfigs.iterator().next() : null;
         }
+        
         if ( adapterConfig != null )
         {
+            if( !accountId.equals( adapterConfig.getOwner()))
+            {
+                throw new JSONRPCException( CODE.INVALID_PARAMS, "Adapter not owned by the accountId: "+ accountId );
+            }
             adapterConfig.addAccount( accountId );
             adapterConfig.update();
             return ServerUtils.serialize( adapterConfig );

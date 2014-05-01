@@ -311,7 +311,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 		return adapterConfigs;
 	}
 	
-    public Dialog createDialog( @Name( "accountId" ) String accountId, @Name( "name" ) String name,
+    public Object createDialog( @Name( "accountId" ) String accountId, @Name( "name" ) String name,
         @Name( "url" ) String url ) throws Exception
     {
         Dialog dialog = new Dialog( name, url );
@@ -320,7 +320,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         return dialog;
     }
     
-    public Dialog getDialog( @Name( "accountId" ) String accountId, @Name( "id" ) String id ) throws Exception
+    public Object getDialog( @Name( "accountId" ) String accountId, @Name( "id" ) String id ) throws Exception
     {
         if ( accountId != null && id != null )
         {

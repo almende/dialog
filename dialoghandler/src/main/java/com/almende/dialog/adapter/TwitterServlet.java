@@ -157,6 +157,20 @@ public class TwitterServlet extends TextServlet implements Runnable {
             {
                 String format = "EEE MMM dd HH:mm:ss ZZZZZ yyyy";
                 DateTime date = null;
+                //check if an error is seen in the response
+                JsonNode errorValue = om.readValue( response.getBody(), JsonNode.class ).get( "errors" );
+                if( errorValue != null)
+                {
+                    JsonNode errorDetails = errorValue.iterator().next();
+                    if(errorDetails != null)
+                    {
+                        log.severe( String.format(
+                            "Ërror: \"%s\" code: \"%s\" seen while fetching: %s for adapterId: %s with address: %s ",
+                            errorDetails.get( "message" ).asText(), errorDetails.get( "code" ).asText(),
+                            req.getPathInfo(), config.getConfigId(), config.getMyAddress() ) );
+                        continue;
+                    }
+                }
                 ArrayNode res = om.readValue( response.getBody(), ArrayNode.class );
                 if ( tweetOrDirectMesssageId == null )
                 {

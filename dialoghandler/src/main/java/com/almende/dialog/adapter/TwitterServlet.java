@@ -54,6 +54,9 @@ public class TwitterServlet extends TextServlet implements Runnable {
 	
 	private AdapterConfig adapterConfig = null;
 	private TwitterEndpoint twitterEndpoint = null;
+	private int retryLimit = 3;
+	private int retryCount = 0;
+	
 	public enum TwitterEndpoint
 	{
 	    DIRECT_MESSAGE ( "/direct_messages"),
@@ -68,6 +71,21 @@ public class TwitterServlet extends TextServlet implements Runnable {
 	    public String getUrl()
         {
             return url;
+        }
+	}
+	
+	public static class TwitterErrorResponse
+	{
+	    Collection<Map<String, String>> errors = null;
+
+        public Collection<Map<String, String>> getErrors()
+        {
+            return errors;
+        }
+
+        public void setErrors( Collection<Map<String, String>> errors )
+        {
+            this.errors = errors;
         }
 	}
 	
@@ -158,21 +176,20 @@ public class TwitterServlet extends TextServlet implements Runnable {
                 String format = "EEE MMM dd HH:mm:ss ZZZZZ yyyy";
                 DateTime date = null;
                 //check if an error is seen in the response
-                JsonNode errorValue = om.readValue( response.getBody(), JsonNode.class ).get( "errors" );
+                TwitterErrorResponse errorValue = getIfTwitterErrorInResponse( response.getBody(), false );
                 if( errorValue != null)
                 {
-                    JsonNode errorDetails = errorValue.iterator().next();
-                    if(errorDetails != null)
+                    for ( Map<String, String> error : errorValue.getErrors() )
                     {
                         log.severe( String.format(
                             "Ërror: \"%s\" code: \"%s\" seen while fetching: %s for adapterId: %s with address: %s ",
-                            errorDetails.get( "message" ).asText(), errorDetails.get( "code" ).asText(),
-                            req.getPathInfo(), config.getConfigId(), config.getMyAddress() ) );
-                        continue;
+                            error.get( "message" ), error.get( "code" ), req.getPathInfo(), config.getConfigId(),
+                            config.getMyAddress() ) );
                     }
+                    continue;
                 }
                 ArrayNode res = om.readValue( response.getBody(), ArrayNode.class );
-                if ( tweetOrDirectMesssageId == null )
+                if ( updatedTweedOrDirectMesssageId == null )
                 {
                     for ( JsonNode tweet : res )
                     {
@@ -182,7 +199,7 @@ public class TwitterServlet extends TextServlet implements Runnable {
                         Date newDate = sf.parse( msgDate );
                         if ( date == null || date.isBefore( newDate.getTime() ) )
                         {
-                            tweetOrDirectMesssageId = tweet.get( "id_str" ).asText();
+                            updatedTweedOrDirectMesssageId = tweet.get( "id_str" ).asText();
                             date = new DateTime( newDate.getTime() );
                         }
                     }
@@ -256,13 +273,13 @@ public class TwitterServlet extends TextServlet implements Runnable {
 				.build();
 		
 		int count = 0;
-		to = to.startsWith("@") ? to : "@" + to;
+        String formattedTwitterTo = to.startsWith( "@" ) ? to : "@" + to;
 		Token accessToken = new Token(config.getAccessToken(),
 				config.getAccessTokenSecret());
-		for (String messagepart : Splitter.fixedLength(140 - (to.length() + 1))
+		for (String messagepart : Splitter.fixedLength(140 - (formattedTwitterTo.length() + 1))
 				.split(message)) {
 			try {
-				to = URLEncoder.encode(to, "UTF-8");
+			    formattedTwitterTo = URLEncoder.encode(formattedTwitterTo, "UTF-8");
 				String url = null;
 				String tweetType = null;
 				if (extras != null
@@ -277,21 +294,18 @@ public class TwitterServlet extends TextServlet implements Runnable {
 				if (tweetType != null && tweetType.equals("direct")) {
 					// make sure the user for whom the direct message is for, is
 					// followed
-					followUser(service, accessToken, to);
+					followUser(service, accessToken, formattedTwitterTo);
 					String directMessage = URLEncoder.encode(messagepart,
 							"UTF8").replace("+", "%20");
 					url = "https://api.twitter.com/1.1/direct_messages/new.json";
-					url = ServerUtils.getURLWithQueryParams(url, "screen_name",
-							to);
-					url = ServerUtils.getURLWithQueryParams(url, "text",
-							directMessage);
+                    url = ServerUtils.getURLWithQueryParams( url, "screen_name", formattedTwitterTo );
+                    url = ServerUtils.getURLWithQueryParams( url, "text", directMessage );
 				} else {
 					String inReptyTweetID = (extras != null && extras
 							.get(STATUS_ID_KEY) != null) ? extras.get(
 							STATUS_ID_KEY).toString() : "";
-					String status = to
-							+ URLEncoder.encode(" " + messagepart, "UTF8")
-									.replace("+", "%20");
+                    String status = formattedTwitterTo
+                        + URLEncoder.encode( " " + messagepart, "UTF8" ).replace( "+", "%20" );
 					url = "https://api.twitter.com/1.1/statuses/update.json";
 					url = ServerUtils.getURLWithQueryParams(url, "status",
 							status);
@@ -302,13 +316,29 @@ public class TwitterServlet extends TextServlet implements Runnable {
 				OAuthRequest request = new OAuthRequest(Verb.POST, url);
 				service.signRequest(accessToken, request);
 				Response response = request.send();
+				//check if an error exists in hte reply 
+                TwitterErrorResponse twitterErrors = getIfTwitterErrorInResponse( response.getBody(), false );
+                if(twitterErrors != null)
+                {
+                    for ( Map<String, String> errors : twitterErrors.getErrors() )
+                    {
+                        //if the status is the same, add a timestamp
+                        if(errors.get( "code" ) != null && errors.get( "code" ).equals( "187" ) && retryCount < retryLimit)
+                        {
+                            retryCount++;
+                            message += "\nSent at: " + ServerUtils.getStringFormatFromDateTime(
+                                ServerUtils.getServerCurrentTimeInMillis(), "dd-MM-yyyy HH:mm:ss Z" ); 
+                            return sendMessage( message, subject, from, fromName, to, toName, extras, config );
+                        }
+                    }
+                }
 				log.info("Message send result: " + response.getBody());
 				count++;
 			} catch (Exception ex) {
-				log.warning("Failed to send message");
+				log.warning("Failed to send message. Error: "+ ex.getLocalizedMessage());
 			}
 		}
-		
+		retryCount = 0;
 		return count;
 	}
 	
@@ -409,6 +439,24 @@ public class TwitterServlet extends TextServlet implements Runnable {
         catch ( Exception e )
         {
             log.severe( String.format( "adapterId is: %s" + adapterConfig, "ERROR loading question: " + e.toString() ) );
+        }
+    }
+    
+    private TwitterErrorResponse getIfTwitterErrorInResponse( String responseBody, boolean throwException )
+    throws Exception
+    {
+        ObjectMapper om = ParallelInit.getObjectMapper();
+        try
+        {
+            return om.readValue( responseBody, TwitterErrorResponse.class );
+        }
+        catch ( Exception e )
+        {
+            if ( throwException )
+            {
+                throw e;
+            }
+            return null;
         }
     }
 }

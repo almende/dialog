@@ -5,7 +5,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -186,6 +188,11 @@ public class ServerUtils
     public static DateTime getServerCurrentTime()
     {
         return DateTime.now( getServerDateTimeZone() );
+    }
+    
+    public static String getStringFormatFromDateTime( long pDateTime, String format )
+    {
+        return new SimpleDateFormat( format ).format( new Date( pDateTime ) );
     }
     
     public static DateTimeZone getServerDateTimeZone()

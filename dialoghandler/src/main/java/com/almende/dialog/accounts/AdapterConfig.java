@@ -542,18 +542,18 @@ public class AdapterConfig {
 	 */
 	@Deprecated
 	public String getInitialAgentURL() {
-	    try
-        {
-	        Dialog dialog = getOrCreateDialog();
-            if( dialog!= null && dialog.getUrl() != null && !dialog.getUrl().isEmpty())
-            {
-                return dialog.getUrl();
-            }
-        }
-        catch ( Exception e )
-        {
-            log.severe( String.format( "Fetching Dialog failed. Error: %s", e.getLocalizedMessage() ) );
-        }
+//	    try
+//        {
+//	        Dialog dialog = getOrCreateDialog();
+//            if( dialog!= null && dialog.getUrl() != null && !dialog.getUrl().isEmpty())
+//            {
+//                return dialog.getUrl();
+//            }
+//        }
+//        catch ( Exception e )
+//        {
+//            log.severe( String.format( "Fetching Dialog failed. Error: %s", e.getLocalizedMessage() ) );
+//        }
 		return initialAgentURL;
 	}
 
@@ -566,24 +566,24 @@ public class AdapterConfig {
     @Deprecated
 	public void setInitialAgentURL(String initialAgentURL) throws Exception {
 		this.initialAgentURL = initialAgentURL;
-		Dialog dialog = getOrCreateDialog();
-        if ( dialog != null )
-        {
-            //unlink hte dialog if url is empty
-            if(initialAgentURL == null || initialAgentURL.isEmpty())
-            {
-                dialogId = null;
-                update();
-            }
-            else if(!initialAgentURL.equals( dialog.getUrl()))
-            {
-                Dialog newDialog = Dialog.createDialog(
-                    String.format( "Dialog created for: %s with new initialAgentUrl", myAddress ), initialAgentURL,
-                    owner );
-                dialogId = newDialog != null ? newDialog.getId() : null;
-                update();
-            }
-        }
+//		Dialog dialog = getOrCreateDialog();
+//        if ( dialog != null )
+//        {
+//            //unlink hte dialog if url is empty
+//            if(initialAgentURL == null || initialAgentURL.isEmpty())
+//            {
+//                dialogId = null;
+//                update();
+//            }
+//            else if(!initialAgentURL.equals( dialog.getUrl()))
+//            {
+//                Dialog newDialog = Dialog.createDialog(
+//                    String.format( "Dialog created for: %s with new initialAgentUrl", myAddress ), initialAgentURL,
+//                    owner );
+//                dialogId = newDialog != null ? newDialog.getId() : null;
+//                update();
+//            }
+//        }
 	}
     
     /**
@@ -595,19 +595,20 @@ public class AdapterConfig {
      */
     public Dialog setDialogWithURL(String name, String url) throws Exception
     {
-        cachedDialog = getOrCreateDialog();
-        if(cachedDialog != null && !cachedDialog.getUrl().equals( url ))
-        {
-            cachedDialog.setName( name );
-            cachedDialog.setUrl( url );
-            cachedDialog.storeOrUpdate();
-        }
-        else if(cachedDialog == null)
-        {
-            cachedDialog = Dialog.createDialog( name, url, owner );
-        }
-        dialogId = cachedDialog != null ? cachedDialog.getId() : null;
-        return cachedDialog;
+//        cachedDialog = getOrCreateDialog();
+//        if(cachedDialog != null && !cachedDialog.getUrl().equals( url ))
+//        {
+//            cachedDialog.setName( name );
+//            cachedDialog.setUrl( url );
+//            cachedDialog.storeOrUpdate();
+//        }
+//        else if(cachedDialog == null)
+//        {
+//            cachedDialog = Dialog.createDialog( name, url, owner );
+//        }
+//        dialogId = cachedDialog != null ? cachedDialog.getId() : null;
+//        return cachedDialog;
+        return new Dialog( name, url );
     }
     
 	
@@ -758,20 +759,21 @@ public class AdapterConfig {
     @JsonIgnore
     public Dialog getOrCreateDialog() throws Exception
     {
-        if(cachedDialog == null || !cachedDialog.getId().equals( dialogId ))
-        {
-            cachedDialog = ( dialogId != null && !dialogId.isEmpty() ) ? Dialog.getDialog( dialogId, owner ) : Dialog
-                .createDialog( "Default Dialog for: " + myAddress, initialAgentURL, owner );
-        }
-        String newDialogId = cachedDialog != null ? cachedDialog.getId() : null;
-        //if any change between the new dialogId and the old one.. update this adapter
-        if ( ( newDialogId != null && !newDialogId.isEmpty() && !newDialogId.equals( dialogId ) )
-            || ( dialogId != null && !dialogId.isEmpty() && !dialogId.equals( newDialogId ) ) )
-        {
-            dialogId = newDialogId;
-            update();
-        }
-        return cachedDialog;
+//        if(cachedDialog == null || !cachedDialog.getId().equals( dialogId ))
+//        {
+//            cachedDialog = ( dialogId != null && !dialogId.isEmpty() ) ? Dialog.getDialog( dialogId, owner ) : Dialog
+//                .createDialog( "Default Dialog for: " + myAddress, initialAgentURL, owner );
+//        }
+//        String newDialogId = cachedDialog != null ? cachedDialog.getId() : null;
+//        //if any change between the new dialogId and the old one.. update this adapter
+//        if ( ( newDialogId != null && !newDialogId.isEmpty() && !newDialogId.equals( dialogId ) )
+//            || ( dialogId != null && !dialogId.isEmpty() && !dialogId.equals( newDialogId ) ) )
+//        {
+//            dialogId = newDialogId;
+//            update();
+//        }
+//        return cachedDialog;
+        return new Dialog( "Test dialog", initialAgentURL );
     }
     
     public static void delete( String configId )

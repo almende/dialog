@@ -608,6 +608,7 @@ public class AdapterConfig {
 //        }
 //        dialogId = cachedDialog != null ? cachedDialog.getId() : null;
 //        return cachedDialog;
+        initialAgentURL = url;
         return new Dialog( name, url );
     }
     

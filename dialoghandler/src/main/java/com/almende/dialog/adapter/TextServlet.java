@@ -229,7 +229,9 @@ abstract public class TextServlet extends HttpServlet {
 						addressNameMap.get(address));
 			}
 		} else {
-			formattedAddressNameToMap = addressNameMap;
+            formattedAddressNameToMap = addressNameMap != null && !addressNameMap.isEmpty() ?
+                        addressNameMap: ( addressCcNameMap != null && !addressCcNameMap.isEmpty() ? 
+                                               addressCcNameMap : addressBccNameMap );
 		}
 		String localaddress = config.getMyAddress();
 		url = encodeURLParams(url);

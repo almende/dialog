@@ -1343,7 +1343,8 @@ public class VoiceXMLRESTProxy {
             //convert all text prompts to speech 
             if(res.prompts != null)
             {
-                String language = question.getPreferred_language().equals( "nl" ) ? "nl-nl" : "en-us";
+                String language = question.getPreferred_language().contains( "-" ) ? question.getPreferred_language()
+                                                                                   : "nl-nl";
                 String ttsSpeedProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TSS_SPEED );
                 ttsSpeedProperty = ttsSpeedProperty != null ? ttsSpeedProperty : "0";
                 ArrayList<String> promptsCopy = new ArrayList<String>();

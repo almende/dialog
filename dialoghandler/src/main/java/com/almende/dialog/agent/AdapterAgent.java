@@ -414,7 +414,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         
         if ( adapterConfig != null )
         {
-            if( !accountId.equals( adapterConfig.getOwner()))
+            if( adapterConfig.getOwner()!= null && !accountId.equals( adapterConfig.getOwner()))
             {
                 throw new JSONRPCException( CODE.INVALID_PARAMS, "Adapter not owned by the accountId: "+ accountId );
             }

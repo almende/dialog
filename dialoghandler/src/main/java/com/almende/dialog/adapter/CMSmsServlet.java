@@ -53,7 +53,7 @@ public class CMSmsServlet extends TextServlet {
     @Override
     public void service( HttpServletRequest req, HttpServletResponse res ) throws IOException
     {
-        if ( req.getRequestURI().startsWith( "/sms/cm/deliveryStatus" ) )
+        if ( req.getRequestURI().startsWith( "/dialoghandler/sms/cm/deliveryStatus" ) )
         {
             if ( req.getMethod().equals( "POST" ) )
             {

@@ -38,7 +38,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	public static final String ADAPTER_TYPE_XMPP = "xmpp";
 	public static final String ADAPTER_TYPE_TWITTER = "twitter";	
 	public static final int EMAIL_SCHEDULER_INTERVAL = 30 * 1000; //30seconds
-	public static final int TWITTER_SCHEDULER_INTERVAL = 60 * 1000; //60seconds
+	public static final int TWITTER_SCHEDULER_INTERVAL = 61 * 1000; //61seconds
 	private static final Logger log = Logger.getLogger( AdapterAgent.class.getSimpleName() );
 	
     @Override

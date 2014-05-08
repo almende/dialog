@@ -107,7 +107,7 @@ public class AdapterConfig {
 			TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 			datastore.store(newConfig);
 			
-			if(newConfig.getAdapterType().equals("broadsoft")) {
+			if(newConfig.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
 				Broadsoft bs = new Broadsoft(newConfig);
 				bs.hideCallerId(newConfig.isAnonymous());
 			}
@@ -211,14 +211,13 @@ public class AdapterConfig {
 	}
 	
 	public void update() {
-		
 		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 		datastore.update(this);
-		
-		if(this.getAdapterType().equals("broadsoft")) {
-			Broadsoft bs = new Broadsoft(this);
-			bs.hideCallerId(this.isAnonymous());
-		}
+        if ( this.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_BROADSOFT ) )
+        {
+            Broadsoft bs = new Broadsoft( this );
+            bs.hideCallerId( this.isAnonymous() );
+        }
 	}
 	
 	public static AdapterConfig getAdapterConfig(String adapterID) {

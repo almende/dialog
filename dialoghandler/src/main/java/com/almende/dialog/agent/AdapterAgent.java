@@ -561,7 +561,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 		datastore.store(config);
 		
-		if(config.getAdapterType().equals("broadsoft")) {
+		if(config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_BROADSOFT)) {
 			Broadsoft bs = new Broadsoft(config);
 			bs.hideCallerId(config.isAnonymous());
 		}

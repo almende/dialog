@@ -23,6 +23,7 @@ import org.w3c.dom.Node;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy.Return;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Answer;
@@ -49,7 +50,7 @@ public class VoiceXMLServletTest extends TestFramework {
             QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name() );
         url = ServerUtils.getURLWithQueryParams( url, "question", COMMENT_QUESTION_AUDIO );
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "broadsoft", TEST_PUBLIC_KEY, localAddressBroadsoft, url );
+        AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_BROADSOFT, TEST_PUBLIC_KEY, localAddressBroadsoft, url );
 
         //create session
         getOrCreateSession( adapterConfig, remoteAddressVoice );

@@ -45,7 +45,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 		try {
 			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(
 					adapterID, null, null);
-			if (config.getAdapterType().toLowerCase().equals("broadsoft")) {
+			if (config.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
 				return VoiceXMLRESTProxy.getActiveCalls(config);
 			}
 		} catch (Exception ex) {
@@ -60,7 +60,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 		try {
 			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(
 					adapterID, null, null);
-			if (config.getAdapterType().toLowerCase().equals("broadsoft")) {
+			if (config.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
 				return VoiceXMLRESTProxy.getActiveCallsInfo(config);
 			}
 		} catch (Exception ex) {
@@ -74,10 +74,10 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 		try {
 			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(
 					adapterID, null, null);
-			if (config.getAdapterType().toLowerCase().equals("broadsoft")) {
-				
-				return VoiceXMLRESTProxy.killActiveCalls(config);
-			}
+            if ( config.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_BROADSOFT ) )
+            {
+                return VoiceXMLRESTProxy.killActiveCalls( config );
+            }
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}

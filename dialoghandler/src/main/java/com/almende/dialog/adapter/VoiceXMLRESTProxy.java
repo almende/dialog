@@ -36,6 +36,7 @@ import org.znerd.xmlenc.XMLOutputter;
 import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Broadsoft;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
@@ -92,8 +93,7 @@ public class VoiceXMLRESTProxy {
             return "";
         }
 		
-		String adapterType="broadsoft";
-		String sessionKey = adapterType+"|"+config.getMyAddress()+"|"+address;
+		String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT +"|"+config.getMyAddress()+"|"+address;
 		Session session = Session.getSession(sessionKey);
 		if (session == null){
 			log.severe("VoiceXMLRESTProxy couldn't start new outbound Dialog, adapterConfig not found? "+sessionKey);
@@ -103,7 +103,7 @@ public class VoiceXMLRESTProxy {
 		session.setStartUrl(url);
 		session.setDirection("outbound");
 		session.setRemoteAddress(address);
-		session.setType(adapterType);
+		session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
 		session.setTrackingToken(UUID.randomUUID().toString());
 		session.storeSession();
 		
@@ -131,8 +131,7 @@ public class VoiceXMLRESTProxy {
     public static HashMap<String, String> dial( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
     throws Exception
     {
-        String adapterType = "broadsoft";
-        String sessionPrefix = adapterType+"|"+config.getMyAddress()+"|" ;
+        String sessionPrefix = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+config.getMyAddress()+"|" ;
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
 
         // If it is a broadcast don't provide the remote address because it is deceiving.
@@ -161,7 +160,7 @@ public class VoiceXMLRESTProxy {
                 session.setStartUrl(url);
                 session.setDirection("outbound");
                 session.setRemoteAddress(formattedAddress);
-                session.setType(adapterType);
+                session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
                 session.setTrackingToken(UUID.randomUUID().toString());
                 
                 if(session.getAdapterID()==null)
@@ -245,9 +244,8 @@ public class VoiceXMLRESTProxy {
         log.info("call started:"+direction+":"+remoteID+":"+localID);
         this.host=ui.getBaseUri().toString().replace(":80", "");
         
-        String adapterType="broadsoft";
-        AdapterConfig config = AdapterConfig.findAdapterConfig(adapterType, localID);
-        String sessionKey = adapterType+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
+        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localID);
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
         Session session = Session.getSession(sessionKey);
         
         // Remove retry counter because call is succesfull
@@ -262,7 +260,7 @@ public class VoiceXMLRESTProxy {
             session.setStartUrl(url);
             session.setDirection("inbound");
             session.setRemoteAddress(remoteID);
-            session.setType(adapterType);
+            session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
             session.setPubKey(config.getPublicKey());
             session.setTrackingToken(UUID.randomUUID().toString());
             session.setAdapterID(config.getConfigId());
@@ -435,8 +433,7 @@ public class VoiceXMLRESTProxy {
         throws Exception
     {
         log.info("call hangup with:"+direction+":"+remoteID+":"+localID);
-        String adapterType="broadsoft";
-        String sessionKey = adapterType+"|"+localID+"|"+remoteID;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID;
         Session session = Session.getSession(sessionKey);
         
         Question question = null;
@@ -513,8 +510,7 @@ public class VoiceXMLRESTProxy {
         String answerTime, String releaseTime ) throws Exception
     {
         log.info( "call answered with:" + direction + "_" + remoteID + "_" + localID );
-        String adapterType = "broadsoft";
-        String sessionKey = adapterType+"|"+localID+"|"+remoteID;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID;
         Session session = Session.getSession(sessionKey);
         log.info( "question from session got: "+ session.getSession_id() );
         Question question = null;
@@ -666,8 +662,7 @@ public class VoiceXMLRESTProxy {
                                 address = PhoneNumberUtils.formatNumber(address, null);
                             }
                             
-                            String adapterType="broadsoft";
-                            String sessionKey = adapterType+"|"+config.getMyAddress()+"|"+address;
+                            String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+config.getMyAddress()+"|"+address;
                             String ses = StringStore.getString(sessionKey);
                             
                             log.info("Session key: "+sessionKey);

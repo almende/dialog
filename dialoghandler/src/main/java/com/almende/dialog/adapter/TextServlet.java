@@ -16,18 +16,15 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.CMStatus;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
-import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.RequestUtil;
-import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 
 @SuppressWarnings("serial")
@@ -192,7 +189,7 @@ abstract public class TextServlet extends HttpServlet {
 					res.question.toJSON());
 		}
 		if (question != null) {
-			extras = storeSMSRelatedData(address, localaddress, config,
+			extras = CMStatus.storeSMSRelatedData(address, localaddress, config,
 					question, res.reply, extras);
 		}
 		
@@ -296,7 +293,7 @@ abstract public class TextServlet extends HttpServlet {
                 }
                 if ( question != null )
                 {
-                    extras = storeSMSRelatedData( address, localaddress, config, question, res.reply, extras );
+                    extras = CMStatus.storeSMSRelatedData( address, localaddress, config, question, res.reply, extras );
                 }
                 DDRWrapper.log( question, session, "Start", config );
             }
@@ -405,7 +402,7 @@ abstract public class TextServlet extends HttpServlet {
 			log.info("No session so retrieving config");
 			config = AdapterConfig.findAdapterConfig(getAdapterType(),
 					localaddress);
-			extras = storeSMSRelatedData(address, localaddress, config, null,
+			extras = CMStatus.storeSMSRelatedData(address, localaddress, config, null,
 					getNoConfigMessage(), extras);
 			count = sendMessage(getNoConfigMessage(), subject, localaddress,
 					fromName, address, toName, extras, config);
@@ -431,8 +428,8 @@ abstract public class TextServlet extends HttpServlet {
 				config = AdapterConfig.findAdapterConfig(getAdapterType(),
 						localaddress);
 				try {
-					extras = storeSMSRelatedData(address, localaddress, config,
-							null, getNoConfigMessage(), extras);
+                    extras = CMStatus.storeSMSRelatedData( address, localaddress, config, null, getNoConfigMessage(),
+                        extras );
 					count = sendMessage(getNoConfigMessage(), subject,
 							localaddress, fromName, address, toName, extras,
 							config);
@@ -502,7 +499,7 @@ abstract public class TextServlet extends HttpServlet {
 				question = replystr.question;
 				fromName = getNickname(question);
 				
-				extras = storeSMSRelatedData(address, localaddress, config,
+				extras = CMStatus.storeSMSRelatedData(address, localaddress, config,
 						question, escapeInput.reply, extras);
 				if (question == null) {
 					StringStore.dropString("question_" + address + "_"
@@ -561,9 +558,8 @@ abstract public class TextServlet extends HttpServlet {
             HashMap<String, String> addressNameMap = new HashMap<String, String>(
                     1);
             addressNameMap.put(msg.getAddress(), msg.getRecipientName());
-            Map<String, Object> extras = storeSMSRelatedData(msg.getAddress(),
-                    msg.getLocalAddress(), config, null, escapeInput.reply,
-                    null);
+            Map<String, Object> extras = CMStatus.storeSMSRelatedData( msg.getAddress(), msg.getLocalAddress(), config,
+                null, escapeInput.reply, null );
             result = broadcastMessage(escapeInput.reply, msg.getSubject(),
                     msg.getLocalAddress(), fromName, addressNameMap, extras,
                     config);
@@ -599,53 +595,6 @@ abstract public class TextServlet extends HttpServlet {
 	
 	protected String getNoConfigMessage() {
 		return "Sorry, I can't find the account associated with this chat address...";
-	}
-	
-	/**
-	 * @param address
-	 * @param config
-	 * @param localaddress
-	 * @param res
-	 * @param extras
-	 * @throws Exception
-	 */
-	protected Map<String, Object> storeSMSRelatedData(String address,
-			String localaddress, AdapterConfig config, Question question,
-			String smsText, Map<String, Object> extras) throws Exception {
-		extras = extras != null ? extras : new HashMap<String, Object>();
-		// check if SMS delivery notification is requested
-		if (config.getAdapterType().equals("CM")
-				|| config.getAdapterType().equals("SMS")) {
-			String smsStatusKey = generateSMSReferenceKey(config.getConfigId(),
-					localaddress, address);
-			EventCallback deliveryEventCallback = question != null ? question
-					.getEventCallback("delivered") : null;
-			CMStatus cmStatus = new CMStatus();
-			cmStatus.setAdapterID(config.getConfigId());
-			cmStatus.setLocalAddress(localaddress);
-			cmStatus.setRemoteAddress(address);
-			cmStatus.setReference(smsStatusKey);
-			cmStatus.setSms(smsText);
-			extras.put(CM.SMS_DELIVERY_STATUS_KEY, smsStatusKey);
-			if (deliveryEventCallback != null) {
-				cmStatus.setCallback(deliveryEventCallback.getCallback());
-			}
-			cmStatus.store();
-		}
-		return extras;
-	}
-	
-	/**
-	 * generates a reference key used to track delivery status of an SMS
-	 * 
-	 * @param localaddress
-	 * @param address
-	 * @return
-	 */
-	protected static String generateSMSReferenceKey(String adapterId,
-			String localaddress, String address) {
-		return "CM-Status_" + adapterId + "_" + localaddress + "_" + address
-				+ "_" + ServerUtils.getServerCurrentTimeInMillis();
 	}
 	
 	private String getNickname(Question question) {

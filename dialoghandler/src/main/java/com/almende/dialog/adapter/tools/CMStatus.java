@@ -1,8 +1,13 @@
 package com.almende.dialog.adapter.tools;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.model.EventCallback;
+import com.almende.dialog.model.Question;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.annotations.Id;
@@ -41,6 +46,50 @@ public class CMStatus implements Serializable
     {
     	TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         return datastore.load( CMStatus.class, reference );
+    }
+    
+    /** stores the sms related data in the CMStatus entity
+     * @param address
+     * @param config
+     * @param localaddress
+     * @param res
+     * @param extras
+     * @throws Exception
+     */
+    public static Map<String, Object> storeSMSRelatedData( String address, String localaddress,
+        AdapterConfig config, Question question, String smsText, Map<String, Object> extras ) throws Exception
+    {
+        extras = extras != null ? extras : new HashMap<String, Object>();
+        // check if SMS delivery notification is requested
+        if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
+        {
+            String smsStatusKey = generateSMSReferenceKey( config.getConfigId(), localaddress, address );
+            EventCallback deliveryEventCallback = question != null ? question.getEventCallback( "delivered" ) : null;
+            CMStatus cmStatus = new CMStatus();
+            cmStatus.setAdapterID( config.getConfigId() );
+            cmStatus.setLocalAddress( localaddress );
+            cmStatus.setRemoteAddress( address );
+            cmStatus.setReference( smsStatusKey );
+            cmStatus.setSms( smsText );
+            extras.put( CM.SMS_DELIVERY_STATUS_KEY, smsStatusKey );
+            if ( deliveryEventCallback != null )
+            {
+                cmStatus.setCallback( deliveryEventCallback.getCallback() );
+            }
+            cmStatus.store();
+        }
+        return extras;
+    }
+    
+    /**
+     * generates a reference key used to track delivery status of an SMS
+     * @param localaddress
+     * @param address
+     * @return
+     */
+    private static String generateSMSReferenceKey( String adapterId, String localaddress, String address )
+    {
+        return adapterId + "_" + localaddress + "_" + address + "_" + ServerUtils.getServerCurrentTimeInMillis();
     }
     
     public String getReference()

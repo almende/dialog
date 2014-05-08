@@ -1,0 +1,159 @@
+package com.almende.dialog.agent;
+
+import com.almende.dialog.model.ddr.DDRPrice;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
+import com.almende.dialog.model.ddr.DDRType;
+import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.almende.eve.agent.Agent;
+import com.almende.eve.rpc.annotation.Access;
+import com.almende.eve.rpc.annotation.AccessType;
+import com.almende.eve.rpc.annotation.Name;
+import com.almende.eve.rpc.annotation.Optional;
+import com.almende.util.TypeUtil;
+import com.askfast.commons.agent.intf.DDRRecordAgentInterface;
+
+@Access(AccessType.PUBLIC)
+public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
+{
+    /**
+     * get a specific DDR record if it is owned by the account
+     * @param id
+     * @param accountId
+     * @return
+     * @throws Exception
+     */
+    public Object getDDRRecord( @Name( "ddrRecordId" ) String id, @Name( "accountId" ) String accountId )
+    throws Exception
+    {
+        return DDRRecord.getDDRRecord( id, accountId );
+    }
+    
+    /**
+     * get a specific DDR record if it is owned by the account
+     * @param id
+     * @param accountId
+     * @return
+     * @throws Exception
+     */
+    public Object getDDRRecords( @Name( "adapterId" ) @Optional String adapterId,
+        @Name( "accountId" ) String accountId, @Name( "fromAddress" ) @Optional String fromAddress,
+        @Name( "toAddress" ) @Optional String toAddress, @Name( "typeId" ) @Optional String typeId,
+        @Name( "communicationStatus" ) @Optional String status ) throws Exception
+    {
+        CommunicationStatus communicationStatus = status != null && !status.isEmpty() ? CommunicationStatus
+            .fromJson( status ) : null;
+        return DDRRecord.getDDRRecords( adapterId, accountId, fromAddress, toAddress, typeId, communicationStatus );
+    }
+    
+    /**
+     * create a DDR Type. Access to this
+     * @param name
+     * @throws Exception
+     */
+    public Object createDDRType( @Name( "nameForDDR" ) String name, @Name( "ddrTypeCategory" ) String categoryString )
+    throws Exception
+    {
+        DDRTypeCategory category = categoryString != null && !categoryString.isEmpty() ? DDRTypeCategory
+            .fromJson( categoryString ) : null;
+        DDRType ddrType = new DDRType();
+        ddrType.setName( name );
+        ddrType.setCategory( category );
+        ddrType.createOrUpdate();
+        return ddrType;
+    }
+    
+    /**
+     * get all the DDR Type. Access to this 
+     * @param name
+     */
+    public Object getAllDDRTypes()
+    {
+        return DDRType.getAllDDRTypes();
+    }
+    
+    /**
+     * create a new Price Type. Access to this must be from root account 
+     * @param ddrTypeId
+     * @param startTime
+     * @param endTime
+     * @param price
+     * @param staffleStart
+     * @param staffleEnd
+     * @param unit
+     * @param unitTypeString
+     * @return
+     */
+    public Object createDDRPrice( @Name( "ddrTypeId" ) String ddrTypeId, @Name( "startTime" ) long startTime,
+        @Name( "endTime" ) long endTime, @Name( "price" ) double price,
+        @Name( "staffleStart" ) @Optional int staffleStart, @Name( "staffleEnd" ) @Optional int staffleEnd,
+        @Name( "unit" ) int unit, @Name( "unitType" ) String unitTypeString )
+    {
+        DDRPrice ddrPrice = new DDRPrice();
+        ddrPrice.setDdrTypeId( ddrTypeId );
+        ddrPrice.setEndTime( endTime );
+        ddrPrice.setPrice( price );
+        ddrPrice.setStaffleEnd( staffleEnd );
+        ddrPrice.setStaffleStart( staffleStart );
+        ddrPrice.setStartTime( startTime );
+        ddrPrice.setUnits( unit );
+        UnitType unitType = unitTypeString != null && !unitTypeString.isEmpty() ? UnitType.fromJson( unitTypeString )
+                                                                               : null;
+        ddrPrice.setUnitType( unitType );
+        ddrPrice.createOrUpdate();
+        return ddrPrice;
+    }
+    
+    /**
+     * create a new {@link DDRPrice}Price, a new {@link DDRType} DDRType based on the supplied name and links them
+     * @param ddrTypeName
+     * @param startTime
+     * @param endTime
+     * @param price
+     * @param staffleStart
+     * @param staffleEnd
+     * @param unit
+     * @param unitTypeString
+     * @return
+     * @throws Exception 
+     */
+    public Object createDDRPriceWithNewDDRType( @Name( "nameForDDR" ) String name,
+        @Name( "ddrTypeCategory" ) String categoryString, @Name( "startTime" ) long startTime,
+        @Name( "endTime" ) long endTime, @Name( "price" ) double price,
+        @Name( "staffleStart" ) @Optional int staffleStart, @Name( "staffleEnd" ) @Optional int staffleEnd,
+        @Name( "unit" ) int unit, @Name( "unitType" ) String unitTypeString ) throws Exception
+    {
+        Object ddrTypeObject = createDDRType( name, categoryString );
+        TypeUtil<DDRType> injector = new TypeUtil<DDRType>()
+        {
+        };
+        DDRType ddrType = injector.inject( ddrTypeObject );
+        return createDDRPrice( ddrType.getTypeId(), startTime, endTime, price, staffleStart, staffleEnd, unit,
+            unitTypeString );
+    }
+    
+    
+    /**
+     * get all the DDR Type. Access to this 
+     * @param name
+     */
+    public Object getDDRPrice(@Name( "id" ) Long id)
+    {
+        return DDRPrice.getDDRPrice( id );
+    }
+    
+    /**
+     * get DDRPrices based on the the supplied params 
+     * @param ddrTypeId 
+     * @param unit 
+     * @param unitType 
+     */
+    public Object getDDRPrices( @Name( "ddrTypeId" ) String ddrTypeId, @Name( "unit" ) int unit,
+        @Name( "unitType" ) String unitTypeString )
+    {
+        UnitType unitType = unitTypeString != null && !unitTypeString.isEmpty() ? UnitType.fromJson( unitTypeString )
+                                                                                : null;
+        return DDRPrice.getDDRPrices( ddrTypeId, unit, unitType );
+    }
+}

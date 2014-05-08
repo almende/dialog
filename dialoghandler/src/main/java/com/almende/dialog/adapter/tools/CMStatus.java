@@ -10,6 +10,7 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.annotations.Id;
 
@@ -37,7 +38,7 @@ public class CMStatus implements Serializable
         if ( reference != null )
         {
         	TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-            sentTimeStamp = sentTimeStamp == null ? ServerUtils.getServerCurrentTime().toString() : sentTimeStamp;
+            sentTimeStamp = sentTimeStamp == null ? TimeUtils.getServerCurrentTime().toString() : sentTimeStamp;
             datastore.storeOrUpdate( this );
             log.info( "CM status saved: " + ServerUtils.serializeWithoutException( this ) );
         }
@@ -91,7 +92,7 @@ public class CMStatus implements Serializable
      */
     private static String generateSMSReferenceKey( String adapterId, String localaddress, String address )
     {
-        return adapterId + "_" + localaddress + "_" + address + "_" + ServerUtils.getServerCurrentTimeInMillis();
+        return adapterId + "_" + localaddress + "_" + address + "_" + TimeUtils.getServerCurrentTimeInMillis();
     }
     
     public String getReference()

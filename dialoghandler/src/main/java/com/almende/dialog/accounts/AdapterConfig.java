@@ -23,7 +23,7 @@ import javax.ws.rs.core.Response.Status;
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
-import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
@@ -103,7 +103,7 @@ public class AdapterConfig {
 			    newConfig.setMyAddress( newConfig.getMyAddress() != null ? newConfig.getMyAddress().toLowerCase() 
 			                                                               : null );
 			}
-			newConfig.getProperties().put( ADAPTER_CREATION_TIME_KEY, ServerUtils.getServerCurrentTimeInMillis() );
+			newConfig.getProperties().put( ADAPTER_CREATION_TIME_KEY, TimeUtils.getServerCurrentTimeInMillis() );
 			TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 			datastore.store(newConfig);
 			

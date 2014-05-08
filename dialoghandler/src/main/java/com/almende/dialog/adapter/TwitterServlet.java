@@ -35,6 +35,7 @@ import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -326,8 +327,8 @@ public class TwitterServlet extends TextServlet implements Runnable {
                         if(errors.get( "code" ) != null && errors.get( "code" ).equals( "187" ) && retryCount < retryLimit)
                         {
                             retryCount++;
-                            message += "\nSent at: " + ServerUtils.getStringFormatFromDateTime(
-                                ServerUtils.getServerCurrentTimeInMillis(), "dd-MM-yyyy HH:mm:ss Z" ); 
+                            message += "\nSent at: " + TimeUtils.getStringFormatFromDateTime(
+                                TimeUtils.getServerCurrentTimeInMillis(), "dd-MM-yyyy HH:mm:ss Z" ); 
                             return sendMessage( message, subject, from, fromName, to, toName, extras, config );
                         }
                     }

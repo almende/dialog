@@ -39,6 +39,7 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
 
 
@@ -59,8 +60,8 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
     public static final String BCC_ADDRESS_LIST_KEY = "bcc_email";
 	private static final long serialVersionUID = 6892283600126803780L;
 	private static final String servletPath = "/dialoghandler/_ah/mail/";
-	private static final String DEFAULT_SENDER_EMAIL = "askfasttest@gmail.com";
-	private static final String DEFAULT_SENDER_EMAIL_PASSWORD = "askask2times";
+	public static final String DEFAULT_SENDER_EMAIL = "askfasttest@gmail.com";
+	public static final String DEFAULT_SENDER_EMAIL_PASSWORD = "askask2times";
 	
 	public void doErrorPost(HttpServletRequest req, HttpServletResponse res) {}
 	
@@ -325,7 +326,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                     else
                     //default it from this morning 00:00:00
                     {
-                        DateTime currentTime = ServerUtils.getServerCurrentTime();
+                        DateTime currentTime = TimeUtils.getServerCurrentTime();
                         currentTime = currentTime.minusMillis( currentTime.getMillisOfDay() );
                         lastEmailTimestamp = String.valueOf( currentTime.getMillis() );
                     }

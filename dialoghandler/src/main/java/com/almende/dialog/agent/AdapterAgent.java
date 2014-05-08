@@ -13,7 +13,9 @@ import com.almende.dialog.adapter.TwitterServlet.TwitterEndpoint;
 import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.exception.ConflictException;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.rpc.annotation.Access;
 import com.almende.eve.rpc.annotation.AccessType;
@@ -444,9 +446,11 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		
 		config.setOwner(accountId);
 		config.addAccount(accountId);
+		//add cost/ddr
+        DDRUtils.createDDRRecordOnAdapterPurchase( config );
 		config.update();
 	}
-	
+
 	public void addAccount(@Name("adapterId") String adapterId, @Name("accountId") String accountId) throws Exception {
 		
 		AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
@@ -546,7 +550,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		    config.configId = new UUID().toString();
 		}
 		//add creation timestamp to the adapter
-        config.getProperties().put( AdapterConfig.ADAPTER_CREATION_TIME_KEY, ServerUtils.getServerCurrentTimeInMillis() );
+        config.getProperties().put( AdapterConfig.ADAPTER_CREATION_TIME_KEY, TimeUtils.getServerCurrentTimeInMillis() );
 		//change the casing to lower in case adatertype if email or xmpp
 		if(config.getMyAddress() != null && (config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_EMAIL ) || 
 		    config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_XMPP )) )
@@ -561,7 +565,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 			Broadsoft bs = new Broadsoft(config);
 			bs.hideCallerId(config.isAnonymous());
 		}
-		
+		//add costs for creating this adapter
+		DDRUtils.createDDRRecordOnAdapterPurchase( config );
 		return config;
 	}
 	

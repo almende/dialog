@@ -153,8 +153,8 @@ abstract public class TextServlet extends HttpServlet {
 	@Deprecated
 	public String startDialog(String address, String url, AdapterConfig config)
 			throws Exception {
-		if (config.getAdapterType().equals("CM")
-				|| config.getAdapterType().equals("SMS")) {
+		if (config.getAdapterType().equalsIgnoreCase("CM")
+				|| config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
 			address = PhoneNumberUtils.formatNumber(address, null);
 		}
 		String localaddress = config.getMyAddress();
@@ -428,8 +428,8 @@ abstract public class TextServlet extends HttpServlet {
 				config = AdapterConfig.findAdapterConfig(getAdapterType(),
 						localaddress);
 				try {
-                    extras = CMStatus.storeSMSRelatedData( address, localaddress, config, null, getNoConfigMessage(),
-                        extras );
+					extras = CMStatus.storeSMSRelatedData(address, localaddress, config,
+							null, getNoConfigMessage(), extras);
 					count = sendMessage(getNoConfigMessage(), subject,
 							localaddress, fromName, address, toName, extras,
 							config);
@@ -558,8 +558,9 @@ abstract public class TextServlet extends HttpServlet {
             HashMap<String, String> addressNameMap = new HashMap<String, String>(
                     1);
             addressNameMap.put(msg.getAddress(), msg.getRecipientName());
-            Map<String, Object> extras = CMStatus.storeSMSRelatedData( msg.getAddress(), msg.getLocalAddress(), config,
-                null, escapeInput.reply, null );
+            Map<String, Object> extras = CMStatus.storeSMSRelatedData(msg.getAddress(),
+                    msg.getLocalAddress(), config, null, escapeInput.reply,
+                    null);
             result = broadcastMessage(escapeInput.reply, msg.getSubject(),
                     msg.getLocalAddress(), fromName, addressNameMap, extras,
                     config);

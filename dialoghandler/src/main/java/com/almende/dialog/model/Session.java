@@ -6,6 +6,7 @@ import java.util.logging.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.TextServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.impl.S_fields;
 import com.almende.dialog.model.intf.SessionIntf;
 import com.almende.dialog.state.StringStore;
@@ -40,11 +41,16 @@ public class Session implements SessionIntf {
 	public void kill(){
 		this.killed=true;
 		this.storeSession();
-		if ("XMPP".equals(this.getType()) || "MAIL".equals(this.getType()) || "SMS".equals(this.getType())){
-			TextServlet.killSession(this);
-		} else {
-			VoiceXMLRESTProxy.killSession(this);
-		}
+        if ( AdapterAgent.ADAPTER_TYPE_XMPP.equalsIgnoreCase( this.getType() )
+            || AdapterAgent.ADAPTER_TYPE_EMAIL.equalsIgnoreCase( this.getType() )
+            || AdapterAgent.ADAPTER_TYPE_SMS.equalsIgnoreCase( this.getType() ) )
+        {
+            TextServlet.killSession( this );
+        }
+        else
+        {
+            VoiceXMLRESTProxy.killSession( this );
+        }
 	}
 	@JsonIgnore
 	public String toJSON() {

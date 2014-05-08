@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.util.ServerUtils;
@@ -61,7 +62,8 @@ public class CMStatus implements Serializable
     {
         extras = extras != null ? extras : new HashMap<String, Object>();
         // check if SMS delivery notification is requested
-        if ( config.getAdapterType().equals( "CM" ) || config.getAdapterType().equals( "SMS" ) )
+        if ( config.getAdapterType().equalsIgnoreCase( "cm" )
+            || config.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_SMS ) )
         {
             String smsStatusKey = generateSMSReferenceKey( config.getConfigId(), localaddress, address );
             EventCallback deliveryEventCallback = question != null ? question.getEventCallback( "delivered" ) : null;

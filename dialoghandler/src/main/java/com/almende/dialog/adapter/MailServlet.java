@@ -37,7 +37,9 @@ import org.joda.time.DateTime;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
@@ -185,6 +187,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
         props.put( "mail.smtp.auth", "true" );
         Session session = Session.getDefaultInstance( props );
         Message simpleMessage = new MimeMessage( session );
+        Map<String, String> allAddresses = new HashMap<>( addressNameMap );
         try
         {
             log.info( String.format(
@@ -222,6 +225,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                         {
                         };
                         HashMap<String, String> ccAddressNameMap = injector.inject( extras.get( CC_ADDRESS_LIST_KEY ) );
+                        allAddresses.putAll( ccAddressNameMap );
                         for ( String address : ccAddressNameMap.keySet() )
                         {
                             String toName = ccAddressNameMap.get( address ) != null ? ccAddressNameMap.get( address )
@@ -243,6 +247,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                     {
                         @SuppressWarnings( "unchecked" )
                         Map<String, String> bccAddressNameMap = (Map<String, String>) extras.get( BCC_ADDRESS_LIST_KEY );
+                        allAddresses.putAll( bccAddressNameMap );
                         for ( String address : bccAddressNameMap.keySet() )
                         {
                             String toName = bccAddressNameMap.get( address ) != null ? bccAddressNameMap.get( address )
@@ -286,6 +291,8 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                 transport.sendMessage( simpleMessage, simpleMessage.getAllRecipients() );
                 transport.close();
             }
+            //add cost to ddr record
+            DDRUtils.createDDRRecordOnOutgoingCommunication( config, UnitType.PART, allAddresses );
         }
         catch ( Exception e )
         {

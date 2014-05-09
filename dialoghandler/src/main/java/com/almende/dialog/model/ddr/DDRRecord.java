@@ -1,14 +1,20 @@
 package com.almende.dialog.model.ddr;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.bson.types.ObjectId;
 
+import com.almende.dialog.util.ServerUtils;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 /**
  * The actual price charged as part of the service and/or communication cost
@@ -21,7 +27,7 @@ public class DDRRecord
      */
     public enum CommunicationStatus
     {
-        INCOMING, OUTGOING, DELIVERED, SENT, ERROR, UNKNOWN;
+        DELIVERED, RECEIEVED, SENT, ERROR, UNKNOWN;
         @JsonCreator
         public static CommunicationStatus fromJson( String name )
         {
@@ -34,7 +40,10 @@ public class DDRRecord
     String adapterId;
     String accountId;
     String fromAddress;
-    String toAddress;
+    @JsonIgnore
+    Map<String, String> toAddress;
+    //creating a dummy serialized version of toAddress as dot(.) in keys is not allowed by mongo 
+    String toAddressString;
     String ddrTypeId;
     double quantity;
     long start;
@@ -77,13 +86,12 @@ public class DDRRecord
      * @param adapterId
      * @param accountId
      * @param fromAddress
-     * @param toAddress
      * @param ddrTypeId
      * @param status
      * @return
      */
     public static List<DDRRecord> getDDRRecords( String adapterId, String accountId, String fromAddress,
-        String toAddress, String ddrTypeId, CommunicationStatus status )
+        String ddrTypeId, CommunicationStatus status )
     {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         RootFindCommand<DDRRecord> query = datastore.find().type( DDRRecord.class );
@@ -96,10 +104,6 @@ public class DDRRecord
         if ( fromAddress != null )
         {
             query = query.addFilter( "fromAddress", FilterOperator.EQUAL, fromAddress );
-        }
-        if ( toAddress != null )
-        {
-            query = query.addFilter( "toAddress", FilterOperator.EQUAL, toAddress );
         }
         if ( ddrTypeId != null )
         {
@@ -144,11 +148,22 @@ public class DDRRecord
     {
         this.fromAddress = fromAddress;
     }
-    public String getToAddress()
+    @JsonIgnore
+    public Map<String, String> getToAddress() throws Exception
     {
+        if ( toAddress == null && toAddressString == null )
+        {
+            toAddress = new HashMap<String, String>();
+        }
+        else if ( ( toAddress == null || toAddress.isEmpty() ) && toAddressString != null )
+        {
+            toAddress = ServerUtils.deserialize( toAddressString,
+                new TypeReference<HashMap<String, String>>(){} );
+        }
         return toAddress;
     }
-    public void setToAddress( String toAddress )
+    @JsonIgnore
+    public void setToAddress( Map<String, String> toAddress )
     {
         this.toAddress = toAddress;
     }
@@ -199,5 +214,28 @@ public class DDRRecord
     public void setStatus( CommunicationStatus status )
     {
         this.status = status;
+    }
+
+    /**
+     * only used by the mongo serializing/deserializing
+     * @return
+     * @throws Exception
+     */
+    @JsonProperty("toAddress")
+    private String getToAddressString() throws Exception
+    {
+        toAddressString = ServerUtils.serialize( toAddress );
+        return toAddressString;
+    }
+
+    /**
+     * only used by the mongo serializing/deserializing
+     * @param toAddressString
+     * @throws Exception
+     */
+    @JsonProperty("toAddress")
+    private void setToAddressString( String toAddressString ) throws Exception
+    {
+        this.toAddressString = toAddressString;
     }
 }

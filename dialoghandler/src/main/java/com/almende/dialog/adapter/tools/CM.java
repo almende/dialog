@@ -9,6 +9,8 @@ import org.znerd.xmlenc.XMLOutputter;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
@@ -81,7 +83,11 @@ public class CM {
             }
             log.info( "Result from CM: " + result );
         }
-        return countMessageParts( message, dcs );
+        int messagePartCount = countMessageParts( message, dcs );
+        //add costs with no.of messages * recipients
+        DDRUtils.createDDRRecordOnOutgoingCommunication( config, UnitType.PART, addressNameMap, messagePartCount
+            * addressNameMap.size() );
+        return messagePartCount;
     }
     
     public int broadcastMessage( String message, String subject, String from, String fromName,
@@ -115,7 +121,11 @@ public class CM {
                 throw new Exception( result );
             log.info( "Result from CM: " + result );
         }
-        return countMessageParts( message, dcs );
+        int messagePartCount = countMessageParts( message, dcs );
+        //add costs with no.of messages * recipients
+        DDRUtils.createDDRRecordOnOutgoingCommunication( config, UnitType.PART, addressNameMap, messagePartCount
+            * addressNameMap.size() );
+        return messagePartCount;
     }
 
     /**

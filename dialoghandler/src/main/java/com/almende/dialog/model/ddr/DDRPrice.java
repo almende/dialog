@@ -1,10 +1,13 @@
 package com.almende.dialog.model.ddr;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.bson.types.ObjectId;
 
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.util.twigmongo.FilterOperator;
+import com.almende.util.twigmongo.QueryResultIterator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
@@ -30,11 +33,59 @@ public class DDRPrice
         }
     }
     
+    public enum AdapterType
+    {
+        XMPP( AdapterAgent.ADAPTER_TYPE_XMPP ),
+        SMS( AdapterAgent.ADAPTER_TYPE_SMS ),
+        CALL( AdapterAgent.ADAPTER_TYPE_BROADSOFT ),
+        EMAIL( AdapterAgent.ADAPTER_TYPE_EMAIL ),
+        FACEBOOK( AdapterAgent.ADAPTER_TYPE_FACEBOOK ),
+        TWITTER( AdapterAgent.ADAPTER_TYPE_TWITTER );
+
+        private String value;
+
+        private AdapterType( String value )
+        {
+            this.value = value;
+        }
+        
+        public String getName()
+        {
+            return value;
+        }
+
+        /**
+         * returns the enum based on the value
+         * @param value
+         * @return
+         */
+        public static AdapterType getByValue(String value)
+        {
+            for ( AdapterType type : values() )
+            {
+                if(type.name().equalsIgnoreCase( value ))
+                {
+                    return type;
+                }
+            }
+            return null;
+        }
+        
+        @JsonCreator
+        public static AdapterType fromJson( String name )
+        {
+            return valueOf( name.toUpperCase() );
+        }
+    }
+    
     @Id
     public String id;
     private String ddrTypeId;
     private int units;
     private UnitType unitType;
+    private AdapterType adapterType;
+    //used incase a particular price is applied to a particular adapter
+    private String adapterId;
     private double price;
     private long startTime;
     private long endTime;
@@ -64,8 +115,8 @@ public class DDRPrice
     }
     
     /**
-     * fetch the ddr records based the input parameters. fetches the records that matches to all the 
-     * parameters given
+     * fetch the ddr records based the input parameters. if no DDRPrice records are found for the adapterId, it 
+     * returns the ones matching other indexes
      * @param adapterId
      * @param accountId
      * @param fromAddress
@@ -74,7 +125,7 @@ public class DDRPrice
      * @param status
      * @return
      */
-    public static List<DDRPrice> getDDRPrices( String ddrTypeId, Integer units, UnitType unitType )
+    public static List<DDRPrice> getDDRPrices( String ddrTypeId, AdapterType adapterType, String adapterId )
     {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         RootFindCommand<DDRPrice> query = datastore.find().type( DDRPrice.class );
@@ -83,15 +134,26 @@ public class DDRPrice
         {
             query = query.addFilter( "ddrTypeId", FilterOperator.EQUAL, ddrTypeId );
         }
-        if ( units != null )
+        if ( adapterType != null )
         {
-            query = query.addFilter( "units", FilterOperator.EQUAL, units );
+            query = query.addFilter( "adapterType", FilterOperator.EQUAL, adapterType.name() );
         }
-        if ( unitType != null )
+        ArrayList<DDRPrice> result = null;
+        if ( adapterId != null && !adapterId.isEmpty() )
         {
-            query = query.addFilter( "unitType", FilterOperator.EQUAL, unitType.name() );
+            QueryResultIterator<DDRPrice> ddrIterator = new QueryResultIterator<DDRPrice>( DDRPrice.class, query.now()
+                .getCursor() );
+            result = new ArrayList<DDRPrice>();
+            while ( ddrIterator.hasNext() )
+            {
+                DDRPrice ddrPrice = ddrIterator.next();
+                if ( adapterId.equals( ddrPrice.getAdapterId() ) )
+                {
+                    result.add( ddrPrice );
+                }
+            }
         }
-        return query.now().toArray();
+        return result != null && !result.isEmpty() ? result : query.now().toArray(); 
     }
     
     /**
@@ -187,5 +249,25 @@ public class DDRPrice
     public void setId( String id )
     {
         this.id = id;
+    }
+
+    public AdapterType getAdapterType()
+    {
+        return adapterType;
+    }
+
+    public void setAdapterType( AdapterType adapterType )
+    {
+        this.adapterType = adapterType;
+    }
+
+    public String getAdapterId()
+    {
+        return adapterId;
+    }
+
+    public void setAdapterId( String adapterId )
+    {
+        this.adapterId = adapterId;
     }
 }

@@ -27,6 +27,7 @@ import com.almende.dialog.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.util.DDRUtils;
 
 public class XMPPServlet extends TextServlet implements MessageListener, ChatManagerListener
 {
@@ -43,7 +44,7 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
 
     @Override
     protected int sendMessage( String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config ) throws XMPPException
+        Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
         XMPPConnection xmppConnection = null;
         try
@@ -68,9 +69,11 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
             }
             Chat chat = xmppConnection.getChatManager().createChat( to, this );
             chat.sendMessage( message );
+            //add costs with no.of messages * recipients
+            DDRUtils.createDDRRecordOnOutgoingCommunication( config, to, 1 );
             return 1;
         }
-        catch ( XMPPException ex )
+        catch ( Exception ex )
         {
             if(xmppConnection != null)
             {
@@ -90,7 +93,7 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
         {
             sendMessage( message, subject, from, senderName, address, addressNameMap.get( address ), extras, config );
         }
-        return 1;
+        return addressNameMap.size();
     }
         
     @Override

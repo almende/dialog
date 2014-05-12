@@ -1,11 +1,13 @@
 package com.almende.dialog.agent;
 
 import com.almende.dialog.model.ddr.DDRPrice;
+import com.almende.dialog.model.ddr.DDRPrice.AdapterType;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.rpc.annotation.Access;
 import com.almende.eve.rpc.annotation.AccessType;
@@ -39,12 +41,12 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
      */
     public Object getDDRRecords( @Name( "adapterId" ) @Optional String adapterId,
         @Name( "accountId" ) String accountId, @Name( "fromAddress" ) @Optional String fromAddress,
-        @Name( "toAddress" ) @Optional String toAddress, @Name( "typeId" ) @Optional String typeId,
+        @Name( "typeId" ) @Optional String typeId,
         @Name( "communicationStatus" ) @Optional String status ) throws Exception
     {
         CommunicationStatus communicationStatus = status != null && !status.isEmpty() ? CommunicationStatus
             .fromJson( status ) : null;
-        return DDRRecord.getDDRRecords( adapterId, accountId, fromAddress, toAddress, typeId, communicationStatus );
+        return DDRRecord.getDDRRecords( adapterId, accountId, fromAddress, typeId, communicationStatus );
     }
     
     /**
@@ -85,10 +87,11 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
      * @param unitTypeString
      * @return
      */
-    public Object createDDRPrice( @Name( "ddrTypeId" ) String ddrTypeId, @Name( "startTime" ) long startTime,
+    public Object createDDRPrice( @Name( "ddrTypeId" ) String ddrTypeId, @Name( "startTime" ) @Optional long startTime,
         @Name( "endTime" ) long endTime, @Name( "price" ) double price,
         @Name( "staffleStart" ) @Optional int staffleStart, @Name( "staffleEnd" ) @Optional int staffleEnd,
-        @Name( "unit" ) int unit, @Name( "unitType" ) String unitTypeString )
+        @Name( "unit" ) int unit, @Name( "unitType" ) String unitTypeString,
+        @Name( "adapterType" ) String adapterTypeString, @Name( "adapterId" ) @Optional String adapterId )
     {
         DDRPrice ddrPrice = new DDRPrice();
         ddrPrice.setDdrTypeId( ddrTypeId );
@@ -98,9 +101,13 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
         ddrPrice.setStaffleStart( staffleStart );
         ddrPrice.setStartTime( startTime );
         ddrPrice.setUnits( unit );
+        ddrPrice.setAdapterId( adapterId );
         UnitType unitType = unitTypeString != null && !unitTypeString.isEmpty() ? UnitType.fromJson( unitTypeString )
                                                                                : null;
+        AdapterType adapterType = adapterTypeString != null && !adapterTypeString.isEmpty() ? AdapterType
+            .getByValue( adapterTypeString ) : null;
         ddrPrice.setUnitType( unitType );
+        ddrPrice.setAdapterType( adapterType );
         ddrPrice.createOrUpdate();
         return ddrPrice;
     }
@@ -119,18 +126,20 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
      * @throws Exception 
      */
     public Object createDDRPriceWithNewDDRType( @Name( "nameForDDR" ) String name,
-        @Name( "ddrTypeCategory" ) String categoryString, @Name( "startTime" ) long startTime,
+        @Name( "ddrTypeCategory" ) String categoryString, @Name( "startTime" ) @Optional long startTime,
         @Name( "endTime" ) long endTime, @Name( "price" ) double price,
         @Name( "staffleStart" ) @Optional int staffleStart, @Name( "staffleEnd" ) @Optional int staffleEnd,
-        @Name( "unit" ) int unit, @Name( "unitType" ) String unitTypeString ) throws Exception
+        @Name( "unit" ) int unit, @Name( "unitType" ) String unitTypeString,
+        @Name( "adapterType" ) String adapterTypeString, @Name( "adapterId" ) String adapterid ) throws Exception
     {
+        //set default values for some optional field
+        startTime = startTime != 0L ? startTime : TimeUtils.getServerCurrentTimeInMillis();
+        unit = unit != 0 ? unit : 1;
         Object ddrTypeObject = createDDRType( name, categoryString );
-        TypeUtil<DDRType> injector = new TypeUtil<DDRType>()
-        {
-        };
+        TypeUtil<DDRType> injector = new TypeUtil<DDRType>(){};
         DDRType ddrType = injector.inject( ddrTypeObject );
         return createDDRPrice( ddrType.getTypeId(), startTime, endTime, price, staffleStart, staffleEnd, unit,
-            unitTypeString );
+            unitTypeString, adapterTypeString, adapterid );
     }
     
     
@@ -146,14 +155,14 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
     /**
      * get DDRPrices based on the the supplied params 
      * @param ddrTypeId 
-     * @param unit 
+     * @param units 
      * @param unitType 
      */
-    public Object getDDRPrices( @Name( "ddrTypeId" ) String ddrTypeId, @Name( "unit" ) int unit,
-        @Name( "unitType" ) String unitTypeString )
+    public Object getDDRPrices( @Name( "ddrTypeId" ) String ddrTypeId, @Name( "adapterType" ) String adapterTypeString,
+        @Name( "adapterType" ) @Optional String adapterId )
     {
-        UnitType unitType = unitTypeString != null && !unitTypeString.isEmpty() ? UnitType.fromJson( unitTypeString )
-                                                                                : null;
-        return DDRPrice.getDDRPrices( ddrTypeId, unit, unitType );
+        AdapterType adapterType = adapterTypeString != null && !adapterTypeString.isEmpty() ? AdapterType
+            .getByValue( adapterTypeString ) : null;
+        return DDRPrice.getDDRPrices( ddrTypeId, adapterType, adapterId );
     }
 }

@@ -37,7 +37,6 @@ import org.joda.time.DateTime;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
@@ -292,7 +291,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                 transport.close();
             }
             //add cost to ddr record
-            DDRUtils.createDDRRecordOnOutgoingCommunication( config, UnitType.PART, allAddresses );
+            DDRUtils.createDDRRecordOnOutgoingCommunication( config, allAddresses );
         }
         catch ( Exception e )
         {

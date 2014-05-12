@@ -23,7 +23,12 @@ public class DDRType
      */
     public enum DDRTypeCategory
     {
-        ADAPTER_PURCHASE, COMMUNICATION_COST, SERVICE_COST, SUBSCRIPTION_COST, OTHER;
+        ADAPTER_PURCHASE,
+        INCOMING_COMMUNICATION_COST,
+        OUTGOING_COMMUNICATION_COST,
+        SERVICE_COST,
+        SUBSCRIPTION_COST,
+        OTHER;
 
         @JsonCreator
         public static DDRTypeCategory fromJson( String name )

@@ -42,7 +42,10 @@ import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
+import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.myBlobstore.MyBlobStore;
@@ -51,7 +54,8 @@ import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 
 @Path("/vxml/")
 public class VoiceXMLRESTProxy {
-	protected static final Logger log = Logger.getLogger(com.almende.dialog.adapter.VoiceXMLRESTProxy.class.getName());
+	protected static final Logger log = Logger.getLogger(VoiceXMLRESTProxy.class.getName());
+	protected static final com.almende.dialog.Logger dialogLog =  new com.almende.dialog.Logger();
 	private static final int LOOP_DETECTION=10;
 	private static final String DTMFGRAMMAR="dtmf2hash";
 	
@@ -174,11 +178,14 @@ public class VoiceXMLRESTProxy {
 
                 Broadsoft bs = new Broadsoft( config );
                 bs.startSubscription();
-
-                String extSession = bs.startCall( formattedAddress );
+                String extSession = "";
+                if ( !ServerUtils.isInUnitTestingEnvironment() )
+                {
+                    extSession = bs.startCall( formattedAddress );
+                }
                 session.setExternalSession( extSession );
                 session.storeSession();
-                resultSessionMap.put(formattedAddress, sessionKey);
+                resultSessionMap.put( formattedAddress, sessionKey );
             }
             catch ( Exception e )
             {
@@ -240,7 +247,8 @@ public class VoiceXMLRESTProxy {
     @Path("new")
     @GET
     @Produces("application/voicexml")
-    public Response getNewDialog(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID, @Context UriInfo ui){
+    public Response getNewDialog(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID, @Context UriInfo ui)
+    {
         log.info("call started:"+direction+":"+remoteID+":"+localID);
         this.host=ui.getBaseUri().toString().replace(":80", "");
         
@@ -290,7 +298,29 @@ public class VoiceXMLRESTProxy {
         DDRWrapper.log(question,session,"Start",config);
         session.storeSession();
         
-        return handleQuestion(question,session.getAdapterConfig().getConfigId(),remoteID,sessionKey);
+        Response response = handleQuestion(question,session.getAdapterConfig().getConfigId(),remoteID,sessionKey);
+        //add costs
+        try
+        {
+            if ( direction.equalsIgnoreCase( "outbound" ) )
+            {
+                DDRUtils.createDDRRecordOnOutgoingCommunication( config, remoteID, 1 );
+            }
+            else
+            {
+                DDRUtils.createDDRRecordOnIncomingCommunication( config, remoteID, 1 );
+            }
+        }
+        catch ( Exception e )
+        {
+            String errorMessage = String
+                .format(
+                    "Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
+                    direction, config.getConfigId(), config.getMyAddress(), remoteID, localID );
+            log.severe( errorMessage );
+            dialogLog.severe( config.getConfigId(), errorMessage );
+        }
+        return response;
     }
 	
     @Path( "answer" )
@@ -491,6 +521,34 @@ public class VoiceXMLRESTProxy {
         else
         {
             log.info( "no question received" );
+        }
+        //stop costs
+        try
+        {
+            if ( startTime != null && answerTime != null && releaseTime != null )
+            {
+                if ( direction.equalsIgnoreCase( "outbound" ) )
+                {
+                    DDRUtils.updateDDRRecordOnCallStops( session.getAdapterConfig(),
+                        DDRTypeCategory.OUTGOING_COMMUNICATION_COST, CommunicationStatus.SENT, remoteID,
+                        Long.parseLong( startTime ), Long.parseLong( answerTime ), Long.parseLong( releaseTime ) );
+                }
+                else
+                {
+                    DDRUtils.updateDDRRecordOnCallStops( session.getAdapterConfig(),
+                        DDRTypeCategory.INCOMING_COMMUNICATION_COST, CommunicationStatus.RECEIEVED, remoteID,
+                        Long.parseLong( startTime ), Long.parseLong( answerTime ), Long.parseLong( releaseTime ) );
+                }
+            }
+        }
+        catch ( Exception e )
+        {
+            String errorMessage = String
+                .format(
+                    "Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
+                    direction, session.getAdapterConfig().getConfigId(), session.getAdapterConfig().getMyAddress(), remoteID, localID );
+            log.severe( errorMessage );
+            dialogLog.severe( session.getAdapterConfig().getConfigId(), errorMessage );
         }
         StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
         StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound");

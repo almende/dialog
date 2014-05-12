@@ -13,7 +13,6 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 /**
@@ -27,7 +26,7 @@ public class DDRRecord
      */
     public enum CommunicationStatus
     {
-        DELIVERED, RECEIEVED, SENT, ERROR, UNKNOWN;
+        DELIVERED, RECEIEVED, SENT, FINISHED, ERROR, UNKNOWN;
         @JsonCreator
         public static CommunicationStatus fromJson( String name )
         {
@@ -162,6 +161,7 @@ public class DDRRecord
         }
         return toAddress;
     }
+    
     @JsonIgnore
     public void setToAddress( Map<String, String> toAddress )
     {
@@ -221,11 +221,17 @@ public class DDRRecord
      * @return
      * @throws Exception
      */
-    @JsonProperty("toAddress")
-    private String getToAddressString() throws Exception
+    public String getToAddressString() throws Exception
     {
-        toAddressString = ServerUtils.serialize( toAddress );
-        return toAddressString;
+        if ( ( toAddress == null || toAddress.isEmpty() ) && toAddressString != null )
+        {
+            return toAddressString;
+        }
+        else
+        {
+            toAddressString = ServerUtils.serialize( toAddress );
+            return toAddressString;
+        }
     }
 
     /**
@@ -233,8 +239,7 @@ public class DDRRecord
      * @param toAddressString
      * @throws Exception
      */
-    @JsonProperty("toAddress")
-    private void setToAddressString( String toAddressString ) throws Exception
+    public void setToAddressString( String toAddressString ) throws Exception
     {
         this.toAddressString = toAddressString;
     }

@@ -4,12 +4,12 @@
 <form>
   <block>
     <prompt>
-      <audio src="/WaitSound.wav"/>
-      <audio src="/WaitSound.wav"/>
-      <audio src="/WaitSound.wav"/>
-      <audio src="/WaitSound.wav"/>
-      <audio src="/WaitSound.wav"/>
-      <audio src="/WaitSound.wav"/>
+      <audio src="/dialoghandler/WaitSound.wav"/>
+      <audio src="/dialoghandler/WaitSound.wav"/>
+      <audio src="/dialoghandler/WaitSound.wav"/>
+      <audio src="/dialoghandler/WaitSound.wav"/>
+      <audio src="/dialoghandler/WaitSound.wav"/>
+      <audio src="/dialoghandler/WaitSound.wav"/>
     </prompt>
   </block>
 </form>

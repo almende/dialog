@@ -24,7 +24,6 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.util.DatastoreThread;
 import com.almende.util.ParallelInit;
 import com.meterware.servletunit.ServletRunner;
 import com.sun.jersey.api.client.Client;
@@ -53,9 +52,9 @@ public class TestFramework
     {
         new ParallelInit( true );
         ParallelInit.getDatastore();
-        if(ParallelInit.mongo != null)
+        if(ParallelInit.datastore != null)
         {
-            ParallelInit.mongo.dropDatabase( DatastoreThread.TEST_DB_NAME );
+            ParallelInit.datastore.dropDatabase();
         }
         servletRunner.remove();
         if(servletRunner.get() == null)
@@ -67,9 +66,9 @@ public class TestFramework
     @After
     public void tearDown()
     {
-        if(ParallelInit.mongo != null)
+        if(ParallelInit.datastore != null)
         {
-            ParallelInit.mongo.dropDatabase( DatastoreThread.TEST_DB_NAME );
+            ParallelInit.datastore.dropDatabase();
         }
         servletRunner.remove();
     }

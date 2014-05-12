@@ -20,6 +20,11 @@ public class TimeUtils
     {
         return DateTimeZone.forID( serverTimezone );
     }
+    
+    public static TimeZone getServerTimeZone()
+    {
+        return TimeZone.getTimeZone( serverTimezone );
+    }
 
     public static DateTime getServerCurrentTime()
     {

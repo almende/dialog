@@ -280,7 +280,6 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             service, accountId, initialAgentURL );
         //set for incoming requests
         XMPPServlet xmppServlet = new XMPPServlet();
-        xmppServlet.listenForRosterChanges( newConfig );
         xmppServlet.listenForIncomingChats( newConfig );
         return newConfig.getConfigId();
     }
@@ -310,7 +309,6 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         {
             XMPPServlet.registerASKFastXMPPAccount( xmppAddress, password, name, email );
             XMPPServlet xmppServlet = new XMPPServlet();
-            xmppServlet.listenForRosterChanges( newConfig );
             xmppServlet.listenForIncomingChats( newConfig );
         }
         catch ( XMPPException e )
@@ -318,7 +316,6 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             if(e.getXMPPError().getCode() == 409) //just listen to incoming chats if account already exists.
             {
                 XMPPServlet xmppServlet = new XMPPServlet();
-                xmppServlet.listenForRosterChanges( newConfig );
                 xmppServlet.listenForIncomingChats( newConfig );
             }
             log.severe( "Error registering an ASK-Fast account. Error: "+ e.getLocalizedMessage() );

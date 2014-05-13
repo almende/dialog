@@ -30,7 +30,7 @@
 		<mongo.version>2.11.3</mongo.version>
 		<cors.version>1.8</cors.version>
 		<slf4j.version>1.7.5</slf4j.version>
-		<eve.version>2.2.1-SNAPSHOT</eve.version>
+		<eve.version>2.2.3-SNAPSHOT</eve.version>
 		<hamcrest.version>1.3</hamcrest.version>
 		<askfast.version>0.0.1-SNAPSHOT</askfast.version>
 		<xml.version>1.3.04</xml.version>

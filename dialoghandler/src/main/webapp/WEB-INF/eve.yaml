@@ -3,9 +3,7 @@
 # environment specific settings
 environment:
   Development:
-    # development specific settings...
   Production:
-    # production specific settings...
 
 # transport services
 transport_services:
@@ -34,3 +32,4 @@ bootstrap:
     dialog: com.almende.dialog.agent.DialogAgent
     adapter: com.almende.dialog.agent.AdapterAgent
     log: com.almende.dialog.agent.LogWrapperAgent
+    ddr: com.almende.dialog.agent.DDRRecordAgent

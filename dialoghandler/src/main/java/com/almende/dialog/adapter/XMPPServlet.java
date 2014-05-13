@@ -69,8 +69,6 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
             }
             Chat chat = xmppConnection.getChatManager().createChat( to, this );
             chat.sendMessage( message );
-            //add costs with no.of messages * recipients
-            DDRUtils.createDDRRecordOnOutgoingCommunication( config, to, 1 );
             return 1;
         }
         catch ( Exception ex )
@@ -115,17 +113,6 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
     }
     
     /**
-     * checks for changes in the contactList. if new users are added etc
-     * @throws XMPPException 
-     */
-    public void listenForRosterChanges(AdapterConfig adapterConfig) throws XMPPException
-    {
-//        XMPPConnection xmppConnection = getXMPPConnection( adapterConfig, true );
-//        Roster roster = xmppConnection.getRoster();
-//        roster.addRosterListener( this );
-    }
-    
-    /**
      * listens on any incoming messages to this adapterConfig
      * @throws XMPPException 
      */
@@ -133,9 +120,6 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
     {
         XMPPConnection xmppConnection = getXMPPConnection( adapterConfig, true );
         Roster.setDefaultSubscriptionMode( SubscriptionMode.accept_all );
-//        Presence presence = new Presence( Type.available );
-//        presence.setMode( Mode.chat );
-//        xmppConnection.sendPacket( presence );
         xmppConnection.getChatManager().addChatListener( this );
     }
 
@@ -204,28 +188,6 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
         }
         return xmppConnection.get();
     }
-
-//    @Override
-//    public void entriesAdded( Collection<String> entries )
-//    {
-//        log.info( String.format( "Following users: %s are added to account : %s", ServerUtils
-//            .serializeWithoutException( entries ),
-//            xmppConnection != null && xmppConnection.get() != null ? xmppConnection.get().getUser() : null ) );
-//    }
-//
-//    @Override
-//    public void entriesDeleted( Collection<String> entries )
-//    {
-//        log.info( String.format( "Following users: %s are removed from account : %s", ServerUtils
-//            .serializeWithoutException( entries ),
-//            xmppConnection != null && xmppConnection.get() != null ? xmppConnection.get().getUser() : null ) );
-//    }
-//
-//    @Override
-//    public void entriesUpdated( Collection<String> entries )
-//    {
-//        log.info( "entriesUpdated" );
-//    }
     
     @Override
     public void chatCreated( Chat chat, boolean createdLocally )
@@ -239,6 +201,20 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
     protected void doErrorPost( HttpServletRequest req, HttpServletResponse res ) throws IOException
     {
         log.info( "doErrorPost" );
+    }
+    
+    @Override
+    protected void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    {
+        DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+    }
+
+
+    @Override
+    protected void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
+    throws Exception
+    {
+        DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, toAddress );
     }
     
     public static void registerASKFastXMPPAccount( String username, String password, String name, String email )

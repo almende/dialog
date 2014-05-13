@@ -33,7 +33,9 @@ import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
@@ -277,8 +279,7 @@ public class TwitterServlet extends TextServlet implements Runnable {
         String formattedTwitterTo = to.startsWith( "@" ) ? to : "@" + to;
 		Token accessToken = new Token(config.getAccessToken(),
 				config.getAccessTokenSecret());
-		for (String messagepart : Splitter.fixedLength(140 - (formattedTwitterTo.length() + 1))
-				.split(message)) {
+		for (String messagepart : Splitter.fixedLength(140 - (formattedTwitterTo.length() + 1)).split(message)) {
 			try {
 			    formattedTwitterTo = URLEncoder.encode(formattedTwitterTo, "UTF-8");
 				String url = null;
@@ -426,6 +427,26 @@ public class TwitterServlet extends TextServlet implements Runnable {
 			throws IOException {
 		// TODO Auto-generated method stub
 	}
+	
+    @Override
+    protected void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    {
+        DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+    }
+
+    @Override
+    protected void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
+    {
+        int totalCount = 0;
+        //calculate the total tweets been done!
+        for ( String address : toAddress.keySet() )
+        {
+            String formattedTwitterTo = address.startsWith( "@" ) ? address : "@" + address;
+            totalCount += Splitter.fixedLength(140 - (formattedTwitterTo.length() + 1)).splitToList( message ).size();
+        }
+        //add costs with no.of messages * recipients
+        DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress, totalCount );
+    }
 
     @Override
     public void run()

@@ -15,7 +15,9 @@ import org.scribe.model.Token;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Facebook;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -153,5 +155,19 @@ public class WallFacebookServlet extends TextServlet {
     protected void doErrorPost(HttpServletRequest req, HttpServletResponse res)
             throws IOException {
 
+    }
+    
+    @Override
+    protected void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    {
+        DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+    }
+
+    @Override
+    protected void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
+    throws Exception
+    {
+        //add costs with no.of messages * recipients
+        DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress );
     }
 }

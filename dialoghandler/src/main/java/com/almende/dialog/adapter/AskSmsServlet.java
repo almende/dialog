@@ -13,6 +13,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang.NotImplementedException;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -189,4 +191,17 @@ public class AskSmsServlet extends TextServlet {
 		
 		return data;
 	}
+
+    @Override
+    protected void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    {
+        throw new NotImplementedException("Attaching cost not implemented for this Adapter");
+    }
+
+    @Override
+    protected void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
+    throws Exception
+    {
+        throw new NotImplementedException("Attaching cost not implemented for this Adapter");
+    }
 }

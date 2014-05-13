@@ -19,6 +19,8 @@ import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.CMStatus;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
@@ -124,6 +126,20 @@ public class CMSmsServlet extends TextServlet {
 	@Override
 	protected void doErrorPost(HttpServletRequest req, HttpServletResponse res)
 			throws IOException {}
+	
+    @Override
+    protected void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    {
+        // Needs implementation, but service not available at CM
+    }
+
+    @Override
+    protected void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
+    {
+        //add costs with no.of messages * recipients
+        DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,
+            CM.countMessageParts( message ) * toAddress.size() );
+    }
 
 	/**
      * handles the status report based on xml payload sent by CM. 

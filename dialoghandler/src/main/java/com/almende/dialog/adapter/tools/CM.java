@@ -9,8 +9,6 @@ import org.znerd.xmlenc.XMLOutputter;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.example.agent.TestServlet;
-import com.almende.dialog.model.ddr.DDRPrice.UnitType;
-import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
@@ -84,9 +82,6 @@ public class CM {
             log.info( "Result from CM: " + result );
         }
         int messagePartCount = countMessageParts( message, dcs );
-        //add costs with no.of messages * recipients
-        DDRUtils.createDDRRecordOnOutgoingCommunication( config, UnitType.PART, addressNameMap, messagePartCount
-            * addressNameMap.size() );
         return messagePartCount;
     }
     
@@ -121,11 +116,7 @@ public class CM {
                 throw new Exception( result );
             log.info( "Result from CM: " + result );
         }
-        int messagePartCount = countMessageParts( message, dcs );
-        //add costs with no.of messages * recipients
-        DDRUtils.createDDRRecordOnOutgoingCommunication( config, UnitType.PART, addressNameMap, messagePartCount
-            * addressNameMap.size() );
-        return messagePartCount;
+        return countMessageParts( message, dcs );
     }
 
     /**
@@ -215,7 +206,7 @@ public class CM {
         return sw;
     }
 	
-	public boolean isGSMSeven(CharSequence str0) {
+	public static boolean isGSMSeven(CharSequence str0) {
         if (str0 == null) {
             return true;
         }
@@ -281,7 +272,23 @@ public class CM {
         return true;
     }
 	
-	private int countMessageParts(String message, String type) {
+	/*
+	 * gets the number of message parts based on the charecters in the message
+	 */
+	public static int countMessageParts(String message){
+	    String dcs;
+        if ( !isGSMSeven( message ) )
+        {
+            dcs = MESSAGE_TYPE_UTF8;
+        }
+        else
+        {
+            dcs = MESSAGE_TYPE_GSM7;
+        }
+        return countMessageParts( message, dcs );
+	}
+	
+	private static int countMessageParts(String message, String type) {
 
 		int maxChars = 0;
 		

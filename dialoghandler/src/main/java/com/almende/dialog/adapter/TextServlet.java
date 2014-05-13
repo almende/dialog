@@ -57,6 +57,11 @@ abstract public class TextServlet extends HttpServlet {
 			String from, String senderName, Map<String, String> addressNameMap,
 			Map<String, Object> extras, AdapterConfig config) throws Exception;
 	
+    protected abstract void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception;
+
+    protected abstract void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress,
+        String message ) throws Exception;
+	
 	protected abstract TextMessage receiveMessage(HttpServletRequest req,
 			HttpServletResponse resp) throws Exception;
 	
@@ -194,7 +199,7 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		
 		DDRWrapper.log(question, session, "Start", config);
-		int count = sendMessage(res.reply, "Message from DH", localaddress,
+		int count = sendMessageAndAttachCharge(res.reply, "Message from DH", localaddress,
 				fromName, address, "", extras, config);
 		for (int i = 0; i < count; i++) {
 			DDRWrapper.log(question, session, "Send", config);
@@ -312,7 +317,7 @@ abstract public class TextServlet extends HttpServlet {
             subject = subject != null && !subject.isEmpty() ? subject : "Message from Ask-Fast";
             // fix for bug: #15 https://github.com/almende/dialog/issues/15
             res.reply = URLDecoder.decode( res.reply, "UTF-8" );
-            int count = broadcastMessage( res.reply, subject, localaddress, senderName, formattedAddressNameToMap,
+            int count = broadcastMessageAndAttachCharge( res.reply, subject, localaddress, senderName, formattedAddressNameToMap,
                 extras, config );
 
             for ( Session session : sessions )
@@ -360,7 +365,7 @@ abstract public class TextServlet extends HttpServlet {
 		
 		TextMessage msg;
 		try {
-			msg = receiveMessage(req, res);
+			msg = receiveMessageAndAttachCharge(req, res);
 		} catch (Exception ex) {
 			log.severe("Failed to parse received message: "
 					+ ex.getLocalizedMessage());
@@ -404,7 +409,7 @@ abstract public class TextServlet extends HttpServlet {
 					localaddress);
 			extras = CMStatus.storeSMSRelatedData(address, localaddress, config, null,
 					getNoConfigMessage(), extras);
-			count = sendMessage(getNoConfigMessage(), subject, localaddress,
+			count = sendMessageAndAttachCharge( getNoConfigMessage(), subject, localaddress,
 					fromName, address, toName, extras, config);
 			// Create new session to store the send in the ddr.
 			session = new Session();
@@ -430,9 +435,11 @@ abstract public class TextServlet extends HttpServlet {
 				try {
 					extras = CMStatus.storeSMSRelatedData(address, localaddress, config,
 							null, getNoConfigMessage(), extras);
-					count = sendMessage(getNoConfigMessage(), subject,
+					count = sendMessageAndAttachCharge(getNoConfigMessage(), subject,
 							localaddress, fromName, address, toName, extras,
 							config);
+					//attach outbound cost
+					attachOutgoingCost( config, address, getNoConfigMessage() );
 				} catch (Exception ex) {
 					log.severe(ex.getLocalizedMessage());
 				}
@@ -519,8 +526,9 @@ abstract public class TextServlet extends HttpServlet {
 										+ DEMODIALOG));
 			}
 		}
+		
 		try {
-			count = sendMessage(escapeInput.reply, subject, localaddress,
+			count = sendMessageAndAttachCharge(escapeInput.reply, subject, localaddress,
 					fromName, address, toName, extras, config);
 		} catch (Exception ex) {
 			log.severe("Message sending failed. Message: "
@@ -532,7 +540,7 @@ abstract public class TextServlet extends HttpServlet {
 		return count;
 	}
 	
-	/**
+    /**
 	 * processses any escape command entered by the user
 	 * @return
 	 */
@@ -561,7 +569,7 @@ abstract public class TextServlet extends HttpServlet {
             Map<String, Object> extras = CMStatus.storeSMSRelatedData(msg.getAddress(),
                     msg.getLocalAddress(), config, null, escapeInput.reply,
                     null);
-            result = broadcastMessage(escapeInput.reply, msg.getSubject(),
+            result = broadcastMessageAndAttachCharge( escapeInput.reply, msg.getSubject(),
                     msg.getLocalAddress(), fromName, addressNameMap, extras,
                     config);
         } else if (cmd.startsWith("reset")) {
@@ -621,4 +629,71 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		return url;
 	}
+
+	/**
+	 * sends a message and charges the owner of the adapter for outbound communication
+	 * @param message message to be sent
+	 * @param subject
+	 * @param from
+	 * @param fromName
+	 * @param to
+	 * @param toName
+	 * @param extras
+	 * @param config
+	 * @return the number of messages sent. Can be more than 1 when sending special charecters in SMS
+	 * @throws Exception
+	 */
+    private int sendMessageAndAttachCharge( String message, String subject, String from, String fromName, String to,
+        String toName, Map<String, Object> extras, AdapterConfig config ) throws Exception
+    {
+        int count = sendMessage( message, subject, from, fromName, to, toName, extras, config );
+        //attach costs
+        attachOutgoingCost( config, to, message );
+        return count;
+    }
+	    
+    /**
+     * broadcasts a message and charges the owner of the adapter for outbound communication
+     * @param message message to be sent
+     * @param subject
+     * @param from
+     * @param senderName
+     * @param addressNameMap
+     * @param extras
+     * @param config
+     * @return the number of outbound messages done
+     * @throws Exception
+     */
+    private int broadcastMessageAndAttachCharge( String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
+    {
+        int count = broadcastMessage( message, subject, from, senderName, addressNameMap, extras, config );
+        //attach costs
+        attachOutgoingCost( config, addressNameMap, message );
+        return count;
+    }
+    
+    private TextMessage receiveMessageAndAttachCharge( HttpServletRequest req, HttpServletResponse resp )
+    throws Exception
+    {
+        TextMessage receiveMessage = receiveMessage( req, resp );
+        //attach charges for incoming
+        AdapterConfig config = AdapterConfig.findAdapterConfig( getAdapterType(), receiveMessage.getLocalAddress() );
+        attachIncomingCost( config, receiveMessage.getAddress() );
+        return receiveMessage;
+    }
+	    
+    /**
+     * helper method to convert the address to map in turn calls {@link TextServlet#attachOutgoingCost(AdapterConfig, Map, String)}
+     * @param config
+     * @param address
+     * @param message
+     * @throws Exception
+     */
+    private void attachOutgoingCost( AdapterConfig config, String address, String message ) throws Exception
+    {
+        HashMap<String, String> toAddressMap = new HashMap<String, String>();
+        toAddressMap.put( address, "" );
+        attachOutgoingCost( config, toAddressMap, message );
+    }
 }

@@ -290,8 +290,6 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                 transport.sendMessage( simpleMessage, simpleMessage.getAllRecipients() );
                 transport.close();
             }
-            //add cost to ddr record
-            DDRUtils.createDDRRecordOnOutgoingCommunication( config, allAddresses );
         }
         catch ( Exception e )
         {
@@ -534,5 +532,18 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             DEFAULT_SENDER_EMAIL_PASSWORD );
         transport.sendMessage( simpleMessage, simpleMessage.getAllRecipients() );
         transport.close();
+    }
+
+    @Override
+    protected void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    {
+        DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+    }
+
+    @Override
+    protected void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
+    throws Exception
+    {
+        DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, toAddress );
     }
 }

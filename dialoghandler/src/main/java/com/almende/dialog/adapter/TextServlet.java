@@ -23,6 +23,7 @@ import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.state.StringStore;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.util.ParallelInit;
@@ -57,9 +58,9 @@ abstract public class TextServlet extends HttpServlet {
 			String from, String senderName, Map<String, String> addressNameMap,
 			Map<String, Object> extras, AdapterConfig config) throws Exception;
 	
-    protected abstract void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception;
+    protected abstract double attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception;
 
-    protected abstract void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress,
+    protected abstract double attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress,
         String message ) throws Exception;
 	
 	protected abstract TextMessage receiveMessage(HttpServletRequest req,
@@ -669,7 +670,9 @@ abstract public class TextServlet extends HttpServlet {
     {
         int count = broadcastMessage( message, subject, from, senderName, addressNameMap, extras, config );
         //attach costs
-        attachOutgoingCost( config, addressNameMap, message );
+        double totalCost = attachOutgoingCost( config, addressNameMap, message );
+        //push the cost to hte queue
+        DDRUtils.publishDDREntryToQueue( config.getOwner(), totalCost );
         return count;
     }
     
@@ -690,10 +693,13 @@ abstract public class TextServlet extends HttpServlet {
      * @param message
      * @throws Exception
      */
-    private void attachOutgoingCost( AdapterConfig config, String address, String message ) throws Exception
+    private double attachOutgoingCost( AdapterConfig config, String address, String message ) throws Exception
     {
         HashMap<String, String> toAddressMap = new HashMap<String, String>();
         toAddressMap.put( address, "" );
-        attachOutgoingCost( config, toAddressMap, message );
+        double totalCost = attachOutgoingCost( config, toAddressMap, message );
+        //push the cost to hte queue
+        DDRUtils.publishDDREntryToQueue( config.getOwner(), totalCost );
+        return totalCost;
     }
 }

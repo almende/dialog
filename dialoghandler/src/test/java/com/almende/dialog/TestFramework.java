@@ -39,7 +39,7 @@ public class TestFramework
 //    private final LocalServiceTestHelper helper = new LocalServiceTestHelper( new LocalDatastoreServiceTestConfig() );
     protected static final String localAddressMail      = "info@dialog-handler.appspotmail.com";
     protected static final String localAddressChat      = "info@dialog-handler.appspotchat.com";
-    protected static final String remoteAddressEmail         = "sshetty@ask-cs.com";
+    protected static final String remoteAddressEmail         = "info@askcs.com";
     protected static final String localAddressBroadsoft = "0854881000";
     protected static final String remoteAddressVoice    = "0614765800";
     protected static final String TEST_PUBLIC_KEY    = "agent1@ask-cs.com";
@@ -142,7 +142,7 @@ public class TestFramework
         adapterConfig.setAnonymous( false );
         adapterConfig.setPublicKey( publicKey );
         adapterConfig.setMyAddress( myAddress );
-        adapterConfig.setAccessToken( "2630|Ask54de" );
+        adapterConfig.setAccessToken( "1111|blabla" );
         adapterConfig.setInitialAgentURL( initiatAgentURL );
         String adapterConfigString = adapterConfig.createConfig( ServerUtils.serialize( adapterConfig ) ).getEntity()
             .toString();

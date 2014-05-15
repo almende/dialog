@@ -429,13 +429,13 @@ public class TwitterServlet extends TextServlet implements Runnable {
 	}
 	
     @Override
-    protected void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected double attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
     {
-        DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
     }
 
     @Override
-    protected void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
+    protected double attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
     {
         int totalCount = 0;
         //calculate the total tweets been done!
@@ -445,7 +445,7 @@ public class TwitterServlet extends TextServlet implements Runnable {
             totalCount += Splitter.fixedLength(140 - (formattedTwitterTo.length() + 1)).splitToList( message ).size();
         }
         //add costs with no.of messages * recipients
-        DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress, totalCount );
+        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress, totalCount );
     }
 
     @Override

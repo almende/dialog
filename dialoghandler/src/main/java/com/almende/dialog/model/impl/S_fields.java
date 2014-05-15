@@ -18,6 +18,9 @@ public class S_fields implements SessionIntf {
 	String keyword;
 	String adapterID;
 	String trackingToken;
+	String startTimestamp;
+	String answerTimestamp;
+	String releaseTimestamp;
 	
 	@Override
 	public String getSession_id() {
@@ -128,4 +131,34 @@ public class S_fields implements SessionIntf {
 	public void setTrackingToken(String token) {
 		this.trackingToken = token;		
 	}
+
+    public String getStartTimestamp()
+    {
+        return startTimestamp;
+    }
+
+    public void setStartTimestamp( String startTimestamp )
+    {
+        this.startTimestamp = startTimestamp;
+    }
+
+    public String getAnswerTimestamp()
+    {
+        return answerTimestamp;
+    }
+
+    public void setAnswerTimestamp( String answerTimestamp )
+    {
+        this.answerTimestamp = answerTimestamp;
+    }
+
+    public String getReleaseTimestamp()
+    {
+        return releaseTimestamp;
+    }
+
+    public void setReleaseTimestamp( String releaseTimestamp )
+    {
+        this.releaseTimestamp = releaseTimestamp;
+    }
 }

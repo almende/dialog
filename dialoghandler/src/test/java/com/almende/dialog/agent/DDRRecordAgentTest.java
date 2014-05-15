@@ -132,7 +132,7 @@ public class DDRRecordAgentTest extends TestFramework
     public void outgoingEMAILCallAddsADDRRecordTest() throws Exception
     {
         Map<String, String> addressNameMap = new HashMap<String, String>();
-        addressNameMap.put( "inffo@ask-cs.com", "Test" );
+        addressNameMap.put( "inffo@ask.com", "Test" );
         Map<String, String> resultMap = createDDRPricesAndAdapterAndSendOutBound( UnitType.PART, AdapterType.EMAIL,
             "test", addressNameMap );
 

@@ -15,6 +15,9 @@ public interface SessionIntf extends Serializable  {
 	public String getExternalSession();
 	public String getAdapterID();
 	public String getTrackingToken();
+    public String getStartTimestamp();
+    public String getAnswerTimestamp();
+    public String getReleaseTimestamp();
 	
 	public void setSession_id(String session_id);
 	public void setPubKey(String pubKey);
@@ -27,4 +30,7 @@ public interface SessionIntf extends Serializable  {
 	public void setExternalSession(String externalSession);
 	public void setAdapterID(String adapterID);
 	public void setTrackingToken(String token);
+    public void setStartTimestamp( String startTimestamp );
+    public void setReleaseTimestamp( String releaseTimestamp );
+    public void setAnswerTimestamp( String answerTimestamp );
 }

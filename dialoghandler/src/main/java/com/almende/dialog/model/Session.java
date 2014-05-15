@@ -247,4 +247,34 @@ public class Session implements SessionIntf {
 	public void setTrackingToken(String token) {
 		this.session.setTrackingToken(token);
 	}
+    @Override
+    public String getStartTimestamp()
+    {
+        return this.session.getStartTimestamp();
+    }
+    @Override
+    public String getAnswerTimestamp()
+    {
+        return this.session.getAnswerTimestamp();
+    }
+    @Override
+    public String getReleaseTimestamp()
+    {
+        return this.session.getReleaseTimestamp();
+    }
+    @Override
+    public void setStartTimestamp( String startTimestamp )
+    {
+        this.session.setStartTimestamp( startTimestamp );
+    }
+    @Override
+    public void setReleaseTimestamp( String releaseTimestamp )
+    {
+        this.session.setReleaseTimestamp( releaseTimestamp );
+    }
+    @Override
+    public void setAnswerTimestamp( String answerTimestamp )
+    {
+        this.session.setAnswerTimestamp( answerTimestamp );
+    }
 }

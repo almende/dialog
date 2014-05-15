@@ -193,13 +193,13 @@ public class AskSmsServlet extends TextServlet {
 	}
 
     @Override
-    protected void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected double attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
     {
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
     }
 
     @Override
-    protected void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
+    protected double attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
     throws Exception
     {
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");

@@ -14,6 +14,9 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
 
 /**
  * Helper functions for creating DDR records and processing of them
@@ -22,6 +25,9 @@ import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 public class DDRUtils
 {
     private static final Logger log = Logger.getLogger( DDRUtils.class.getSimpleName() );
+    //create a single static connection for publishing ddrs
+    private static ConnectionFactory rabbitMQConnectionFactory;
+    private static final String PUBLISH_QUEUE_NAME = "DDR_PUBLISH_QUEUE";
     
     /** creates a DDR Record for this adapterid and owner. <br>
      * Preconditions: <br>
@@ -30,7 +36,7 @@ public class DDRUtils
      * @param config AdapterConfig having a non-null {@link AdapterConfig#getConfigId()} and {@link AdapterConfig#getOwner()} 
      * @throws Exception
      */
-    public static void createDDRRecordOnAdapterPurchase( AdapterConfig config ) throws Exception
+    public static double createDDRRecordOnAdapterPurchase( AdapterConfig config ) throws Exception
     {
         DDRType adapterPurchaseDDRType = DDRType.getDDRType( DDRTypeCategory.ADAPTER_PURCHASE );
         if ( adapterPurchaseDDRType != null )
@@ -48,8 +54,12 @@ public class DDRUtils
                     config.getOwner(), 1, ddrPrice.getPrice() );
                 ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );
                 ddrRecord.createOrUpdate();
+                return ddrRecord.getTotalCost();
             }
         }
+        log.warning( String.format( "Not charging this adapter purchase with address: %s adapterid: %s anything!!",
+            config.getMyAddress(), config.getConfigId() ) );
+        return 0.0;
     }
     
     /**
@@ -59,10 +69,10 @@ public class DDRUtils
      * @param toAddress
      * @throws Exception
      */
-    public static void createDDRRecordOnOutgoingCommunication( AdapterConfig config, Map<String, String> toAddress )
+    public static double createDDRRecordOnOutgoingCommunication( AdapterConfig config, Map<String, String> toAddress )
     throws Exception
     {
-        createDDRRecordOnCommunication( config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, toAddress,
+        return createDDRRecordOnCommunication( config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, toAddress,
             CommunicationStatus.SENT );
     }
     
@@ -75,12 +85,12 @@ public class DDRUtils
      * the address list
      * @throws Exception
      */
-    public static void createDDRRecordOnOutgoingCommunication( AdapterConfig config, String toAddress, int quantity )
+    public static double createDDRRecordOnOutgoingCommunication( AdapterConfig config, String toAddress, int quantity )
     throws Exception
     {
         HashMap<String, String> toAddressMap = new HashMap<String, String>();
         toAddressMap.put( toAddress, "" );
-        createDDRRecordOnCommunication( config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, toAddressMap,
+        return createDDRRecordOnCommunication( config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, toAddressMap,
             CommunicationStatus.SENT, quantity );
     }
     
@@ -91,12 +101,12 @@ public class DDRUtils
      * @param quantity
      * @throws Exception
      */
-    public static void createDDRRecordOnIncomingCommunication( AdapterConfig config, String fromAddress, int quantity )
+    public static double createDDRRecordOnIncomingCommunication( AdapterConfig config, String fromAddress, int quantity )
     throws Exception
     {
         HashMap<String, String> fromAddressMap = new HashMap<String, String>();
         fromAddressMap.put( fromAddress, "" );
-        createDDRRecordOnCommunication( config, DDRTypeCategory.INCOMING_COMMUNICATION_COST, fromAddressMap,
+        return createDDRRecordOnCommunication( config, DDRTypeCategory.INCOMING_COMMUNICATION_COST, fromAddressMap,
             CommunicationStatus.RECEIEVED, quantity );
     }
     
@@ -110,10 +120,10 @@ public class DDRUtils
      * the address list
      * @throws Exception
      */
-    public static void createDDRRecordOnOutgoingCommunication( AdapterConfig config, UnitType unitType,
+    public static double createDDRRecordOnOutgoingCommunication( AdapterConfig config, UnitType unitType,
         Map<String, String> toAddress) throws Exception
     {
-        createDDRRecordOnCommunication( config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, toAddress,
+        return createDDRRecordOnCommunication( config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, toAddress,
             CommunicationStatus.SENT, toAddress.size() );
     }
     
@@ -126,19 +136,19 @@ public class DDRUtils
      * the address list
      * @throws Exception
      */
-    public static void createDDRRecordOnOutgoingCommunication( AdapterConfig config, UnitType unitType,
+    public static double createDDRRecordOnOutgoingCommunication( AdapterConfig config, UnitType unitType,
         Map<String, String> toAddress, int quantity ) throws Exception
     {
-        createDDRRecordOnCommunication( config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, toAddress,
+        return createDDRRecordOnCommunication( config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, toAddress,
             CommunicationStatus.SENT, quantity );
     }
     
-    public static void createDDRRecordOnIncomingCommunication( AdapterConfig config, String fromAddress )
+    public static double createDDRRecordOnIncomingCommunication( AdapterConfig config, String fromAddress )
     throws Exception
     {
         Map<String, String> fromAddresses = new HashMap<String, String>();
         fromAddresses.put( fromAddress, "" );
-        createDDRRecordOnCommunication( config, DDRTypeCategory.INCOMING_COMMUNICATION_COST, fromAddresses,
+        return createDDRRecordOnCommunication( config, DDRTypeCategory.INCOMING_COMMUNICATION_COST, fromAddresses,
             CommunicationStatus.RECEIEVED );
     }
     
@@ -213,6 +223,30 @@ public class DDRUtils
         }
     }
     
+    public static void publishDDREntryToQueue( String accountId, double totalCost ) throws Exception
+    {
+        try
+        {
+            rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory : new ConnectionFactory();
+            rabbitMQConnectionFactory.setHost( "localhost" );
+            Connection connection = rabbitMQConnectionFactory.newConnection();
+            Channel channel = connection.createChannel();
+            //create a message
+            HashMap<String, String> message = new HashMap<String, String>();
+            message.put( "accountId", accountId );
+            message.put( "cost", String.valueOf( totalCost ) );
+            channel.queueDeclare( PUBLISH_QUEUE_NAME, false, false, false, null );
+            channel.basicPublish( "", PUBLISH_QUEUE_NAME, null, ServerUtils.serialize( message )
+                .getBytes() );
+            channel.close();
+            connection.close();
+        }
+        catch ( Exception e )
+        {
+            log.severe( "Error seen: " + e.getLocalizedMessage() );
+        }
+    }
+    
     /**
      * creates a ddr record based on the input parameters and quantity is the size of the addresses map
      * @param config
@@ -222,10 +256,10 @@ public class DDRUtils
      * @param status
      * @throws Exception
      */
-    private static void createDDRRecordOnCommunication( AdapterConfig config, DDRTypeCategory category,
+    private static double createDDRRecordOnCommunication( AdapterConfig config, DDRTypeCategory category,
         Map<String, String> addresses, CommunicationStatus status ) throws Exception
     {
-        createDDRRecordOnCommunication( config, category, addresses, status, addresses.size() );
+        return createDDRRecordOnCommunication( config, category, addresses, status, addresses.size() );
     }
     
     /**
@@ -238,7 +272,7 @@ public class DDRUtils
      * @param quantity
      * @throws Exception
      */
-    private static void createDDRRecordOnCommunication( AdapterConfig config, DDRTypeCategory category,
+    private static double createDDRRecordOnCommunication( AdapterConfig config, DDRTypeCategory category,
         Map<String, String> addresses, CommunicationStatus status, int quantity ) throws Exception
     {
         DDRType communicationCostDDRType = DDRType.getDDRType( category );
@@ -274,7 +308,11 @@ public class DDRUtils
                 ddrRecord.setQuantity( quantity );
                 ddrRecord.setStatus( status );
                 ddrRecord.createOrUpdate();
+                return ddrRecord.getTotalCost();
             }
         }
+        log.warning( String.format( "Not charging this communication from: %s adapterid: %s anything!!",
+            config.getMyAddress(), config.getConfigId() ) );
+        return 0.0;
     }
 }

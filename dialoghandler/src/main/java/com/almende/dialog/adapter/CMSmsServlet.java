@@ -128,16 +128,17 @@ public class CMSmsServlet extends TextServlet {
 			throws IOException {}
 	
     @Override
-    protected void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected double attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
     {
         // Needs implementation, but service not available at CM
+        return 0.0;
     }
 
     @Override
-    protected void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
+    protected double attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
     {
         //add costs with no.of messages * recipients
-        DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,
+        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,
             CM.countMessageParts( message ) * toAddress.size() );
     }
 

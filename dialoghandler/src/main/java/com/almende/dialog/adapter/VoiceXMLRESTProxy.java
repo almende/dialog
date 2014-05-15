@@ -448,7 +448,7 @@ public class VoiceXMLRESTProxy {
 			extras.put( "sessionKey", sessionKey );
 			question = question.event("exception", "Wrong answer received", extras, responder);
 			
-			return handleQuestion(question,session.getAdapterConfig().getConfigId(),responder,sessionKey);
+			return handleQuestion(question,session.getAdapterID(),responder,sessionKey);
 		}
 		return Response.ok(reply).build();
 	}
@@ -465,6 +465,11 @@ public class VoiceXMLRESTProxy {
         log.info("call hangup with:"+direction+":"+remoteID+":"+localID);
         String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID;
         Session session = Session.getSession(sessionKey);
+        //update the session with call times
+        session.setStartTimestamp( startTime );
+        session.setAnswerTimestamp( answerTime );
+        session.setReleaseTimestamp( releaseTime );
+        session.storeSession();
         
         Question question = null;
         log.info( String.format( "Session key: %s with remote: %s and local %s", sessionKey,
@@ -522,34 +527,6 @@ public class VoiceXMLRESTProxy {
         {
             log.info( "no question received" );
         }
-        //stop costs
-        try
-        {
-            if ( startTime != null && answerTime != null && releaseTime != null )
-            {
-                if ( direction.equalsIgnoreCase( "outbound" ) )
-                {
-                    DDRUtils.updateDDRRecordOnCallStops( session.getAdapterConfig(),
-                        DDRTypeCategory.OUTGOING_COMMUNICATION_COST, CommunicationStatus.SENT, remoteID,
-                        Long.parseLong( startTime ), Long.parseLong( answerTime ), Long.parseLong( releaseTime ) );
-                }
-                else
-                {
-                    DDRUtils.updateDDRRecordOnCallStops( session.getAdapterConfig(),
-                        DDRTypeCategory.INCOMING_COMMUNICATION_COST, CommunicationStatus.RECEIEVED, remoteID,
-                        Long.parseLong( startTime ), Long.parseLong( answerTime ), Long.parseLong( releaseTime ) );
-                }
-            }
-        }
-        catch ( Exception e )
-        {
-            String errorMessage = String
-                .format(
-                    "Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
-                    direction, session.getAdapterConfig().getConfigId(), session.getAdapterConfig().getMyAddress(), remoteID, localID );
-            log.severe( errorMessage );
-            dialogLog.severe( session.getAdapterConfig().getConfigId(), errorMessage );
-        }
         StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
         StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound");
         StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound_retry");
@@ -570,6 +547,12 @@ public class VoiceXMLRESTProxy {
         log.info( "call answered with:" + direction + "_" + remoteID + "_" + localID );
         String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID;
         Session session = Session.getSession(sessionKey);
+        //update the session with call times
+        session.setStartTimestamp( startTime );
+        session.setAnswerTimestamp( answerTime );
+        session.setReleaseTimestamp( releaseTime );
+        session.storeSession();
+        
         log.info( "question from session got: "+ session.getSession_id() );
         Question question = null;
         String stringStoreKey = direction + "_" + remoteID + "_" + localID;
@@ -721,7 +704,7 @@ public class VoiceXMLRESTProxy {
                             }
                             
                             String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+config.getMyAddress()+"|"+address;
-                            String ses = StringStore.getString(sessionKey);
+                            Session session = Session.getSession(sessionKey);
                             
                             log.info("Session key: "+sessionKey);
                             String direction="inbound";
@@ -810,7 +793,7 @@ public class VoiceXMLRESTProxy {
                             
                             if ( callState.getTextContent().equals( "Released" ) )
                             {
-                                if ( ses != null && direction != "transfer"
+                                if ( session != null && direction != "transfer"
                                     && !personality.getTextContent().equals( "Terminator" )
                                     && fullAddress.startsWith( "tel:" ) )
                                 {
@@ -842,6 +825,17 @@ public class VoiceXMLRESTProxy {
                                         log.info( "Session already ended?" );
                                     }
                                 }
+                                //update session with call timings
+                                session.setAnswerTimestamp( answerTimeString );
+                                session.setStartTimestamp( startTimeString );
+                                session.setReleaseTimestamp( releaseTimeString );
+                                session.setDirection( direction );
+                                session.setRemoteAddress( address );
+                                session.setLocalAddress( config.getMyAddress() );
+                                session.storeSession();
+                                log.info( String.format( "Call ended. session updated: %s",
+                                    ServerUtils.serialize( session ) ) );
+                                stopCostsAtHangup(sessionKey);
                             }
                             
                         } else {
@@ -1540,5 +1534,42 @@ public class VoiceXMLRESTProxy {
         }
         return "http://api.voicerss.org/?key=afafc70fde4b4b32a730842e6fcf0c62&src=" + textForSpeech + "&hl=" + language
             + "&c=" + contentType + "&r=" + speed + "&f=" + format + "&type=.wav";
+    }
+    
+    private void stopCostsAtHangup( String sessionId )
+    {
+        Session session = Session.getSession( sessionId );
+        //stop costs
+        try
+        {
+            log.info( String.format( "stopping charges for session: %s", ServerUtils.serialize( session ) ) );
+            if ( session.getStartTimestamp() != null && session.getAnswerTimestamp() != null && session.getReleaseTimestamp() != null )
+            {
+                if ( session.getDirection().equalsIgnoreCase( "outbound" ) )
+                {
+                    DDRUtils.updateDDRRecordOnCallStops( session.getAdapterConfig(),
+                        DDRTypeCategory.OUTGOING_COMMUNICATION_COST, CommunicationStatus.SENT, session.getRemoteAddress(),
+                        Long.parseLong( session.getStartTimestamp() ), Long.parseLong( session.getAnswerTimestamp() ),
+                        Long.parseLong( session.getReleaseTimestamp() ) );
+                }
+                else if( session.getDirection().equalsIgnoreCase( "inbound" ) )
+                {
+                    DDRUtils.updateDDRRecordOnCallStops( session.getAdapterConfig(),
+                        DDRTypeCategory.INCOMING_COMMUNICATION_COST, CommunicationStatus.RECEIEVED, session.getRemoteAddress(),
+                        Long.parseLong( session.getStartTimestamp() ), Long.parseLong( session.getAnswerTimestamp() ),
+                        Long.parseLong( session.getReleaseTimestamp() ) );
+                }
+            }
+        }
+        catch ( Exception e )
+        {
+            String errorMessage = String
+                .format(
+                    "Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
+                    session.getDirection(), session.getAdapterConfig().getConfigId(), session.getAdapterConfig()
+                        .getMyAddress(), session.getRemoteAddress(), session.getLocalAddress() );
+            log.severe( errorMessage );
+            dialogLog.severe( session.getAdapterConfig().getConfigId(), errorMessage );
+        }
     }
 }

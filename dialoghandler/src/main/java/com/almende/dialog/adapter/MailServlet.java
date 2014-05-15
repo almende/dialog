@@ -535,15 +535,15 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
     }
 
     @Override
-    protected void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected double attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
     {
-        DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
     }
 
     @Override
-    protected void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
+    protected double attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
     throws Exception
     {
-        DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, toAddress );
+        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, toAddress );
     }
 }

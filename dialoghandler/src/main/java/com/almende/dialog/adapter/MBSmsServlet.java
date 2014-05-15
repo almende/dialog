@@ -94,16 +94,16 @@ public class MBSmsServlet extends TextServlet {
     }
     
     @Override
-    protected void attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected double attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
     {
-        DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
     }
 
     @Override
-    protected void attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
+    protected double attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
     {
         //add costs with no.of messages * recipients
-        DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,
+        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,
             CM.countMessageParts( message ) * toAddress.size() );
     }
 

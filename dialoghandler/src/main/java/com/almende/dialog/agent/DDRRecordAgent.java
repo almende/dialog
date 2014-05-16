@@ -99,7 +99,7 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
         endTime = endTime != null ? endTime : TimeUtils.getServerCurrentTime().plusYears( 5 ).getMillis();
         unit = unit != null ? unit : 1;
         unitTypeString = unitTypeString != null ? unitTypeString : UnitType.PART.name();
-
+        
         DDRPrice ddrPrice = new DDRPrice();
         ddrPrice.setDdrTypeId( ddrTypeId );
         ddrPrice.setEndTime( endTime );
@@ -163,8 +163,8 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
      * @param units 
      * @param unitType 
      */
-    public Object getDDRPrices( @Name( "ddrTypeId" ) String ddrTypeId, @Name( "adapterType" ) String adapterTypeString,
-        @Name( "adapterId" ) @Optional String adapterId )
+    public Object getDDRPrices( @Name( "ddrTypeId" ) String ddrTypeId,
+        @Name( "adapterType" ) @Optional String adapterTypeString, @Name( "adapterId" ) @Optional String adapterId )
     {
         AdapterType adapterType = adapterTypeString != null && !adapterTypeString.isEmpty() ? AdapterType
             .getByValue( adapterTypeString ) : null;

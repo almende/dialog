@@ -87,10 +87,10 @@ public class DDRPrice
     //used incase a particular price is applied to a particular adapter
     private String adapterId;
     private double price;
-    private long startTime;
-    private long endTime;
-    private int staffleStart;
-    private int staffleEnd;
+    private Long startTime;
+    private Long endTime;
+    private Integer staffleStart;
+    private Integer staffleEnd;
     
     /**
      * create (if missing) or updates this document instance
@@ -208,35 +208,35 @@ public class DDRPrice
     {
         this.price = price;
     }
-    public long getStartTime()
+    public Long getStartTime()
     {
         return startTime;
     }
-    public void setStartTime( long startTime )
+    public void setStartTime( Long startTime )
     {
         this.startTime = startTime;
     }
-    public long getEndTime()
+    public Long getEndTime()
     {
         return endTime;
     }
-    public void setEndTime( long endTime )
+    public void setEndTime( Long endTime )
     {
         this.endTime = endTime;
     }
-    public int getStaffleStart()
+    public Integer getStaffleStart()
     {
         return staffleStart;
     }
-    public void setStaffleStart( int staffleStart )
+    public void setStaffleStart( Integer staffleStart )
     {
         this.staffleStart = staffleStart;
     }
-    public int getStaffleEnd()
+    public Integer getStaffleEnd()
     {
         return staffleEnd;
     }
-    public void setStaffleEnd( int staffleEnd )
+    public void setStaffleEnd( Integer staffleEnd )
     {
         this.staffleEnd = staffleEnd;
     }

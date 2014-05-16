@@ -189,34 +189,36 @@ public class DDRUtils
                     }
                     Long duration = ( releaseTime != null ? releaseTime : TimeUtils.getServerCurrentTimeInMillis() )
                         - ddrRecord.getStart();
+                    Double durantion_double = duration.doubleValue();
                     ddrRecord.setDuration( duration );
-                    Long totalTime = null;
+                    Double totalTime = null;
                     switch ( ddrPrice.getUnitType() ) 
                     {
                         case SECOND:
-                            totalTime = duration / 1000; //in secs
+                            totalTime = durantion_double.doubleValue() / 1000; //in secs
                             break;
                         case MINUTE:
-                            totalTime = duration / (60 * 1000); //in mins
+                            totalTime = durantion_double / (60 * 1000); //in mins
                             break;
                         case HOUR:
-                            totalTime = duration / ( 60 * 60 * 1000); //in hrs
+                            totalTime = durantion_double / ( 60 * 60 * 1000); //in hrs
                             break;
                         case DAY:
-                            totalTime = duration / ( 24* 60 * 60 * 1000); //in days
+                            totalTime = durantion_double / ( 24 * 60 * 60 * 1000); //in days
                             break;
                         case MONTH:
                             int monthOfYear = TimeUtils.getServerCurrentTime().getMonthOfYear();
                             int totalDays = Calendar.getInstance( TimeUtils.getServerTimeZone() ).getActualMaximum(
                                 monthOfYear );
-                            totalTime = duration / ( totalDays * 24 * 60 * 60 * 1000 ); //in months
+                            totalTime = durantion_double / ( totalDays * 24 * 60 * 60 * 1000 ); //in months
                             break;
                         default:
                             throw new Exception( "Update ddr not implemented for this UnitType: "
                                 + ddrPrice.getUnitType() );
                     }
-                    double noOfComsumedUnits = totalTime / ((double)ddrPrice.getUnits());
-                    ddrRecord.setTotalCost( noOfComsumedUnits * ddrPrice.getPrice() );
+                    double noOfComsumedUnits = Math.ceil(totalTime) / ((double)ddrPrice.getUnits());
+                    ddrRecord.setTotalCost( Math.ceil( noOfComsumedUnits ) * ddrPrice.getPrice() );
+                    ddrRecord.setStatus( CommunicationStatus.FINISHED );
                     ddrRecord.createOrUpdate();
                     return ddrRecord.getTotalCost();
                 }
@@ -290,6 +292,7 @@ public class DDRUtils
             {
                 //applying charges
                 DDRPrice ddrPrice = communicationDDRPrices.iterator().next();
+                log.info( String.format( "DDRPrice id: %s with Charges: %s found!!", ddrPrice.getId(), ddrPrice.getPrice() ) );
                 DDRRecord ddrRecord = new DDRRecord( communicationCostDDRType.getTypeId(), config.getConfigId(),
                     config.getOwner(), 1, ddrPrice.getPrice() * quantity );
                 ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );

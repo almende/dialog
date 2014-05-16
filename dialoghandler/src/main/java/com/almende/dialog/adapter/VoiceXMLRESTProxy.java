@@ -298,7 +298,6 @@ public class VoiceXMLRESTProxy {
         DDRWrapper.log(question,session,"Start",config);
         session.storeSession();
         
-        Response response = handleQuestion(question,session.getAdapterConfig().getConfigId(),remoteID,sessionKey);
         //add costs
         try
         {
@@ -320,7 +319,8 @@ public class VoiceXMLRESTProxy {
             log.severe( errorMessage );
             dialogLog.severe( config.getConfigId(), errorMessage );
         }
-        return response;
+        
+        return handleQuestion( question, config.getConfigId(), remoteID, sessionKey );
     }
 	
     @Path( "answer" )
@@ -830,7 +830,7 @@ public class VoiceXMLRESTProxy {
                                 session.storeSession();
                                 log.info( String.format( "Call ended. session updated: %s",
                                     ServerUtils.serialize( session ) ) );
-                                stopCostsAtHangup(sessionKey);
+                                stopCostsAtHangup(session);
                                 
                                 //flush the keys
                                 StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
@@ -1538,16 +1538,16 @@ public class VoiceXMLRESTProxy {
             + "&c=" + contentType + "&r=" + speed + "&f=" + format + "&type=.wav";
     }
     
-    private void stopCostsAtHangup( String sessionId )
+    private void stopCostsAtHangup( Session session )
     {
-        Session session = Session.getSession( sessionId );
         //stop costs
         try
         {
             AdapterConfig adapterConfig = session.getAdapterConfig();
             double totalCosts = 0.0;
             log.info( String.format( "stopping charges for session: %s", ServerUtils.serialize( session ) ) );
-            if ( session.getStartTimestamp() != null && session.getAnswerTimestamp() != null && session.getReleaseTimestamp() != null )
+            if ( session.getStartTimestamp() != null && session.getAnswerTimestamp() != null
+                && session.getReleaseTimestamp() != null && session.getDirection() != null )
             {
                 if ( session.getDirection().equalsIgnoreCase( "outbound" )
                     || session.getDirection().equalsIgnoreCase( "transfer" ) )

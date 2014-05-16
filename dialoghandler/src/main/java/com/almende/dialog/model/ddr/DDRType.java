@@ -50,7 +50,6 @@ public class DDRType
      */
     public void createOrUpdate() throws Exception
     {
-        typeId = typeId != null && !typeId.isEmpty() ? typeId : ObjectId.get().toStringMongod();
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         DDRType ddrType = getDDRType( category );
         if ( ddrType != null )
@@ -60,6 +59,7 @@ public class DDRType
         }
         else 
         {
+            typeId = typeId != null && !typeId.isEmpty() ? typeId : ObjectId.get().toStringMongod();
             datastore.storeOrUpdate( this );
         }
     }

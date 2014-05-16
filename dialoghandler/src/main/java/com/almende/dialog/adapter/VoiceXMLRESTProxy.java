@@ -527,11 +527,6 @@ public class VoiceXMLRESTProxy {
         {
             log.info( "no question received" );
         }
-        StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
-        StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound");
-        StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound_retry");
-        StringStore.dropString(sessionKey);
-        StringStore.dropString(sessionKey+"@outbound");
         StringStore.dropString( stringStoreKey );
         return Response.ok("").build();
     }
@@ -836,6 +831,13 @@ public class VoiceXMLRESTProxy {
                                 log.info( String.format( "Call ended. session updated: %s",
                                     ServerUtils.serialize( session ) ) );
                                 stopCostsAtHangup(sessionKey);
+                                
+                                //flush the keys
+                                StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
+                                StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound");
+                                StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound_retry");
+                                StringStore.dropString(sessionKey);
+                                StringStore.dropString(sessionKey+"@outbound");
                             }
                             
                         } else {
@@ -1542,22 +1544,33 @@ public class VoiceXMLRESTProxy {
         //stop costs
         try
         {
+            AdapterConfig adapterConfig = session.getAdapterConfig();
+            double totalCosts = 0.0;
             log.info( String.format( "stopping charges for session: %s", ServerUtils.serialize( session ) ) );
             if ( session.getStartTimestamp() != null && session.getAnswerTimestamp() != null && session.getReleaseTimestamp() != null )
             {
-                if ( session.getDirection().equalsIgnoreCase( "outbound" ) )
+                if ( session.getDirection().equalsIgnoreCase( "outbound" )
+                    || session.getDirection().equalsIgnoreCase( "transfer" ) )
                 {
-                    DDRUtils.updateDDRRecordOnCallStops( session.getAdapterConfig(),
-                        DDRTypeCategory.OUTGOING_COMMUNICATION_COST, CommunicationStatus.SENT, session.getRemoteAddress(),
-                        Long.parseLong( session.getStartTimestamp() ), Long.parseLong( session.getAnswerTimestamp() ),
-                        Long.parseLong( session.getReleaseTimestamp() ) );
+                    totalCosts = DDRUtils
+                        .updateDDRRecordOnCallStops( adapterConfig, DDRTypeCategory.OUTGOING_COMMUNICATION_COST,
+                            CommunicationStatus.SENT, session.getRemoteAddress(),
+                            Long.parseLong( session.getStartTimestamp() ),
+                            Long.parseLong( session.getAnswerTimestamp() ),
+                            Long.parseLong( session.getReleaseTimestamp() ) );
                 }
-                else if( session.getDirection().equalsIgnoreCase( "inbound" ) )
+                else if ( session.getDirection().equalsIgnoreCase( "inbound" ) )
                 {
-                    DDRUtils.updateDDRRecordOnCallStops( session.getAdapterConfig(),
-                        DDRTypeCategory.INCOMING_COMMUNICATION_COST, CommunicationStatus.RECEIEVED, session.getRemoteAddress(),
-                        Long.parseLong( session.getStartTimestamp() ), Long.parseLong( session.getAnswerTimestamp() ),
-                        Long.parseLong( session.getReleaseTimestamp() ) );
+                    totalCosts = DDRUtils
+                        .updateDDRRecordOnCallStops( adapterConfig, DDRTypeCategory.INCOMING_COMMUNICATION_COST,
+                            CommunicationStatus.RECEIEVED, session.getRemoteAddress(),
+                            Long.parseLong( session.getStartTimestamp() ),
+                            Long.parseLong( session.getAnswerTimestamp() ),
+                            Long.parseLong( session.getReleaseTimestamp() ) );
+                }
+                //publish charges
+                if(totalCosts > 0.0) {
+                    DDRUtils.publishDDREntryToQueue( adapterConfig.getOwner(), totalCosts );
                 }
             }
         }

@@ -163,7 +163,7 @@ public class DDRUtils
      * @param releaseTime actual call hangup timestamp
      * @throws Exception
      */
-    public static void updateDDRRecordOnCallStops( AdapterConfig config, DDRTypeCategory category,
+    public static double updateDDRRecordOnCallStops( AdapterConfig config, DDRTypeCategory category,
         CommunicationStatus status, String remoteID, Long startTime, Long answerTime, Long releaseTime ) throws Exception
     {
         DDRType communicationCostDDRType = DDRType.getDDRType( category );
@@ -218,9 +218,11 @@ public class DDRUtils
                     double noOfComsumedUnits = totalTime / ((double)ddrPrice.getUnits());
                     ddrRecord.setTotalCost( noOfComsumedUnits * ddrPrice.getPrice() );
                     ddrRecord.createOrUpdate();
+                    return ddrRecord.getTotalCost();
                 }
             }
         }
+        return 0.0;
     }
     
     public static void publishDDREntryToQueue( String accountId, double totalCost ) throws Exception
@@ -236,6 +238,7 @@ public class DDRUtils
             message.put( "accountId", accountId );
             message.put( "cost", String.valueOf( totalCost ) );
             channel.queueDeclare( PUBLISH_QUEUE_NAME, false, false, false, null );
+            log.info( String.format( "Publishing costs: %s for account: %s", totalCost, accountId ) );
             channel.basicPublish( "", PUBLISH_QUEUE_NAME, null, ServerUtils.serialize( message )
                 .getBytes() );
             channel.close();

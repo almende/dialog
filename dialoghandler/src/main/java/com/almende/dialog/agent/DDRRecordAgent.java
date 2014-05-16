@@ -87,12 +87,18 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
      * @param unitTypeString
      * @return
      */
-    public Object createDDRPrice( @Name( "ddrTypeId" ) String ddrTypeId, @Name( "startTime" ) @Optional long startTime,
-        @Name( "endTime" ) long endTime, @Name( "price" ) double price,
-        @Name( "staffleStart" ) @Optional int staffleStart, @Name( "staffleEnd" ) @Optional int staffleEnd,
-        @Name( "unit" ) int unit, @Name( "unitType" ) String unitTypeString,
+    public Object createDDRPrice( @Name( "ddrTypeId" ) String ddrTypeId, @Name( "startTime" ) @Optional Long startTime,
+        @Name( "endTime" ) @Optional Long endTime, @Name( "price" ) Double price,
+        @Name( "staffleStart" ) @Optional Integer staffleStart, @Name( "staffleEnd" ) @Optional Integer staffleEnd,
+        @Name( "unit" ) @Optional Integer unit, @Name( "unitType" ) String unitTypeString,
         @Name( "adapterType" ) String adapterTypeString, @Name( "adapterId" ) @Optional String adapterId )
     {
+        //set default values for some optional field
+        startTime = startTime != null ? startTime : TimeUtils.getServerCurrentTimeInMillis();
+        //add end time as 5yrs from now
+        endTime = endTime != null ? endTime : TimeUtils.getServerCurrentTime().plusYears( 5 ).getMillis();
+        unit = unit != null ? unit : 1;
+        
         DDRPrice ddrPrice = new DDRPrice();
         ddrPrice.setDdrTypeId( ddrTypeId );
         ddrPrice.setEndTime( endTime );
@@ -126,15 +132,12 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
      * @throws Exception 
      */
     public Object createDDRPriceWithNewDDRType( @Name( "nameForDDR" ) String name,
-        @Name( "ddrTypeCategory" ) String categoryString, @Name( "startTime" ) @Optional long startTime,
-        @Name( "endTime" ) long endTime, @Name( "price" ) double price,
-        @Name( "staffleStart" ) @Optional int staffleStart, @Name( "staffleEnd" ) @Optional int staffleEnd,
-        @Name( "unit" ) int unit, @Name( "unitType" ) String unitTypeString,
+        @Name( "ddrTypeCategory" ) String categoryString, @Name( "startTime" ) @Optional Long startTime,
+        @Name( "endTime" ) Long endTime, @Name( "price" ) Double price,
+        @Name( "staffleStart" ) @Optional Integer staffleStart, @Name( "staffleEnd" ) @Optional Integer staffleEnd,
+        @Name( "unit" ) Integer unit, @Name( "unitType" ) String unitTypeString,
         @Name( "adapterType" ) String adapterTypeString, @Name( "adapterId" ) String adapterid ) throws Exception
     {
-        //set default values for some optional field
-        startTime = startTime != 0L ? startTime : TimeUtils.getServerCurrentTimeInMillis();
-        unit = unit != 0 ? unit : 1;
         Object ddrTypeObject = createDDRType( name, categoryString );
         TypeUtil<DDRType> injector = new TypeUtil<DDRType>(){};
         DDRType ddrType = injector.inject( ddrTypeObject );
@@ -159,7 +162,7 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
      * @param unitType 
      */
     public Object getDDRPrices( @Name( "ddrTypeId" ) String ddrTypeId, @Name( "adapterType" ) String adapterTypeString,
-        @Name( "adapterType" ) @Optional String adapterId )
+        @Name( "adapterId" ) @Optional String adapterId )
     {
         AdapterType adapterType = adapterTypeString != null && !adapterTypeString.isEmpty() ? AdapterType
             .getByValue( adapterTypeString ) : null;

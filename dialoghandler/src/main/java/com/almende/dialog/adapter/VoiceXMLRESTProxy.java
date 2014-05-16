@@ -1578,9 +1578,9 @@ public class VoiceXMLRESTProxy {
         {
             String errorMessage = String
                 .format(
-                    "Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
+                    "Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s \n Error: %",
                     session.getDirection(), session.getAdapterConfig().getConfigId(), session.getAdapterConfig()
-                        .getMyAddress(), session.getRemoteAddress(), session.getLocalAddress() );
+                        .getMyAddress(), session.getRemoteAddress(), session.getLocalAddress(), e.getLocalizedMessage() );
             log.severe( errorMessage );
             dialogLog.severe( session.getAdapterConfig().getConfigId(), errorMessage );
         }

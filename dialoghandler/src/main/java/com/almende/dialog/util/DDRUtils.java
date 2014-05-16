@@ -229,6 +229,7 @@ public class DDRUtils
     {
         try
         {
+            log.info( String.format( "Publishing costs: %s for account: %s", totalCost, accountId ) );
             rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory : new ConnectionFactory();
             rabbitMQConnectionFactory.setHost( "localhost" );
             Connection connection = rabbitMQConnectionFactory.newConnection();
@@ -238,7 +239,6 @@ public class DDRUtils
             message.put( "accountId", accountId );
             message.put( "cost", String.valueOf( totalCost ) );
             channel.queueDeclare( PUBLISH_QUEUE_NAME, false, false, false, null );
-            log.info( String.format( "Publishing costs: %s for account: %s", totalCost, accountId ) );
             channel.basicPublish( "", PUBLISH_QUEUE_NAME, null, ServerUtils.serialize( message )
                 .getBytes() );
             channel.close();

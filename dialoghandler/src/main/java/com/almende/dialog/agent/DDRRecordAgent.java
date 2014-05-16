@@ -90,15 +90,16 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
     public Object createDDRPrice( @Name( "ddrTypeId" ) String ddrTypeId, @Name( "startTime" ) @Optional Long startTime,
         @Name( "endTime" ) @Optional Long endTime, @Name( "price" ) Double price,
         @Name( "staffleStart" ) @Optional Integer staffleStart, @Name( "staffleEnd" ) @Optional Integer staffleEnd,
-        @Name( "unit" ) @Optional Integer unit, @Name( "unitType" ) String unitTypeString,
-        @Name( "adapterType" ) String adapterTypeString, @Name( "adapterId" ) @Optional String adapterId )
+        @Name( "unit" ) @Optional Integer unit, @Name( "unitType" ) @Optional String unitTypeString,
+        @Name( "adapterType" ) @Optional String adapterTypeString, @Name( "adapterId" ) @Optional String adapterId )
     {
         //set default values for some optional field
         startTime = startTime != null ? startTime : TimeUtils.getServerCurrentTimeInMillis();
         //add end time as 5yrs from now
         endTime = endTime != null ? endTime : TimeUtils.getServerCurrentTime().plusYears( 5 ).getMillis();
         unit = unit != null ? unit : 1;
-        
+        unitTypeString = unitTypeString != null ? unitTypeString : UnitType.PART.name();
+
         DDRPrice ddrPrice = new DDRPrice();
         ddrPrice.setDdrTypeId( ddrTypeId );
         ddrPrice.setEndTime( endTime );
@@ -133,10 +134,11 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
      */
     public Object createDDRPriceWithNewDDRType( @Name( "nameForDDR" ) String name,
         @Name( "ddrTypeCategory" ) String categoryString, @Name( "startTime" ) @Optional Long startTime,
-        @Name( "endTime" ) Long endTime, @Name( "price" ) Double price,
+        @Name( "endTime" ) @Optional Long endTime, @Name( "price" ) Double price,
         @Name( "staffleStart" ) @Optional Integer staffleStart, @Name( "staffleEnd" ) @Optional Integer staffleEnd,
-        @Name( "unit" ) Integer unit, @Name( "unitType" ) String unitTypeString,
-        @Name( "adapterType" ) String adapterTypeString, @Name( "adapterId" ) String adapterid ) throws Exception
+        @Name( "unit" ) @Optional Integer unit, @Name( "unitType" ) @Optional String unitTypeString,
+        @Name( "adapterType" ) @Optional String adapterTypeString, @Name( "adapterId" ) @Optional  String adapterid )
+    throws Exception
     {
         Object ddrTypeObject = createDDRType( name, categoryString );
         TypeUtil<DDRType> injector = new TypeUtil<DDRType>(){};

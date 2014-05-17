@@ -356,10 +356,6 @@ public class VoiceXMLRESTProxy {
                     return Response.status( Response.Status.BAD_REQUEST ).build();
                 }
                 DDRWrapper.log( question, session, "Answer" );
-
-                StringStore.dropString( question_id );
-                StringStore.dropString( question_id + "-remoteID" );
-                StringStore.dropString( "question_" + session.getRemoteAddress() + "_" + session.getLocalAddress() );
                 question = question.answer( responder, session.getAdapterConfig().getConfigId(), answer_id,
                     answer_input, sessionKey );
                 return handleQuestion( question, session.getAdapterConfig().getConfigId(), responder, sessionKey );
@@ -519,9 +515,8 @@ public class VoiceXMLRESTProxy {
             DDRWrapper.log( question, session, "Hangup" );
             handleQuestion( null, session.getAdapterConfig().getConfigId(), remoteID, sessionKey );
             //delete all session entities
-            String question_id = question.getQuestion_id();
-            StringStore.dropString(question_id);
-            StringStore.dropString(question_id+"-remoteID");
+            StringStore.dropString(question.getQuestion_id());
+            StringStore.dropString(question.getQuestion_id()+"-remoteID");
         }
         else
         {
@@ -567,7 +562,7 @@ public class VoiceXMLRESTProxy {
             {
                 question = ServerUtils.deserialize( questionNode.get( "question" ).toString(), Question.class );
             }
-            responder = questionNode.get( "remoteCallerId" ).asText();
+                responder = questionNode.get( "remoteCallerId" ).asText();
                 referredCalledId = questionNode.get( "referredCalledId" ).asText();
             }
         }
@@ -602,9 +597,6 @@ public class VoiceXMLRESTProxy {
     public Response receiveCCMessage(String xml) {
         
         log.info("Received cc: "+xml);
-        
-        String reply="";
-        
         try {
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
             DocumentBuilder db = dbf.newDocumentBuilder();
@@ -831,13 +823,22 @@ public class VoiceXMLRESTProxy {
                                 log.info( String.format( "Call ended. session updated: %s",
                                     ServerUtils.serialize( session ) ) );
                                 stopCostsAtHangup(session);
-                                
                                 //flush the keys
-                                StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
-                                StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound");
-                                StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress()+"@outbound_retry");
-                                StringStore.dropString(sessionKey);
-                                StringStore.dropString(sessionKey+"@outbound");
+                                try
+                                {
+//                                    StringStore.dropString( "question_" + session.getRemoteAddress() + "_"
+//                                        + session.getLocalAddress() );
+                                    StringStore.dropString( "question_" + session.getRemoteAddress() + "_"
+                                        + session.getLocalAddress() + "@outbound" );
+                                    StringStore.dropString( "question_" + session.getRemoteAddress() + "_"
+                                        + session.getLocalAddress() + "@outbound_retry" );
+                                    StringStore.dropString( sessionKey );
+                                    StringStore.dropString( sessionKey + "@outbound" );
+                                }
+                                catch ( Exception e )
+                                {
+                                    log.info( "exception seen: " + e.getLocalizedMessage() );
+                                }
                             }
                             
                         } else {
@@ -860,7 +861,7 @@ public class VoiceXMLRESTProxy {
         } catch (Exception e) {
             log.severe("Something failed: "+ e.getMessage());
         }
-        return Response.ok(reply).build();
+        return Response.ok("").build();
     }
     
     /**

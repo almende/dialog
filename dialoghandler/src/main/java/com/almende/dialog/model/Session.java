@@ -22,7 +22,7 @@ public class Session implements SessionIntf {
 	
 	SessionIntf session;
 	@Id
-	String key = "";
+	public String key = "";
 	public boolean killed = false;
 	String language = null;
 	Question question = null;

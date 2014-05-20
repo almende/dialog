@@ -27,6 +27,7 @@ import com.almende.dialog.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 
 public class XMPPServlet extends TextServlet implements MessageListener, ChatManagerListener
@@ -204,14 +205,14 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
     }
     
     @Override
-    protected double attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected DDRRecord attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
     {
         return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
     }
 
 
     @Override
-    protected double attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
+    protected DDRRecord attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
     throws Exception
     {
         return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, toAddress );

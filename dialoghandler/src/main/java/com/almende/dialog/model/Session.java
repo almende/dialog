@@ -1,6 +1,8 @@
 package com.almende.dialog.model;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import com.almende.dialog.accounts.AdapterConfig;
@@ -9,20 +11,23 @@ import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.impl.S_fields;
 import com.almende.dialog.model.intf.SessionIntf;
-import com.almende.dialog.state.StringStore;
-import com.almende.util.ParallelInit;
+import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
+import com.almende.util.twigmongo.annotations.Id;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class Session implements SessionIntf {
 	private static final long serialVersionUID = 2674975096455049670L;
-	private static final Logger log = Logger
-			.getLogger("DialogHandler");
-	static final ObjectMapper om =ParallelInit.getObjectMapper();
+	private static final Logger log = Logger.getLogger("DialogHandler");
 	
 	SessionIntf session;
+	@Id
 	String key = "";
 	public boolean killed = false;
+	String language = null;
+	Question question = null;
+	Map<String, String> extras = null;
+	Integer retryCount = null;
 	
 	public Session() {
 		this.session = new S_fields();
@@ -55,7 +60,7 @@ public class Session implements SessionIntf {
 	@JsonIgnore
 	public String toJSON() {
 		try {
-			return om.writeValueAsString(this);
+			return JOM.getInstance().writeValueAsString(this);
 		} catch (Exception e) {
 			log.severe("Session toJSON: failed to serialize Session!");
 		}
@@ -64,7 +69,7 @@ public class Session implements SessionIntf {
 	@JsonIgnore
 	public static Session fromJSON(String json) {
 		try {
-			return om.readValue(json, Session.class);
+			return JOM.getInstance().readValue(json, Session.class);
 		} catch (Exception e){
 			log.severe("Session fromJSON: failed to parse Session JSON!: "+ json );
 		}
@@ -72,11 +77,13 @@ public class Session implements SessionIntf {
 	}
 	@JsonIgnore
 	public void storeSession() {
-		StringStore.storeString(key, this.toJSON());
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        datastore.storeOrUpdate( this );
 	}
 	@JsonIgnore
 	public void drop() {
-		StringStore.dropString(key);
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        datastore.delete( this );
 	}
 	public static Session getSession(String key) {
 		return getSession(key, null);
@@ -84,10 +91,10 @@ public class Session implements SessionIntf {
 	
 	@JsonIgnore
 	public static Session getSession(String key, String keyword) {
-		Session session = null;
-		String session_json = StringStore.getString(key);
+		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        Session session = datastore.load(Session.class, key);
 		// If there is no session create a new one for the user
-		if (session_json == null || session_json.equals("")){
+		if (session == null){
 			String[] split = key.split("\\|");
 			
 			if (split.length == 3){
@@ -144,11 +151,7 @@ public class Session implements SessionIntf {
 			} else {
 				log.severe("getSession: incorrect key given:"+key);
 			}
-		// Session found, so reuse that one.
-		} else {
-			session = Session.fromJSON(session_json);
 		}
-		session.key = key;
 		return session;
 	}
 	
@@ -276,5 +279,80 @@ public class Session implements SessionIntf {
     public void setAnswerTimestamp( String answerTimestamp )
     {
         this.session.setAnswerTimestamp( answerTimestamp );
+    }
+    @Override
+    public String getDDRRecordId()
+    {
+        return this.session.getDDRRecordId();
+    }
+    @Override
+    public void setDDRRecordId( String ddrRecordId )
+    {
+        this.session.setDDRRecordId( ddrRecordId );
+    }
+    public Map<String, String> getExtras()
+    {
+        extras = extras != null ? extras : new HashMap<String, String>();
+        return extras;
+    }
+    public void setExtras( Map<String, String> extras )
+    {
+        this.extras = extras;
+    }
+    /**
+     * used to mimick the String store entity. 
+     * @return the first value found in the {@link Session#extras}
+     */
+    public static String getString( String sessionKey )
+    {
+        Session session = getSession( sessionKey );
+        return !session.getExtras().isEmpty() ? session.getExtras().values().iterator().next() : null;
+    }
+    
+    public String getKey()
+    {
+        return key;
+    }
+    public void setKey( String key )
+    {
+        this.key = key;
+    }
+    
+    /**
+     * mimicks the old string store entity by creating a new session entity with 
+     * @param string
+     * @param answer_input
+     */
+    public static Session storeString( String key, String valueTobeStored )
+    {
+        Session session = new Session();
+        session.setKey( key );
+        session.getExtras().put( key, valueTobeStored );
+        session.storeSession();
+        return session;
+    }
+    public String getLanguage()
+    {
+        return language;
+    }
+    public void setLanguage( String language )
+    {
+        this.language = language;
+    }
+    public Question getQuestion()
+    {
+        return question;
+    }
+    public void setQuestion( Question question )
+    {
+        this.question = question;
+    }
+    public Integer getRetryCount()
+    {
+        return retryCount;
+    }
+    public void setRetryCount( Integer retryCount )
+    {
+        this.retryCount = retryCount;
     }
 }

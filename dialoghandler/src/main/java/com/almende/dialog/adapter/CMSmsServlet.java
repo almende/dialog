@@ -20,6 +20,7 @@ import com.almende.dialog.adapter.tools.CMStatus;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
@@ -128,14 +129,14 @@ public class CMSmsServlet extends TextServlet {
 			throws IOException {}
 	
     @Override
-    protected double attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected DDRRecord attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
     {
         // Needs implementation, but service not available at CM
-        return 0.0;
+        return null;
     }
 
     @Override
-    protected double attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
+    protected DDRRecord attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
     {
         //add costs with no.of messages * recipients
         return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,

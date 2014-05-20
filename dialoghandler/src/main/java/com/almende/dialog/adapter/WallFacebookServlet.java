@@ -15,8 +15,9 @@ import org.scribe.model.Token;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Facebook;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
-import com.almende.dialog.state.StringStore;
+import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -51,7 +52,7 @@ public class WallFacebookServlet extends TextServlet {
                 if(!config.getMyAddress().equals(message.get("from").get("id").asText())) {
 
                     String id = message.get("id").asText();
-                    String since = StringStore.getString(getAdapterType()+"_comment_"+id);
+                    String since = Session.getString(getAdapterType()+"_comment_"+id);
 
                     if(since==null) {
                         since="0";
@@ -100,7 +101,7 @@ public class WallFacebookServlet extends TextServlet {
                         }
                     }
 
-                    StringStore.storeString(getAdapterType()+"_comment_"+id, last.toString());
+                    Session.storeString(getAdapterType()+"_comment_"+id, last.toString());
                 }
 
                 allMessages.add(message);
@@ -158,13 +159,13 @@ public class WallFacebookServlet extends TextServlet {
     }
     
     @Override
-    protected double attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected DDRRecord attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
     {
         return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
     }
 
     @Override
-    protected double attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
+    protected DDRRecord attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
     throws Exception
     {
         //add costs with no.of messages * recipients

@@ -11,7 +11,6 @@ import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
-import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.Transport;
 import javax.mail.event.ConnectionEvent;
@@ -37,7 +36,8 @@ import org.joda.time.DateTime;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.state.StringStore;
+import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
@@ -184,7 +184,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
         props.put( "mail.smtp.user", username );
         props.put( "mail.smtp.password", password );
         props.put( "mail.smtp.auth", "true" );
-        Session session = Session.getDefaultInstance( props );
+        javax.mail.Session session = javax.mail.Session.getDefaultInstance( props );
         Message simpleMessage = new MimeMessage( session );
         Map<String, String> allAddresses = new HashMap<>( addressNameMap );
         try
@@ -313,11 +313,12 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
         {
             Properties props = new Properties();
             props.setProperty( "mail.store.protocol", receivingProtocol );
-            Session session = Session.getDefaultInstance( props, null );
+            javax.mail.Session mailSession = javax.mail.Session.getDefaultInstance( props, null );
             try
             {
                 //fetch the last Email timestamp read
-                String lastEmailTimestamp = StringStore.getString( "lastEmailRead_" + adapterConfig.getConfigId() );
+                Session session = Session.getSession( "incoming_email" + adapterConfig.getConfigId() );
+                String lastEmailTimestamp = session != null ? session.getExtras().get("lastEmailTimestamp" ) : null; 
                 String updatedLastEmailTimestamp = null;
                 //if no lastEmailTimestamp is seen, default it to when the adapter was created
                 if ( lastEmailTimestamp == null )
@@ -334,11 +335,12 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                         currentTime = currentTime.minusMillis( currentTime.getMillisOfDay() );
                         lastEmailTimestamp = String.valueOf( currentTime.getMillis() );
                     }
+                    session.getExtras().put( "lastEmailTimestamp", lastEmailTimestamp );
                 }
                 log.info( String.format( "initial EMail timestamp for adapterId: %s is: %s",
                     adapterConfig.getConfigId(), lastEmailTimestamp ) );
 
-                Store store = session.getStore( receivingProtocol );
+                Store store = mailSession.getStore( receivingProtocol );
                 store.connect( receivingHost, username, password );
                 Folder folder = store.getFolder( "INBOX" );
                 folder.open( Folder.READ_ONLY );
@@ -371,7 +373,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                                         .getTime(), lastEmailTimestamp ) );
                             try
                             {
-                                MimeMessage mimeMessage = new MimeMessage( session, messages[i].getInputStream() );
+                                MimeMessage mimeMessage = new MimeMessage( mailSession, messages[i].getInputStream() );
                                 mimeMessage.setFrom( fromAddress );
                                 mimeMessage.setSubject( messages[i].getSubject() );
                                 mimeMessage.setContent( messages[i].getContent(), messages[i].getContentType() );
@@ -391,9 +393,10 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                 }
                 folder.close( true );
                 store.close();
-                if ( updatedLastEmailTimestamp != null && !updatedLastEmailTimestamp.equals( lastEmailTimestamp ) )
+                if ( updatedLastEmailTimestamp != null && !updatedLastEmailTimestamp.equals( lastEmailTimestamp ) && session != null )
                 {
-                    StringStore.storeString( "lastEmailRead_" + adapterConfig.getConfigId(), updatedLastEmailTimestamp );
+                    session.getExtras().put( "lastEmailTimestamp", lastEmailTimestamp );
+                    session.storeSession();
                 }
             }
             catch ( Exception e )
@@ -421,7 +424,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             .getProperties().get( RECEIVING_HOST_KEY ).toString() : GMAIL_RECEIVING_HOST;
         Properties props = new Properties();
         props.setProperty( "mail.store.protocol", receivingProtocol );
-        Session session = Session.getDefaultInstance(props, null);
+        javax.mail.Session session = javax.mail.Session.getDefaultInstance(props, null);
         Store store = session.getStore( receivingProtocol );
         store.connect( receivingHost, adapterConfig.getXsiUser(), adapterConfig.getXsiPasswd() );
         Folder folder = store.getFolder( "INBOX" );
@@ -460,7 +463,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             fromAddress = message.getFrom()[0];
             if ( !fromAddress.toString().contains( "no-reply" ) && !fromAddress.toString().contains( "noreply" ) )
             {
-                Session session = Session.getDefaultInstance( new Properties(), null );
+                javax.mail.Session session = javax.mail.Session.getDefaultInstance( new Properties(), null );
                 MimeMessage mimeMessage = new MimeMessage( session, message.getInputStream() );
                 mimeMessage.setFrom( message.getFrom()[0] );
                 mimeMessage.setSubject( subject );
@@ -524,7 +527,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
      * @throws NumberFormatException
      * @throws MessagingException
      */
-    private void sendEmailWithDefaultAccount( Message simpleMessage, Session session ) throws NumberFormatException,
+    private void sendEmailWithDefaultAccount( Message simpleMessage, javax.mail.Session session ) throws NumberFormatException,
     MessagingException
     {
         Transport transport = session.getTransport( GMAIL_SENDING_PROTOCOL );
@@ -535,13 +538,13 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
     }
 
     @Override
-    protected double attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected DDRRecord attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
     {
         return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
     }
 
     @Override
-    protected double attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
+    protected DDRRecord attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
     throws Exception
     {
         return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, toAddress );

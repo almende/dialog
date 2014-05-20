@@ -16,6 +16,7 @@ import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 
@@ -94,13 +95,13 @@ public class MBSmsServlet extends TextServlet {
     }
     
     @Override
-    protected double attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected DDRRecord attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
     {
         return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
     }
 
     @Override
-    protected double attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
+    protected DDRRecord attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
     {
         //add costs with no.of messages * recipients
         return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,

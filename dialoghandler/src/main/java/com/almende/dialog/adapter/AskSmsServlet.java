@@ -18,6 +18,7 @@ import org.apache.commons.lang.NotImplementedException;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.sms.SmsMessage;
 import com.almende.util.ParallelInit;
@@ -193,13 +194,13 @@ public class AskSmsServlet extends TextServlet {
 	}
 
     @Override
-    protected double attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected DDRRecord attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception
     {
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
     }
 
     @Override
-    protected double attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
+    protected DDRRecord attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
     throws Exception
     {
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");

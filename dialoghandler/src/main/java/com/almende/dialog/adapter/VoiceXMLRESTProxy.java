@@ -42,14 +42,14 @@ import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
+import com.almende.dialog.model.ddr.DDRPrice;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
-import com.almende.dialog.state.StringStore;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.myBlobstore.MyBlobStore;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 
 @Path("/vxml/")
@@ -89,7 +89,7 @@ public class VoiceXMLRESTProxy {
 	{
 		try
         {
-            address = PhoneNumberUtils.formatNumber(address, null)+"@outbound";
+            address = PhoneNumberUtils.formatNumber( address, PhoneNumberFormat.E164 );
         }
         catch ( Exception e )
         {
@@ -109,17 +109,17 @@ public class VoiceXMLRESTProxy {
 		session.setRemoteAddress(address);
 		session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
 		session.setTrackingToken(UUID.randomUUID().toString());
-		session.storeSession();
 		
 		Question question = Question.fromURL(url,config.getConfigId(),address,config.getMyAddress());
-		StringStore.storeString("InitialQuestion_"+sessionKey, question.toJSON());
+        session.setQuestion( question );
+        session.storeSession();
 		
 		DDRWrapper.log(url,session.getTrackingToken(),session,"Dial",config);
 		
 		Broadsoft bs = new Broadsoft(config);
 		bs.startSubscription();
 		
-		String extSession = bs.startCall(address);
+		String extSession = bs.startCall(address + "@outbound");
 		
 		session.setExternalSession(extSession);
 		session.storeSession();
@@ -144,14 +144,13 @@ public class VoiceXMLRESTProxy {
             loadAddress = addressNameMap.keySet().iterator().next();
 
         //fetch the question
-        String questionJson = Question.getJSONFromURL( url, config.getConfigId(), loadAddress, "" );
+        Question question = Question.fromURL( url, config.getConfigId(), loadAddress, config.getMyAddress() );
 
         for ( String address : addressNameMap.keySet() )
         {
             try
             {
-                String formattedAddress = PhoneNumberUtils.formatNumber( address, PhoneNumberFormat.E164 )
-                    + "@outbound";
+                String formattedAddress = PhoneNumberUtils.formatNumber( address, PhoneNumberFormat.E164 );
                 String sessionKey = sessionPrefix + formattedAddress;
                 Session session = Session.getSession( sessionKey );
                 if ( session == null )
@@ -166,14 +165,9 @@ public class VoiceXMLRESTProxy {
                 session.setRemoteAddress(formattedAddress);
                 session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
                 session.setTrackingToken(UUID.randomUUID().toString());
-                
-                if(session.getAdapterID()==null)
-                    session.setAdapterID(config.getConfigId());
+                session.setAdapterID(config.getConfigId());
+                session.setQuestion( question );
                 session.storeSession();
-
-                StringStore.storeString("InitialQuestion_"+ sessionKey, questionJson);
-                StringStore.storeString( "question_" + session.getRemoteAddress() + "_" + session.getLocalAddress(),
-                    questionJson );
                 DDRWrapper.log(url,session.getTrackingToken(),session,"Dial",config);
 
                 Broadsoft bs = new Broadsoft( config );
@@ -181,7 +175,7 @@ public class VoiceXMLRESTProxy {
                 String extSession = "";
                 if ( !ServerUtils.isInUnitTestingEnvironment() )
                 {
-                    extSession = bs.startCall( formattedAddress );
+                    extSession = bs.startCall( formattedAddress + "@outbound" );
                 }
                 session.setExternalSession( extSession );
                 session.storeSession();
@@ -253,62 +247,56 @@ public class VoiceXMLRESTProxy {
         this.host=ui.getBaseUri().toString().replace(":80", "");
         
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localID);
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID+(direction.equals("outbound")?"@outbound":"");
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID;
         Session session = Session.getSession(sessionKey);
         
-        // Remove retry counter because call is succesfull
-        if(direction.equalsIgnoreCase("outbound")) {
-            StringStore.dropString(sessionKey+"_retry");
-            log.info("Removed retry!");
-        }
-        
-        String url="";
-        if (direction.equals("inbound")){
-            url = config.getInitialAgentURL();
-            session.setStartUrl(url);
-            session.setDirection("inbound");
-            session.setRemoteAddress(remoteID);
-            session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
-            session.setPubKey(config.getPublicKey());
-            session.setTrackingToken(UUID.randomUUID().toString());
-            session.setAdapterID(config.getConfigId());
-            
-            Broadsoft bs = new Broadsoft( config );
-            bs.startSubscription();
-        } 
-        else 
+        String url = "";
+        if ( session != null )
         {
-            if (session != null) {
+            session.setDirection( direction );
+            session.setRemoteAddress( remoteID );
+            session.setType( AdapterAgent.ADAPTER_TYPE_BROADSOFT );
+            session.setPubKey( config.getPublicKey() );
+            session.setTrackingToken( UUID.randomUUID().toString() );
+            session.setAdapterID( config.getConfigId() );
+            
+            if (direction.equals("inbound")){
+                url = config.getInitialAgentURL();
+                session.setStartUrl( url );
+                Broadsoft bs = new Broadsoft( config );
+                bs.startSubscription();
+            }
+            else if(direction.equalsIgnoreCase("outbound")) // Remove retry counter because call is succesfull 
+            {
                 url = session.getStartUrl();
-            } else {
-                log.severe(String.format("Session %s not found", sessionKey));
-                return null;
+//                Session.dropString(sessionKey+"_retry");
+//                log.info("Removed retry!");
             }
         }
+        else {
+            log.severe(String.format("Session %s not found", sessionKey));
+            return null;
+        }
         
-        String json = StringStore.getString("InitialQuestion_"+sessionKey);
-        Question question = null;
-        if(json!=null) {
-            log.info("Getting question from cache");
-            question = Question.fromJSON(json, session.getAdapterConfig().getConfigId());
-            StringStore.dropString("InitialQuestion_"+sessionKey);
-        } else {
+        Question question = session.getQuestion();
+        if(question == null) {
             question = Question.fromURL(url,session.getAdapterConfig().getConfigId(),remoteID,localID);
         }
         DDRWrapper.log(question,session,"Start",config);
-        session.storeSession();
         
         //add costs
         try
         {
+            DDRRecord ddrRecord = null;
             if ( direction.equalsIgnoreCase( "outbound" ) )
             {
-                DDRUtils.createDDRRecordOnOutgoingCommunication( config, remoteID, 1 );
+                ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication( config, remoteID, 1 );
             }
             else
             {
-                DDRUtils.createDDRRecordOnIncomingCommunication( config, remoteID, 1 );
+                ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication( config, remoteID, 1 );
             }
+            session.setDDRRecordId( ddrRecord.getId() );
         }
         catch ( Exception e )
         {
@@ -318,6 +306,10 @@ public class VoiceXMLRESTProxy {
                     direction, config.getConfigId(), config.getMyAddress(), remoteID, localID );
             log.severe( errorMessage );
             dialogLog.severe( config.getConfigId(), errorMessage );
+        }
+        finally
+        {
+            session.storeSession();
         }
         
         return handleQuestion( question, config.getConfigId(), remoteID, sessionKey );
@@ -343,12 +335,9 @@ public class VoiceXMLRESTProxy {
         Session session = Session.getSession( sessionKey );
         if ( session != null )
         {
-            String json = StringStore.getString( "question_" + session.getRemoteAddress() + "_"
-                + session.getLocalAddress() );
-            if ( json != null )
+            Question question = session.getQuestion();
+            if ( question != null )
             {
-                Question question = Question.fromJSON( json, session.getAdapterConfig().getConfigId() );
-                //String responder = StringStore.getString(question_id+"-remoteID");
                 String responder = session.getRemoteAddress();
                 if ( session.killed )
                 {
@@ -377,40 +366,17 @@ public class VoiceXMLRESTProxy {
         @QueryParam( "sessionKey" ) String sessionKey ) throws Exception
     {
         String reply = "<vxml><exit/></vxml>";
-        String json = StringStore.getString( question_id + "_" + sessionKey );
-        if ( json != null )
+        Session session = Session.getSession( sessionKey );
+        if ( session != null )
         {
-            Session session = Session.getSession( sessionKey );
-            Question question = Question.fromJSON( json, session.getAdapterConfig().getConfigId() );
-            String responder = StringStore.getString( question_id + "-remoteID" + "_" + sessionKey );
-            //check if there was a redirection before
-            String referralJSON = StringStore.getString( "transfer_" + session.getRemoteAddress() + "_"
-                + session.getLocalAddress() );
-            String referredCalledId = null;
-            String remoteID = null;
-            if ( referralJSON != null )
-            {
-                ObjectNode questionNode = ServerUtils.deserialize( referralJSON, false, ObjectNode.class );
-                if ( questionNode != null )
-                {
-                    remoteID = questionNode.get( "remoteCallerId" ).asText();
-                    referredCalledId = questionNode.get( "referredCalledId" ).asText();
-                }
-            }
+            Question question = session.getQuestion();
+            String responder = session.getRemoteAddress();
             if ( session.killed )
             {
                 return Response.status( Response.Status.BAD_REQUEST ).build();
             }
             DDRWrapper.log( question, session, "Timeout" );
-
-            StringStore.dropString( question_id );
-            StringStore.dropString( question_id + "-remoteID" );
-            StringStore.dropString( "question_" + session.getRemoteAddress() + "_"
-                + session.getLocalAddress() );
-
             HashMap<String,Object> extras = new HashMap<String, Object>();
-            extras.put( "remoteCallerId", remoteID );
-            extras.put( "referredCalledId", referredCalledId );
             extras.put( "sessionKey", sessionKey );
             question = question.event( "timeout", "No answer received", extras, responder );
 
@@ -425,20 +391,15 @@ public class VoiceXMLRESTProxy {
 	@Produces("application/voicexml+xml")
 	public Response exception(@QueryParam("questionId") String question_id, @QueryParam("sessionKey") String sessionKey){
 		String reply="<vxml><exit/></vxml>";
-		String json = StringStore.getString(question_id + "_" + sessionKey);
-		if (json != null){
-			Session session = Session.getSession(sessionKey);
-			Question question = Question.fromJSON(json, session.getAdapterConfig().getConfigId());
-			String responder = StringStore.getString(question_id + "-remoteID" + "_" + sessionKey);
+		Session session = Session.getSession( sessionKey );
+		if (session != null && session.getQuestion() != null){
+			Question question = session.getQuestion();
+			String responder = session.getRemoteAddress();
 			
 			if (session.killed){
 				return Response.status(Response.Status.BAD_REQUEST).build();
 			}
 			DDRWrapper.log(question,session,"Timeout");
-			
-			StringStore.dropString(question_id);
-			StringStore.dropString(question_id+"-remoteID");
-			StringStore.dropString("question_"+session.getRemoteAddress()+"_"+session.getLocalAddress());
 
 			HashMap<String, String> extras = new HashMap<String, String>();
 			extras.put( "sessionKey", sessionKey );
@@ -467,38 +428,17 @@ public class VoiceXMLRESTProxy {
         session.setReleaseTimestamp( releaseTime );
         session.storeSession();
         
-        Question question = null;
         log.info( String.format( "Session key: %s with remote: %s and local %s", sessionKey,
             session.getRemoteAddress(), session.getLocalAddress() ) );
-        String stringStoreKey = direction + "_" + session.getRemoteAddress() + "_" + session.getLocalAddress();
-        String json = StringStore.getString( stringStoreKey );
+        Question question = session.getQuestion();
         String referredCalledId = null;
-        if ( json != null )
+        if ( question != null )
         {
-            ObjectNode questionNode = ServerUtils.deserialize( json, ObjectNode.class );
-            question = ServerUtils.deserialize( questionNode.get( "question" ).toString(), Question.class );
-            remoteID = questionNode.get( "remoteCallerId" ).asText();
-            referredCalledId = questionNode.get( "referredCalledId" ).asText();
-            //not deleting the remoteCallerIdQuestionMap as hangup (personality: Originator callState: Released) 
-            //is received via the ccxml file 
-            //            StringStore.dropString( direction + "_" + session.getRemoteAddress() + "_" + session.getLocalAddress() );
+            remoteID = session.getRemoteAddress();
+            referredCalledId = session.getExtras().get( "referredCalledId" );
         }
-        else
-        {
-            stringStoreKey = "question_" + session.getRemoteAddress() + "_" + session.getLocalAddress();
-            json = StringStore.getString( stringStoreKey );
-            if ( json == null )
-            {
-                stringStoreKey = "question_" + session.getRemoteAddress()
-                    + ( session.getRemoteAddress().contains( "@outbound" ) ? "" : "@outbound" ) + "_"
-                    + session.getLocalAddress();
-                json = StringStore.getString( stringStoreKey );
-            }
-            question = Question.fromJSON( json, session.getAdapterConfig().getConfigId() );
-        }
-        log.info( String.format( "tried fetching question: %s from StringStore with id: %s", json, stringStoreKey ));
-        if ( question == null )
-        {
+        else {
+            
             question = Question.fromURL( session.getStartUrl(), session.getAdapterConfig().getConfigId(), remoteID,
                 localID );
         }
@@ -514,15 +454,11 @@ public class VoiceXMLRESTProxy {
             question.event( "hangup", "Hangup", timeMap, remoteID );
             DDRWrapper.log( question, session, "Hangup" );
             handleQuestion( null, session.getAdapterConfig().getConfigId(), remoteID, sessionKey );
-            //delete all session entities
-            StringStore.dropString(question.getQuestion_id());
-            StringStore.dropString(question.getQuestion_id()+"-remoteID");
         }
         else
         {
             log.info( "no question received" );
         }
-        StringStore.dropString( stringStoreKey );
         return Response.ok("").build();
     }
 
@@ -544,45 +480,12 @@ public class VoiceXMLRESTProxy {
         session.storeSession();
         
         log.info( "question from session got: "+ session.getSession_id() );
-        Question question = null;
-        String stringStoreKey = direction + "_" + remoteID + "_" + localID;
-        String json = StringStore.getString( stringStoreKey );
-        String responder = "";
-        String referredCalledId = null;
+        Question question = session.getQuestion();
         //for direction = transfer (redirect event), json should not be null        
-        if ( json != null )
+        if ( question != null )
         {
-            log.info( String.format( "question from string store with id: %s is: %s", direction + "_" + remoteID + "_"
-                + localID, json ) );
-            ObjectNode questionNode = ServerUtils.deserialize( json, false, ObjectNode.class );
-            log.info( "questionNode at answered: " + questionNode.toString() );
-            if ( questionNode != null )
-            {
-                if(questionNode.get( "question" ) != null)
-            {
-                question = ServerUtils.deserialize( questionNode.get( "question" ).toString(), Question.class );
-            }
-                responder = questionNode.get( "remoteCallerId" ).asText();
-                referredCalledId = questionNode.get( "referredCalledId" ).asText();
-            }
-        }
-        //this is invoked when an outbound call is triggered and answered by the callee
-        else 
-        {
-            stringStoreKey = "question_" + session.getRemoteAddress() + "_" + session.getLocalAddress();
-            json = StringStore.getString( stringStoreKey );
-            if ( json == null )
-            {
-                stringStoreKey = "question_" + session.getRemoteAddress()
-                    + ( session.getRemoteAddress().contains( "@outbound" ) ? "" : "@outbound" ) + "_"
-                    + session.getLocalAddress();
-                json = StringStore.getString( stringStoreKey );
-            }
-            question = Question.fromJSON( json, session.getAdapterConfig().getConfigId() );
-        }
-        log.info( String.format( "tried fetching question: %s from StringStore with id: %s", json, stringStoreKey ));
-        if(question != null)
-        {
+            String responder = session.getRemoteAddress();
+            String referredCalledId = session.getExtras().get( "referredCalledId" );
             HashMap<String, Object> timeMap = getTimeMap( startTime, answerTime, releaseTime );
             timeMap.put( "referredCalledId", referredCalledId );
             timeMap.put( "sessionKey", sessionKey );
@@ -733,9 +636,7 @@ public class VoiceXMLRESTProxy {
                                     log.severe( "Need to restart the call!!!! ReleaseCause: "
                                         + releaseCause.getTextContent() );
 
-                                    String retryKey = sessionKey + "_retry";
-                                    int retry = ( StringStore.getString( retryKey ) == null ? 0 : Integer
-                                        .parseInt( StringStore.getString( retryKey ) ) );
+                                    int retry = session.getRetryCount() != null ? session.getRetryCount() : 0;
                                     if ( retry < MAX_RETRIES )
                                     {
 
@@ -743,14 +644,12 @@ public class VoiceXMLRESTProxy {
                                         String extSession = bs.startCall( address );
                                         log.info( "Restarted call extSession: " + extSession );
                                         retry++;
-                                        StringStore.storeString( sessionKey + "_rety", retry + "" );
+                                        session.setRetryCount( retry );
                                     }
                                     else
                                     {
                                         // TODO: Send mail to support!!!
-
                                         log.severe( "Retries failed!!!" );
-                                        StringStore.dropString( retryKey );
                                     }
                                 }
                                 else if ( releaseCause.getTextContent().equals( "Request Failure" ) )
@@ -759,24 +658,24 @@ public class VoiceXMLRESTProxy {
                                         + releaseCause.getTextContent() );
 
                                     String retryKey = sessionKey + "_retry";
-                                    int retry = ( StringStore.getString( retryKey ) == null ? 0 : Integer
-                                        .parseInt( StringStore.getString( retryKey ) ) );
+                                    int retry = session.getRetryCount() != null ? session.getRetryCount() : 0;
                                     if ( retry < MAX_RETRIES )
                                     {
                                         Broadsoft bs = new Broadsoft( config );
                                         String extSession = bs.startCall( address );
                                         log.info( "Restarted call extSession: " + extSession );
                                         retry++;
-                                        StringStore.storeString( retryKey, retry + "" );
+                                        session.setRetryCount( retry );
                                     }
                                     else
                                     {
                                         // TODO: Send mail to support!!!
                                         log.severe( "Retries failed!!!" );
-                                        StringStore.dropString( retryKey );
                                     }
                                 }
                             }
+                            //store or update the session
+                            session.storeSession();
                             
                             if ( callState.getTextContent().equals( "Released" ) )
                             {
@@ -826,14 +725,7 @@ public class VoiceXMLRESTProxy {
                                 //flush the keys
                                 try
                                 {
-//                                    StringStore.dropString( "question_" + session.getRemoteAddress() + "_"
-//                                        + session.getLocalAddress() );
-                                    StringStore.dropString( "question_" + session.getRemoteAddress() + "_"
-                                        + session.getLocalAddress() + "@outbound" );
-                                    StringStore.dropString( "question_" + session.getRemoteAddress() + "_"
-                                        + session.getLocalAddress() + "@outbound_retry" );
-                                    StringStore.dropString( sessionKey );
-                                    StringStore.dropString( sessionKey + "@outbound" );
+                                    session.drop();
                                 }
                                 catch ( Exception e )
                                 {
@@ -897,24 +789,12 @@ public class VoiceXMLRESTProxy {
      */
     @GET
     @Path( "retry" )
-    public Response retryQuestion( @QueryParam( "sessionKey" ) String sessionKey,
-        @QueryParam( "questionId" ) String questionId ) throws Exception
+    public Response retryQuestion( @QueryParam( "sessionKey" ) String sessionKey ) throws Exception
     {
-        String resultQuestion = "";
         Session session = Session.getSession( sessionKey );
-        if ( questionId != null && sessionKey != null )
+        if(session.getQuestion() != null)
         {
-            resultQuestion = StringStore.getString( questionId + "_" + sessionKey );
-        }
-        else if ( sessionKey != null )
-        {
-            resultQuestion = StringStore.getString( "question_" + session.getRemoteAddress() + "_"
-                + session.getLocalAddress() );
-        }
-        if(resultQuestion != null)
-        {
-            Question question = ServerUtils.deserialize( resultQuestion, false, Question.class );
-            return handleQuestion( question, session.getAdapterID(), session.getRemoteAddress(), sessionKey );
+            return handleQuestion( session.getQuestion(), session.getAdapterID(), session.getRemoteAddress(), sessionKey );
         }
         return Response.ok( "" ).build();
     }
@@ -1382,13 +1262,9 @@ public class VoiceXMLRESTProxy {
         if ( question != null )
         {
             question.generateIds();
-            String questionJSON = question.toJSON();
-            StringStore.storeString( question.getQuestion_id() + "_" +sessionKey, questionJSON );
-            StringStore.storeString( question.getQuestion_id() + "-remoteID" + "_" + sessionKey, remoteID );
-
             Session session = Session.getSession( sessionKey );
-            StringStore.storeString( "question_" + session.getRemoteAddress() + "_" + session.getLocalAddress(),
-                questionJSON );
+            session.setQuestion( question );
+            session.setRemoteAddress( remoteID );
             
             //convert all text prompts to speech 
             if(res.prompts != null)
@@ -1441,26 +1317,15 @@ public class VoiceXMLRESTProxy {
                             //update url with formatted redirecteId. RFC3966 returns format tel:<blabla> as expected
                             question.setUrl( PhoneNumberUtils.formatNumber( redirectedId, PhoneNumberFormat.RFC3966 ) );
                             String transferKey = "transfer_" + redirectedId + "_" + sessionKeyArray[1];
-                            log.info( String.format( "referral question %s stored with key: %s", questionJSON,
+                            log.info( String.format( "referral question %s stored with key: %s", question.toJSON(),
                                 transferKey ) );
                             //store the remoteId as its lost while trying to trigger the answered event
-                            HashMap<String, Object> questionMap = new HashMap<String, Object>();
-                            questionMap.put( "question", question );
-                            questionMap.put( "remoteCallerId", remoteID );
-                            questionMap.put( "referredCalledId", redirectedId );
-                            String questionMapString = null;
-                            try
-                            {
-                                questionMapString = ServerUtils.serialize( questionMap );
-                            }
-                            catch ( Exception e )
-                            {
-                                log.severe( "Question map serialization failed" );
-                                e.printStackTrace();
-                            }
-                            log.info( "question map: " + questionMapString );
-                            //key format: transfer_requester_remoteId
-                            StringStore.storeString( transferKey, questionMapString );
+                            HashMap<String, String> extras = new HashMap<String, String>();
+                            extras.put( "referredCalledId", redirectedId );
+                            session.getExtras().putAll( extras );
+                            session.setQuestion( question );
+                            session.setRemoteAddress( remoteID );
+                            session.storeSession();
                         }
                         catch ( Exception e )
                         {
@@ -1545,34 +1410,24 @@ public class VoiceXMLRESTProxy {
         try
         {
             AdapterConfig adapterConfig = session.getAdapterConfig();
-            double totalCosts = 0.0;
             log.info( String.format( "stopping charges for session: %s", ServerUtils.serialize( session ) ) );
             if ( session.getStartTimestamp() != null && session.getAnswerTimestamp() != null
                 && session.getReleaseTimestamp() != null && session.getDirection() != null )
             {
-                if ( session.getDirection().equalsIgnoreCase( "outbound" )
-                    || session.getDirection().equalsIgnoreCase( "transfer" ) )
-                {
-                    totalCosts = DDRUtils
-                        .updateDDRRecordOnCallStops( adapterConfig, DDRTypeCategory.OUTGOING_COMMUNICATION_COST,
-                            CommunicationStatus.SENT, session.getRemoteAddress(),
-                            Long.parseLong( session.getStartTimestamp() ),
-                            Long.parseLong( session.getAnswerTimestamp() ),
-                            Long.parseLong( session.getReleaseTimestamp() ) );
-                }
-                else if ( session.getDirection().equalsIgnoreCase( "inbound" ) )
-                {
-                    totalCosts = DDRUtils
-                        .updateDDRRecordOnCallStops( adapterConfig, DDRTypeCategory.INCOMING_COMMUNICATION_COST,
-                            CommunicationStatus.RECEIEVED, session.getRemoteAddress(),
-                            Long.parseLong( session.getStartTimestamp() ),
-                            Long.parseLong( session.getAnswerTimestamp() ),
-                            Long.parseLong( session.getReleaseTimestamp() ) );
-                }
+                DDRRecord ddrRecord = DDRUtils.updateDDRRecordOnCallStops( session.getDDRRecordId(), adapterConfig.getOwner(),
+                    Long.parseLong( session.getStartTimestamp() ), Long.parseLong( session.getAnswerTimestamp() ),
+                    Long.parseLong( session.getReleaseTimestamp() ) );
+
                 //publish charges
-                if(totalCosts > 0.0) {
-                    DDRUtils.publishDDREntryToQueue( adapterConfig.getOwner(), totalCosts );
+                DDRPrice ddrPriceForDialogService = DDRUtils.fetchDDRPrice( DDRTypeCategory.SERVICE_COST, UnitType.PART );
+                Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord );
+                //add the service cost if the communication cost is lesser than the service cost
+                if ( totalCost != null && ddrPriceForDialogService != null
+                    && ddrPriceForDialogService.getPrice() != null && totalCost < ddrPriceForDialogService.getPrice() )
+                {
+                    totalCost += ddrPriceForDialogService.getPrice();
                 }
+                DDRUtils.publishDDREntryToQueue( adapterConfig.getOwner(), totalCost );
             }
         }
         catch ( Exception e )

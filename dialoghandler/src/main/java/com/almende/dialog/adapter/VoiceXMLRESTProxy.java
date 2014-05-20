@@ -247,7 +247,7 @@ public class VoiceXMLRESTProxy {
         this.host=ui.getBaseUri().toString().replace(":80", "");
         
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localID);
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID.split( "@" )[0];
         Session session = Session.getSession(sessionKey);
         
         String url = "";
@@ -269,8 +269,6 @@ public class VoiceXMLRESTProxy {
             else if(direction.equalsIgnoreCase("outbound")) // Remove retry counter because call is succesfull 
             {
                 url = session.getStartUrl();
-//                Session.dropString(sessionKey+"_retry");
-//                log.info("Removed retry!");
             }
         }
         else {
@@ -281,6 +279,7 @@ public class VoiceXMLRESTProxy {
         Question question = session.getQuestion();
         if(question == null) {
             question = Question.fromURL(url,session.getAdapterConfig().getConfigId(),remoteID,localID);
+            session.setQuestion( question );
         }
         DDRWrapper.log(question,session,"Start",config);
         
@@ -300,9 +299,8 @@ public class VoiceXMLRESTProxy {
         }
         catch ( Exception e )
         {
-            String errorMessage = String
-                .format(
-                    "Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
+            String errorMessage = String.format(
+                    "Creating DDR records failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
                     direction, config.getConfigId(), config.getMyAddress(), remoteID, localID );
             log.severe( errorMessage );
             dialogLog.severe( config.getConfigId(), errorMessage );
@@ -423,7 +421,7 @@ public class VoiceXMLRESTProxy {
         throws Exception
     {
         log.info("call hangup with:"+direction+":"+remoteID+":"+localID);
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID.split( "@" )[0];
         Session session = Session.getSession(sessionKey);
         //update the session with call times
         session.setStartTimestamp( startTime );
@@ -475,7 +473,7 @@ public class VoiceXMLRESTProxy {
         String answerTime, String releaseTime ) throws Exception
     {
         log.info( "call answered with:" + direction + "_" + remoteID + "_" + localID );
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID.split( "@" )[0]; //ignore the @outbound suffix
         Session session = Session.getSession(sessionKey);
         //update the session with call times
         session.setStartTimestamp( startTime );
@@ -597,7 +595,7 @@ public class VoiceXMLRESTProxy {
                                 address = PhoneNumberUtils.formatNumber(address, null);
                             }
                             
-                            String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+config.getMyAddress()+"|"+address;
+                            String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+config.getMyAddress()+"|"+address.split( "@" )[0];
                             Session session = Session.getSession(sessionKey);
                             
                             log.info("Session key: "+sessionKey);
@@ -683,6 +681,7 @@ public class VoiceXMLRESTProxy {
                             
                             if ( callState.getTextContent().equals( "Released" ) )
                             {
+                                boolean callReleased = false;
                                 if ( session != null && direction != "transfer"
                                     && !personality.getTextContent().equals( "Terminator" )
                                     && fullAddress.startsWith( "tel:" ) )
@@ -690,13 +689,14 @@ public class VoiceXMLRESTProxy {
                                     log.info( "SESSSION FOUND!! SEND HANGUP!!!" );
                                     this.hangup( direction, address, config.getMyAddress(), startTimeString,
                                         answerTimeString, releaseTimeString, false );
+                                    callReleased = true;
                                 }
                                 else
                                 {
                                     if ( personality.getTextContent().equals( "Originator" )
                                         && fullAddress.startsWith( "sip:" ) )
                                     {
-                                        log.info( "Probably a disconnect of a sip. call hangup event" );
+                                        log.info( "Probably a disconnect of a sip. not calling hangup event" );
                                     }
                                     else if ( personality.getTextContent().equals( "Originator" )
                                         && fullAddress.startsWith( "tel:" ) )
@@ -704,6 +704,7 @@ public class VoiceXMLRESTProxy {
                                         log.info( "Probably a disconnect of a redirect. call hangup event" );
                                         hangup( direction, address, config.getMyAddress(), startTimeString,
                                             answerTimeString, releaseTimeString, null );
+                                        callReleased = true;
                                     }
                                     else if ( personality.getTextContent().equals( "Terminator" ) )
                                     {
@@ -723,17 +724,13 @@ public class VoiceXMLRESTProxy {
                                 session.setRemoteAddress( address );
                                 session.setLocalAddress( config.getMyAddress() );
                                 session.storeSession();
-                                log.info( String.format( "Call ended. session updated: %s",
-                                    ServerUtils.serialize( session ) ) );
-                                stopCostsAtHangup(session);
-                                //flush the keys
-                                try
+                                if ( callReleased )
                                 {
+                                    log.info( String.format( "Call ended. session updated: %s",
+                                        ServerUtils.serialize( session ) ) );
+                                    stopCostsAtHangup( session );
+                                    //flush the keys
                                     session.drop();
-                                }
-                                catch ( Exception e )
-                                {
-                                    log.info( "exception seen: " + e.getLocalizedMessage() );
                                 }
                             }
                             
@@ -756,6 +753,7 @@ public class VoiceXMLRESTProxy {
             
         } catch (Exception e) {
             log.severe("Something failed: "+ e.getMessage());
+            e.printStackTrace();
         }
         return Response.ok("").build();
     }
@@ -1410,10 +1408,10 @@ public class VoiceXMLRESTProxy {
     
     private void stopCostsAtHangup( Session session )
     {
+        AdapterConfig adapterConfig = session.getAdapterConfig();
         //stop costs
         try
         {
-            AdapterConfig adapterConfig = session.getAdapterConfig();
             log.info( String.format( "stopping charges for session: %s", ServerUtils.serialize( session ) ) );
             if ( session.getStartTimestamp() != null && session.getAnswerTimestamp() != null
                 && session.getReleaseTimestamp() != null && session.getDirection() != null )
@@ -1436,11 +1434,10 @@ public class VoiceXMLRESTProxy {
         }
         catch ( Exception e )
         {
-            String errorMessage = String
-                .format(
-                    "Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s \n Error: %",
-                    session.getDirection(), session.getAdapterConfig().getConfigId(), session.getAdapterConfig()
-                        .getMyAddress(), session.getRemoteAddress(), session.getLocalAddress(), e.getLocalizedMessage() );
+            String errorMessage = String.format(
+                    "Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s \n Error: %s",
+                    session.getDirection(), session.getAdapterID(), adapterConfig.getMyAddress(),
+                    session.getRemoteAddress(), session.getLocalAddress(), e.getLocalizedMessage() );
             log.severe( errorMessage );
             dialogLog.severe( session.getAdapterConfig().getConfigId(), errorMessage );
         }

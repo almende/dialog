@@ -85,6 +85,13 @@ public class Session implements SessionIntf {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         datastore.delete( this );
 	}
+	
+    public static void drop( String key )
+    {
+        Session session = getSession( key );
+        session.drop();
+    }
+    
 	public static Session getSession(String key) {
 		return getSession(key, null);
 	}

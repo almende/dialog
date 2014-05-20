@@ -221,10 +221,7 @@ public class OAuthServlet extends HttpServlet {
             Token requestToken=null;
             if(!serv.equals("facebook")) {
                 requestToken = service.getRequestToken();
-                Session session = new Session();
-                session.setKey( requestToken.getToken() );
-                session.getExtras().put( "secret", requestToken.getSecret() );
-                session.storeSession();
+                Session.storeString( requestToken.getToken(), requestToken.getSecret() );
             }
             String authUrl = service.getAuthorizationUrl(requestToken);
             
@@ -285,9 +282,8 @@ public class OAuthServlet extends HttpServlet {
                 return null;
             }
             
-            Session session = Session.getSession(oauthToken);
-            String secret = session != null ? session.getExtras().get( "secret" ) : null;
-            session.drop();
+            String secret = Session.getString(oauthToken);
+            Session.drop(oauthToken);
             Token requestToken = new Token(oauthToken, secret);
             
             Verifier v = new Verifier(oauthVerifier);

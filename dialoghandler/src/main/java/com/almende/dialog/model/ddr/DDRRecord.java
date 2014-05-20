@@ -51,16 +51,18 @@ public class DDRRecord
     //creating a dummy serialized version of toAddress as dot(.) in keys is not allowed by mongo 
     String toAddressString;
     String ddrTypeId;
-    Double quantity;
+    Integer quantity;
     Long start;
     Long duration;
     CommunicationStatus status;
     @JsonIgnore
     Boolean shouldGenerateCosts = false;
+    @JsonIgnore
+    Boolean shouldIncludeServiceCosts = false;
     
     public DDRRecord(){}
     
-    public DDRRecord( String ddrTypeId, String adapterId, String accountId, double quantity )
+    public DDRRecord( String ddrTypeId, String adapterId, String accountId, Integer quantity )
     {
         this.ddrTypeId = ddrTypeId;
         this.adapterId = adapterId;
@@ -182,27 +184,30 @@ public class DDRRecord
     {
         this.ddrTypeId = ddrTypeId;
     }
-    public double getQuantity()
+    public Integer getQuantity()
     {
         return quantity;
     }
-    public void setQuantity( double quantity )
-    {
-        this.quantity = quantity;
-    }
+    
     public Long getStart()
     {
         return start;
-    }
-    public void setStart( long start )
-    {
-        this.start = start;
     }
     public Long getDuration()
     {
         return duration;
     }
-    public void setDuration( long duration )
+    public void setQuantity( Integer quantity )
+    {
+        this.quantity = quantity;
+    }
+
+    public void setStart( Long start )
+    {
+        this.start = start;
+    }
+
+    public void setDuration( Long duration )
     {
         this.duration = duration;
     }
@@ -269,6 +274,12 @@ public class DDRRecord
         this.shouldGenerateCosts = shouldGenerateCosts;
     }
     
+    @JsonIgnore
+    public void setShouldIncludeServiceCosts( Boolean shouldIncludeServiceCosts )
+    {
+        this.shouldIncludeServiceCosts = shouldIncludeServiceCosts;
+    }
+    
     @JsonProperty("totalCost")
     public Double getTotalCost() throws Exception
     {
@@ -279,7 +290,7 @@ public class DDRRecord
             {
                 case INCOMING_COMMUNICATION_COST:
                 case OUTGOING_COMMUNICATION_COST:
-                    return DDRUtils.calculateCommunicationDDRCost( this );
+                    return DDRUtils.calculateCommunicationDDRCost( this, shouldIncludeServiceCosts );
                 case ADAPTER_PURCHASE:
                 case SERVICE_COST:
                 case SUBSCRIPTION_COST:

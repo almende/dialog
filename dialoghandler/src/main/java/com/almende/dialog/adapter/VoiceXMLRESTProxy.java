@@ -42,10 +42,7 @@ import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.model.ddr.DDRPrice;
-import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
@@ -247,7 +244,17 @@ public class VoiceXMLRESTProxy {
         this.host=ui.getBaseUri().toString().replace(":80", "");
         
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localID);
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID.split( "@" )[0];
+        String formattedRemoteId = remoteID;
+        //format the remote number
+        try
+        {
+            formattedRemoteId = PhoneNumberUtils.formatNumber( remoteID.split( "@" )[0], PhoneNumberFormat.E164 );
+        }
+        catch ( Exception e1 )
+        {
+            log.severe( "Remote number formatting failed: "+ remoteID.split( "@" )[0] );
+        }
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+ formattedRemoteId;
         Session session = Session.getSession(sessionKey);
         
         String url = "";
@@ -566,7 +573,10 @@ public class VoiceXMLRESTProxy {
                             Node rpChild = remoteParty.getChildNodes().item(i);
                             if(rpChild.getNodeName().equals("address")) {
                                 address=rpChild.getTextContent();
-                            } else if(rpChild.getNodeName().equals("callType")) {
+                            }else if(rpChild.getNodeName().equals("userId")){
+                                address=rpChild.getTextContent().replace( "@ask.ask.voipit.nl", "" );
+                            }
+                            else if(rpChild.getNodeName().equals("callType")) {
                                 type=rpChild.getTextContent();
                             }
                         }
@@ -647,8 +657,6 @@ public class VoiceXMLRESTProxy {
                                 {
                                     log.severe( "Restart call?? ReleaseCause: "
                                         + releaseCause.getTextContent() );
-
-                                    String retryKey = sessionKey + "_retry";
                                     int retry = session.getRetryCount() != null ? session.getRetryCount() : 0;
                                     if ( retry < MAX_RETRIES )
                                     {
@@ -698,6 +706,7 @@ public class VoiceXMLRESTProxy {
                                     else if ( personality.getTextContent().equals( "Terminator" ) )
                                     {
                                         log.info( "No session for this inbound?????" );
+                                        callReleased = true;
                                     }
                                     else
                                     {
@@ -1411,15 +1420,7 @@ public class VoiceXMLRESTProxy {
                     Long.parseLong( session.getReleaseTimestamp() ) );
 
                 //publish charges
-                DDRPrice ddrPriceForDialogService = DDRUtils
-                    .fetchDDRPrice( DDRTypeCategory.SERVICE_COST, UnitType.PART );
-                Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord );
-                //add the service cost if the communication cost is lesser than the service cost
-                if ( totalCost != null && ddrPriceForDialogService != null
-                    && ddrPriceForDialogService.getPrice() != null && totalCost < ddrPriceForDialogService.getPrice() )
-                {
-                    totalCost += ddrPriceForDialogService.getPrice();
-                }
+                Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
                 DDRUtils.publishDDREntryToQueue( adapterConfig.getOwner(), totalCost );
             }
         }

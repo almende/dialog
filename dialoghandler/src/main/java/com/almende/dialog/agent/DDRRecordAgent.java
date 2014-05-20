@@ -29,10 +29,12 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
      * @throws Exception
      */
     public Object getDDRRecord( @Name( "ddrRecordId" ) String id, @Name( "accountId" ) String accountId,
-        @Name( "shouldGenerateCosts" ) @Optional Boolean shouldGenerateCosts ) throws Exception
+        @Name( "shouldGenerateCosts" ) @Optional Boolean shouldGenerateCosts,
+        @Name( "shouldIncludeServiceCosts" ) @Optional Boolean shouldIncludeServiceCosts) throws Exception
     {
         DDRRecord ddrRecord = DDRRecord.getDDRRecord( id, accountId );
         ddrRecord.setShouldGenerateCosts(shouldGenerateCosts);
+        ddrRecord.setShouldIncludeServiceCosts( shouldIncludeServiceCosts );
         return ddrRecord;
     }
     
@@ -46,16 +48,18 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
     public Object getDDRRecords( @Name( "adapterId" ) @Optional String adapterId,
         @Name( "accountId" ) String accountId, @Name( "fromAddress" ) @Optional String fromAddress,
         @Name( "typeId" ) @Optional String typeId, @Name( "communicationStatus" ) @Optional String status,
-        @Name( "shouldGenerateCosts" ) @Optional Boolean shouldGenerateCosts ) throws Exception
+        @Name( "shouldGenerateCosts" ) @Optional Boolean shouldGenerateCosts, 
+        @Name( "shouldIncludeServiceCosts" ) @Optional Boolean shouldIncludeServiceCosts) throws Exception
     {
         CommunicationStatus communicationStatus = status != null && !status.isEmpty() ? CommunicationStatus
             .fromJson( status ) : null;
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords( adapterId, accountId, fromAddress, typeId, communicationStatus );
-        if ( shouldGenerateCosts )
+        if ( shouldGenerateCosts != null && shouldGenerateCosts )
         {
             for ( DDRRecord ddrRecord : ddrRecords )
             {
                 ddrRecord.setShouldGenerateCosts( shouldGenerateCosts );
+                ddrRecord.setShouldIncludeServiceCosts( shouldIncludeServiceCosts );
             }
         }
         return ddrRecords;
@@ -175,13 +179,14 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
      * @param units 
      * @param unitType 
      */
-    public Object getDDRPrices( @Name( "ddrTypeId" ) String ddrTypeId,
+    public Object getDDRPrices( @Name( "ddrTypeId" ) @Optional String ddrTypeId,
         @Name( "adapterType" ) @Optional String adapterTypeString, @Name( "adapterId" ) @Optional String adapterId,
         @Name( "unitType" ) @Optional String unitTypeString )
     {
         AdapterType adapterType = adapterTypeString != null && !adapterTypeString.isEmpty() ? AdapterType
             .getByValue( adapterTypeString ) : null;
-        UnitType unitType = unitTypeString != null && !unitTypeString.isEmpty() ? UnitType.fromJson( unitTypeString ): null;
+        UnitType unitType = unitTypeString != null && !unitTypeString.isEmpty() ? UnitType.fromJson( unitTypeString )
+                                                                               : null;
         return DDRPrice.getDDRPrices( ddrTypeId, adapterType, adapterId, unitType );
     }
 }

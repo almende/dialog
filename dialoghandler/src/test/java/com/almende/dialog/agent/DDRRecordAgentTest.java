@@ -89,7 +89,7 @@ public class DDRRecordAgentTest extends TestFramework
         String createAdapter = adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null,
             null, null, TEST_ACCOUNTID, null );
         //check if a ddr record is created
-        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, TEST_ACCOUNTID, null, null, null, null );
+        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, TEST_ACCOUNTID, null, null, null, null, null );
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };
@@ -115,7 +115,7 @@ public class DDRRecordAgentTest extends TestFramework
         assertThat( ddrPrice.getDdrTypeId(), Matchers.notNullValue() );
         adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null, null, null, null, null );
         //check if a ddr record is created
-        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, null, null, null, null, null );
+        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, null, null, null, null, null, null );
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };
@@ -196,7 +196,7 @@ public class DDRRecordAgentTest extends TestFramework
             if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
             {
                 assertThat( ddrCost, Matchers.is( 1.0 ) );
-                assertThat( ddrRecord.getQuantity(), Matchers.is( 2.0 ) );
+                assertThat( ddrRecord.getQuantity(), Matchers.is( 2 ) );
                 assertThat( ddrRecord.getFromAddress(), Matchers.is( "TEST" ) );
                 assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
                 assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
@@ -238,7 +238,7 @@ public class DDRRecordAgentTest extends TestFramework
             totalCost += ddrCost;
             assertThat( ddrRecord.getAccountId(), Matchers.is( resultMap.get( ACCOUNT_ID_KEY ) ) );
             assertThat( ddrRecord.getAdapterId(), Matchers.is( resultMap.get( ADAPTER_ID_KEY ) ) );
-            assertThat( ddrRecord.getQuantity(), Matchers.is( 1.0 ) );
+            assertThat( ddrRecord.getQuantity(), Matchers.is( 1 ) );
             assertThat( ddrCost, Matchers.is( 10.0 ) );
         }
 
@@ -260,7 +260,7 @@ public class DDRRecordAgentTest extends TestFramework
             if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
             {
                 assertThat( ddrCost, Matchers.is( 0.5 ) );
-                assertThat( ddrRecord.getQuantity(), Matchers.is( 1.0 ) );
+                assertThat( ddrRecord.getQuantity(), Matchers.is( 1 ) );
                 assertThat( ddrRecord.getFromAddress(), Matchers.is( localAddressBroadsoft + "@ask.ask.voipit.nl" ) );
                 assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
                 assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
@@ -289,7 +289,7 @@ public class DDRRecordAgentTest extends TestFramework
             if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
             {
                 assertThat( ddrCost, Matchers.is( 2.5 ) );
-                assertThat( ddrRecord.getQuantity(), Matchers.is( 1.0 ) );
+                assertThat( ddrRecord.getQuantity(), Matchers.is( 1 ) );
                 assertThat( ddrRecord.getFromAddress(), Matchers.is( "0854881000@ask.ask.voipit.nl" ) );
                 assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
                 assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
@@ -382,7 +382,7 @@ public class DDRRecordAgentTest extends TestFramework
      */
     private static Collection<DDRRecord> getDDRRecordsByAccountId( String accountId ) throws Exception
     {
-        Object ddrRecords = new DDRRecordAgent().getDDRRecords( null, accountId, null, null, null, null );
+        Object ddrRecords = new DDRRecordAgent().getDDRRecords( null, accountId, null, null, null, null, null );
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };

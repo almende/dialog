@@ -240,14 +240,16 @@ public class DDRUtils
      * {@link DDRPrice#getStartTime() startTime} and
      * {@link DDRPrice#getEndTime() endTime}
      * @param ddrRecord
-     * @return cost incurred for this ddrRecord
+     * @param includeServiceCosts includes the service cost for this ddr too, if true.
+     * @return
      * @throws Exception
      */
-    public static Double calculateCommunicationDDRCost( DDRRecord ddrRecord ) throws Exception
+    public static Double calculateCommunicationDDRCost( DDRRecord ddrRecord, Boolean includeServiceCosts ) throws Exception
     {
-        DDRType ddrType = ddrRecord.getDdrType();
-        if ( ddrType != null && ddrRecord != null)
+        double result = 0.0;
+        if ( ddrRecord != null)
         {
+            DDRType ddrType = ddrRecord.getDdrType();
             AdapterConfig config = ddrRecord.getAdapter();
             List<DDRPrice> communicationDDRPrices = DDRPrice.getDDRPrices( ddrType.getTypeId(),
                 AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), null );
@@ -270,10 +272,36 @@ public class DDRUtils
                         selectedDDRPrice = ddrPrice;
                     }
                 }
-                return calculateDDRCost( ddrRecord, selectedDDRPrice );
+                result = calculateDDRCost( ddrRecord, selectedDDRPrice );
             }
         }
-        return null;
+        //check if service costs are to be included
+        if(includeServiceCosts != null && includeServiceCosts)
+        {
+            DDRPrice ddrPriceForDialogService = DDRUtils.fetchDDRPrice( DDRTypeCategory.SERVICE_COST, UnitType.PART );
+            Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
+            //add the service cost if the communication cost is lesser than the service cost
+            if ( result < serviceCost )
+            {
+                result += serviceCost;
+            }
+        }
+        return result;
+    }
+    
+    /**
+     * calculates only the communication cost for the given ddrRecord based on the linked DDRPrice.
+     * DDRPrice with the most recent {@link DDRPrice#getEndTime() endTime} is
+     * chosen if the {@link DDRRecord#getStart() startTime} doesnt fall between
+     * {@link DDRPrice#getStartTime() startTime} and
+     * {@link DDRPrice#getEndTime() endTime}
+     * @param ddrRecord
+     * @return cost incurred for this ddrRecord
+     * @throws Exception
+     */
+    public static Double calculateCommunicationDDRCost( DDRRecord ddrRecord ) throws Exception
+    {
+        return calculateCommunicationDDRCost( ddrRecord, false );
     }
     
     /**
@@ -370,10 +398,7 @@ public class DDRUtils
         {
             log.info( String.format( "Applying charges for account: %s and adapter: %s with address: %s",
                 config.getOwner(), config.getConfigId(), config.getMyAddress() ) );
-            List<DDRPrice> communicationDDRPrices = DDRPrice.getDDRPrices( communicationCostDDRType.getTypeId(),
-                AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), null );
-            if ( communicationDDRPrices != null && !communicationDDRPrices.isEmpty() && config.getConfigId() != null
-                && config.getOwner() != null )
+            if ( config.getConfigId() != null && config.getOwner() != null )
             {
                 DDRRecord ddrRecord = new DDRRecord( communicationCostDDRType.getTypeId(), config.getConfigId(),
                     config.getOwner(), 1 );

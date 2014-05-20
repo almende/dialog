@@ -21,6 +21,7 @@ public class S_fields implements SessionIntf {
 	String startTimestamp;
 	String answerTimestamp;
 	String releaseTimestamp;
+	String ddrRecordId;
 	
 	@Override
 	public String getSession_id() {
@@ -160,5 +161,15 @@ public class S_fields implements SessionIntf {
     public void setReleaseTimestamp( String releaseTimestamp )
     {
         this.releaseTimestamp = releaseTimestamp;
+    }
+
+    public String getDDRRecordId()
+    {
+        return ddrRecordId;
+    }
+
+    public void setDDRRecordId( String ddrRecordId )
+    {
+        this.ddrRecordId = ddrRecordId;
     }
 }

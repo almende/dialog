@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.bson.types.ObjectId;
 
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.QueryResultIterator;
@@ -63,7 +64,7 @@ public class DDRPrice
         {
             for ( AdapterType type : values() )
             {
-                if(type.name().equalsIgnoreCase( value ))
+                if(type.getName().equalsIgnoreCase( value ))
                 {
                     return type;
                 }
@@ -86,7 +87,7 @@ public class DDRPrice
     private AdapterType adapterType;
     //used incase a particular price is applied to a particular adapter
     private String adapterId;
-    private double price;
+    private Double price;
     private Long startTime;
     private Long endTime;
     private Integer staffleStart;
@@ -117,15 +118,13 @@ public class DDRPrice
     /**
      * fetch the ddr records based the input parameters. if no DDRPrice records are found for the adapterId, it 
      * returns the ones matching other indexes
+     * @param ddrTypeId
+     * @param adapterType this is updated if missing when adapterId is given
      * @param adapterId
-     * @param accountId
-     * @param fromAddress
-     * @param toAddress
-     * @param typeId
-     * @param status
+     * @param unitType
      * @return
      */
-    public static List<DDRPrice> getDDRPrices( String ddrTypeId, AdapterType adapterType, String adapterId )
+    public static List<DDRPrice> getDDRPrices( String ddrTypeId, AdapterType adapterType, String adapterId, UnitType unitType )
     {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         RootFindCommand<DDRPrice> query = datastore.find().type( DDRPrice.class );
@@ -134,9 +133,22 @@ public class DDRPrice
         {
             query = query.addFilter( "ddrTypeId", FilterOperator.EQUAL, ddrTypeId );
         }
+        //force use the adapterType if only the adapterId is found  
+        if(adapterType == null && adapterId != null && !adapterId.isEmpty())
+        {
+            AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig( adapterId );
+            if(adapterConfig != null)
+            {
+                adapterType = AdapterType.getByValue( adapterConfig.getAdapterType() );
+            }
+        }
         if ( adapterType != null )
         {
             query = query.addFilter( "adapterType", FilterOperator.EQUAL, adapterType.name() );
+        }
+        if ( unitType != null )
+        {
+            query = query.addFilter( "unitType", FilterOperator.EQUAL, unitType.name() );
         }
         ArrayList<DDRPrice> result = null;
         if ( adapterId != null && !adapterId.isEmpty() )
@@ -200,11 +212,11 @@ public class DDRPrice
     {
         this.unitType = unitType;
     }
-    public double getPrice()
+    public Double getPrice()
     {
         return price;
     }
-    public void setPrice( double price )
+    public void setPrice( Double price )
     {
         this.price = price;
     }
@@ -269,5 +281,19 @@ public class DDRPrice
     public void setAdapterId( String adapterId )
     {
         this.adapterId = adapterId;
+    }
+    
+    /**
+     * simple check to see if the timestamp is between the startTime and the endTime
+     * @param timestamp
+     * @return
+     */
+    public boolean isValidForTimestamp(long timestamp)
+    {
+        if ( ( startTime != null && startTime <= timestamp ) && ( endTime == null || endTime >= timestamp ) )
+        {
+            return true;
+        }
+        return false;
     }
 }

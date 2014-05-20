@@ -23,11 +23,29 @@ public class DDRType
      */
     public enum DDRTypeCategory
     {
+        /**
+         * used when an adapter is purchased
+         */
         ADAPTER_PURCHASE,
+        /**
+         * incoming communication cost applied
+         */
         INCOMING_COMMUNICATION_COST,
+        /**
+         * outgoing communication cost applied
+         */
         OUTGOING_COMMUNICATION_COST,
+        /**
+         * service cost applied for performing/completing one dialog scenario
+         */
         SERVICE_COST,
+        /**
+         * cost applied for an adapter on a repeating basis. E.g. monthly basis
+         */
         SUBSCRIPTION_COST,
+        /**
+         * any other subsription cost
+         */
         OTHER;
 
         @JsonCreator

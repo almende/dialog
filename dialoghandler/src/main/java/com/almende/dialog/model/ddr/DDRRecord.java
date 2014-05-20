@@ -6,6 +6,9 @@ import java.util.Map;
 
 import org.bson.types.ObjectId;
 
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
@@ -13,6 +16,7 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 /**
@@ -21,6 +25,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
  */
 public class DDRRecord
 {
+    public static final String DDR_TOTALCOST_KEY = "totalCost";
+    public static final String DDR_RECORD_KEY = "DDR_RECORD";
+    
     /**
      * status of the communication
      */
@@ -44,21 +51,21 @@ public class DDRRecord
     //creating a dummy serialized version of toAddress as dot(.) in keys is not allowed by mongo 
     String toAddressString;
     String ddrTypeId;
-    double quantity;
-    long start;
-    long duration;
-    double totalCost;
+    Double quantity;
+    Long start;
+    Long duration;
     CommunicationStatus status;
+    @JsonIgnore
+    Boolean shouldGenerateCosts = false;
     
     public DDRRecord(){}
     
-    public DDRRecord( String ddrTypeId, String adapterId, String accountId, double quantity, double totalCost )
+    public DDRRecord( String ddrTypeId, String adapterId, String accountId, double quantity )
     {
         this.ddrTypeId = ddrTypeId;
         this.adapterId = adapterId;
         this.accountId = accountId;
         this.quantity = quantity;
-        this.totalCost = totalCost;
     }
     
     public void createOrUpdate()
@@ -183,7 +190,7 @@ public class DDRRecord
     {
         this.quantity = quantity;
     }
-    public long getStart()
+    public Long getStart()
     {
         return start;
     }
@@ -191,21 +198,13 @@ public class DDRRecord
     {
         this.start = start;
     }
-    public long getDuration()
+    public Long getDuration()
     {
         return duration;
     }
     public void setDuration( long duration )
     {
         this.duration = duration;
-    }
-    public double getTotalCost()
-    {
-        return totalCost;
-    }
-    public void setTotalCost( double totalCost )
-    {
-        this.totalCost = totalCost;
     }
     public CommunicationStatus getStatus()
     {
@@ -242,5 +241,60 @@ public class DDRRecord
     public void setToAddressString( String toAddressString ) throws Exception
     {
         this.toAddressString = toAddressString;
+    }
+    
+    @JsonIgnore    
+    public DDRType getDdrType()
+    {
+        if(ddrTypeId != null && !ddrTypeId.isEmpty())
+        {
+            return DDRType.getDDRType( ddrTypeId );
+        }
+        return null;
+    }
+
+    @JsonIgnore
+    public AdapterConfig getAdapter()
+    {
+        if(adapterId != null && !adapterId.isEmpty())
+        {
+            return AdapterConfig.getAdapterConfig( adapterId );
+        }
+        return null;
+    }
+
+    @JsonIgnore
+    public void setShouldGenerateCosts( Boolean shouldGenerateCosts )
+    {
+        this.shouldGenerateCosts = shouldGenerateCosts;
+    }
+    
+    @JsonProperty("totalCost")
+    public Double getTotalCost() throws Exception
+    {
+        if ( shouldGenerateCosts )
+        {
+            DDRType ddrType = getDdrType();
+            switch ( ddrType.getCategory() )
+            {
+                case INCOMING_COMMUNICATION_COST:
+                case OUTGOING_COMMUNICATION_COST:
+                    return DDRUtils.calculateCommunicationDDRCost( this );
+                case ADAPTER_PURCHASE:
+                case SERVICE_COST:
+                case SUBSCRIPTION_COST:
+                {
+                    //fetch the ddrPrice
+                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices( ddrTypeId, null, adapterId, UnitType.PART );
+                    if ( ddrPrices != null && !ddrPrices.isEmpty() )
+                    {
+                        return DDRUtils.calculateDDRCost( this, ddrPrices.iterator().next() );
+                    }
+                }
+                default:
+                    break;
+            }
+        }
+        return null;
     }
 }

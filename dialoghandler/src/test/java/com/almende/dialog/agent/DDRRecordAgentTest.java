@@ -30,6 +30,7 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
@@ -88,7 +89,7 @@ public class DDRRecordAgentTest extends TestFramework
         String createAdapter = adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null,
             null, null, TEST_ACCOUNTID, null );
         //check if a ddr record is created
-        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, TEST_ACCOUNTID, null, null, null );
+        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, TEST_ACCOUNTID, null, null, null, null );
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };
@@ -97,7 +98,7 @@ public class DDRRecordAgentTest extends TestFramework
         DDRRecord ddrRecord = allDdrRecords.iterator().next();
         assertThat( ddrRecord.getAccountId(), Matchers.is( TEST_ACCOUNTID ) );
         assertThat( ddrRecord.getAdapterId(), Matchers.is( createAdapter ) );
-        assertThat( ddrRecord.getTotalCost(), Matchers.is( 10.0 ) );
+        assertThat( DDRUtils.calculateCommunicationDDRCost( ddrRecord ), Matchers.is( 10.0 ) );
     }
 
     /**
@@ -114,7 +115,7 @@ public class DDRRecordAgentTest extends TestFramework
         assertThat( ddrPrice.getDdrTypeId(), Matchers.notNullValue() );
         adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null, null, null, null, null );
         //check if a ddr record is created
-        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, null, null, null, null );
+        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, null, null, null, null, null );
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };
@@ -143,12 +144,13 @@ public class DDRRecordAgentTest extends TestFramework
         int assertCount = 0;
         for ( DDRRecord ddrRecord : allDdrRecords )
         {
-            totalCost += ddrRecord.getTotalCost();
+            Double ddrCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord );
+            totalCost += ddrCost;
             assertThat( ddrRecord.getAccountId(), Matchers.is( resultMap.get( ACCOUNT_ID_KEY ) ) );
             assertThat( ddrRecord.getAdapterId(), Matchers.is( resultMap.get( ADAPTER_ID_KEY ) ) );
             if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
             {
-                assertThat( ddrRecord.getTotalCost(), Matchers.is( 0.5 ) );
+                assertThat( ddrCost, Matchers.is( 0.5 ) );
                 assertThat( ddrRecord.getFromAddress(), Matchers.is( MailServlet.DEFAULT_SENDER_EMAIL ) );
                 assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
                 assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
@@ -156,7 +158,7 @@ public class DDRRecordAgentTest extends TestFramework
             }
             else if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_ADAPTER_PRICE_KEY ) ) )
             {
-                assertThat( ddrRecord.getTotalCost(), Matchers.is( 10.0 ) );
+                assertThat( ddrCost, Matchers.is( 10.0 ) );
                 assertCount++;
             }
         }
@@ -187,12 +189,13 @@ public class DDRRecordAgentTest extends TestFramework
         int assertCount = 0;
         for ( DDRRecord ddrRecord : allDdrRecords )
         {
-            totalCost += ddrRecord.getTotalCost();
+            Double ddrCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord );
+            totalCost += ddrCost;
             assertThat( ddrRecord.getAccountId(), Matchers.is( resultMap.get( ACCOUNT_ID_KEY ) ) );
             assertThat( ddrRecord.getAdapterId(), Matchers.is( resultMap.get( ADAPTER_ID_KEY ) ) );
             if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
             {
-                assertThat( ddrRecord.getTotalCost(), Matchers.is( 1.0 ) );
+                assertThat( ddrCost, Matchers.is( 1.0 ) );
                 assertThat( ddrRecord.getQuantity(), Matchers.is( 2.0 ) );
                 assertThat( ddrRecord.getFromAddress(), Matchers.is( "TEST" ) );
                 assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
@@ -201,7 +204,7 @@ public class DDRRecordAgentTest extends TestFramework
             }
             else if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_ADAPTER_PRICE_KEY ) ) )
             {
-                assertThat( ddrRecord.getTotalCost(), Matchers.is( 10.0 ) );
+                assertThat( ddrCost, Matchers.is( 10.0 ) );
                 assertCount++;
             }
         }
@@ -231,11 +234,12 @@ public class DDRRecordAgentTest extends TestFramework
         int assertCount = 0;
         for ( DDRRecord ddrRecord : allDdrRecords )
         {
-            totalCost += ddrRecord.getTotalCost();
+            Double ddrCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord );
+            totalCost += ddrCost;
             assertThat( ddrRecord.getAccountId(), Matchers.is( resultMap.get( ACCOUNT_ID_KEY ) ) );
             assertThat( ddrRecord.getAdapterId(), Matchers.is( resultMap.get( ADAPTER_ID_KEY ) ) );
             assertThat( ddrRecord.getQuantity(), Matchers.is( 1.0 ) );
-            assertThat( ddrRecord.getTotalCost(), Matchers.is( 10.0 ) );
+            assertThat( ddrCost, Matchers.is( 10.0 ) );
         }
 
         totalCost = 0.0;
@@ -249,28 +253,28 @@ public class DDRRecordAgentTest extends TestFramework
         allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
         for ( DDRRecord ddrRecord : allDdrRecords )
         {
-            totalCost += ddrRecord.getTotalCost();
+            Double ddrCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord );
+            totalCost += ddrCost;
             assertThat( ddrRecord.getAccountId(), Matchers.is( resultMap.get( ACCOUNT_ID_KEY ) ) );
             assertThat( ddrRecord.getAdapterId(), Matchers.is( resultMap.get( ADAPTER_ID_KEY ) ) );
             if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
             {
-                assertThat( ddrRecord.getTotalCost(), Matchers.is( 0.5 ) );
+                assertThat( ddrCost, Matchers.is( 0.5 ) );
                 assertThat( ddrRecord.getQuantity(), Matchers.is( 1.0 ) );
                 assertThat( ddrRecord.getFromAddress(), Matchers.is( localAddressBroadsoft + "@ask.ask.voipit.nl" ) );
                 assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
                 assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
-                assertThat( ddrRecord.getTotalCost(), Matchers.is( 0.5 ) );
                 assertCount++;
             }
             else if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_ADAPTER_PRICE_KEY ) ) )
             {
-                assertThat( ddrRecord.getTotalCost(), Matchers.is( 10.0 ) );
+                assertThat( ddrCost, Matchers.is( 10.0 ) );
                 assertCount++;
             }
         }
         //hangup the call after 5 mins
         long currentTimeInMillis = TimeUtils.getServerCurrentTimeInMillis();
-        voiceXMLRESTProxy.hangup( "outbound", remoteAddressVoice + "@outbound", localAddressBroadsoft
+        voiceXMLRESTProxy.hangup( "outbound", remoteAddressVoice, localAddressBroadsoft
             + "@ask.ask.voipit.nl", String.valueOf( currentTimeInMillis ), String.valueOf( currentTimeInMillis + 5000 ),
             String.valueOf( currentTimeInMillis + 5000 + ( 5 * 60 * 1000 ) ), null );
         allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
@@ -278,12 +282,13 @@ public class DDRRecordAgentTest extends TestFramework
         totalCost = 0;
         for (DDRRecord ddrRecord : allDdrRecords) 
         {
-            totalCost += ddrRecord.getTotalCost();
+            Double ddrCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord );
+            totalCost += ddrCost;
             assertThat( ddrRecord.getAccountId(), Matchers.is( resultMap.get( ACCOUNT_ID_KEY ) ) );
             assertThat( ddrRecord.getAdapterId(), Matchers.is( resultMap.get( ADAPTER_ID_KEY ) ) );
             if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
             {
-                assertThat( ddrRecord.getTotalCost(), Matchers.is( 2.5 ) );
+                assertThat( ddrCost, Matchers.is( 2.5 ) );
                 assertThat( ddrRecord.getQuantity(), Matchers.is( 1.0 ) );
                 assertThat( ddrRecord.getFromAddress(), Matchers.is( "0854881000@ask.ask.voipit.nl" ) );
                 assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
@@ -292,7 +297,7 @@ public class DDRRecordAgentTest extends TestFramework
             }
             else if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_ADAPTER_PRICE_KEY ) ) )
             {
-                assertThat( ddrRecord.getTotalCost(), Matchers.is( 10.0 ) );
+                assertThat( ddrCost, Matchers.is( 10.0 ) );
                 assertCount++;
             }
         }
@@ -377,7 +382,7 @@ public class DDRRecordAgentTest extends TestFramework
      */
     private static Collection<DDRRecord> getDDRRecordsByAccountId( String accountId ) throws Exception
     {
-        Object ddrRecords = new DDRRecordAgent().getDDRRecords( null, accountId, null, null, null );
+        Object ddrRecords = new DDRRecordAgent().getDDRRecords( null, accountId, null, null, null, null );
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };

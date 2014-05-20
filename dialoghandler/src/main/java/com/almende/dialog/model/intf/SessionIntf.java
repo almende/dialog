@@ -18,6 +18,7 @@ public interface SessionIntf extends Serializable  {
     public String getStartTimestamp();
     public String getAnswerTimestamp();
     public String getReleaseTimestamp();
+    public String getDDRRecordId();  
 	
 	public void setSession_id(String session_id);
 	public void setPubKey(String pubKey);
@@ -33,4 +34,5 @@ public interface SessionIntf extends Serializable  {
     public void setStartTimestamp( String startTimestamp );
     public void setReleaseTimestamp( String releaseTimestamp );
     public void setAnswerTimestamp( String answerTimestamp );
+    public void setDDRRecordId(String ddrRecordId);
 }

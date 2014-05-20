@@ -173,7 +173,7 @@ public class DDRUtils
             }
             Long duration = ( releaseTime != null ? releaseTime : TimeUtils.getServerCurrentTimeInMillis() )
                 - ddrRecord.getStart();
-            ddrRecord.setDuration( duration );
+            ddrRecord.setDuration( duration > 0 ? duration : 0 );
             ddrRecord.setStatus( CommunicationStatus.FINISHED );
             ddrRecord.createOrUpdate();
         }
@@ -192,7 +192,7 @@ public class DDRUtils
     
     public static void publishDDREntryToQueue( String accountId, Double totalCost ) throws Exception
     {
-        if ( totalCost != null && totalCost >= 0.0 )
+        if ( totalCost != null && totalCost > 0.0 )
         {
             try
             {
@@ -396,7 +396,7 @@ public class DDRUtils
                 ddrRecord.setQuantity( quantity );
                 ddrRecord.setStatus( status );
                 ddrRecord.createOrUpdate();
-                return ddrRecord;
+                return DDRRecord.getDDRRecord( ddrRecord.getId(), ddrRecord.getAccountId() );
             }
         }
         log.warning( String.format( "Not charging this communication from: %s adapterid: %s anything!!",

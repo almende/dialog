@@ -423,11 +423,6 @@ public class VoiceXMLRESTProxy {
         log.info("call hangup with:"+direction+":"+remoteID+":"+localID);
         String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID.split( "@" )[0];
         Session session = Session.getSession(sessionKey);
-        //update the session with call times
-        session.setStartTimestamp( startTime );
-        session.setAnswerTimestamp( answerTime );
-        session.setReleaseTimestamp( releaseTime );
-        session.storeSession();
         
         log.info( String.format( "Session key: %s with remote: %s and local %s", sessionKey,
             session.getRemoteAddress(), session.getLocalAddress() ) );
@@ -475,12 +470,6 @@ public class VoiceXMLRESTProxy {
         log.info( "call answered with:" + direction + "_" + remoteID + "_" + localID );
         String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID.split( "@" )[0]; //ignore the @outbound suffix
         Session session = Session.getSession(sessionKey);
-        //update the session with call times
-        session.setStartTimestamp( startTime );
-        session.setAnswerTimestamp( answerTime );
-        session.setReleaseTimestamp( releaseTime );
-        session.storeSession();
-        
         log.info( "question from session got: "+ session.getSession_id() );
         Question question = session.getQuestion();
         //for direction = transfer (redirect event), json should not be null        
@@ -717,15 +706,15 @@ public class VoiceXMLRESTProxy {
                                     }
                                 }
                                 //update session with call timings
-                                session.setAnswerTimestamp( answerTimeString );
-                                session.setStartTimestamp( startTimeString );
-                                session.setReleaseTimestamp( releaseTimeString );
-                                session.setDirection( direction );
-                                session.setRemoteAddress( address );
-                                session.setLocalAddress( config.getMyAddress() );
-                                session.storeSession();
                                 if ( callReleased )
                                 {
+                                    session.setAnswerTimestamp( answerTimeString );
+                                    session.setStartTimestamp( startTimeString );
+                                    session.setReleaseTimestamp( releaseTimeString );
+                                    session.setDirection( direction );
+                                    session.setRemoteAddress( address );
+                                    session.setLocalAddress( config.getMyAddress() );
+                                    session.storeSession();
                                     log.info( String.format( "Call ended. session updated: %s",
                                         ServerUtils.serialize( session ) ) );
                                     stopCostsAtHangup( session );
@@ -1413,15 +1402,17 @@ public class VoiceXMLRESTProxy {
         try
         {
             log.info( String.format( "stopping charges for session: %s", ServerUtils.serialize( session ) ) );
-            if ( session.getStartTimestamp() != null && session.getAnswerTimestamp() != null
-                && session.getReleaseTimestamp() != null && session.getDirection() != null )
+            if ( session.getStartTimestamp() != null && session.getReleaseTimestamp() != null
+                && session.getDirection() != null )
             {
-                DDRRecord ddrRecord = DDRUtils.updateDDRRecordOnCallStops( session.getDDRRecordId(), adapterConfig.getOwner(),
-                    Long.parseLong( session.getStartTimestamp() ), Long.parseLong( session.getAnswerTimestamp() ),
+                DDRRecord ddrRecord = DDRUtils.updateDDRRecordOnCallStops( session.getDDRRecordId(),
+                    adapterConfig.getOwner(), Long.parseLong( session.getStartTimestamp() ),
+                    session.getAnswerTimestamp() != null ? Long.parseLong( session.getAnswerTimestamp() ) : null,
                     Long.parseLong( session.getReleaseTimestamp() ) );
 
                 //publish charges
-                DDRPrice ddrPriceForDialogService = DDRUtils.fetchDDRPrice( DDRTypeCategory.SERVICE_COST, UnitType.PART );
+                DDRPrice ddrPriceForDialogService = DDRUtils
+                    .fetchDDRPrice( DDRTypeCategory.SERVICE_COST, UnitType.PART );
                 Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord );
                 //add the service cost if the communication cost is lesser than the service cost
                 if ( totalCost != null && ddrPriceForDialogService != null

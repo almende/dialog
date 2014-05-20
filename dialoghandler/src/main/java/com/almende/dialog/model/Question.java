@@ -236,7 +236,7 @@ public class Question implements QuestionIntf {
 			ArrayList<Answer> answers = question.getAnswers();
 			for (Answer ans : answers) {
 				if (ans.getAnswer_text() != null
-						&& ans.getAnswer_text().equals(answer_input)) {
+						&& ans.getAnswer_text().equalsIgnoreCase( answer_input)) {
 					answer = ans;
 					break;
 				}
@@ -268,10 +268,14 @@ public class Question implements QuestionIntf {
 			// Oeps, couldn't find/handle answer, just repeat last question:
 			// TODO: somewhat smarter behavior? Should dialog standard provide
 			// error handling?
-			if (answered) newQ = this.event("exception",
-					"Wrong answer received", null, responder);
-			if (newQ != null) return newQ;
-			
+			if (answered)
+			{
+			    newQ = this.event("exception", "Wrong answer received", null, responder);
+			}
+            if ( newQ != null )
+            {
+                return newQ;
+            }
 			return retryLoadingQuestion(adapterID, answer_input, sessionKey);
 		} else {
 			// flush any existing retry counters for this session

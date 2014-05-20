@@ -347,6 +347,8 @@ public class VoiceXMLRESTProxy {
                 DDRWrapper.log( question, session, "Answer" );
                 question = question.answer( responder, session.getAdapterConfig().getConfigId(), answer_id,
                     answer_input, sessionKey );
+                session.setQuestion( question );
+                session.storeSession();
                 return handleQuestion( question, session.getAdapterConfig().getConfigId(), responder, sessionKey );
             } else {
                 log.warning( "No question found in session!" );
@@ -379,9 +381,9 @@ public class VoiceXMLRESTProxy {
             HashMap<String,Object> extras = new HashMap<String, Object>();
             extras.put( "sessionKey", sessionKey );
             question = question.event( "timeout", "No answer received", extras, responder );
-
-            return handleQuestion( question, session.getAdapterConfig().getConfigId(), responder,
-                                   sessionKey );
+            session.setQuestion( question );
+            session.storeSession();
+            return handleQuestion( question, session.getAdapterConfig().getConfigId(), responder, sessionKey );
         }
         return Response.ok( reply ).build();
     }
@@ -404,7 +406,8 @@ public class VoiceXMLRESTProxy {
 			HashMap<String, String> extras = new HashMap<String, String>();
 			extras.put( "sessionKey", sessionKey );
 			question = question.event("exception", "Wrong answer received", extras, responder);
-			
+			session.setQuestion( question );
+			session.storeSession();
 			return handleQuestion(question,session.getAdapterID(),responder,sessionKey);
 		}
 		return Response.ok(reply).build();
@@ -452,6 +455,7 @@ public class VoiceXMLRESTProxy {
             timeMap.put( "referredCalledId", referredCalledId );
             timeMap.put( "sessionKey", sessionKey );
             question.event( "hangup", "Hangup", timeMap, remoteID );
+            session.setQuestion( null );
             DDRWrapper.log( question, session, "Hangup" );
             handleQuestion( null, session.getAdapterConfig().getConfigId(), remoteID, sessionKey );
         }

@@ -9,8 +9,6 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.TextServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.agent.AdapterAgent;
-import com.almende.dialog.model.impl.S_fields;
-import com.almende.dialog.model.intf.SessionIntf;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.QueryResultIterator;
@@ -19,22 +17,31 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-public class Session implements SessionIntf {
-	private static final long serialVersionUID = 2674975096455049670L;
+public class Session {
 	private static final Logger log = Logger.getLogger("DialogHandler");
 	
-	SessionIntf session;
 	@Id
-	public String key = "";
+    public String key = "";
+	
+	String accountId;
+    String startUrl;
+    String remoteAddress;
+    String localAddress;
+    String direction;
+    String type;
+    String externalSession;
+    String keyword;
+    String adapterID;
+    String trackingToken;
+    String startTimestamp;
+    String answerTimestamp;
+    String releaseTimestamp;
+    String ddrRecordId;
 	public boolean killed = false;
 	String language = null;
 	Question question = null;
 	Map<String, String> extras = null;
 	Integer retryCount = null;
-	
-	public Session() {
-		this.session = new S_fields();
-	}
 	
 	@JsonIgnore
 	public void kill(){
@@ -51,6 +58,7 @@ public class Session implements SessionIntf {
             VoiceXMLRESTProxy.killSession( this );
         }
 	}
+	
 	@JsonIgnore
 	public String toJSON() {
 		try {
@@ -159,130 +167,11 @@ public class Session implements SessionIntf {
 	
 	@JsonIgnore
 	public AdapterConfig getAdapterConfig() {
-		if(session.getAdapterID()!=null)
-			return AdapterConfig.getAdapterConfig(session.getAdapterID());
-		
+		if(getAdapterID()!=null)
+			return AdapterConfig.getAdapterConfig(getAdapterID());
 		return null;
 	}
-	@Override
-	public String getStartUrl() {
-		return session.getStartUrl();
-	}
-	@Override
-	public void setStartUrl(String url) {
-		session.setStartUrl(url);
-	}
-	@Override
-	public String getRemoteAddress() {
-		return this.session.getRemoteAddress();
-	}
-	@Override
-	public String getDirection() {
-		return this.session.getDirection();
-	}
-	@Override
-	public void setRemoteAddress(String remoteAddress) {
-		this.session.setRemoteAddress(remoteAddress);
-	}
-	@Override
-	public void setDirection(String direction) {
-		this.session.setDirection(direction);
-	}
-	@Override
-	public String getLocalAddress() {
-		return this.session.getLocalAddress();
-	}
-	@Override
-	public void setLocalAddress(String localAddress) {
-		this.session.setLocalAddress(localAddress);
-	}
-	@Override
-	public String getType() {
-		return this.session.getType();
-	}
-	@Override
-	public void setType(String type) {
-		this.session.setType(type);
-	}
-	@Override
-	public String getAccountId() {
-		
-		return this.session.getAccountId();
-	}
-	@Override
-	public void setAccountId(String accountId) {
-		this.session.setAccountId( accountId );
-	}
 	
-	@Override
-	public String getExternalSession() {
-		return this.session.getExternalSession();
-	}
-	
-	@Override
-	public void setExternalSession(String externalSession) {
-		this.session.setExternalSession(externalSession);
-	}
-	
-	@Override
-	public String getAdapterID() {
-		return this.session.getAdapterID();
-	}
-	
-	@Override
-	public void setAdapterID(String adapterID) {
-		this.session.setAdapterID(adapterID);
-	}
-	
-	@Override
-	public String getTrackingToken() {
-		return this.session.getTrackingToken();
-	}
-	
-	@Override
-	public void setTrackingToken(String token) {
-		this.session.setTrackingToken(token);
-	}
-    @Override
-    public String getStartTimestamp()
-    {
-        return this.session.getStartTimestamp();
-    }
-    @Override
-    public String getAnswerTimestamp()
-    {
-        return this.session.getAnswerTimestamp();
-    }
-    @Override
-    public String getReleaseTimestamp()
-    {
-        return this.session.getReleaseTimestamp();
-    }
-    @Override
-    public void setStartTimestamp( String startTimestamp )
-    {
-        this.session.setStartTimestamp( startTimestamp );
-    }
-    @Override
-    public void setReleaseTimestamp( String releaseTimestamp )
-    {
-        this.session.setReleaseTimestamp( releaseTimestamp );
-    }
-    @Override
-    public void setAnswerTimestamp( String answerTimestamp )
-    {
-        this.session.setAnswerTimestamp( answerTimestamp );
-    }
-    @Override
-    public String getDDRRecordId()
-    {
-        return this.session.getDDRRecordId();
-    }
-    @Override
-    public void setDDRRecordId( String ddrRecordId )
-    {
-        this.session.setDDRRecordId( ddrRecordId );
-    }
     public Map<String, String> getExtras()
     {
         extras = extras != null ? extras : new HashMap<String, String>();
@@ -349,6 +238,134 @@ public class Session implements SessionIntf {
         this.retryCount = retryCount;
     }
     
+    public String getAccountId() {
+        return accountId;
+    }
+
+    public void setAccountId(String accountId) {
+        this.accountId = accountId;
+    }
+
+    
+    public String getStartUrl() {
+        return startUrl;
+    }
+
+    
+    public void setStartUrl(String url) {
+        this.startUrl = url;
+    }
+
+    
+    public String getRemoteAddress() {
+        return this.remoteAddress;
+    }
+
+    
+    public String getDirection() {
+        return this.direction;
+    }
+
+    
+    public void setRemoteAddress(String remoteAddress) {
+        this.remoteAddress=remoteAddress;
+    }
+
+    
+    public void setDirection(String direction) {
+        this.direction=direction;
+    }
+
+    
+    public String getLocalAddress() {
+        return this.localAddress;
+    }
+
+    
+    public void setLocalAddress(String localAddress) {
+        this.localAddress=localAddress;
+    }
+
+    
+    public String getType() {
+        return this.type;
+    }
+
+    
+    public void setType(String type) {
+        this.type=type;
+    }
+
+    
+    public void setExternalSession(String externalSession) {
+        this.externalSession = externalSession;
+    }
+    
+    
+    public String getExternalSession() {
+        return this.externalSession;
+    }
+
+    
+    public String getAdapterID() {
+        return this.adapterID;
+    }
+
+    
+    public void setAdapterID(String adapterID) {
+        this.adapterID = adapterID;
+    }
+    
+    
+    public String getTrackingToken() {
+        return this.trackingToken;
+    }
+    
+    
+    public void setTrackingToken(String token) {
+        this.trackingToken = token;     
+    }
+
+    public String getStartTimestamp()
+    {
+        return startTimestamp;
+    }
+
+    public void setStartTimestamp( String startTimestamp )
+    {
+        this.startTimestamp = startTimestamp;
+    }
+
+    public String getAnswerTimestamp()
+    {
+        return answerTimestamp;
+    }
+
+    public void setAnswerTimestamp( String answerTimestamp )
+    {
+        this.answerTimestamp = answerTimestamp;
+    }
+
+    public String getReleaseTimestamp()
+    {
+        return releaseTimestamp;
+    }
+
+    public void setReleaseTimestamp( String releaseTimestamp )
+    {
+        this.releaseTimestamp = releaseTimestamp;
+    }
+
+    public String getDDRRecordId()
+    {
+        return ddrRecordId;
+    }
+
+    public void setDDRRecordId( String ddrRecordId )
+    {
+        this.ddrRecordId = ddrRecordId;
+    }
+    
     /**
      * this returns a Question from a different session which is created for the direction and adapterId, when 
      * the extrasKey in {@link Session#extras} returns the same value.
@@ -383,5 +400,35 @@ public class Session implements SessionIntf {
             }
         }
         return null;
+    }
+
+    public String getKeyword()
+    {
+        return keyword;
+    }
+
+    public void setKeyword( String keyword )
+    {
+        this.keyword = keyword;
+    }
+
+    public String getDdrRecordId()
+    {
+        return ddrRecordId;
+    }
+
+    public void setDdrRecordId( String ddrRecordId )
+    {
+        this.ddrRecordId = ddrRecordId;
+    }
+
+    public boolean isKilled()
+    {
+        return killed;
+    }
+
+    public void setKilled( boolean killed )
+    {
+        this.killed = killed;
     }
 }

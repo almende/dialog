@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.AdapterType;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -180,12 +181,28 @@ public class DDRUtils
         return ddrRecord;
     }
     
-    public static DDRRecord createDDRForDialogService(AdapterConfig adapterConfig) throws Exception
+    /**
+     * create a ddr for an adapter being created and charge a monthly fee for example
+     * @param adapterConfig
+     * @return
+     * @throws Exception
+     */
+    //TODO: not fully implemented
+    public static DDRRecord createDDRForSubscription(AdapterConfig adapterConfig) throws Exception
     {
-        DDRType serviceDDRType = DDRType.getDDRType( DDRTypeCategory.SERVICE_COST );
-        if(serviceDDRType != null)
+        DDRType subscriptionDDRType = DDRType.getDDRType( DDRTypeCategory.SUBSCRIPTION_COST );
+        if(subscriptionDDRType != null)
         {
-            
+            String subscriptionStorageKey = DDRTypeCategory.SUBSCRIPTION_COST + "_" + subscriptionDDRType.getTypeId();
+            Session subscriptionStorage = Session.getSession( subscriptionStorageKey );
+            if(subscriptionStorage == null)
+            {
+                //store the current adapterid in the storage
+                Session.storeString( subscriptionStorageKey, adapterConfig.getConfigId());
+                subscriptionStorage = Session.getSession( subscriptionStorageKey );
+            }
+            subscriptionStorage.getExtras()
+                .put( "timestamp", String.valueOf( TimeUtils.getServerCurrentTimeInMillis() ) );
         }
         return null;
     }
@@ -364,12 +381,12 @@ public class DDRUtils
                             totalTime = duration_double / ( totalDays * 24 * 60 * 60 * 1000 ); //in months
                             break;
                         case PART:
-                            totalTime = ddrRecord.getQuantity().doubleValue();
+                            totalTime = 1.0;
                         default:
                             throw new Exception( "DDR not implemented for this UnitType: " + ddrPrice.getUnitType() );
                     }
                     double noOfComsumedUnits = Math.ceil( totalTime ) / ( (double) ddrPrice.getUnits() );
-                    totalCost = Math.ceil( noOfComsumedUnits ) * ddrPrice.getPrice();
+                    totalCost = ddrRecord.getQuantity() * Math.ceil( noOfComsumedUnits ) * ddrPrice.getPrice();
                     break;
                 }
                 case ADAPTER_PURCHASE:
@@ -415,7 +432,7 @@ public class DDRUtils
                     case RECEIEVED:
                         ddrRecord.setFromAddress( addresses.keySet().iterator().next() );
                         Map<String, String> toAddresses = new HashMap<String, String>();
-                        toAddresses.put( config.getMyAddress(), config.getAddress() );
+                        toAddresses.put( config.getMyAddress(), "" );
                         ddrRecord.setToAddress( toAddresses );
                         break;
                     default:

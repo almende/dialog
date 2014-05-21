@@ -12,7 +12,10 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.impl.S_fields;
 import com.almende.dialog.model.intf.SessionIntf;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.util.twigmongo.FilterOperator;
+import com.almende.util.twigmongo.QueryResultIterator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
+import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -31,15 +34,6 @@ public class Session implements SessionIntf {
 	
 	public Session() {
 		this.session = new S_fields();
-	}
-	@Override
-	public String getSession_id() {
-		return session.getSession_id();
-	}
-
-	@Override
-	public void setSession_id(String session_id) {
-		session.setSession_id(session_id);
 	}
 	
 	@JsonIgnore
@@ -148,7 +142,7 @@ public class Session implements SessionIntf {
 				//TODO: check account/pubkey usage here
 				session = new Session();
 				session.setAdapterID(config.getConfigId());
-				session.setPubKey(config.getOwner());
+				session.setAccountId( config.getOwner());
 				session.setRemoteAddress(split[2]);
 				session.setLocalAddress(localaddress);
 				session.setType(type);
@@ -211,21 +205,13 @@ public class Session implements SessionIntf {
 		this.session.setType(type);
 	}
 	@Override
-	public String getPubKey() {
+	public String getAccountId() {
 		
-		return this.session.getPubKey();
+		return this.session.getAccountId();
 	}
 	@Override
-	public String getPrivKey() {
-		return this.session.getPrivKey();
-	}
-	@Override
-	public void setPubKey(String pubKey) {
-		this.session.setPubKey(pubKey);
-	}
-	@Override
-	public void setPrivKey(String privKey) {
-		this.session.setPrivKey(privKey);
+	public void setAccountId(String accountId) {
+		this.session.setAccountId( accountId );
 	}
 	
 	@Override
@@ -361,5 +347,41 @@ public class Session implements SessionIntf {
     public void setRetryCount( Integer retryCount )
     {
         this.retryCount = retryCount;
+    }
+    
+    /**
+     * this returns a Question from a different session which is created for the direction and adapterId, when 
+     * the extrasKey in {@link Session#extras} returns the same value.
+     * @param adapterId
+     * @param direction
+     * @param extrasKey
+     * @param extrasValue
+     * @return
+     */
+    public static Question getQuestionFromDifferentSession( String adapterId, String direction, String extrasKey,
+        String extrasValue )
+    {
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        RootFindCommand<Session> query = datastore.find().type( Session.class );
+        //fetch accounts that match
+        if ( adapterId != null )
+        {
+            query = query.addFilter( "adapterID", FilterOperator.EQUAL, adapterId );
+        }
+        if ( direction != null )
+        {
+            query = query.addFilter( "direction", FilterOperator.EQUAL, direction );
+        }
+        QueryResultIterator<Session> resultIterator = query.now();
+        while ( resultIterator.hasNext() )
+        {
+            Session session = resultIterator.next();
+            if ( session != null && session.getExtras().get( extrasKey ) != null
+                && session.getExtras().get( extrasKey ).equals( extrasValue ) )
+            {
+                return session.getQuestion();
+            }
+        }
+        return null;
     }
 }

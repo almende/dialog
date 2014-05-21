@@ -1344,26 +1344,12 @@ public class VoiceXMLRESTProxy {
                         //create a new ddr record and session to catch the redirect
                         Session referralSession = Session.getSession( AdapterAgent.ADAPTER_TYPE_BROADSOFT + "|"
                         + session.getLocalAddress() + "|" + redirectedId );
-                        if ( session.getDirection() != null
-                            && ( session.getDirection().equals( "outbound" ) || session.getDirection().equals(
-                                "transfer" ) ) )
+                        if ( session.getDirection() != null )
                         {
-                            if ( referralSession != null && referralSession.getDDRRecordId() == null )
-                            {
-                                DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(
-                                    AdapterConfig.getAdapterConfig( adapterID ), redirectedId, 1 );
-                                referralSession.setDDRRecordId( ddrRecord.getId() );
-                                referralSession.setDirection( session.getDirection() );
-                            }
-                        }
-                        else
-                        //if its an inbound call, create a new ddr with DDRTypeCategory: OUTGOING_COMMUNICATION_COST
-                        {
-                            DDRRecord ddrRecordForIncomingReferral = DDRUtils.createDDRRecordOnOutgoingCommunication(
-                                session.getAdapterConfig(), redirectedId, 1 );
-                            referralSession.setDDRRecordId( ddrRecordForIncomingReferral.getId() );
-                            //save the referred ddrRecord id in the session
-                            session.getExtras().put( "referredDDRRecordId", ddrRecordForIncomingReferral.getId() );
+                            DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(
+                                AdapterConfig.getAdapterConfig( adapterID ), redirectedId, 1 );
+                            referralSession.setDDRRecordId( ddrRecord.getId() );
+                            referralSession.setDirection( session.getDirection() );
                         }
                         referralSession.storeSession();
                         session.storeSession();
@@ -1455,20 +1441,6 @@ public class VoiceXMLRESTProxy {
 
                 //publish charges
                 Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
-//                //check if it was an incoming redirection 
-//                if(ddrRecord != null && session.getExtras().containsKey( "referredDDRRecordId" ))
-//                {
-//                    DDRRecord refferedDdrRecord = DDRRecord.getDDRRecord(
-//                        session.getExtras().get( "referredDDRRecordId" ), session.getAccountId() );
-//                    if ( refferedDdrRecord != null && session.getAnswerTimestamp() != null)
-//                    {
-////                        refferedDdrRecord.setStart( ddrRecord.getStart() );
-////                        refferedDdrRecord.setStatus( ddrRecord.getStatus() );
-////                        refferedDdrRecord.setDuration( ddrRecord.getDuration() );
-////                        refferedDdrRecord.createOrUpdate();
-//                        totalCost += DDRUtils.calculateCommunicationDDRCost( refferedDdrRecord, false );
-//                    }
-//                }
                 DDRUtils.publishDDREntryToQueue( adapterConfig.getOwner(), totalCost );
             }
         }

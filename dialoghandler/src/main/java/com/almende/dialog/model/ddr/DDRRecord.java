@@ -306,6 +306,6 @@ public class DDRRecord
                     break;
             }
         }
-        return null;
+        return 0.0;
     }
 }

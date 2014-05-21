@@ -170,7 +170,7 @@ abstract public class TextServlet extends HttpServlet {
 					+ sessionKey);
 			return "";
 		}
-		session.setPubKey(config.getPublicKey());
+		session.setAccountId( config.getOwner());
 		session.setDirection("outbound");
 		session.setTrackingToken(UUID.randomUUID().toString());
         String preferred_language = session.getLanguage();
@@ -286,7 +286,7 @@ abstract public class TextServlet extends HttpServlet {
                         + sessionKey );
                     return null;
                 }
-                session.setPubKey( config.getPublicKey() );
+                session.setAccountId( config.getOwner() );
                 session.setDirection( "outbound" );
 
                 if ( res.question != null )

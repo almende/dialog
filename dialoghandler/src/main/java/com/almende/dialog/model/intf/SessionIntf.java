@@ -4,9 +4,7 @@ import java.io.Serializable;
 
 public interface SessionIntf extends Serializable  {
 	
-	public String getSession_id();
-	public String getPubKey();
-	public String getPrivKey();
+	public String getAccountId();
 	public String getStartUrl();
 	public String getRemoteAddress();
 	public String getLocalAddress();
@@ -20,9 +18,7 @@ public interface SessionIntf extends Serializable  {
     public String getReleaseTimestamp();
     public String getDDRRecordId();  
 	
-	public void setSession_id(String session_id);
-	public void setPubKey(String pubKey);
-	public void setPrivKey(String privKey);
+	public void setAccountId(String accountId);
 	public void setStartUrl(String url);
 	public void setRemoteAddress(String remoteAddress);
 	public void setLocalAddress(String localAddress);

@@ -382,6 +382,7 @@ public class DDRUtils
                             break;
                         case PART:
                             totalTime = 1.0;
+                            break;
                         default:
                             throw new Exception( "DDR not implemented for this UnitType: " + ddrPrice.getUnitType() );
                     }

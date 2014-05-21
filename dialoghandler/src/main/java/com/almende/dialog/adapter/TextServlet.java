@@ -57,9 +57,9 @@ abstract public class TextServlet extends HttpServlet {
 			String from, String senderName, Map<String, String> addressNameMap,
 			Map<String, Object> extras, AdapterConfig config) throws Exception;
 	
-    protected abstract DDRRecord attachIncomingCost( AdapterConfig adapterConfig, String fromAddress ) throws Exception;
+    protected abstract DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress ) throws Exception;
 
-    protected abstract DDRRecord attachOutgoingCost( AdapterConfig adapterConfig, Map<String, String> toAddress,
+    protected abstract DDRRecord createDDRForOutgoing( AdapterConfig adapterConfig, Map<String, String> toAddress,
         String message ) throws Exception;
 	
 	protected abstract TextMessage receiveMessage(HttpServletRequest req,
@@ -664,9 +664,9 @@ abstract public class TextServlet extends HttpServlet {
     {
         int count = broadcastMessage( message, subject, from, senderName, addressNameMap, extras, config );
         //attach costs
-        DDRRecord ddrRecord = attachOutgoingCost( config, addressNameMap, message );
+        DDRRecord ddrRecord = createDDRForOutgoing( config, addressNameMap, message );
         //push the cost to hte queue
-        Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord );
+        Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
         DDRUtils.publishDDREntryToQueue( config.getOwner(), totalCost );
         return count;
     }
@@ -677,12 +677,12 @@ abstract public class TextServlet extends HttpServlet {
         TextMessage receiveMessage = receiveMessage( req, resp );
         //attach charges for incoming
         AdapterConfig config = AdapterConfig.findAdapterConfig( getAdapterType(), receiveMessage.getLocalAddress() );
-        attachIncomingCost( config, receiveMessage.getAddress() );
+        createDDRForIncoming( config, receiveMessage.getAddress() );
         return receiveMessage;
     }
 	    
     /**
-     * helper method to convert the address to map in turn calls {@link TextServlet#attachOutgoingCost(AdapterConfig, Map, String)}
+     * helper method to convert the address to map in turn calls {@link TextServlet#createDDRForOutgoing(AdapterConfig, Map, String)}
      * @param config
      * @param address
      * @param message
@@ -692,9 +692,9 @@ abstract public class TextServlet extends HttpServlet {
     {
         HashMap<String, String> toAddressMap = new HashMap<String, String>();
         toAddressMap.put( address, "" );
-        DDRRecord ddrRecord = attachOutgoingCost( config, toAddressMap, message );
+        DDRRecord ddrRecord = createDDRForOutgoing( config, toAddressMap, message );
         //push the cost to hte queue
-        Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord );
+        Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
         DDRUtils.publishDDREntryToQueue( config.getOwner(), totalCost );
         return ddrRecord;
     }

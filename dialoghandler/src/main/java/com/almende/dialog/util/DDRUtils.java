@@ -240,7 +240,8 @@ public class DDRUtils
      * {@link DDRPrice#getStartTime() startTime} and
      * {@link DDRPrice#getEndTime() endTime}
      * @param ddrRecord
-     * @param includeServiceCosts includes the service cost for this ddr too, if true.
+     * @param includeServiceCosts includes the service cost for this ddr too, if true. The service cost is 
+     * ignored if it is lesser than the communiciation cost
      * @return
      * @throws Exception
      */
@@ -341,7 +342,7 @@ public class DDRUtils
                 case OUTGOING_COMMUNICATION_COST:
                 {
                     Double totalTime = null;
-                    double duration_double = ddrRecord.getDuration().doubleValue();
+                    double duration_double = ddrRecord.getDuration() != null ? ddrRecord.getDuration().doubleValue() : 0.0;
                     switch ( ddrPrice.getUnitType() )
                     {
                         case SECOND:
@@ -362,6 +363,8 @@ public class DDRUtils
                                 monthOfYear );
                             totalTime = duration_double / ( totalDays * 24 * 60 * 60 * 1000 ); //in months
                             break;
+                        case PART:
+                            totalTime = ddrRecord.getQuantity().doubleValue();
                         default:
                             throw new Exception( "DDR not implemented for this UnitType: " + ddrPrice.getUnitType() );
                     }

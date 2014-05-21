@@ -186,7 +186,7 @@ public class DDRRecord
     }
     public Integer getQuantity()
     {
-        return quantity;
+        return quantity != null ? quantity : 0;
     }
     
     public Long getStart()

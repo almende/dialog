@@ -27,6 +27,14 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
     @Override
     protected void onCreate()
     {
+        generateDefaultDDRTypes();
+    }
+    
+    /**
+     * generates all DDRTypes with default names
+     */
+    public void generateDefaultDDRTypes()
+    {
         //check if all DDR categories are created on bootstrapping this agent
         for ( DDRTypeCategory ddrCategory : DDRTypeCategory.values() )
         {
@@ -39,7 +47,7 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
                     {
                         ddrType = new DDRType();
                         ddrType.setCategory( ddrCategory );
-                        ddrType.setName( ddrCategory.name() );
+                        ddrType.setName( "DEFAULT - " + ddrCategory.name() );
                         ddrType.createOrUpdate();
                     }
                 }

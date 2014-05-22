@@ -1,6 +1,7 @@
 package com.almende.dialog.agent;
 
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.AdapterType;
@@ -21,6 +22,36 @@ import com.askfast.commons.agent.intf.DDRRecordAgentInterface;
 @Access(AccessType.PUBLIC)
 public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
 {
+    private static final Logger log = Logger.getLogger( DDRRecordAgent.class.getName() );
+    
+    @Override
+    protected void onCreate()
+    {
+        //check if all DDR categories are created on bootstrapping this agent
+        for ( DDRTypeCategory ddrCategory : DDRTypeCategory.values() )
+        {
+            if ( !ddrCategory.equals( DDRTypeCategory.OTHER ) ) //ignore other
+            {
+                try
+                {
+                    DDRType ddrType = DDRType.getDDRType( ddrCategory );
+                    if ( ddrType == null )
+                    {
+                        ddrType = new DDRType();
+                        ddrType.setCategory( ddrCategory );
+                        ddrType.setName( ddrCategory.name() );
+                        ddrType.createOrUpdate();
+                    }
+                }
+                catch ( Exception e )
+                {
+                    log.severe( String.format( "DDRType creation failed for type: %s. Error: %s", ddrCategory.name(),
+                        e.getLocalizedMessage() ) );
+                }
+            }
+        }
+    }
+    
     /**
      * get a specific DDR record if it is owned by the account
      * @param id

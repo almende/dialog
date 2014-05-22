@@ -296,7 +296,7 @@ public class DDRRecord
                 case SUBSCRIPTION_COST:
                 {
                     //fetch the ddrPrice
-                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices( ddrTypeId, null, adapterId, UnitType.PART );
+                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices( ddrTypeId, null, adapterId, UnitType.PART, null );
                     if ( ddrPrices != null && !ddrPrices.isEmpty() )
                     {
                         return DDRUtils.calculateDDRCost( this, ddrPrices.iterator().next() );

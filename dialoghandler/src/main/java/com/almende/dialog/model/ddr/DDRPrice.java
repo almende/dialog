@@ -8,7 +8,6 @@ import org.bson.types.ObjectId;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.util.twigmongo.FilterOperator;
-import com.almende.util.twigmongo.QueryResultIterator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
@@ -92,6 +91,8 @@ public class DDRPrice
     private Long endTime;
     private Integer staffleStart;
     private Integer staffleEnd;
+    //used incase this price model has some specific charecteristics. e.g. price for landline numbers for a country
+    private String keyword;
     
     /**
      * create (if missing) or updates this document instance
@@ -124,7 +125,8 @@ public class DDRPrice
      * @param unitType
      * @return
      */
-    public static List<DDRPrice> getDDRPrices( String ddrTypeId, AdapterType adapterType, String adapterId, UnitType unitType )
+    public static List<DDRPrice> getDDRPrices( String ddrTypeId, AdapterType adapterType, String adapterId, UnitType unitType,
+        String keyword)
     {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         RootFindCommand<DDRPrice> query = datastore.find().type( DDRPrice.class );
@@ -150,22 +152,37 @@ public class DDRPrice
         {
             query = query.addFilter( "unitType", FilterOperator.EQUAL, unitType.name() );
         }
-        ArrayList<DDRPrice> result = null;
+        List<DDRPrice> allPrices = query.now().toArray();
+        List<DDRPrice> result = null;
+        //check if any special rates are given to the particular adapterID, if not use the generic one for the adapter type
+        //this is the most specific rates given
         if ( adapterId != null && !adapterId.isEmpty() )
         {
-            QueryResultIterator<DDRPrice> ddrIterator = new QueryResultIterator<DDRPrice>( DDRPrice.class, query.now()
-                .getCursor() );
             result = new ArrayList<DDRPrice>();
-            while ( ddrIterator.hasNext() )
+            for ( DDRPrice ddrPrice : allPrices )
             {
-                DDRPrice ddrPrice = ddrIterator.next();
                 if ( adapterId.equals( ddrPrice.getAdapterId() ) )
                 {
                     result.add( ddrPrice );
                 }
             }
+            result = !result.isEmpty() ? result : allPrices;
         }
-        return result != null && !result.isEmpty() ? result : query.now().toArray(); 
+        //check if any special rates are given to the particular keyword, if not use the generic one for the adapter type
+        //if any prices are fetched from 
+        if ( keyword != null && !keyword.isEmpty())
+        {
+            List<DDRPrice> ddrPricesByKeyword = new ArrayList<DDRPrice>();
+            for ( DDRPrice ddrPrice : result )
+            {
+                if ( keyword.equals( ddrPrice.getKeyword() ) )
+                {
+                    ddrPricesByKeyword.add( ddrPrice );
+                }
+            }
+            result = !ddrPricesByKeyword.isEmpty() ? ddrPricesByKeyword : result;
+        }
+        return result; 
     }
     
     /**
@@ -295,5 +312,15 @@ public class DDRPrice
             return true;
         }
         return false;
+    }
+
+    public String getKeyword()
+    {
+        return keyword;
+    }
+
+    public void setKeyword( String keyword )
+    {
+        this.keyword = keyword;
     }
 }

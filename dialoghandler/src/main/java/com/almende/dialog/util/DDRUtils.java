@@ -15,6 +15,8 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
+import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
@@ -45,7 +47,7 @@ public class DDRUtils
             log.info( String.format( "Applying charges for account: %s and adapter: %s with address: %s",
                 config.getOwner(), config.getConfigId(), config.getMyAddress() ) );
             List<DDRPrice> adapterPurchaseDDRPrices = DDRPrice.getDDRPrices( adapterPurchaseDDRType.getTypeId(),
-                AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), null );
+                AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), null, null );
             if ( adapterPurchaseDDRPrices != null && !adapterPurchaseDDRPrices.isEmpty()
                 && config.getConfigId() != null && config.getOwner() != null )
             {
@@ -269,12 +271,36 @@ public class DDRUtils
         {
             DDRType ddrType = ddrRecord.getDdrType();
             AdapterConfig config = ddrRecord.getAdapter();
-            List<DDRPrice> communicationDDRPrices = DDRPrice.getDDRPrices( ddrType.getTypeId(),
-                AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), null );
+            List<DDRPrice> communicationDDRPrices = null;
+            if(AdapterType.getByValue( config.getAdapterType()).equals( AdapterType.CALL ))
+            {
+                String toAddress = null;
+                //for a calling ddr record, it must always have one address in the toList
+                if( ddrRecord.getToAddress().keySet().size() == 1)
+                {
+                    toAddress = ddrRecord.getToAddress().keySet().iterator().next();
+                    PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType( toAddress );
+                    PhoneNumber phoneNumber = PhoneNumberUtils.getPhoneNumberProto( toAddress, null );
+                    communicationDDRPrices = DDRPrice.getDDRPrices( ddrType.getTypeId(),
+                        AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), null,
+                        phoneNumber.getCountryCode() + "_" + numberType );
+                }
+                else
+                {
+                    log.severe( "Multiple addresses found in the toAddress field for CALL: "
+                        + ddrRecord.getToAddressString() );
+                }
+            }
+            else
+            {
+                communicationDDRPrices = DDRPrice.getDDRPrices( ddrType.getTypeId(),
+                    AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), null, null );
+            }
             if ( communicationDDRPrices != null && !communicationDDRPrices.isEmpty() && config.getConfigId() != null
                 && config.getOwner() != null )
             {
-                //use the ddrPrice that has the most recent start date
+                //use the ddrPrice that has the most recent start date and matches the keyword based on the 
+                //to address, if it is mobile or landline
                 DDRPrice selectedDDRPrice = null;
                 for ( DDRPrice ddrPrice : communicationDDRPrices )
                 {
@@ -296,7 +322,7 @@ public class DDRUtils
         //check if service costs are to be included
         if(includeServiceCosts != null && includeServiceCosts)
         {
-            DDRPrice ddrPriceForDialogService = DDRUtils.fetchDDRPrice( DDRTypeCategory.SERVICE_COST, UnitType.PART );
+            DDRPrice ddrPriceForDialogService = DDRUtils.fetchDDRPrice( DDRTypeCategory.SERVICE_COST, UnitType.PART, null );
             Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
             //add the service cost if the communication cost is lesser than the service cost
             if ( result < serviceCost )
@@ -329,12 +355,12 @@ public class DDRUtils
      * @return returns the first DDRPrice based on the category and the unitType.
      * @throws Exception
      */
-    public static DDRPrice fetchDDRPrice(DDRTypeCategory category, UnitType unitType) throws Exception
+    public static DDRPrice fetchDDRPrice(DDRTypeCategory category, UnitType unitType, String keyword) throws Exception
     {
         DDRType ddrType = DDRType.getDDRType( category );
         if(ddrType != null)
         {
-            List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices( ddrType.getTypeId(), null, null, unitType);
+            List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices( ddrType.getTypeId(), null, null, unitType, keyword);
             return ddrPrices != null && !ddrPrices.isEmpty() ? ddrPrices.iterator().next() : null;
         }
         return null;

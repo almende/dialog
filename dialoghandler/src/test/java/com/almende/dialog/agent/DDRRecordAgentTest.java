@@ -370,7 +370,7 @@ public class DDRRecordAgentTest extends TestFramework
     {
         Object ddrPriceObject = ddrRecordAgent.createDDRPriceWithNewDDRType( name, category.name(),
             TimeUtils.getServerCurrentTimeInMillis(), TimeUtils.getCurrentServerTimePlusMinutes( 100 ), price, 0, 10,
-            1, unitType.name(), adapterType.name(), adapterId );
+            1, unitType.name(), adapterType.name(), adapterId, null );
         TypeUtil<DDRPrice> injector = new TypeUtil<DDRPrice>(){};
         return injector.inject( ddrPriceObject );
     }

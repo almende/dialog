@@ -55,15 +55,15 @@ public class DDRPrice
         }
 
         /**
-         * returns the enum based on the value
+         * returns the enum based on the name or the value
          * @param value
          * @return
          */
-        public static AdapterType getByValue(String value)
+        public static AdapterType getByValue( String value )
         {
             for ( AdapterType type : values() )
             {
-                if(type.getName().equalsIgnoreCase( value ))
+                if ( type.getName().equalsIgnoreCase( value ) || type.name().equalsIgnoreCase( value ) )
                 {
                     return type;
                 }
@@ -166,8 +166,8 @@ public class DDRPrice
                     result.add( ddrPrice );
                 }
             }
-            result = !result.isEmpty() ? result : allPrices;
         }
+        result = result != null && !result.isEmpty() ? result : allPrices;
         //check if any special rates are given to the particular keyword, if not use the generic one for the adapter type
         //if any prices are fetched from 
         if ( keyword != null && !keyword.isEmpty())
@@ -175,14 +175,14 @@ public class DDRPrice
             List<DDRPrice> ddrPricesByKeyword = new ArrayList<DDRPrice>();
             for ( DDRPrice ddrPrice : result )
             {
-                if ( keyword.equals( ddrPrice.getKeyword() ) )
+                if ( keyword.equalsIgnoreCase( ddrPrice.getKeyword() ) )
                 {
                     ddrPricesByKeyword.add( ddrPrice );
                 }
             }
             result = !ddrPricesByKeyword.isEmpty() ? ddrPricesByKeyword : result;
         }
-        return result; 
+        return result != null ? result : allPrices; 
     }
     
     /**

@@ -166,7 +166,7 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
         ddrPrice.setStartTime( startTime );
         ddrPrice.setUnits( unit );
         ddrPrice.setAdapterId( adapterId );
-        ddrPrice.setKeyword( keyword );
+        ddrPrice.setKeyword( keyword != null ? keyword.toUpperCase() : keyword );
         UnitType unitType = unitTypeString != null && !unitTypeString.isEmpty() ? UnitType.fromJson( unitTypeString )
                                                                                : null;
         if(adapterId != null)

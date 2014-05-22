@@ -283,7 +283,7 @@ public class DDRUtils
                     PhoneNumber phoneNumber = PhoneNumberUtils.getPhoneNumberProto( toAddress, null );
                     communicationDDRPrices = DDRPrice.getDDRPrices( ddrType.getTypeId(),
                         AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), null,
-                        phoneNumber.getCountryCode() + "_" + numberType );
+                        phoneNumber.getCountryCode() + "|" + numberType.name().toUpperCase() );
                 }
                 else
                 {
@@ -318,16 +318,17 @@ public class DDRUtils
                 }
                 result = calculateDDRCost( ddrRecord, selectedDDRPrice );
             }
-        }
-        //check if service costs are to be included
-        if(includeServiceCosts != null && includeServiceCosts)
-        {
-            DDRPrice ddrPriceForDialogService = DDRUtils.fetchDDRPrice( DDRTypeCategory.SERVICE_COST, UnitType.PART, null );
-            Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
-            //add the service cost if the communication cost is lesser than the service cost
-            if ( result < serviceCost )
+            //check if service costs are to be included
+            if(includeServiceCosts != null && includeServiceCosts)
             {
-                result += serviceCost;
+                DDRPrice ddrPriceForDialogService = DDRUtils.fetchDDRPrice( DDRTypeCategory.SERVICE_COST,
+                    AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), UnitType.PART, null );
+                Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
+                //add the service cost if the communication cost is lesser than the service cost
+                if ( result < serviceCost )
+                {
+                    result += serviceCost;
+                }
             }
         }
         return result;
@@ -349,18 +350,23 @@ public class DDRUtils
     }
     
     /**
-     * returns the first DDRPrice based on the category and the unitType. 
+     * returns the first DDRPrice based on the category and the unitType.
      * @param category returns null if this is null or a DDRType is not found for this category.
+     * @param adapterType
+     * @param adapterId
      * @param unitType
+     * @param keyword
      * @return returns the first DDRPrice based on the category and the unitType.
      * @throws Exception
      */
-    public static DDRPrice fetchDDRPrice(DDRTypeCategory category, UnitType unitType, String keyword) throws Exception
+    public static DDRPrice fetchDDRPrice( DDRTypeCategory category, AdapterType adapterType, String adapterId,
+        UnitType unitType, String keyword ) throws Exception
     {
         DDRType ddrType = DDRType.getDDRType( category );
-        if(ddrType != null)
+        if ( ddrType != null )
         {
-            List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices( ddrType.getTypeId(), null, null, unitType, keyword);
+            List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices( ddrType.getTypeId(), adapterType, adapterId, unitType,
+                keyword );
             return ddrPrices != null && !ddrPrices.isEmpty() ? ddrPrices.iterator().next() : null;
         }
         return null;

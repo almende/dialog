@@ -334,7 +334,7 @@ public class DDRUtils
                 }
             }
         }
-        return result;
+        return getCeilingAtPrecision(result, 3);
     }
     
     /**
@@ -433,7 +433,7 @@ public class DDRUtils
                     throw new Exception( "DDR not implemented for this category: " + ddrType.getCategory() );
             }
         }
-        return totalCost;
+        return getCeilingAtPrecision(totalCost, 3);
     }
     
     /**
@@ -483,5 +483,11 @@ public class DDRUtils
         log.warning( String.format( "Not charging this communication from: %s adapterid: %s anything!!",
             config.getMyAddress(), config.getConfigId() ) );
         return null;
+    }
+    
+    private static Double getCeilingAtPrecision(double value, int precision) {
+
+//        return value;
+        return Math.round(value * Math.pow(10, precision)) / Math.pow(10, precision);
     }
 }

@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import org.bson.types.ObjectId;
 import com.almende.util.AnnotationUtil;
 import com.almende.util.AnnotationUtil.AnnotatedClass;
 import com.almende.util.AnnotationUtil.AnnotatedField;
@@ -82,6 +82,13 @@ public class TwigCompatibleMongoDatastore {
 			DBCollection table = ParallelInit.getDatastore().getCollection(
 					collectionName);
 			BasicDBObject searchQuery = new BasicDBObject();
+			
+			Class<?> keyFieldType = keyField.getField().getType();
+			if ( ( keyField.getField().getType().equals( long.class ) && ( (long) key ) == 0 )
+                || ( keyField.getField().getType().equals( Long.class ) && key == null ) )
+            {
+                key = ObjectId.get();
+            }
 			searchQuery.put(keyField.getName(), key);
 			
 			BasicDBObject doc = JOM.getInstance().convertValue(document,
@@ -114,7 +121,7 @@ public class TwigCompatibleMongoDatastore {
 		}
 		
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	public <V, T> Map<V, T> loadAll(Class<T> clazz, Collection<V> keys) {
 		Map<V, T> result = new HashMap<V, T>();
@@ -211,5 +218,22 @@ public class TwigCompatibleMongoDatastore {
 			orderBy.append(fieldname, dir.getDirection());
 		}
 	}
+
+    public <T> void delete(Class<T> entityType, Object id) {
+
+        AnnotatedField keyField = getKeyField(entityType);
+        try {
+            String collectionName = entityType.getClass().getCanonicalName().toLowerCase() + "s";
+            DBCollection table = ParallelInit.getDatastore().getCollection(collectionName);
+            BasicDBObject searchQuery = new BasicDBObject();
+            searchQuery.put(keyField.getName(), id);
+
+            table.remove(searchQuery);
+        }
+        catch (Exception e) {
+            System.err.println("Warning: Couldn't get key field from:" + entityType.getClass());
+            e.printStackTrace();
+        }
+    }
 	
 }

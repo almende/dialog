@@ -108,10 +108,22 @@ public class DDRPrice
      * @return
      * @throws Exception
      */
-    public static DDRPrice getDDRPrice(long id)
+    public static DDRPrice getDDRPrice(String id)
     {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         return datastore.load(DDRPrice.class, id);
+    }
+    
+    /**
+     * fetch the ddr type from the datastore
+     * @param id
+     * @return
+     * @throws Exception
+     */
+    public static void removeDDRPrice(String id)
+    {
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        datastore.delete(DDRPrice.class, id);
     }
     
     /**

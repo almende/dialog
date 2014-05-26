@@ -216,12 +216,20 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
                               unitTypeString, adapterTypeString, adapterid, keyword);
     }
     
+    /**
+     * deletes a ddr price from the datastore
+     * @param id
+     */
+    public void removeDDRPrice(@Name( "id" ) String id)
+    {
+        DDRPrice.removeDDRPrice(id);
+    }
     
     /**
      * get all the DDR Type. Access to this 
      * @param name
      */
-    public Object getDDRPrice(@Name( "id" ) Long id)
+    public Object getDDRPrice(@Name( "id" ) String id)
     {
         return DDRPrice.getDDRPrice( id );
     }

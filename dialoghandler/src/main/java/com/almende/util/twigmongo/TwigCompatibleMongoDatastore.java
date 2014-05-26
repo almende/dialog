@@ -223,7 +223,7 @@ public class TwigCompatibleMongoDatastore {
 
         AnnotatedField keyField = getKeyField(entityType);
         try {
-            String collectionName = entityType.getClass().getCanonicalName().toLowerCase() + "s";
+            String collectionName = entityType.getCanonicalName().toLowerCase() + "s";
             DBCollection table = ParallelInit.getDatastore().getCollection(collectionName);
             BasicDBObject searchQuery = new BasicDBObject();
             searchQuery.put(keyField.getName(), id);

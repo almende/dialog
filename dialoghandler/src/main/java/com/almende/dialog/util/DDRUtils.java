@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
@@ -302,19 +301,23 @@ public class DDRUtils
                 //use the ddrPrice that has the most recent start date and matches the keyword based on the 
                 //to address, if it is mobile or landline
                 DDRPrice selectedDDRPrice = null;
+                boolean isDDRPriceInTimerange = false;
                 for ( DDRPrice ddrPrice : communicationDDRPrices )
                 {
+                    //pick a price whose start and endTimestamp falls in that of the ddrRecords
                     if ( ddrRecord.getStart() != null && ddrPrice.isValidForTimestamp( ddrRecord.getStart() ) )
                     {
                         selectedDDRPrice = ddrPrice;
+                        isDDRPriceInTimerange = true;
                         break;
                     }
-                    //pick the most recent offer
-                    else if ( selectedDDRPrice.getEndTime() == null
-                        || ( ddrPrice.getEndTime() != null && ddrPrice.getEndTime() > selectedDDRPrice.getEndTime() ) )
-                    {
-                        selectedDDRPrice = ddrPrice;
-                    }
+                    //TODO: should check for other mechanisms that fetch the closet offer to the ddrRecord timestamp
+                    selectedDDRPrice = ddrPrice; //else pick the last ddrPrice in the list
+                }
+                if (!isDDRPriceInTimerange) {
+                    log.warning(String.format("No DDRPrice date range match for DDRRecord: %s. In turn fetched: %s of type: %s with price: %s",
+                                              ddrRecord.getId(), selectedDDRPrice.getId(),
+                                              selectedDDRPrice.getUnitType(), selectedDDRPrice.getPrice()));
                 }
                 result = calculateDDRCost( ddrRecord, selectedDDRPrice );
             }

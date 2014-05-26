@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -181,8 +180,8 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 						"You are not allowed to use this adapter!");
 			}
 			
-			log.info(String.format("Config found: %s of Type: %s",
-					config.getConfigId(), config.getAdapterType()));
+                        log.info(String.format("Config found: %s of Type: %s with address: %s", config.getConfigId(),
+                                               config.getAdapterType(), config.getMyAddress()));
 			adapterType = config.getAdapterType();
 			try {
                 if ( adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_XMPP ) )

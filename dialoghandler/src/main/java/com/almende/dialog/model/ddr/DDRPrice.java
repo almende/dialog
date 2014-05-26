@@ -2,9 +2,7 @@ package com.almende.dialog.model.ddr;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.bson.types.ObjectId;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.util.twigmongo.FilterOperator;
@@ -120,9 +118,10 @@ public class DDRPrice
      * fetch the ddr records based the input parameters. if no DDRPrice records are found for the adapterId, it 
      * returns the ones matching other indexes
      * @param ddrTypeId
-     * @param adapterType this is updated if missing when adapterId is given
-     * @param adapterId
-     * @param unitType
+     * @param adapterType optional field. If no prices are fetched for this adapterType a generic one will be returned. 
+     * this is also updated if missing and adapterId is given
+     * @param adapterId optional field. If no prices are fetched for this adapterId a generic one will be returned. 
+     * @param unitType optional field. If no prices are fetched for this unitType a generic one will be returned.
      * @return
      */
     public static List<DDRPrice> getDDRPrices( String ddrTypeId, AdapterType adapterType, String adapterId, UnitType unitType,
@@ -144,10 +143,6 @@ public class DDRPrice
                 adapterType = AdapterType.getByValue( adapterConfig.getAdapterType() );
             }
         }
-        if ( adapterType != null )
-        {
-            query = query.addFilter( "adapterType", FilterOperator.EQUAL, adapterType.name() );
-        }
         if ( unitType != null )
         {
             query = query.addFilter( "unitType", FilterOperator.EQUAL, unitType.name() );
@@ -168,8 +163,22 @@ public class DDRPrice
             }
         }
         result = result != null && !result.isEmpty() ? result : allPrices;
-        //check if any special rates are given to the particular keyword, if not use the generic one for the adapter type
-        //if any prices are fetched from 
+        //check if any special rates are given to the particular keyword, if not use the generic one for 
+        //any prices that are fetched from adapterType 
+        if ( adapterType != null)
+        {
+            List<DDRPrice> ddrPricesByAdapterType = new ArrayList<DDRPrice>();
+            for ( DDRPrice ddrPrice : result )
+            {
+                if ( adapterType.equals( ddrPrice.getAdapterType() ) )
+                {
+                    ddrPricesByAdapterType.add( ddrPrice );
+                }
+            }
+            result = !ddrPricesByAdapterType.isEmpty() ? ddrPricesByAdapterType : result;
+        }
+        //check if any special rates are given to the particular keyword, if not use the generic one for 
+        //any prices that are fetched from keyword
         if ( keyword != null && !keyword.isEmpty())
         {
             List<DDRPrice> ddrPricesByKeyword = new ArrayList<DDRPrice>();

@@ -2,7 +2,6 @@ package com.almende.dialog.agent;
 
 import java.util.List;
 import java.util.logging.Logger;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.AdapterType;
@@ -197,21 +196,24 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
      * @return
      * @throws Exception
      */
-    public Object createDDRPriceWithNewDDRType( @Name( "nameForDDR" ) String name,
-        @Name( "ddrTypeCategory" ) String categoryString, @Name( "startTime" ) @Optional Long startTime,
-        @Name( "endTime" ) @Optional Long endTime, @Name( "price" ) Double price,
-        @Name( "staffleStart" ) @Optional Integer staffleStart, @Name( "staffleEnd" ) @Optional Integer staffleEnd,
-        @Name( "unit" ) @Optional Integer unit, @Name( "unitType" ) @Optional String unitTypeString,
-        @Name( "adapterType" ) @Optional String adapterTypeString, @Name( "adapterId" ) @Optional String adapterid,
-        @Name( "keyword" ) @Optional String keyword ) throws Exception
-    {
-        Object ddrTypeObject = createDDRType( name, categoryString );
-        TypeUtil<DDRType> injector = new TypeUtil<DDRType>()
-        {
+    public Object createDDRPriceWithNewDDRType(@Name("nameForDDR") String name,
+                                               @Name("ddrTypeCategory") String categoryString,
+                                               @Name("startTime") @Optional Long startTime,
+                                               @Name("endTime") @Optional Long endTime, @Name("price") Double price,
+                                               @Name("staffleStart") @Optional Integer staffleStart,
+                                               @Name("staffleEnd") @Optional Integer staffleEnd,
+                                               @Name("unit") @Optional Integer unit,
+                                               @Name("unitType") @Optional String unitTypeString,
+                                               @Name("adapterType") @Optional String adapterTypeString,
+                                               @Name("adapterId") @Optional String adapterid,
+                                               @Name("keyword") @Optional String keyword) throws Exception {
+
+        Object ddrTypeObject = createDDRType(name, categoryString);
+        TypeUtil<DDRType> injector = new TypeUtil<DDRType>() {
         };
-        DDRType ddrType = injector.inject( ddrTypeObject );
-        return createDDRPrice( ddrType.getTypeId(), startTime, endTime, price, staffleStart, staffleEnd, unit,
-            unitTypeString, adapterTypeString, adapterid, keyword );
+        DDRType ddrType = injector.inject(ddrTypeObject);
+        return createDDRPrice(ddrType.getTypeId(), startTime, endTime, price, staffleStart, staffleEnd, unit,
+                              unitTypeString, adapterTypeString, adapterid, keyword);
     }
     
     

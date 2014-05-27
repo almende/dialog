@@ -3,20 +3,16 @@ package com.almende.dialog.agent;
 
 
 import static org.junit.Assert.assertThat;
-
 import java.net.URI;
 import java.net.URLEncoder;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
 import javax.ws.rs.core.UriInfo;
-
 import org.hamcrest.Matchers;
 import org.junit.Test;
 import org.mockito.Mockito;
-
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.MBSmsServlet;

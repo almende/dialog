@@ -172,7 +172,6 @@ public class VoiceXMLRESTProxy {
                 }
                 session.setExternalSession( extSession );
                 session.storeSession();
-                log.info("\n\n Session info: "+ ServerUtils.serialize(session) + "\n\n");
                 resultSessionMap.put( formattedAddress, sessionKey );
             }
             catch ( Exception e )

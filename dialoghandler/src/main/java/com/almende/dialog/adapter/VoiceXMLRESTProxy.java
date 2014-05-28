@@ -415,42 +415,38 @@ public class VoiceXMLRESTProxy {
 		return Response.ok(reply).build();
 	}
 
-//	@Path("hangup")
-//    @GET
-//    @Produces("application/voicexml+xml")
-    public Response hangup( Session session ) 
-        throws Exception
-    {
-        log.info("call hangup with:"+session.getDirection() + ":" + session.getRemoteAddress() +":"+ session.getLocalAddress());
-//        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+ session.getLocalAddress() +"|"+ session.getRemoteAddress().split( "@" )[0];
-//        Session session = Session.getSession(sessionKey);
-        
-//        log.info( String.format( "Session key: %s with remote: %s and local %s", sessionKey,
-//            session.getRemoteAddress(), session.getLocalAddress() ) );
-//        //update the session timings
-//        session.setStartTimestamp( startTime );
-//        session.setAnswerTimestamp( answerTime );
-//        session.setReleaseTimestamp( releaseTime );
-//        session.storeSession();
-//        Question question = session.getQuestion();
-        if ( session.getQuestion() == null )
-        {
-            Question question = Question.fromURL( session.getStartUrl(), session.getAdapterConfig().getConfigId(), session.getRemoteAddress(),
-                session.getLocalAddress() );
-            session.setQuestion(question);
-        }
-        if ( session.getQuestion() != null )
-        {
-            HashMap<String, Object> timeMap = getTimeMap( session.getStartTimestamp(), session.getAnswerTimestamp(), session.getReleaseTimestamp() );
-            timeMap.put( "referredCalledId", session.getExtras().get( "referredCalledId" ));
-            timeMap.put( "sessionKey", session.getKey() );
-            handleQuestion( null, session.getAdapterConfig().getConfigId(), session.getRemoteAddress(), session.getKey() );
-            session.getQuestion().event( "hangup", "Hangup", session.getExtras(), session.getRemoteAddress() );
-            DDRWrapper.log( session.getQuestion(), session, "Hangup" );
-        }
-        else
-        {
-            log.info( "no question received" );
+	
+    /**
+     * hang up a call based on the session.
+     * 
+     * @param session if null, doesnt trigger an hangup event. Also expects a question to be there in this session, or atleast a 
+     * startURL from where the question can be fetched.
+     * @return
+     * @throws Exception
+     */
+    public Response hangup(Session session) throws Exception {
+
+        if (session != null) {
+            log.info("call hangup with:" + session.getDirection() + ":" + session.getRemoteAddress() + ":" +
+                     session.getLocalAddress());
+            if (session.getQuestion() == null) {
+                Question question = Question.fromURL(session.getStartUrl(), session.getAdapterConfig().getConfigId(),
+                                                     session.getRemoteAddress(), session.getLocalAddress());
+                session.setQuestion(question);
+            }
+            if (session.getQuestion() != null) {
+                HashMap<String, Object> timeMap = getTimeMap(session.getStartTimestamp(), session.getAnswerTimestamp(),
+                                                             session.getReleaseTimestamp());
+                timeMap.put("referredCalledId", session.getExtras().get("referredCalledId"));
+                timeMap.put("sessionKey", session.getKey());
+                handleQuestion(null, session.getAdapterConfig().getConfigId(), session.getRemoteAddress(),
+                               session.getKey());
+                session.getQuestion().event("hangup", "Hangup", session.getExtras(), session.getRemoteAddress());
+                DDRWrapper.log(session.getQuestion(), session, "Hangup");
+            }
+            else {
+                log.info("no question received");
+            }
         }
         return Response.ok("").build();
     }

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.TextServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
@@ -77,100 +76,110 @@ public class Session {
 		}
 		return null;
 	}
-	@JsonIgnore
-	public void storeSession() {
+
+    @JsonIgnore
+    public void storeSession() {
+
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        datastore.storeOrUpdate( this );
-	}
-	@JsonIgnore
-	public void drop() {
+        datastore.storeOrUpdate(this);
+    }
+
+    @JsonIgnore
+    public void drop() {
+
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        datastore.delete( this );
-	}
+        datastore.delete(this);
+    }
 	
     public static void drop( String key )
     {
-        Session session = getSession( key );
+        Session session = getOrCreateSession( key );
         session.drop();
     }
     
-	public static Session getSession(String key) {
-		return getSession(key, null);
-	}
-	
-	@JsonIgnore
-	public static Session getSession(String key, String keyword) {
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+    public static Session getOrCreateSession(String key) {
+
+        return getOrCreateSession(key, null);
+    }
+
+    @JsonIgnore
+    public static Session getOrCreateSession(String key, String keyword) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         Session session = datastore.load(Session.class, key);
-		// If there is no session create a new one for the user
-		if (session == null){
-			String[] split = key.split("\\|");
-			
-			if (split.length == 3){
-				String type = split[0];
-				String localaddress = split[1];
-				AdapterConfig config = null; 
-				ArrayList<AdapterConfig> configs = AdapterConfig.findAdapters(type, localaddress, null);
-                if ( configs.size() == 0 )
-                {
-                    log.warning( "No adapter found for new session type: " + type + " address: " + localaddress );
+        // If there is no session create a new one for the user
+        if (session == null) {
+            String[] split = key.split("\\|");
+
+            if (split.length == 3) {
+                String type = split[0];
+                String localaddress = split[1];
+                AdapterConfig config = null;
+                ArrayList<AdapterConfig> configs = AdapterConfig.findAdapters(type, localaddress, null);
+                if (configs.size() == 0) {
+                    log.warning("No adapter found for new session type: " + type + " address: " + localaddress);
                     return null;
                 }
-                else if ( configs.size() == 1 )
-                {
-                    config = configs.get( 0 );
-                    log.info( "Adapter found for new session type: " + type + " address: " + localaddress );
+                else if (configs.size() == 1) {
+                    config = configs.get(0);
+                    log.info("Adapter found for new session type: " + type + " address: " + localaddress);
                 }
-                else
-                {
+                else {
                     AdapterConfig defaultConfig = null;
-                    for ( AdapterConfig conf : configs )
-                    {
-                        if ( conf.getKeyword() == null )
-                        {
+                    for (AdapterConfig conf : configs) {
+                        if (conf.getKeyword() == null) {
                             defaultConfig = conf;
                         }
-                        else if ( keyword != null && conf.getKeyword().equals( keyword ) )
-                        {
+                        else if (keyword != null && conf.getKeyword().equals(keyword)) {
                             config = conf;
                         }
                     }
-                    if ( config == null )
-                    {
-                        log.warning( "No adapter with right keyword so using default type: " + type + " address: "
-                            + localaddress );
+                    if (config == null) {
+                        log.warning("No adapter with right keyword so using default type: " + type + " address: " +
+                                    localaddress);
                         config = defaultConfig;
                     }
-                    else
-                    {
-                        log.info( "Adapter found with right keyword type: " + type + " address: " + localaddress
-                            + " keyword: " + keyword );
+                    else {
+                        log.info("Adapter found with right keyword type: " + type + " address: " + localaddress +
+                                 " keyword: " + keyword);
                     }
                 }
-				//TODO: check account/pubkey usage here
-				session = new Session();
-				session.setAdapterID(config.getConfigId());
-				session.setAccountId( config.getOwner());
-				session.setRemoteAddress(split[2]);
-				session.setLocalAddress(localaddress);
-				session.setType(type);
-				session.key = key;
-				session.storeSession();
-				log.info( "new session created with id: "+ session.key );
-			} else {
-				log.severe("getSession: incorrect key given:"+key);
-			}
-		}
-		return session;
-	}
+                //TODO: check account/pubkey usage here
+                session = new Session();
+                session.setAdapterID(config.getConfigId());
+                session.setAccountId(config.getOwner());
+                session.setRemoteAddress(split[2]);
+                session.setLocalAddress(localaddress);
+                session.setType(type);
+                session.key = key;
+                session.storeSession();
+                log.info("new session created with id: " + session.key);
+            }
+            else {
+                log.severe("getSession: incorrect key given:" + key);
+            }
+        }
+        return session;
+    }
+    
+    /**
+     * retusn teh session without creating a new default one
+     * @param sessionKey
+     * @return
+     */
+    @JsonIgnore
+    public static Session getSession(String sessionKey) {
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        return datastore.load(Session.class, sessionKey);
+    }
 	
-	
-	@JsonIgnore
-	public AdapterConfig getAdapterConfig() {
-		if(getAdapterID()!=null)
-			return AdapterConfig.getAdapterConfig(getAdapterID());
-		return null;
-	}
+    @JsonIgnore
+    public AdapterConfig getAdapterConfig() {
+
+        if (getAdapterID() != null)
+            return AdapterConfig.getAdapterConfig(getAdapterID());
+        return null;
+    }
 	
     public Map<String, String> getExtras()
     {
@@ -187,7 +196,7 @@ public class Session {
      */
     public static String getString( String sessionKey )
     {
-        Session session = getSession( sessionKey );
+        Session session = getOrCreateSession( sessionKey );
         return !session.getExtras().isEmpty() ? session.getExtras().values().iterator().next() : null;
     }
     
@@ -225,10 +234,17 @@ public class Session {
     {
         return question;
     }
-    public void setQuestion( Question question )
-    {
-        this.question = question;
+
+    public void setQuestion(Question question) {
+
+        if (question == null) {
+            return;
+        }
+        else {
+            this.question = question;
+        }
     }
+    
     public Integer getRetryCount()
     {
         return retryCount;

@@ -317,7 +317,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             try
             {
                 //fetch the last Email timestamp read
-                Session session = Session.getSession( "incoming_email" + adapterConfig.getConfigId() );
+                Session session = Session.getOrCreateSession( "incoming_email" + adapterConfig.getConfigId() );
                 String lastEmailTimestamp = session != null ? session.getExtras().get("lastEmailTimestamp" ) : null; 
                 String updatedLastEmailTimestamp = null;
                 //if no lastEmailTimestamp is seen, default it to when the adapter was created

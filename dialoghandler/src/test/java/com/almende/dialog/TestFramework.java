@@ -126,7 +126,7 @@ public class TestFramework
     throws Exception
     {
         String sessionKey = createSessionKey(adapterConfig, responder);
-        Session session = Session.getSession( sessionKey, adapterConfig.getKeyword() );
+        Session session = Session.getOrCreateSession( sessionKey, adapterConfig.getKeyword() );
         return session;
     }
     

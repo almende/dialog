@@ -164,7 +164,7 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		String localaddress = config.getMyAddress();
 		String sessionKey = getAdapterType() + "|" + localaddress + "|" + address;
-		Session session = Session.getSession(sessionKey, config.getKeyword());
+		Session session = Session.getOrCreateSession(sessionKey, config.getKeyword());
 		if (session == null) {
 			log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
 					+ sessionKey);
@@ -255,7 +255,7 @@ abstract public class TextServlet extends HttpServlet {
             Map<String, Object> extras = new HashMap<String, Object>();
             extras.put( Question.MEDIA_PROPERTIES, question.getMedia_properties() );
             String sessionKey = getAdapterType() + "|" + localaddress + "|" + loadAddress;
-            Session session = Session.getSession( sessionKey );
+            Session session = Session.getOrCreateSession( sessionKey );
             String preferred_language = session != null ? session.getLanguage() : null;
             if ( preferred_language == null )
             {
@@ -279,7 +279,7 @@ abstract public class TextServlet extends HttpServlet {
             {
                 // store the session first
                 sessionKey = getAdapterType() + "|" + localaddress + "|" + address;
-                session = Session.getSession( sessionKey, config.getKeyword() );
+                session = Session.getOrCreateSession( sessionKey, config.getKeyword() );
                 if ( session == null )
                 {
                     log.severe( "XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
@@ -402,7 +402,7 @@ abstract public class TextServlet extends HttpServlet {
 		
 		Map<String, Object> extras = msg.getExtras();
 		AdapterConfig config;
-        Session session = Session.getSession( getAdapterType() + "|" + localaddress + "|" + address, keyword );
+        Session session = Session.getOrCreateSession( getAdapterType() + "|" + localaddress + "|" + address, keyword );
 		// If session is null it means the adapter is not found.
 		if (session == null) {
 			log.info("No session so retrieving config");

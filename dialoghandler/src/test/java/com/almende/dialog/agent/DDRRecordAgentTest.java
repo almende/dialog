@@ -19,6 +19,7 @@ import com.almende.dialog.adapter.MBSmsServlet;
 import com.almende.dialog.adapter.MailServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.adapter.XMPPServlet;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.AdapterType;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -270,9 +271,12 @@ public class DDRRecordAgentTest extends TestFramework
         }
         //hangup the call after 5 mins
         long currentTimeInMillis = TimeUtils.getServerCurrentTimeInMillis();
-        voiceXMLRESTProxy.hangup( "outbound", remoteAddressVoice, localAddressBroadsoft
-            + "@ask.ask.voipit.nl", String.valueOf( currentTimeInMillis ), String.valueOf( currentTimeInMillis + 5000 ),
-            String.valueOf( currentTimeInMillis + 5000 + ( 5 * 60 * 1000 ) ), null );
+//        voiceXMLRESTProxy.hangup( "outbound", remoteAddressVoice, localAddressBroadsoft
+//            + "@ask.ask.voipit.nl", String.valueOf( currentTimeInMillis ), String.valueOf( currentTimeInMillis + 5000 ),
+//            String.valueOf( currentTimeInMillis + 5000 + ( 5 * 60 * 1000 ) ), null );
+        voiceXMLRESTProxy.hangup(Session.getSession(AdapterAgent.ADAPTER_TYPE_BROADSOFT + "|" + localAddressBroadsoft +
+                                                    "@ask.ask.voipit.nl" + "|" +
+                                                    addressNameMap.keySet().iterator().next()));
         allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
         assertCount = 0;
         totalCost = 0;

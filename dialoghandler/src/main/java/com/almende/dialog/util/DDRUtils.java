@@ -195,12 +195,12 @@ public class DDRUtils
         if(subscriptionDDRType != null)
         {
             String subscriptionStorageKey = DDRTypeCategory.SUBSCRIPTION_COST + "_" + subscriptionDDRType.getTypeId();
-            Session subscriptionStorage = Session.getSession( subscriptionStorageKey );
+            Session subscriptionStorage = Session.getOrCreateSession( subscriptionStorageKey );
             if(subscriptionStorage == null)
             {
                 //store the current adapterid in the storage
                 Session.storeString( subscriptionStorageKey, adapterConfig.getConfigId());
-                subscriptionStorage = Session.getSession( subscriptionStorageKey );
+                subscriptionStorage = Session.getOrCreateSession( subscriptionStorageKey );
             }
             subscriptionStorage.getExtras()
                 .put( "timestamp", String.valueOf( TimeUtils.getServerCurrentTimeInMillis() ) );

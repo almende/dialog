@@ -296,7 +296,7 @@ public class VoiceXMLRESTProxy {
                 else {
                     ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, remoteID, 1);
                 }
-                session.setDDRRecordId(ddrRecord.getId());
+                session.setDdrRecordId(ddrRecord.getId());
             }
             catch (Exception e) {
                 String errorMessage = String.format("Creating DDR records failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
@@ -1301,7 +1301,7 @@ public class VoiceXMLRESTProxy {
                         {
                             DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(
                                 AdapterConfig.getAdapterConfig( adapterID ), redirectedId, 1 );
-                            referralSession.setDDRRecordId( ddrRecord.getId() );
+                            referralSession.setDdrRecordId(ddrRecord.getId() );
                             referralSession.setDirection( session.getDirection() );
                         }
                         referralSession.storeSession();
@@ -1388,7 +1388,7 @@ public class VoiceXMLRESTProxy {
             if ( session.getStartTimestamp() != null && session.getReleaseTimestamp() != null
                 && session.getDirection() != null )
             {
-                DDRRecord ddrRecord = DDRUtils.updateDDRRecordOnCallStops( session.getDDRRecordId(),
+                DDRRecord ddrRecord = DDRUtils.updateDDRRecordOnCallStops( session.getDdrRecordId(),
                     adapterConfig.getOwner(), Long.parseLong( session.getStartTimestamp() ),
                     session.getAnswerTimestamp() != null ? Long.parseLong( session.getAnswerTimestamp() ) : null,
                     Long.parseLong( session.getReleaseTimestamp() ) );

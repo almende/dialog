@@ -372,16 +372,6 @@ public class Session {
         this.releaseTimestamp = releaseTimestamp;
     }
 
-    public String getDDRRecordId()
-    {
-        return ddrRecordId;
-    }
-
-    public void setDDRRecordId( String ddrRecordId )
-    {
-        this.ddrRecordId = ddrRecordId;
-    }
-    
     /**
      * this returns a Question from a different session which is created for the direction and adapterId, when 
      * the extrasKey in {@link Session#extras} returns the same value.

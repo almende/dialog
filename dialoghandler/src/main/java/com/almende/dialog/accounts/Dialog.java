@@ -179,9 +179,4 @@ public class Dialog implements DialogInterface
             }
         }
     }
-
-    public static void deleteAllDialogs( String accountId )
-    {
-        
-    }
 }

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -45,7 +44,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 		try {
 			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(
 					adapterID, null, null);
-			if (config.getAdapterType().toLowerCase().equals("broadsoft")) {
+			if (config.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
 				return VoiceXMLRESTProxy.getActiveCalls(config);
 			}
 		} catch (Exception ex) {
@@ -60,7 +59,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 		try {
 			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(
 					adapterID, null, null);
-			if (config.getAdapterType().toLowerCase().equals("broadsoft")) {
+			if (config.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
 				return VoiceXMLRESTProxy.getActiveCallsInfo(config);
 			}
 		} catch (Exception ex) {
@@ -74,10 +73,10 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 		try {
 			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(
 					adapterID, null, null);
-			if (config.getAdapterType().toLowerCase().equals("broadsoft")) {
-				
-				return VoiceXMLRESTProxy.killActiveCalls(config);
-			}
+            if ( config.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_BROADSOFT ) )
+            {
+                return VoiceXMLRESTProxy.killActiveCalls( config );
+            }
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
@@ -86,7 +85,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 	}
 	
 	public String killCall(@Name("session") String sessionKey) {
-		Session session = Session.getSession(sessionKey);
+		Session session = Session.getOrCreateSession(sessionKey);
 		if (session == null) return "unknown";
 		session.kill();
 		return "ok";
@@ -181,8 +180,8 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 						"You are not allowed to use this adapter!");
 			}
 			
-			log.info(String.format("Config found: %s of Type: %s",
-					config.getConfigId(), config.getAdapterType()));
+                        log.info(String.format("Config found: %s of Type: %s with address: %s", config.getConfigId(),
+                                               config.getAdapterType(), config.getMyAddress()));
 			adapterType = config.getAdapterType();
 			try {
                 if ( adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_XMPP ) )

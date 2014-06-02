@@ -32,7 +32,7 @@ import org.scribe.oauth.OAuthService;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Facebook;
 import com.almende.dialog.adapter.tools.Twitter;
-import com.almende.dialog.state.StringStore;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.dialog.util.ServerUtils;
@@ -221,7 +221,7 @@ public class OAuthServlet extends HttpServlet {
             Token requestToken=null;
             if(!serv.equals("facebook")) {
                 requestToken = service.getRequestToken();
-                StringStore.storeString(requestToken.getToken(), requestToken.getSecret());
+                Session.storeString( requestToken.getToken(), requestToken.getSecret() );
             }
             String authUrl = service.getAuthorizationUrl(requestToken);
             
@@ -282,8 +282,8 @@ public class OAuthServlet extends HttpServlet {
                 return null;
             }
             
-            String secret = StringStore.getString(oauthToken);
-            StringStore.dropEntity(oauthToken);
+            String secret = Session.getString(oauthToken);
+            Session.drop(oauthToken);
             Token requestToken = new Token(oauthToken, secret);
             
             Verifier v = new Verifier(oauthVerifier);

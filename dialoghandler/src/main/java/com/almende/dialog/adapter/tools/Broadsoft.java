@@ -53,7 +53,6 @@ public class Broadsoft {
 	
     public String startCall( String address )
     {
-        String formattedAddress = new String( address );
         WebResource webResource = client.resource( XSI_URL + XSI_ACTIONS + user + XSI_START_CALL );
         webResource.addFilter( this.auth );
 		
@@ -64,21 +63,21 @@ public class Broadsoft {
         HashMap<String, String> queryKeyValue = new HashMap<String, String>();
         try
         {
-            queryKeyValue.put( "address", URLEncoder.encode( formattedAddress, "UTF-8" ) );
+            queryKeyValue.put( "address", URLEncoder.encode( address, "UTF-8" ) );
         }
         catch ( UnsupportedEncodingException ex )
         {
             log.severe( "Problems dialing out:" + ex.getMessage() );
-            dialogLog.severe( config, "Failed to start call to: " + formattedAddress + " Error: " + ex.getMessage() );
+            dialogLog.severe( config, "Failed to start call to: " + address + " Error: " + ex.getMessage() );
 		}
 		
         while ( retryCounter.get( webResource.toString() ) != null && retryCounter.get( webResource.toString() ) < MAX_RETRY_COUNT )
         {
             try
             {
-                String result = sendRequestWithRetry(webResource, queryKeyValue, HTTPMethod.POST, null);
+                String result = sendRequestWithRetry( webResource, queryKeyValue, HTTPMethod.POST, null );
                 log.info( "Result from BroadSoft: " + result );
-                dialogLog.info( config, "Start outbound call to: " + formattedAddress );
+                dialogLog.info( config, "Start outbound call to: " + address );
                 //flush retryCount
                 retryCounter.remove( webResource.toString() );
                 return getCallId( result );
@@ -88,7 +87,7 @@ public class Broadsoft {
                 Integer retry = retryCounter.get( webResource.toString() );
                 log.severe( "Problems dialing out:" + ex.getMessage() );
                 dialogLog.severe( config,
-                    String.format( "Failed to start call to: %s Error: %s. Retrying! Count: %s", formattedAddress,
+                    String.format( "Failed to start call to: %s Error: %s. Retrying! Count: %s", address,
                         ex.getMessage(), retry ) );
                 retryCounter.put( webResource.toString(), ++retry );
             }
@@ -296,14 +295,19 @@ public class Broadsoft {
 		return null;
 	}
 	
-	private String getCallId(String xml) {
-		int startPos = xml.indexOf("callId>");
-		int endPos = xml.indexOf("</callId");
-		
-		String callId = xml.substring(startPos+7, endPos);
-		
-		return callId;
-	}
+    private String getCallId( String xml )
+    {
+        if ( xml != null && !xml.isEmpty() )
+        {
+            int startPos = xml.indexOf( "callId>" );
+            int endPos = xml.indexOf( "</callId" );
+
+            String callId = xml.substring( startPos + 7, endPos );
+
+            return callId;
+        }
+        return null;
+    }
 	
 	private ArrayList<String> getCallIDsFromXML(String xml) {
 		

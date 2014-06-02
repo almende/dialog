@@ -24,7 +24,6 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.util.DatastoreThread;
 import com.almende.util.ParallelInit;
 import com.meterware.servletunit.ServletRunner;
 import com.sun.jersey.api.client.Client;
@@ -40,7 +39,7 @@ public class TestFramework
 //    private final LocalServiceTestHelper helper = new LocalServiceTestHelper( new LocalDatastoreServiceTestConfig() );
     protected static final String localAddressMail      = "info@dialog-handler.appspotmail.com";
     protected static final String localAddressChat      = "info@dialog-handler.appspotchat.com";
-    protected static final String remoteAddressEmail         = "sshetty@ask-cs.com";
+    protected static final String remoteAddressEmail         = "info@askcs.com";
     protected static final String localAddressBroadsoft = "0854881000";
     protected static final String remoteAddressVoice    = "0614765800";
     protected static final String TEST_PUBLIC_KEY    = "agent1@ask-cs.com";
@@ -53,9 +52,9 @@ public class TestFramework
     {
         new ParallelInit( true );
         ParallelInit.getDatastore();
-        if(ParallelInit.mongo != null)
+        if(ParallelInit.datastore != null)
         {
-            ParallelInit.mongo.dropDatabase( DatastoreThread.TEST_DB_NAME );
+            ParallelInit.datastore.dropDatabase();
         }
         servletRunner.remove();
         if(servletRunner.get() == null)
@@ -67,9 +66,9 @@ public class TestFramework
     @After
     public void tearDown()
     {
-        if(ParallelInit.mongo != null)
+        if(ParallelInit.datastore != null)
         {
-            ParallelInit.mongo.dropDatabase( DatastoreThread.TEST_DB_NAME );
+            ParallelInit.datastore.dropDatabase();
         }
         servletRunner.remove();
     }
@@ -127,7 +126,7 @@ public class TestFramework
     throws Exception
     {
         String sessionKey = createSessionKey(adapterConfig, responder);
-        Session session = Session.getSession( sessionKey, adapterConfig.getKeyword() );
+        Session session = Session.getOrCreateSession( sessionKey, adapterConfig.getKeyword() );
         return session;
     }
     
@@ -143,7 +142,7 @@ public class TestFramework
         adapterConfig.setAnonymous( false );
         adapterConfig.setPublicKey( publicKey );
         adapterConfig.setMyAddress( myAddress );
-        adapterConfig.setAccessToken( "2630|Ask54de" );
+        adapterConfig.setAccessToken( "1111|blabla" );
         adapterConfig.setInitialAgentURL( initiatAgentURL );
         String adapterConfigString = adapterConfig.createConfig( ServerUtils.serialize( adapterConfig ) ).getEntity()
             .toString();

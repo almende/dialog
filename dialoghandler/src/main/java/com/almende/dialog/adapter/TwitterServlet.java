@@ -33,8 +33,12 @@ import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
-import com.almende.dialog.state.StringStore;
+import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -151,7 +155,7 @@ public class TwitterServlet extends TextServlet implements Runnable {
             {
                 // make sure that the user follows the one, for whom the direct
                 // message is intended for
-                tweetOrDirectMesssageId = StringStore.getString( "lastdirectmessage_" + config.getConfigId() );
+                tweetOrDirectMesssageId = Session.getString( "lastdirectmessage_" + config.getConfigId() );
                 url = "https://api.twitter.com/1.1/direct_messages.json";
                 if ( tweetOrDirectMesssageId != null && !tweetOrDirectMesssageId.equals( "0" ) )
                     url += "?since_id=" + tweetOrDirectMesssageId;
@@ -159,7 +163,7 @@ public class TwitterServlet extends TextServlet implements Runnable {
             }
             else
             {
-                tweetOrDirectMesssageId = StringStore.getString( "lasttweet_" + config.getConfigId() );
+                tweetOrDirectMesssageId = Session.getString( "lasttweet_" + config.getConfigId() );
                 url = "https://api.twitter.com/1.1/statuses/mentions_timeline.json";
                 if ( tweetOrDirectMesssageId != null && !tweetOrDirectMesssageId.equals( "0" ) )
                     url += "?since_id=" + tweetOrDirectMesssageId;
@@ -243,12 +247,12 @@ public class TwitterServlet extends TextServlet implements Runnable {
                 {
                     if ( req.getPathInfo().equals( TwitterEndpoint.DIRECT_MESSAGE.getUrl() ) )
                     {
-                        StringStore.storeString( "lastdirectmessage_" + config.getConfigId(),
+                        Session.storeString( "lastdirectmessage_" + config.getConfigId(),
                             updatedTweedOrDirectMesssageId );
                     }
                     else
                     {
-                        StringStore.storeString( "lasttweet_" + config.getConfigId(), updatedTweedOrDirectMesssageId );
+                        Session.storeString( "lasttweet_" + config.getConfigId(), updatedTweedOrDirectMesssageId );
                     }
                 }
             }
@@ -276,8 +280,7 @@ public class TwitterServlet extends TextServlet implements Runnable {
         String formattedTwitterTo = to.startsWith( "@" ) ? to : "@" + to;
 		Token accessToken = new Token(config.getAccessToken(),
 				config.getAccessTokenSecret());
-		for (String messagepart : Splitter.fixedLength(140 - (formattedTwitterTo.length() + 1))
-				.split(message)) {
+		for (String messagepart : Splitter.fixedLength(140 - (formattedTwitterTo.length() + 1)).split(message)) {
 			try {
 			    formattedTwitterTo = URLEncoder.encode(formattedTwitterTo, "UTF-8");
 				String url = null;
@@ -326,8 +329,8 @@ public class TwitterServlet extends TextServlet implements Runnable {
                         if(errors.get( "code" ) != null && errors.get( "code" ).equals( "187" ) && retryCount < retryLimit)
                         {
                             retryCount++;
-                            message += "\nSent at: " + ServerUtils.getStringFormatFromDateTime(
-                                ServerUtils.getServerCurrentTimeInMillis(), "dd-MM-yyyy HH:mm:ss Z" ); 
+                            message += "\nSent at: " + TimeUtils.getStringFormatFromDateTime(
+                                TimeUtils.getServerCurrentTimeInMillis(), "dd-MM-yyyy HH:mm:ss Z" ); 
                             return sendMessage( message, subject, from, fromName, to, toName, extras, config );
                         }
                     }
@@ -425,6 +428,26 @@ public class TwitterServlet extends TextServlet implements Runnable {
 			throws IOException {
 		// TODO Auto-generated method stub
 	}
+	
+    @Override
+    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    {
+        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+    }
+
+    @Override
+    protected DDRRecord createDDRForOutgoing( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
+    {
+        int totalCount = 0;
+        //calculate the total tweets been done!
+        for ( String address : toAddress.keySet() )
+        {
+            String formattedTwitterTo = address.startsWith( "@" ) ? address : "@" + address;
+            totalCount += Splitter.fixedLength(140 - (formattedTwitterTo.length() + 1)).splitToList( message ).size();
+        }
+        //add costs with no.of messages * recipients
+        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress, totalCount );
+    }
 
     @Override
     public void run()

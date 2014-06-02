@@ -81,7 +81,8 @@ public class CM {
             }
             log.info( "Result from CM: " + result );
         }
-        return countMessageParts( message, dcs );
+        int messagePartCount = countMessageParts( message, dcs );
+        return messagePartCount;
     }
     
     public int broadcastMessage( String message, String subject, String from, String fromName,
@@ -205,7 +206,7 @@ public class CM {
         return sw;
     }
 	
-	public boolean isGSMSeven(CharSequence str0) {
+	public static boolean isGSMSeven(CharSequence str0) {
         if (str0 == null) {
             return true;
         }
@@ -271,7 +272,23 @@ public class CM {
         return true;
     }
 	
-	private int countMessageParts(String message, String type) {
+	/*
+	 * gets the number of message parts based on the charecters in the message
+	 */
+	public static int countMessageParts(String message){
+	    String dcs;
+        if ( !isGSMSeven( message ) )
+        {
+            dcs = MESSAGE_TYPE_UTF8;
+        }
+        else
+        {
+            dcs = MESSAGE_TYPE_GSM7;
+        }
+        return countMessageParts( message, dcs );
+	}
+	
+	private static int countMessageParts(String message, String type) {
 
 		int maxChars = 0;
 		

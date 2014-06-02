@@ -23,7 +23,7 @@ import javax.ws.rs.core.Response.Status;
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
-import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
@@ -103,11 +103,11 @@ public class AdapterConfig {
 			    newConfig.setMyAddress( newConfig.getMyAddress() != null ? newConfig.getMyAddress().toLowerCase() 
 			                                                               : null );
 			}
-			newConfig.getProperties().put( ADAPTER_CREATION_TIME_KEY, ServerUtils.getServerCurrentTimeInMillis() );
+			newConfig.getProperties().put( ADAPTER_CREATION_TIME_KEY, TimeUtils.getServerCurrentTimeInMillis() );
 			TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 			datastore.store(newConfig);
 			
-			if(newConfig.getAdapterType().equals("broadsoft")) {
+			if(newConfig.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
 				Broadsoft bs = new Broadsoft(newConfig);
 				bs.hideCallerId(newConfig.isAnonymous());
 			}
@@ -211,14 +211,13 @@ public class AdapterConfig {
 	}
 	
 	public void update() {
-		
 		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 		datastore.update(this);
-		
-		if(this.getAdapterType().equals("broadsoft")) {
-			Broadsoft bs = new Broadsoft(this);
-			bs.hideCallerId(this.isAnonymous());
-		}
+        if ( this.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_BROADSOFT ) )
+        {
+            Broadsoft bs = new Broadsoft( this );
+            bs.hideCallerId( this.isAnonymous() );
+        }
 	}
 	
 	public static AdapterConfig getAdapterConfig(String adapterID) {

@@ -12,7 +12,7 @@ import javax.ws.rs.core.Response;
 
 import com.almende.dialog.Settings;
 import com.almende.dialog.model.AnswerPost;
-import com.almende.dialog.state.StringStore;
+import com.almende.dialog.model.Session;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.Client;
@@ -86,26 +86,25 @@ public class PassAlong {
 		if (!responder.equals("")){
 			switch (questionNo){
 				case 1: //Get address, store somewhere
-					StringStore.storeString(responder+"_passAlong_address", answer_input);
-					StringStore.storeString(answer_input+"_passAlong_address", responder); //For the return path!:)
+					Session.storeString(responder+"_passAlong_address", answer_input);
+					Session.storeString(answer_input+"_passAlong_address", responder); //For the return path!:)
 					break;
 				case 31:
 					question_no="1";
 					break;
 				case 2: //Get message, schedule outbound call
-					StringStore.storeString(responder+"_passAlong_message", answer_input);
+					Session.storeString(responder+"_passAlong_message", answer_input);
 					Client client = ParallelInit.getClient();
 					WebResource wr = client.resource("http://"+Settings.HOST+"/rpc");
 					//TODO: make this somewhat configurable
 					String account = "440cb920-dbdf-11e1-b243-00007f000001";
 					String token = "440ce030-dbdf-11e1-b243-00007f000001";
 					String request = "{\"id\":1, \"method\":\"outboundCall\", \"params\":{"
-							+"\"address\":\""+StringStore.getString(responder+"_passAlong_address")+"\","
+							+"\"address\":\""+Session.getString( responder+"_passAlong_address") +"\","
 							+"\"url\":\""+URL+"?question_no=3&responder="+responder+"\","
 							+"\"type\":\"gtalk\",\"account\":\""+account+"\",\"token\":\""+token+"\""
 							+"}}";
 					wr.type("application/json").post(String.class,request);
-
 					break;
 			}
 		}
@@ -122,7 +121,7 @@ public class PassAlong {
 		String result = "";
 		String message = "";
 		if (responder != null && !responder.equals("")){
-			message = StringStore.getString(responder+"_passAlong_message");
+			message = Session.getString(responder+"_passAlong_message");
 		}
 		if (preferred_language != null && preferred_language.startsWith("en")){
 			switch (questionNo){

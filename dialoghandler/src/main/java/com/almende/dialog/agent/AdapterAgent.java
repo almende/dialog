@@ -13,7 +13,9 @@ import com.almende.dialog.adapter.TwitterServlet.TwitterEndpoint;
 import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.exception.ConflictException;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.rpc.annotation.Access;
 import com.almende.eve.rpc.annotation.AccessType;
@@ -34,6 +36,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	
 	public static final String ADAPTER_TYPE_BROADSOFT = "broadsoft";
 	public static final String ADAPTER_TYPE_SMS = "sms";
+	public static final String ADAPTER_TYPE_FACEBOOK = "facebook";
 	public static final String ADAPTER_TYPE_EMAIL = "email";
 	public static final String ADAPTER_TYPE_XMPP = "xmpp";
 	public static final String ADAPTER_TYPE_TWITTER = "twitter";	
@@ -277,7 +280,6 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             service, accountId, initialAgentURL );
         //set for incoming requests
         XMPPServlet xmppServlet = new XMPPServlet();
-        xmppServlet.listenForRosterChanges( newConfig );
         xmppServlet.listenForIncomingChats( newConfig );
         return newConfig.getConfigId();
     }
@@ -307,7 +309,6 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         {
             XMPPServlet.registerASKFastXMPPAccount( xmppAddress, password, name, email );
             XMPPServlet xmppServlet = new XMPPServlet();
-            xmppServlet.listenForRosterChanges( newConfig );
             xmppServlet.listenForIncomingChats( newConfig );
         }
         catch ( XMPPException e )
@@ -315,7 +316,6 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             if(e.getXMPPError().getCode() == 409) //just listen to incoming chats if account already exists.
             {
                 XMPPServlet xmppServlet = new XMPPServlet();
-                xmppServlet.listenForRosterChanges( newConfig );
                 xmppServlet.listenForIncomingChats( newConfig );
             }
             log.severe( "Error registering an ASK-Fast account. Error: "+ e.getLocalizedMessage() );
@@ -444,9 +444,11 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		
 		config.setOwner(accountId);
 		config.addAccount(accountId);
+		//add cost/ddr
+        DDRUtils.createDDRRecordOnAdapterPurchase( config );
 		config.update();
 	}
-	
+
 	public void addAccount(@Name("adapterId") String adapterId, @Name("accountId") String accountId) throws Exception {
 		
 		AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
@@ -546,7 +548,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		    config.configId = new UUID().toString();
 		}
 		//add creation timestamp to the adapter
-        config.getProperties().put( AdapterConfig.ADAPTER_CREATION_TIME_KEY, ServerUtils.getServerCurrentTimeInMillis() );
+        config.getProperties().put( AdapterConfig.ADAPTER_CREATION_TIME_KEY, TimeUtils.getServerCurrentTimeInMillis() );
 		//change the casing to lower in case adatertype if email or xmpp
 		if(config.getMyAddress() != null && (config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_EMAIL ) || 
 		    config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_XMPP )) )
@@ -557,11 +559,12 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 		datastore.store(config);
 		
-		if(config.getAdapterType().equals("broadsoft")) {
+		if(config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_BROADSOFT)) {
 			Broadsoft bs = new Broadsoft(config);
 			bs.hideCallerId(config.isAnonymous());
 		}
-		
+		//add costs for creating this adapter
+		DDRUtils.createDDRRecordOnAdapterPurchase( config );
 		return config;
 	}
 	

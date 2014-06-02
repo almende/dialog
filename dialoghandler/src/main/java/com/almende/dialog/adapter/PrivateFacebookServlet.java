@@ -15,7 +15,10 @@ import org.scribe.model.Token;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Facebook;
 import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.state.StringStore;
+import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,7 +47,7 @@ public class PrivateFacebookServlet extends TextServlet {
             ArrayList<String> threads = fb.getThreads();
             for(String threadId : threads) {
                 boolean process=true;
-                String since = StringStore.getString(getAdapterType()+"_DM_"+threadId);
+                String since = Session.getString(getAdapterType()+"_DM_"+threadId);
                 if(since==null) {
                     since="0";
                     process=false;
@@ -80,7 +83,7 @@ public class PrivateFacebookServlet extends TextServlet {
                     //allMessages.add(message);
                 }
 
-                StringStore.storeString(getAdapterType()+"_DM_"+threadId, "0");
+                Session.storeString(getAdapterType()+"_DM_"+threadId, "0");
             }
 
             out.println(allMessages.toString());
@@ -126,5 +129,18 @@ public class PrivateFacebookServlet extends TextServlet {
             throws IOException {
         // TODO Auto-generated method stub
 
+    }
+    
+    @Override
+    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    {
+        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+    }
+
+    @Override
+    protected DDRRecord createDDRForOutgoing( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
+    {
+        //add costs with no.of messages * recipients
+        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress );
     }
 }

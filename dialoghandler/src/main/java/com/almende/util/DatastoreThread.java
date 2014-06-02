@@ -42,7 +42,6 @@ public class DatastoreThread extends Thread implements java.lang.Runnable {
         {
             ParallelInit.datastore = mongo.getDB( isTest ? TEST_DB_NAME : DB_NAME );
             ParallelInit.datastoreActive = true;
-            ParallelInit.mongo = mongo;
         }
     }
 }

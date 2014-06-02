@@ -30,7 +30,6 @@ public class ServletListner implements ServletContextListener
         {
             try
             {
-                xmppServlet.listenForRosterChanges( adapterConfig );
                 xmppServlet.listenForIncomingChats( adapterConfig );
             }
             catch ( XMPPException e )

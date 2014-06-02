@@ -665,25 +665,23 @@ public class VoiceXMLRESTProxy {
 
                                 if (callState.getTextContent().equals("Released")) {
                                     boolean callReleased = false;
-                                    boolean callHangup = false;
                                     
                                     if (session != null && direction != "transfer" &&
                                         !personality.getTextContent().equals("Terminator") &&
                                         fullAddress.startsWith("tel:")) {
                                         log.info("SESSSION FOUND!! SEND HANGUP!!!");
                                         callReleased = true;
-                                        callHangup = true;
                                     }
                                     else {
                                         if (personality.getTextContent().equals("Originator") &&
                                             fullAddress.startsWith("sip:")) {
-                                            log.info("Probably a disconnect of a sip. not calling hangup event");
+                                            log.info("Probably a disconnect of a sip. calling hangup event");
+                                            callReleased = session.getAnswerTimestamp() == null ? true : false;
                                         }
                                         else if (personality.getTextContent().equals("Originator") &&
                                                  fullAddress.startsWith("tel:")) {
                                             log.info("Probably a disconnect of a redirect. call hangup event");
                                             callReleased = true;
-                                            callHangup = true;
                                         }
                                         else if (personality.getTextContent().equals("Terminator")) {
                                             log.info("No session for this inbound?????");
@@ -708,9 +706,7 @@ public class VoiceXMLRESTProxy {
                                         stopCostsAtHangup(session);
                                         //flush the keys
                                         session.drop();
-                                        if (callHangup) {
-                                            hangup(session);
-                                        }
+                                        hangup(session);
                                     }
                                 }
                             }

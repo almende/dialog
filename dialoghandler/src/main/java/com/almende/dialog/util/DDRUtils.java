@@ -321,8 +321,8 @@ public class DDRUtils
                 }
                 result = calculateDDRCost( ddrRecord, selectedDDRPrice );
             }
-            //check if service costs are to be included
-            if(includeServiceCosts != null && includeServiceCosts)
+            //check if service costs are to be included, only include it if there is any communication costs
+            if(includeServiceCosts != null && includeServiceCosts && result > 0.0)
             {
                 DDRPrice ddrPriceForDialogService = DDRUtils.fetchDDRPrice( DDRTypeCategory.SERVICE_COST,
                     AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), UnitType.PART, null );

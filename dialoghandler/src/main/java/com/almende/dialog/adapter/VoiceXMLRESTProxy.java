@@ -694,6 +694,10 @@ public class VoiceXMLRESTProxy {
                                     }
                                     //update session with call timings
                                     if (callReleased) {
+                                        //sometimes answerTimeStamp is only given in the ACTIVE ccxml
+                                        String answerTimestamp = session.getAnswerTimestamp();
+                                        answerTimeString = (answerTimestamp != null && answerTimeString == null) ? answerTimestamp
+                                                                                                                : answerTimeString; 
                                         session.setAnswerTimestamp(answerTimeString);
                                         session.setStartTimestamp(startTimeString);
                                         session.setReleaseTimestamp(releaseTimeString);

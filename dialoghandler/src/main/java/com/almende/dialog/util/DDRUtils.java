@@ -329,7 +329,7 @@ public class DDRUtils
         {
             AdapterType adapterType = config != null ? AdapterType.getByValue( config.getAdapterType() ) : null;
             String adapterId = config != null ? config.getConfigId() : null;
-            DDRPrice ddrPriceForDialogService = DDRUtils.fetchDDRPrice(DDRTypeCategory.SERVICE_COST, adapterType,
+            DDRPrice ddrPriceForDialogService = fetchDDRPrice(DDRTypeCategory.SERVICE_COST, adapterType,
                                                                        adapterId, UnitType.PART, null);
             Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
             //add the service cost if the communication cost is lesser than the service cost
@@ -462,7 +462,9 @@ public class DDRUtils
             {
                 DDRRecord ddrRecord = new DDRRecord( communicationCostDDRType.getTypeId(), config.getConfigId(),
                     config.getOwner(), 1 );
-//                ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );
+                //default the start to the current server time. This is expected to be updated with the actual
+                //timestamp for voice communication
+                ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );
                 switch ( status )
                 {
                     case SENT:
@@ -513,7 +515,7 @@ public class DDRUtils
                 if (session.getDdrRecordId() == null) {
                     ddrRecord = DDRRecord.getDDRRecord(session);
                 }
-                ddrRecord = DDRUtils.updateDDRRecordOnCallStops(session.getDdrRecordId(),
+                ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
                                                                 adapterConfig.getOwner(),
                                                                 Long.parseLong(session.getAnswerTimestamp()),
                                                                 session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
@@ -532,8 +534,8 @@ public class DDRUtils
                 }
                     
                 //publish charges
-                Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
-                DDRUtils.publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
+                Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
+                publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
                 result = true;
             }
             //if answerTimestamp and releastTimestamp is not found, add it to the queue

@@ -536,6 +536,16 @@ public class DDRUtils
                 DDRUtils.publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
                 result = true;
             }
+            //if answerTimestamp and releastTimestamp is not found, add it to the queue
+            else {
+                String errorMessage = String.format("No costs added to communication currently for session: %s, as no answerTimestamp or releaseTimestamp is found",
+                                                    session.getKey());
+                log.severe(errorMessage);
+                dialogLog.severe(adapterConfig, errorMessage);
+                if (pushToQueue) { //push the session details to queue
+                    session.pushSessionToQueue();
+                }
+            }
         }
         catch ( Exception e )
         {

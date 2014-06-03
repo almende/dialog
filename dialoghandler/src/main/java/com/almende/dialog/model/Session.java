@@ -38,6 +38,7 @@ public class Session{
     String keyword;
     String adapterID;
     String trackingToken;
+    String creationTimestamp;
     String startTimestamp;
     String answerTimestamp;
     String releaseTimestamp;
@@ -444,6 +445,16 @@ public class Session{
         this.killed = killed;
     }
     
+    public String getCreationTimestamp() {
+        
+        return creationTimestamp;
+    }
+    
+    public void setCreationTimestamp(String creationTimestamp) {
+    
+        this.creationTimestamp = creationTimestamp;
+    }
+    
     public void pushSessionToQueue() {
 
         try {
@@ -461,5 +472,18 @@ public class Session{
         catch (Exception e) {
             log.severe("Error seen: " + e.getLocalizedMessage());
         }
+    }
+    
+    /**
+     * parses the sessionKey from the method parameters and tries to fetch it
+     * @param adapterType
+     * @param localAddress
+     * @param remoteAddress
+     * @return
+     */
+    public static Session getSession(String adapterType, String localAddress, String remoteAddress) {
+
+        String sessionKey = adapterType + "|" + localAddress + "|" + remoteAddress;
+        return getSession(sessionKey);
     }
 }

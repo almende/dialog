@@ -464,7 +464,15 @@ public class DDRUtils
                     config.getOwner(), 1 );
                 //default the start to the current server time. This is expected to be updated with the actual
                 //timestamp for voice communication
-                ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );
+                long currentTimeInMillis = TimeUtils.getServerCurrentTimeInMillis();
+                ddrRecord.setStart( currentTimeInMillis );
+                //update the session creation time too
+                Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), addresses.keySet()
+                                                .iterator().next());
+                if (session != null) {
+                    session.setCreationTimestamp(String.valueOf(currentTimeInMillis));
+                    session.storeSession();
+                }
                 switch ( status )
                 {
                     case SENT:

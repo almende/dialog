@@ -160,10 +160,14 @@ public class DDRRecord
                 log.severe("Error while serializing. Message: "+ e.toString());
             }
         }
-        if (session.getAnswerTimestamp() != null) {
-            query = query.addFilter("start", FilterOperator.EQUAL, Long.parseLong(session.getAnswerTimestamp()));
-        }
         List<DDRRecord> ddrRecordsForSession = query.now().toArray();
+        for (DDRRecord ddrRecord : ddrRecordsForSession) {
+            //return the ddrRecord whose startTime matches the creationTime or answerTime of the session
+            if(ddrRecord.getStart() != null && (ddrRecord.getStart().toString().equals(session.getCreationTimestamp()) ||
+                                            ddrRecord.getStart().toString().equals(session.getAnswerTimestamp()))){
+                return ddrRecord;
+            }
+        }
         return !ddrRecordsForSession.isEmpty() ? ddrRecordsForSession.iterator().next() : null; 
     }
     

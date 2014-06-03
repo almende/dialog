@@ -85,6 +85,13 @@ public class Session{
 		return null;
 	}
 
+    /**
+     * Session can be updated from many different sources. esp in
+     * {@link VoiceXMLRESTProxy}. So every call of this method will ignore any
+     * null updates. i.e if the actual Session in the db is without a null value
+     * and the new entiry is with a null value, the null value is not
+     * considered. This is done on purpose so as to avoid multiple fetch requests to update a Session entity
+     */
     @JsonIgnore
     public void storeSession() {
 

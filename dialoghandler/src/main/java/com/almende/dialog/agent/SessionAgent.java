@@ -103,7 +103,9 @@ public class SessionAgent extends Agent {
             getState().remove("sessionScedulerTaskId_" + sessionKey);
             //remove the session if its already processed
             log.info(String.format("Session %s processed. Deleting..", sessionKey));
-            session.drop();
+            if (session != null) {
+                session.drop();
+            }
             return schedulerId;
         }
         return null;

@@ -145,12 +145,12 @@ public class DDRRecord
             if (session.getDirection().equalsIgnoreCase("incoming")) {
                 query = query.addFilter("fromAddress", FilterOperator.EQUAL, session.getRemoteAddress());
                 addressMap.put(session.getLocalAddress(), "");
-                query = query.addFilter("status", FilterOperator.EQUAL, CommunicationStatus.RECEIEVED);
+                query = query.addFilter("status", FilterOperator.EQUAL, CommunicationStatus.RECEIEVED.name());
             }
             else {
                 query = query.addFilter("fromAddress", FilterOperator.EQUAL, session.getLocalAddress());
                 addressMap.put(session.getRemoteAddress(), "");
-                query = query.addFilter("status", FilterOperator.EQUAL, CommunicationStatus.SENT);
+                query = query.addFilter("status", FilterOperator.EQUAL, CommunicationStatus.SENT.name());
             }
             try {
                 query = query.addFilter("toAddressString", FilterOperator.EQUAL, ServerUtils.serialize(addressMap));

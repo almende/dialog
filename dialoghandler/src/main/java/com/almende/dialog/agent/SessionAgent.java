@@ -2,6 +2,7 @@ package com.almende.dialog.agent;
 
 import java.io.IOException;
 import java.util.logging.Logger;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.agent.annotation.ThreadSafe;
@@ -95,10 +96,14 @@ public class SessionAgent extends Agent {
     public String postProcessSessions(@Name("sessionKey") String sessionKey) {
 
         //if the ddr is processed succesfully then delete the scheduled task
-        if (DDRUtils.stopCostsAtCallHangup(sessionKey, false)) {
+        Session session = Session.getSession(sessionKey);
+        if (session == null || DDRUtils.stopCostsAtCallHangup(sessionKey, false)) {
             String schedulerId = getState().get("sessionScedulerTaskId_" + sessionKey, String.class);
             getScheduler().cancelTask(schedulerId);
             getState().remove("sessionScedulerTaskId_" + sessionKey);
+            //remove the session if its already processed
+            log.info(String.format("Session %s processed. Deleting..", sessionKey));
+            session.drop();
             return schedulerId;
         }
         return null;

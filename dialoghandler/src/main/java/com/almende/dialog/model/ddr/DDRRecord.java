@@ -3,10 +3,10 @@ package com.almende.dialog.model.ddr;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
+import java.util.logging.Logger;
 import org.bson.types.ObjectId;
-
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
  */
 public class DDRRecord
 {
+    protected static final Logger log = Logger.getLogger(DDRRecord.class.getName());
     public static final String DDR_TOTALCOST_KEY = "totalCost";
     public static final String DDR_RECORD_KEY = "DDR_RECORD";
     
@@ -122,6 +123,48 @@ public class DDRRecord
             query = query.addFilter( "status", FilterOperator.EQUAL, status.name() );
         }
         return query.now().toArray();
+    }
+    
+    /**
+     * fetch the ddr record for a particular Session 
+     * @param session
+     * @return
+     * @throws Exception 
+     */
+    public static DDRRecord getDDRRecord(Session session) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        RootFindCommand<DDRRecord> query = datastore.find().type(DDRRecord.class);
+        //fetch accounts that match
+        query = query.addFilter("accountId", FilterOperator.EQUAL, session.getAccountId());
+        if (session.getAdapterID() != null) {
+            query = query.addFilter("adapterId", FilterOperator.EQUAL, session.getAdapterID());
+        }
+        if (session.getDirection() != null) {
+            HashMap<String, String> addressMap = new HashMap<String, String>(1);
+            if (session.getDirection().equalsIgnoreCase("incoming")) {
+                query = query.addFilter("fromAddress", FilterOperator.EQUAL, session.getRemoteAddress());
+                addressMap.put(session.getLocalAddress(), "");
+                query = query.addFilter("status", FilterOperator.EQUAL, CommunicationStatus.RECEIEVED);
+            }
+            else {
+                query = query.addFilter("fromAddress", FilterOperator.EQUAL, session.getLocalAddress());
+                addressMap.put(session.getRemoteAddress(), "");
+                query = query.addFilter("status", FilterOperator.EQUAL, CommunicationStatus.SENT);
+            }
+            try {
+                query = query.addFilter("toAddressString", FilterOperator.EQUAL, ServerUtils.serialize(addressMap));
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe("Error while serializing. Message: "+ e.toString());
+            }
+        }
+        if (session.getAnswerTimestamp() != null) {
+            query = query.addFilter("start", FilterOperator.EQUAL, Long.parseLong(session.getAnswerTimestamp()));
+        }
+        List<DDRRecord> ddrRecordsForSession = query.now().toArray();
+        return !ddrRecordsForSession.isEmpty() ? ddrRecordsForSession.iterator().next() : null; 
     }
     
     public String getId()

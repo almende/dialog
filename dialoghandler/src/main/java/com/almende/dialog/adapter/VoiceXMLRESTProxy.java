@@ -287,7 +287,7 @@ public class VoiceXMLRESTProxy {
         DDRWrapper.log(question,session,"Start",config);
         
         if (session.getQuestion() != null) {
-            //add costs
+            //create ddr record
             try {
                 DDRRecord ddrRecord = null;
                 if (direction.equalsIgnoreCase("outbound")) {
@@ -459,7 +459,7 @@ public class VoiceXMLRESTProxy {
      * @throws Exception 
      */
     public Response answered( String direction, String remoteID, String localID, String startTime,
-        String answerTime, String releaseTime ) throws Exception
+        String answerTime) throws Exception
     {
         log.info( "call answered with:" + direction + "_" + remoteID + "_" + localID );
         String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID.split( "@" )[0]; //ignore the @outbound suffix
@@ -470,7 +470,7 @@ public class VoiceXMLRESTProxy {
             Question question = session.getQuestion();
             String responder = session.getRemoteAddress();
             String referredCalledId = session.getExtras().get( "referredCalledId" );
-            HashMap<String, Object> timeMap = getTimeMap( startTime, answerTime, releaseTime );
+            HashMap<String, Object> timeMap = getTimeMap( startTime, answerTime, null );
             timeMap.put( "referredCalledId", referredCalledId );
             timeMap.put( "sessionKey", sessionKey );
             question.event( "answered", "Answered", timeMap, responder );
@@ -598,7 +598,6 @@ public class VoiceXMLRESTProxy {
                                                                             .equalsIgnoreCase("User Not Found"))) {
                                             session.setDirection(direction);
                                             session.setAnswerTimestamp(answerTimeString);
-                                            session.setReleaseTimestamp(releaseTimeString);
                                             session.setStartTimestamp(startTimeString);
                                             if (session.getQuestion() == null) {
                                                 Question questionFromIncomingCall = Session
@@ -613,7 +612,7 @@ public class VoiceXMLRESTProxy {
                                             }
                                             session.storeSession();
                                             answered(direction, address, config.getMyAddress(), startTimeString,
-                                                     answerTimeString, releaseTimeString);
+                                                     answerTimeString);
                                         }
                                     }
                                 }
@@ -708,9 +707,10 @@ public class VoiceXMLRESTProxy {
                                         session.storeSession();
                                         log.info(String.format("Call ended. session updated: %s",
                                                                ServerUtils.serialize(session)));
-                                        stopCostsAtHangup(session);
-                                        //flush the keys
-                                        session.drop();
+                                        //flush the keys if ddrProcessing was successful
+                                        if (DDRUtils.stopCostsAtCallHangup(session.getKey(), true)) {
+                                            session.drop();
+                                        }
                                         hangup(session);
                                     }
                                 }
@@ -1380,37 +1380,5 @@ public class VoiceXMLRESTProxy {
         }
         return "http://api.voicerss.org/?key=f299376e06a6449488aa818790b9ffd1&src=" + textForSpeech + "&hl=" + language
             + "&c=" + contentType + "&r=" + speed + "&f=" + format + "&type=.wav";
-    }
-    
-    
-    private void stopCostsAtHangup( Session session )
-    {
-        AdapterConfig adapterConfig = session.getAdapterConfig();
-        //stop costs
-        try
-        {
-            log.info( String.format( "stopping charges for session: %s", ServerUtils.serialize( session ) ) );
-            if ( session.getStartTimestamp() != null && session.getReleaseTimestamp() != null
-                && session.getDirection() != null )
-            {
-                DDRRecord ddrRecord = DDRUtils.updateDDRRecordOnCallStops( session.getDdrRecordId(),
-                    adapterConfig.getOwner(), Long.parseLong( session.getStartTimestamp() ),
-                    session.getAnswerTimestamp() != null ? Long.parseLong( session.getAnswerTimestamp() ) : null,
-                    Long.parseLong( session.getReleaseTimestamp() ) );
-
-                //publish charges
-                Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
-                DDRUtils.publishDDREntryToQueue( adapterConfig.getOwner(), totalCost );
-            }
-        }
-        catch ( Exception e )
-        {
-            String errorMessage = String.format(
-                    "Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s \n Error: %s",
-                    session.getDirection(), session.getAdapterID(), adapterConfig.getMyAddress(),
-                    session.getRemoteAddress(), session.getLocalAddress(), e.getLocalizedMessage() );
-            log.severe( errorMessage );
-            dialogLog.severe( session.getAdapterConfig().getConfigId(), errorMessage );
-        }
     }
 }

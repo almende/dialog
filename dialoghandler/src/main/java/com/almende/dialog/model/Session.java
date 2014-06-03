@@ -15,14 +15,20 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
 
-public class Session {
-	private static final Logger log = Logger.getLogger("DialogHandler");
-	
-	@Id
+public class Session{
+
+    private static final Logger log = Logger.getLogger("DialogHandler");
+    private static ConnectionFactory rabbitMQConnectionFactory;
+    private static final String SESSION_QUEUE_NAME = "SESSION_POST_PROCESS_QUEUE";
+    
+    @Id
     public String key = "";
-	
-	String accountId;
+
+    String accountId;
     String startUrl;
     String remoteAddress;
     String localAddress;
@@ -36,11 +42,11 @@ public class Session {
     String answerTimestamp;
     String releaseTimestamp;
     String ddrRecordId;
-	public boolean killed = false;
-	String language = null;
-	Question question = null;
-	Map<String, String> extras = null;
-	Integer retryCount = null;
+    public boolean killed = false;
+    String language = null;
+    Question question = null;
+    Map<String, String> extras = null;
+    Integer retryCount = null;
 	
 	@JsonIgnore
 	public void kill(){
@@ -436,5 +442,24 @@ public class Session {
     public void setKilled( boolean killed )
     {
         this.killed = killed;
+    }
+    
+    public void pushSessionToQueue() {
+
+        try {
+            log.info(String.format("Pushing session for post processing: %s", key));
+            rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory
+                                                                         : new ConnectionFactory();
+            rabbitMQConnectionFactory.setHost("localhost");
+            Connection connection = rabbitMQConnectionFactory.newConnection();
+            Channel channel = connection.createChannel();
+            channel.queueDeclare(SESSION_QUEUE_NAME, false, false, false, null);
+            channel.basicPublish("", SESSION_QUEUE_NAME, null, key.getBytes());
+            channel.close();
+            connection.close();
+        }
+        catch (Exception e) {
+            log.severe("Error seen: " + e.getLocalizedMessage());
+        }
     }
 }

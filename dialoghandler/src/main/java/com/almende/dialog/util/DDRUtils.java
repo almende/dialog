@@ -27,6 +27,7 @@ import com.rabbitmq.client.ConnectionFactory;
 public class DDRUtils
 {
     private static final Logger log = Logger.getLogger( DDRUtils.class.getSimpleName() );
+    protected static final com.almende.dialog.Logger dialogLog = new com.almende.dialog.Logger();
     //create a single static connection for publishing ddrs
     private static ConnectionFactory rabbitMQConnectionFactory;
     private static final String PUBLISH_QUEUE_NAME = "DDR_PUBLISH_QUEUE";
@@ -175,7 +176,7 @@ public class DDRUtils
             }
             Long duration = ( releaseTime != null ? releaseTime : TimeUtils.getServerCurrentTimeInMillis() )
                 - ddrRecord.getStart();
-            ddrRecord.setDuration( duration > 0 ? duration : 0 );
+            ddrRecord.setDuration( duration > 0L ? duration : 0 );
             ddrRecord.setStatus( CommunicationStatus.FINISHED );
             ddrRecord.createOrUpdate();
         }
@@ -266,10 +267,11 @@ public class DDRUtils
     public static Double calculateCommunicationDDRCost( DDRRecord ddrRecord, Boolean includeServiceCosts ) throws Exception
     {
         double result = 0.0;
+        AdapterConfig config = null;
         if ( ddrRecord != null)
         {
             DDRType ddrType = ddrRecord.getDdrType();
-            AdapterConfig config = ddrRecord.getAdapter();
+            config = ddrRecord.getAdapter();
             List<DDRPrice> communicationDDRPrices = null;
             if(AdapterType.getByValue( config.getAdapterType()).equals( AdapterType.CALL ))
             {
@@ -321,17 +323,19 @@ public class DDRUtils
                 }
                 result = calculateDDRCost( ddrRecord, selectedDDRPrice );
             }
-            //check if service costs are to be included, only include it if there is any communication costs
-            if(includeServiceCosts != null && includeServiceCosts && result > 0.0)
+        }
+        //check if service costs are to be included, only include it if there is any communication costs
+        if(includeServiceCosts != null && includeServiceCosts && result > 0.0)
+        {
+            AdapterType adapterType = config != null ? AdapterType.getByValue( config.getAdapterType() ) : null;
+            String adapterId = config != null ? config.getConfigId() : null;
+            DDRPrice ddrPriceForDialogService = DDRUtils.fetchDDRPrice(DDRTypeCategory.SERVICE_COST, adapterType,
+                                                                       adapterId, UnitType.PART, null);
+            Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
+            //add the service cost if the communication cost is lesser than the service cost
+            if ( result < serviceCost )
             {
-                DDRPrice ddrPriceForDialogService = DDRUtils.fetchDDRPrice( DDRTypeCategory.SERVICE_COST,
-                    AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), UnitType.PART, null );
-                Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
-                //add the service cost if the communication cost is lesser than the service cost
-                if ( result < serviceCost )
-                {
-                    result += serviceCost;
-                }
+                result += serviceCost;
             }
         }
         return getCeilingAtPrecision(result, 3);
@@ -458,7 +462,7 @@ public class DDRUtils
             {
                 DDRRecord ddrRecord = new DDRRecord( communicationCostDDRType.getTypeId(), config.getConfigId(),
                     config.getOwner(), 1 );
-                ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );
+//                ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );
                 switch ( status )
                 {
                     case SENT:
@@ -483,6 +487,66 @@ public class DDRUtils
         log.warning( String.format( "Not charging this communication from: %s adapterid: %s anything!!",
             config.getMyAddress(), config.getConfigId() ) );
         return null;
+    }
+    
+    /**
+     * <b>used only with adapter type: broadsoft. </b> <br>
+     * Returns true if a ddr is processed successfully for the given session. else false.
+     * @param sessionKey
+     * @param pushToQueue pushes the sessionKey to the rabbitMQ queue for postprocessing if a corresponding ddr is not
+     * processed successfully
+     * @return
+     */
+    public static boolean stopCostsAtCallHangup( String sessionKey, boolean pushToQueue )
+    {
+        Session session = Session.getSession(sessionKey);
+        AdapterConfig adapterConfig = session.getAdapterConfig();
+        boolean result = false;
+        //stop costs
+        try
+        {
+            log.info( String.format( "stopping charges for session: %s", ServerUtils.serialize( session ) ) );
+            if (session.getAnswerTimestamp() != null && session.getReleaseTimestamp() != null &&
+                session.getDirection() != null) {
+                DDRRecord ddrRecord = null;
+                //if no ddr is seen for this session. try to fetch it based on the timestamps
+                if (session.getDdrRecordId() == null) {
+                    ddrRecord = DDRRecord.getDDRRecord(session);
+                }
+                ddrRecord = DDRUtils.updateDDRRecordOnCallStops(session.getDdrRecordId(),
+                                                                adapterConfig.getOwner(),
+                                                                Long.parseLong(session.getAnswerTimestamp()),
+                                                                session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
+                                                                                                    : null,
+                                                                Long.parseLong(session.getReleaseTimestamp()));
+                //report error when the call is picked up but no costs are attached
+                if(ddrRecord == null && session.getAnswerTimestamp() != null){
+                    String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
+                                                        session.getKey());
+                    log.severe(errorMessage);
+                    dialogLog.severe(adapterConfig, errorMessage);
+                    if (pushToQueue) { //push the session details to queue
+                        session.pushSessionToQueue();
+                    }
+                    return result;
+                }
+                    
+                //publish charges
+                Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
+                DDRUtils.publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
+                result = true;
+            }
+        }
+        catch ( Exception e )
+        {
+            String errorMessage = String.format(
+                    "Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s \n Error: %s",
+                    session.getDirection(), session.getAdapterID(), adapterConfig.getMyAddress(),
+                    session.getRemoteAddress(), session.getLocalAddress(), e.getLocalizedMessage() );
+            log.severe( errorMessage );
+            dialogLog.severe( session.getAdapterConfig().getConfigId(), errorMessage );
+        }
+        return result;
     }
     
     private static Double getCeilingAtPrecision(double value, int precision) {

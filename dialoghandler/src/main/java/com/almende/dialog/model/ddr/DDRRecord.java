@@ -131,8 +131,9 @@ public class DDRRecord
      * @return
      * @throws Exception 
      */
-    public static DDRRecord getDDRRecord(Session session) {
+    public static DDRRecord getDDRRecord(String sessionKey) {
 
+        Session session = Session.getSession(sessionKey);
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         RootFindCommand<DDRRecord> query = datastore.find().type(DDRRecord.class);
         //fetch accounts that match
@@ -168,7 +169,7 @@ public class DDRRecord
                 return ddrRecord;
             }
         }
-        return !ddrRecordsForSession.isEmpty() ? ddrRecordsForSession.iterator().next() : null; 
+        return null; 
     }
     
     public String getId()

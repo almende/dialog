@@ -521,7 +521,7 @@ public class DDRUtils
                 DDRRecord ddrRecord = null;
                 //if no ddr is seen for this session. try to fetch it based on the timestamps
                 if (session.getDdrRecordId() == null) {
-                    ddrRecord = DDRRecord.getDDRRecord(session);
+                    ddrRecord = DDRRecord.getDDRRecord(sessionKey);
                 }
                 ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
                                                                 adapterConfig.getOwner(),

@@ -9,9 +9,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.servlet.http.HttpServletRequest;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.util.ParallelInit;
@@ -22,7 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class ServerUtils
 {
-    private static final String serverTimezone = "Europe/Amsterdam";
     private static final Logger log = Logger.getLogger(DialogAgent.class.getName());
     private static ObjectMapper oMapper = ParallelInit.getObjectMapper();
     

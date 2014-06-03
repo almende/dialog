@@ -8,6 +8,7 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.TextServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.QueryResultIterator;
@@ -88,7 +89,21 @@ public class Session{
     public void storeSession() {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        datastore.storeOrUpdate(this);
+        //update the values and not reset
+        try {
+            Session oldSession = getSession(key);
+            if (oldSession != null) {
+                String serializedSession = ServerUtils.serialize(this);
+                JOM.getInstance().readerForUpdating(oldSession).readValue(serializedSession);
+                datastore.storeOrUpdate(oldSession);
+            }
+            else {
+                datastore.storeOrUpdate(this);
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @JsonIgnore

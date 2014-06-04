@@ -566,15 +566,22 @@ public class DDRUtils
                                                        Long.parseLong(session.getReleaseTimestamp()));
                 //push session to queue when the call is picked up but no costs are attached or
                 //when the ddrRecord is found but no answerTimestamp is seen. (Try to process it again later: when the answer ccxml comes in later on)
-                if ((ddrRecord == null && session.getAnswerTimestamp() != null) ||
-                    (ddrRecord != null && session.getAnswerTimestamp() == null)) {
+                boolean candidateToBePushedToQueue = false; 
+                if (ddrRecord == null && session.getAnswerTimestamp() != null) {
                     String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
                                                         session.getKey());
                     log.severe(errorMessage);
                     dialogLog.severe(adapterConfig, errorMessage);
-                    if (pushToQueue) { //push the session details to queue
-                        session.pushSessionToQueue();
-                    }
+                    candidateToBePushedToQueue = true;
+                }
+                else if(ddrRecord != null && session.getAnswerTimestamp() == null) {
+                    String warningMessage = String.format("No costs added. Looks like a hangup! for session: %s",
+                                                        session.getKey());
+                    log.warning(warningMessage);
+                    candidateToBePushedToQueue = true;
+                }
+                if (candidateToBePushedToQueue && pushToQueue) { //push the session details to queue
+                    session.pushSessionToQueue();
                     return result;
                 }
                     

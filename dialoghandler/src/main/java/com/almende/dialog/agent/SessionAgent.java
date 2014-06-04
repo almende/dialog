@@ -155,6 +155,7 @@ public class SessionAgent extends Agent {
         if (schedulerId != null) {
             getScheduler().cancelTask(schedulerId);
             getState().remove(SESSION_SCHEDULER_NAME_PREFIX + sessionKey);
+            getState().remove(SESSION_SCHEDULER_NAME_PREFIX + sessionKey + "_count");
         }
         //remove the session if its already processed
         log.info(String.format("Stopped session %s processing.", sessionKey));
@@ -171,10 +172,8 @@ public class SessionAgent extends Agent {
         if (!ServerUtils.isInUnitTestingEnvironment()) {
             sessionScheduleRunCount = getState().get(SESSION_SCHEDULER_NAME_PREFIX + sessionKey + "_count",
                                                      Integer.class);
-            if (sessionScheduleRunCount == null) {
-                sessionScheduleRunCount = 0;
-                getState().put(SESSION_SCHEDULER_NAME_PREFIX + sessionKey + "_count", sessionScheduleRunCount);
-            }
+            sessionScheduleRunCount = sessionScheduleRunCount != null ? sessionScheduleRunCount : 0;
+            getState().put(SESSION_SCHEDULER_NAME_PREFIX + sessionKey + "_count", ++sessionScheduleRunCount);
         }
         else {
             sessionScheduleRunCount = this.sessionSchedulerCountForUnitTests++;

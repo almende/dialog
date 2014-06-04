@@ -170,12 +170,16 @@ public class DDRUtils
         DDRRecord ddrRecord = DDRRecord.getDDRRecord( ddrRecordId, accountId );
         if ( ddrRecord != null )
         {
-            if ( answerTime != null )
-            {
-                ddrRecord.setStart( answerTime );
+            ddrRecord.setStart( answerTime ); //initialize the startTime to the answerTime
+            Long duration = null;
+            if(ddrRecord.getStart()!= null) {
+                duration = ( releaseTime != null ? releaseTime : TimeUtils.getServerCurrentTimeInMillis() )
+                                                - ddrRecord.getStart();
             }
-            Long duration = ( releaseTime != null ? releaseTime : TimeUtils.getServerCurrentTimeInMillis() )
-                - ddrRecord.getStart();
+            else {
+                ddrRecord.setStart( startTime); //if no answerTime i.e call not picked up, set to startTime
+                duration = 0L;
+            }
             ddrRecord.setDuration( duration > 0L ? duration : 0 );
             ddrRecord.setStatus( CommunicationStatus.FINISHED );
             ddrRecord.createOrUpdate();
@@ -550,21 +554,23 @@ public class DDRUtils
         try
         {
             log.info( String.format( "stopping charges for session: %s", ServerUtils.serialize( session ) ) );
-            if (session.getAnswerTimestamp() != null && session.getReleaseTimestamp() != null &&
-                session.getDirection() != null) {
                 DDRRecord ddrRecord = null;
                 //if no ddr is seen for this session. try to fetch it based on the timestamps
                 if (session.getDdrRecordId() == null) {
                     ddrRecord = DDRRecord.getDDRRecord(sessionKey);
                 }
+                if ( session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
+                                                session.getDirection() != null) {
                 ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
-                                                                adapterConfig.getOwner(),
-                                                                Long.parseLong(session.getAnswerTimestamp()),
-                                                                session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
-                                                                                                    : null,
-                                                                Long.parseLong(session.getReleaseTimestamp()));
-                //report error when the call is picked up but no costs are attached
-                if(ddrRecord == null && session.getAnswerTimestamp() != null){
+                                                       adapterConfig.getOwner(),
+                                                       Long.parseLong(session.getStartTimestamp()),
+                                                       session.getAnswerTimestamp() != null ? Long.parseLong(session
+                                                                                       .getAnswerTimestamp()) : null,
+                                                       Long.parseLong(session.getReleaseTimestamp()));
+                //push session to queue when the call is picked up but no costs are attached or
+                //when the ddrRecord is found but no answerTimestamp is seen. (Try to process it again later: when the answer ccxml comes in later on)
+                if ((ddrRecord == null && session.getAnswerTimestamp() != null) ||
+                    (ddrRecord != null && session.getAnswerTimestamp() == null)) {
                     String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
                                                         session.getKey());
                     log.severe(errorMessage);

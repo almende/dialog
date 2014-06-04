@@ -342,7 +342,8 @@ public class DDRUtils
     }
     
     /**
-     * calculates only the communication cost for the given ddrRecord based on the linked DDRPrice.
+     * calculates the cost associated with this DDRRecord bsaed on the linked DDRPrice. This does not 
+     * add the servicecosts. Use the {@link DDRUtils#calculateCommunicationDDRCost(DDRRecord, Boolean)} for it. <br>
      * DDRPrice with the most recent {@link DDRPrice#getEndTime() endTime} is
      * chosen if the {@link DDRRecord#getStart() startTime} doesnt fall between
      * {@link DDRPrice#getStartTime() startTime} and
@@ -351,9 +352,42 @@ public class DDRUtils
      * @return cost incurred for this ddrRecord
      * @throws Exception
      */
-    public static Double calculateCommunicationDDRCost( DDRRecord ddrRecord ) throws Exception
-    {
-        return calculateCommunicationDDRCost( ddrRecord, false );
+    public static Double calculateDDRCost(DDRRecord ddrRecord) throws Exception {
+
+        DDRType ddrType = ddrRecord.getDdrType();
+        AdapterConfig adapter = ddrRecord.getAdapter();
+        if (ddrType != null) {
+            AdapterType adapterType = adapter != null ? AdapterType.getByValue(adapter.getAdapterType()) : null;
+            String adapterId = adapter != null ? adapter.getConfigId() : null;
+            switch (ddrType.getCategory()) {
+                case ADAPTER_PURCHASE:
+                case SERVICE_COST: {
+                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType, adapterId,
+                                                                     UnitType.PART, null);
+                    return !ddrPrices.isEmpty() ? ddrPrices.iterator().next().getPrice() : 0.0;
+                }
+                case INCOMING_COMMUNICATION_COST:
+                case OUTGOING_COMMUNICATION_COST:
+                    return calculateCommunicationDDRCost(ddrRecord, false);
+                case SUBSCRIPTION_COST:
+                case OTHER: {
+                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType, adapterId, null,
+                                                                     null);
+                    return !ddrPrices.isEmpty() ? ddrPrices.iterator().next().getPrice() : 0.0;
+                }
+                default:
+                    String errorMessage = String.format("No DDRTypes found for this DDRRecord id: %s and ddrTypeId: %s",
+                                                        ddrRecord.getId(), ddrRecord.getDdrTypeId());
+                    log.severe(errorMessage);
+                    throw new Exception(errorMessage);
+            }
+        }
+        else {
+            String errorMessage = String.format("No DDRTypes found for this DDRRecord id: %s and ddrTypeId: %s",
+                                                ddrRecord.getId(), ddrRecord.getDdrTypeId());
+            log.severe(errorMessage);
+            throw new Exception(errorMessage);
+        }
     }
     
     /**

@@ -163,11 +163,11 @@ public class VoiceXMLRESTProxy {
                 session.setQuestion( question );
                 DDRWrapper.log(url,session.getTrackingToken(),session,"Dial",config);
 
-                Broadsoft bs = new Broadsoft( config );
-                bs.startSubscription();
                 String extSession = "";
                 if ( !ServerUtils.isInUnitTestingEnvironment() )
                 {
+                    Broadsoft bs = new Broadsoft( config );
+                    bs.startSubscription();
                     extSession = bs.startCall( formattedAddress + "@outbound" );
                 }
                 session.setExternalSession( extSession );

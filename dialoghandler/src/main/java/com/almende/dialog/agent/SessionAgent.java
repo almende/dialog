@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.logging.Logger;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.DDRUtils;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.agent.annotation.ThreadSafe;
 import com.almende.eve.rpc.annotation.Access;
@@ -56,7 +57,7 @@ public class SessionAgent extends Agent {
         sessionPostProcessorThread.start();
     }
 
-    public void consumeSessionInQueue() throws IOException {
+    private void consumeSessionInQueue() throws IOException {
 
         try {
             rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory
@@ -73,7 +74,7 @@ public class SessionAgent extends Agent {
                 Delivery delivery = consumer.nextDelivery();
                 try {
                     String sessionKey = new String(delivery.getBody());
-                    log.info("Received a session to post process!..." + sessionKey);
+                    log.info(String.format("---------Received a session: %s to post process!---------", sessionKey));
                     //initiate a scheduler to check if costs can be generated for the session
                     startPostProcessingSessionSceduler(sessionKey);
                 }
@@ -97,24 +98,48 @@ public class SessionAgent extends Agent {
 
         //if the ddr is processed succesfully then delete the scheduled task
         Session session = Session.getSession(sessionKey);
+        String schedulerId = null;
         if (session == null || DDRUtils.stopCostsAtCallHangup(sessionKey, false)) {
-            String schedulerId = getState().get("sessionScedulerTaskId_" + sessionKey, String.class);
-            getScheduler().cancelTask(schedulerId);
-            getState().remove("sessionScedulerTaskId_" + sessionKey);
+            if (!ServerUtils.isInUnitTestingEnvironment()) {
+                schedulerId = getState().get("sessionScedulerTaskId_" + sessionKey, String.class);
+                getScheduler().cancelTask(schedulerId);
+                getState().remove("sessionScedulerTaskId_" + sessionKey);
+            }
             //remove the session if its already processed
             log.info(String.format("Session %s processed. Deleting..", sessionKey));
             if (session != null) {
                 session.drop();
             }
-            return schedulerId;
         }
-        return null;
+        return schedulerId;
+    }
+    
+    /**
+     * process the session and delete the scheduler if processed
+     * @param sessionKey
+     * @return
+     */
+    public String stopProcessSessions(@Name("sessionKey") String sessionKey) {
+
+        //if the ddr is processed succesfully then delete the scheduled task
+        String schedulerId = getState().get("sessionScedulerTaskId_" + sessionKey, String.class);
+        if (schedulerId != null) {
+            getScheduler().cancelTask(schedulerId);
+            getState().remove("sessionScedulerTaskId_" + sessionKey);
+        }
+        //remove the session if its already processed
+        log.info(String.format("Stopped session %s processing.", sessionKey));
+        Session session = Session.getSession(sessionKey);
+        if (session != null) {
+            session.drop();
+        }
+        return schedulerId;
     }
 
     /**
      * start scheduler for checking session. A new scheduler is created per session
      */
-    private String startPostProcessingSessionSceduler(String sessionKey) {
+    public String startPostProcessingSessionSceduler(String sessionKey) {
 
         String id = getState().get("sessionScedulerTaskId_" + sessionKey, String.class);
         if (id == null) {

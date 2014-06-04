@@ -480,7 +480,7 @@ public class Session{
     public void pushSessionToQueue() {
 
         try {
-            log.info(String.format("Pushing session for post processing: %s", key));
+            log.info(String.format("---------Pushing session for post processing: %s---------", key));
             rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory
                                                                          : new ConnectionFactory();
             rabbitMQConnectionFactory.setHost("localhost");

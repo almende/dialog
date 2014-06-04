@@ -27,8 +27,10 @@ public class SessionAgent extends Agent {
     private static ConnectionFactory rabbitMQConnectionFactory;
     private static final String SESSION_QUEUE_NAME = "SESSION_POST_PROCESS_QUEUE";
     private static final int SESSION_SCHEDULER_INTERVAL = 60 * 1000; //60seconds
+    private static final Integer SESSION_SCHEDULER_MAX_COUNT = 2;
+    private static final String SESSION_SCHEDULER_NAME_PREFIX = "sessionScedulerTaskId_";
     private static final Logger log = Logger.getLogger("DialogHandler");
-
+    private int sessionSchedulerCountForUnitTests = 0;
     @Override
     protected void onCreate() {
 
@@ -90,7 +92,32 @@ public class SessionAgent extends Agent {
     }
     
     /**
-     * process the session and delete the scheduler if processed
+     * start scheduler for checking session. A new scheduler is created per session
+     */
+    public String startPostProcessingSessionSceduler(String sessionKey) {
+
+        String id = getState().get(SESSION_SCHEDULER_NAME_PREFIX + sessionKey, String.class);
+        if (id == null) {
+            try {
+                ObjectNode params = JOM.createObjectNode();
+                params.put("sessionKey", sessionKey);
+                JSONRequest req = new JSONRequest("postProcessSessions", params);
+                id = getScheduler().createTask(req, SESSION_SCHEDULER_INTERVAL, true, true);
+                getState().put(SESSION_SCHEDULER_NAME_PREFIX + sessionKey, id);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.warning("Exception in scheduler creation: " + e.getLocalizedMessage());
+            }
+        }
+        else {
+            log.warning("Task already running");
+        }
+        return id;
+    }
+    
+    /**
+     * tries to process the session and delete the scheduler if processed. tries to process it twice
      * @param sessionKey
      * @return
      */
@@ -99,11 +126,12 @@ public class SessionAgent extends Agent {
         //if the ddr is processed succesfully then delete the scheduled task
         Session session = Session.getSession(sessionKey);
         String schedulerId = null;
-        if (session == null || DDRUtils.stopCostsAtCallHangup(sessionKey, false)) {
+        if (session == null || DDRUtils.stopCostsAtCallHangup(sessionKey, false) ||
+            updateSessionScedulerRunCount(sessionKey) >= SESSION_SCHEDULER_MAX_COUNT) {
             if (!ServerUtils.isInUnitTestingEnvironment()) {
-                schedulerId = getState().get("sessionScedulerTaskId_" + sessionKey, String.class);
+                schedulerId = getState().get(SESSION_SCHEDULER_NAME_PREFIX + sessionKey, String.class);
                 getScheduler().cancelTask(schedulerId);
-                getState().remove("sessionScedulerTaskId_" + sessionKey);
+                getState().remove(SESSION_SCHEDULER_NAME_PREFIX + sessionKey);
             }
             //remove the session if its already processed
             log.info(String.format("Session %s processed. Deleting..", sessionKey));
@@ -111,6 +139,7 @@ public class SessionAgent extends Agent {
                 session.drop();
             }
         }
+        //add the count to the agentState too
         return schedulerId;
     }
     
@@ -122,10 +151,10 @@ public class SessionAgent extends Agent {
     public String stopProcessSessions(@Name("sessionKey") String sessionKey) {
 
         //if the ddr is processed succesfully then delete the scheduled task
-        String schedulerId = getState().get("sessionScedulerTaskId_" + sessionKey, String.class);
+        String schedulerId = getState().get(SESSION_SCHEDULER_NAME_PREFIX + sessionKey, String.class);
         if (schedulerId != null) {
             getScheduler().cancelTask(schedulerId);
-            getState().remove("sessionScedulerTaskId_" + sessionKey);
+            getState().remove(SESSION_SCHEDULER_NAME_PREFIX + sessionKey);
         }
         //remove the session if its already processed
         log.info(String.format("Stopped session %s processing.", sessionKey));
@@ -135,29 +164,21 @@ public class SessionAgent extends Agent {
         }
         return schedulerId;
     }
+    
+    private Integer updateSessionScedulerRunCount(String sessionKey) {
 
-    /**
-     * start scheduler for checking session. A new scheduler is created per session
-     */
-    public String startPostProcessingSessionSceduler(String sessionKey) {
-
-        String id = getState().get("sessionScedulerTaskId_" + sessionKey, String.class);
-        if (id == null) {
-            try {
-                ObjectNode params = JOM.createObjectNode();
-                params.put("sessionKey", sessionKey);
-                JSONRequest req = new JSONRequest("postProcessSessions", params);
-                id = getScheduler().createTask(req, SESSION_SCHEDULER_INTERVAL, true, true);
-                getState().put("sessionScedulerTaskId_" + sessionKey, id);
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-                log.warning("Exception in scheduler creation: " + e.getLocalizedMessage());
+        Integer sessionScheduleRunCount = null;
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            sessionScheduleRunCount = getState().get(SESSION_SCHEDULER_NAME_PREFIX + sessionKey + "_count",
+                                                     Integer.class);
+            if (sessionScheduleRunCount == null) {
+                sessionScheduleRunCount = 0;
+                getState().put(SESSION_SCHEDULER_NAME_PREFIX + sessionKey + "_count", sessionScheduleRunCount);
             }
         }
         else {
-            log.warning("Task already running");
+            sessionScheduleRunCount = this.sessionSchedulerCountForUnitTests++;
         }
-        return id;
+        return sessionScheduleRunCount;
     }
 }

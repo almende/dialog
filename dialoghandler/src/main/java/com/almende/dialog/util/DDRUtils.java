@@ -500,16 +500,13 @@ public class DDRUtils
             {
                 DDRRecord ddrRecord = new DDRRecord( communicationCostDDRType.getTypeId(), config.getConfigId(),
                     config.getOwner(), 1 );
-                //default the start to the current server time. This is expected to be updated with the actual
+                //default the start to the sessionCreationTime. This is expected to be updated with the actual
                 //timestamp for voice communication
-                long currentTimeInMillis = TimeUtils.getServerCurrentTimeInMillis();
-                ddrRecord.setStart( currentTimeInMillis );
-                //update the session creation time too
+                //set the ddrRecord time with session creationTime.
                 Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), addresses.keySet()
                                                 .iterator().next());
                 if (session != null) {
-                    session.setCreationTimestamp(String.valueOf(currentTimeInMillis));
-                    session.storeSession();
+                    ddrRecord.setStart( session.getCreationTimestamp() != null ? Long.parseLong(session.getCreationTimestamp()) : null);
                 }
                 switch ( status )
                 {

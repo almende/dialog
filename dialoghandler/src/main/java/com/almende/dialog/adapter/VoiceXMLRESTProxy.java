@@ -254,29 +254,25 @@ public class VoiceXMLRESTProxy {
         Session session = Session.getSession(sessionKey);
         
         String url = "";
-        if ( session != null )
-        {
+        if ( session != null && direction.equalsIgnoreCase("outbound")) {
+                url = session.getStartUrl();
+        }
+        else if(direction.equals("inbound")) {
+            //create a session for incoming only
+            session = Session.getOrCreateSession(sessionKey);
+            url = config.getInitialAgentURL();
+            Broadsoft bs = new Broadsoft( config );
+            bs.startSubscription();
+        }
+        
+        if(session != null) {
+            session.setStartUrl( url );
             session.setDirection( direction );
             session.setRemoteAddress( remoteID );
             session.setType( AdapterAgent.ADAPTER_TYPE_BROADSOFT );
             session.setAccountId( config.getOwner() );
             session.setTrackingToken( UUID.randomUUID().toString() );
             session.setAdapterID( config.getConfigId() );
-            
-            if (direction.equals("inbound")){
-                url = config.getInitialAgentURL();
-                session.setStartUrl( url );
-                Broadsoft bs = new Broadsoft( config );
-                bs.startSubscription();
-            }
-            else if(direction.equalsIgnoreCase("outbound")) // Remove retry counter because call is succesfull 
-            {
-                url = session.getStartUrl();
-            }
-        }
-        else if(direction.equals("inbound")){
-            //create a session for incoming only
-            session = Session.getOrCreateSession(sessionKey);
         }
         else {
             log.severe(String.format("Session %s not found", sessionKey));

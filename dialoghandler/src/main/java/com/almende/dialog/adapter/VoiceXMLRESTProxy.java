@@ -274,6 +274,10 @@ public class VoiceXMLRESTProxy {
                 url = session.getStartUrl();
             }
         }
+        else if(direction.equals("inbound")){
+            //create a session for incoming only
+            session = Session.getOrCreateSession(sessionKey);
+        }
         else {
             log.severe(String.format("Session %s not found", sessionKey));
             return null;

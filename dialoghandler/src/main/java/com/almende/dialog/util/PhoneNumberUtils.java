@@ -4,7 +4,6 @@ package com.almende.dialog.util;
 
 import java.util.Locale;
 import java.util.logging.Logger;
-
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
@@ -24,7 +23,6 @@ public class PhoneNumberUtils
      * 
      * @param phoneNumber
      * @return
-     * @throws ASKFastCheckedException
      */
     public static PhoneNumberType getPhoneNumberType( String phoneNumber )
     {

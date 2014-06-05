@@ -285,10 +285,15 @@ public class DDRUtils
                 {
                     toAddress = ddrRecord.getToAddress().keySet().iterator().next();
                     PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType( toAddress );
-                    PhoneNumber phoneNumber = PhoneNumberUtils.getPhoneNumberProto( toAddress, null );
-                    communicationDDRPrices = DDRPrice.getDDRPrices( ddrType.getTypeId(),
-                        AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), null,
-                        phoneNumber.getCountryCode() + "|" + numberType.name().toUpperCase() );
+                    String keyword = null;
+                    if(!numberType.equals(PhoneNumberType.UNKNOWN))
+                    {
+                        PhoneNumber phoneNumber = PhoneNumberUtils.getPhoneNumberProto( toAddress, null );
+                        keyword = phoneNumber.getCountryCode() + "|" + numberType.name().toUpperCase(); 
+                    }
+                    communicationDDRPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(),
+                                                                   AdapterType.getByValue(config.getAdapterType()),
+                                                                   config.getConfigId(), null, keyword);
                 }
                 else
                 {

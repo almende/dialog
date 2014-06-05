@@ -674,7 +674,11 @@ public class VoiceXMLRESTProxy {
                                     else {
                                         if (personality.getTextContent().equals("Originator") &&
                                             fullAddress.startsWith("sip:")) {
-                                            callReleased = session.getAnswerTimestamp() == null ? true : false;
+                                            if (session.getAnswerTimestamp() == null &&
+                                                session.getStartTimestamp() != null &&
+                                                session.getReleaseTimestamp() != null) {
+                                                callReleased = true;
+                                            }
                                             log.info(String.format("Probably a disconnect of a sip. %s hangup event",
                                                                    callReleased ? "calling" : "not calling"));
                                         }

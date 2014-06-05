@@ -1,7 +1,6 @@
 package com.almende.dialog;
 
 import java.io.Serializable;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.annotations.Id;
@@ -11,7 +10,7 @@ public class Log implements Serializable {
 	private static final long	serialVersionUID	= -8797389516750753990L;
 	
 	@Id
-	private String				logId				= null;
+	public String				logId				= null;
 	private LogLevel			level				= null;
 	private String				adapterID			= null;
 	private String				adapterType			= null;

@@ -85,7 +85,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 	}
 	
 	public String killCall(@Name("session") String sessionKey) {
-		Session session = Session.getOrCreateSession(sessionKey);
+		Session session = Session.getSession(sessionKey);
 		if (session == null) return "unknown";
 		session.kill();
 		return "ok";

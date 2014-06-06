@@ -123,7 +123,7 @@ public class Session{
 	
     public static void drop( String key )
     {
-        Session session = getOrCreateSession( key );
+        Session session = getSession( key );
         session.drop();
     }
     

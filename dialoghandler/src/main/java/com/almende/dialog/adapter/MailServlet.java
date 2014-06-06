@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
-
 import javax.mail.Address;
 import javax.mail.Folder;
 import javax.mail.Message;
@@ -30,9 +29,7 @@ import javax.mail.search.ComparisonTerm;
 import javax.mail.search.ReceivedDateTerm;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.joda.time.DateTime;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -317,8 +314,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             try
             {
                 //fetch the last Email timestamp read
-                Session session = Session.getOrCreateSession( "incoming_email" + adapterConfig.getConfigId() );
-                String lastEmailTimestamp = session != null ? session.getExtras().get("lastEmailTimestamp" ) : null; 
+                String lastEmailTimestamp = Session.getString("incoming_email" + adapterConfig.getConfigId() );
                 String updatedLastEmailTimestamp = null;
                 //if no lastEmailTimestamp is seen, default it to when the adapter was created
                 if ( lastEmailTimestamp == null )
@@ -335,7 +331,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                         currentTime = currentTime.minusMillis( currentTime.getMillisOfDay() );
                         lastEmailTimestamp = String.valueOf( currentTime.getMillis() );
                     }
-                    session.getExtras().put( "lastEmailTimestamp", lastEmailTimestamp );
+                    Session.storeString( "lastEmailTimestamp", lastEmailTimestamp );
                 }
                 log.info( String.format( "initial EMail timestamp for adapterId: %s is: %s",
                     adapterConfig.getConfigId(), lastEmailTimestamp ) );
@@ -393,10 +389,9 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                 }
                 folder.close( true );
                 store.close();
-                if ( updatedLastEmailTimestamp != null && !updatedLastEmailTimestamp.equals( lastEmailTimestamp ) && session != null )
+                if ( updatedLastEmailTimestamp != null && !updatedLastEmailTimestamp.equals( lastEmailTimestamp ) )
                 {
-                    session.getExtras().put( "lastEmailTimestamp", lastEmailTimestamp );
-                    session.storeSession();
+                    Session.storeString( "lastEmailTimestamp", lastEmailTimestamp );
                 }
             }
             catch ( Exception e )

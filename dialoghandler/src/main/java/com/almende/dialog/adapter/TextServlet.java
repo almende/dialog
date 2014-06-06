@@ -9,11 +9,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CMStatus;
@@ -268,6 +266,9 @@ abstract public class TextServlet extends HttpServlet {
                     }
                     question.setPreferred_language(preferred_language);
                     res = formQuestion(question, config.getConfigId(), loadAddress);
+                    // Add key to the map (for the return)
+                    sessionKeyMap.put(loadAddress, session.getKey());
+                    sessions.add(session);
                     
                 } else {
                     // Form the question without the responders address, because we don't know which one.

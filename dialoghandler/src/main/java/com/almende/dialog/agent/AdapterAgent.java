@@ -3,9 +3,7 @@ package com.almende.dialog.agent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
-
 import org.jivesoftware.smack.XMPPException;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.MailServlet;
 import com.almende.dialog.adapter.TwitterServlet;
@@ -433,21 +431,22 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return null;
 	}
 	
-	public void setOwner(@Name("adapterId") String adapterId, @Name("accountId") String accountId) throws Exception {
-		AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
-		if(config==null)
-			throw new Exception("No adapter with this id");
-		
-		if(config.getOwner() != null) {
-			throw new Exception("Adapter is already owned by someone else");
-		}
-		
-		config.setOwner(accountId);
-		config.addAccount(accountId);
-		//add cost/ddr
-        DDRUtils.createDDRRecordOnAdapterPurchase( config );
-		config.update();
-	}
+    public void setOwner(@Name("adapterId") String adapterId, @Name("accountId") String accountId) throws Exception {
+
+        AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
+        if (config == null)
+            throw new Exception("No adapter with this id");
+
+        if (config.getOwner() != null) {
+            throw new Exception("Adapter is already owned by someone else");
+        }
+
+        config.setOwner(accountId);
+        config.addAccount(accountId);
+        //add cost/ddr
+        DDRUtils.createDDRRecordOnAdapterPurchase(config, true);
+        config.update();
+    }
 
 	public void addAccount(@Name("adapterId") String adapterId, @Name("accountId") String accountId) throws Exception {
 		
@@ -531,42 +530,41 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
 	}
 	
-	/**
-	 * saves the AdapterConfig in the datastore
-	 * @param config
-	 * @return
-	 * @throws Exception
-	 */
-	private AdapterConfig createAdapter(AdapterConfig config) throws Exception {
-		
-		if (AdapterConfig.adapterExists(config.getAdapterType(), config.getMyAddress(), config.getKeyword()))
-		{
-			throw new ConflictException("Adapter already exists");
-		}
-		if(config.getConfigId() == null)
-		{
-		    config.configId = new UUID().toString();
-		}
-		//add creation timestamp to the adapter
-        config.getProperties().put( AdapterConfig.ADAPTER_CREATION_TIME_KEY, TimeUtils.getServerCurrentTimeInMillis() );
-		//change the casing to lower in case adatertype if email or xmpp
-		if(config.getMyAddress() != null && (config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_EMAIL ) || 
-		    config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_XMPP )) )
-		{
-		    config.setMyAddress( config.getMyAddress().toLowerCase() );
-		}
-		
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		datastore.store(config);
-		
-		if(config.getAdapterType().equalsIgnoreCase( ADAPTER_TYPE_BROADSOFT)) {
-			Broadsoft bs = new Broadsoft(config);
-			bs.hideCallerId(config.isAnonymous());
-		}
-		//add costs for creating this adapter
-		DDRUtils.createDDRRecordOnAdapterPurchase( config );
-		return config;
-	}
+    /**
+     * saves the AdapterConfig in the datastore
+     * 
+     * @param config
+     * @return
+     * @throws Exception
+     */
+    private AdapterConfig createAdapter(AdapterConfig config) throws Exception {
+
+        if (AdapterConfig.adapterExists(config.getAdapterType(), config.getMyAddress(), config.getKeyword())) {
+            throw new ConflictException("Adapter already exists");
+        }
+        if (config.getConfigId() == null) {
+            config.configId = new UUID().toString();
+        }
+        //add creation timestamp to the adapter
+        config.getProperties().put(AdapterConfig.ADAPTER_CREATION_TIME_KEY, TimeUtils.getServerCurrentTimeInMillis());
+        //change the casing to lower in case adatertype if email or xmpp
+        if (config.getMyAddress() != null &&
+            (config.getAdapterType().equalsIgnoreCase(ADAPTER_TYPE_EMAIL) || config.getAdapterType()
+                                            .equalsIgnoreCase(ADAPTER_TYPE_XMPP))) {
+            config.setMyAddress(config.getMyAddress().toLowerCase());
+        }
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        datastore.store(config);
+
+        if (config.getAdapterType().equalsIgnoreCase(ADAPTER_TYPE_BROADSOFT)) {
+            Broadsoft bs = new Broadsoft(config);
+            bs.hideCallerId(config.isAnonymous());
+        }
+        //add costs for creating this adapter
+        DDRUtils.createDDRRecordOnAdapterPurchase(config, true);
+        return config;
+    }
 	
 	/** creates a simple adapter of type XMPP. doesnt register and listen for messages
      * @param xmppAddress

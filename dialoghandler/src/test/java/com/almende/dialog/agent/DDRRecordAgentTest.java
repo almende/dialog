@@ -417,7 +417,7 @@ public class DDRRecordAgentTest extends TestFramework
         getTestDDRPrice(DDRTypeCategory.SUBSCRIPTION_COST, 0.5, "Test", UnitType.HOUR,
                         AdapterType.getByValue(adapterConfig.getAdapterType()), adapterConfig.getConfigId());
         //check if the adapter is charged a subscription fee
-        DDRRecord ddrForSubscription = DDRUtils.createDDRForSubscription(adapterConfig);
+        DDRRecord ddrForSubscription = DDRUtils.createDDRForSubscription(adapterConfig, false);
         assertThat(ddrForSubscription.getStart(), Matchers.greaterThan(serverCurrentTime.minusHours(1).getMillis()));
         //assert two ddrs are created. 1 for adapter creation. 2nd for suscription
         Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( TEST_ACCOUNTID );
@@ -442,9 +442,9 @@ public class DDRRecordAgentTest extends TestFramework
         getTestDDRPrice(DDRTypeCategory.SUBSCRIPTION_COST, 0.5, "Test", UnitType.SECOND,
                         AdapterType.getByValue(adapterConfig.getAdapterType()), adapterConfig.getConfigId());
         //check if the adapter is charged a subscription fee
-        DDRRecord ddrForSubscription1stSecond = DDRUtils.createDDRForSubscription(adapterConfig);
+        DDRRecord ddrForSubscription1stSecond = DDRUtils.createDDRForSubscription(adapterConfig, false);
         Thread.sleep(1000); //sleep for a second. ugly but works
-        DDRRecord ddrForSubscriptionFor2ndSecond = DDRUtils.createDDRForSubscription(adapterConfig);
+        DDRRecord ddrForSubscriptionFor2ndSecond = DDRUtils.createDDRForSubscription(adapterConfig, false);
         assertThat(ddrForSubscription1stSecond.getStart(),
                    Matchers.greaterThan(serverCurrentTime.minusSeconds(1).getMillis()));
         assertThat(ddrForSubscriptionFor2ndSecond.getStart(),

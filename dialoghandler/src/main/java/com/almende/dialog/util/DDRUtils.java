@@ -40,7 +40,7 @@ public class DDRUtils
      * @param config AdapterConfig having a non-null {@link AdapterConfig#getConfigId()} and {@link AdapterConfig#getOwner()} 
      * @throws Exception
      */
-    public static DDRRecord createDDRRecordOnAdapterPurchase( AdapterConfig config ) throws Exception
+    public static DDRRecord createDDRRecordOnAdapterPurchase( AdapterConfig config, boolean publishCharges) throws Exception
     {
         DDRType adapterPurchaseDDRType = DDRType.getDDRType( DDRTypeCategory.ADAPTER_PURCHASE );
         if ( adapterPurchaseDDRType != null )
@@ -53,6 +53,11 @@ public class DDRUtils
                     config.getOwner(), 1 );
                 ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );
                 ddrRecord.createOrUpdate();
+                //publish charges
+                if (publishCharges) {
+                    Double ddrCost = calculateDDRCost(ddrRecord);
+                    publishDDREntryToQueue(config.getOwner(), ddrCost);
+                }
                 return ddrRecord;
             }
         }
@@ -193,7 +198,7 @@ public class DDRUtils
      * @return
      * @throws Exception
      */
-    public static DDRRecord createDDRForSubscription(AdapterConfig adapterConfig) throws Exception {
+    public static DDRRecord createDDRForSubscription(AdapterConfig adapterConfig, boolean publishCharges) throws Exception {
 
         DDRType subscriptionDDRType = DDRType.getDDRType(DDRTypeCategory.SUBSCRIPTION_COST);
         DDRRecord newestDDRRecord = null;
@@ -206,30 +211,28 @@ public class DDRUtils
                                                                  null, subscriptionDDRType.getTypeId(), null);
             DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
             newestDDRRecord = fetchNewestDdrRecord(ddrRecords);
+            //flag for creating new ddrRecord
+            boolean createNewDDRRecord = false;
             if (newestDDRRecord == null) {
-                newestDDRRecord = new DDRRecord(subscriptionDDRType.getTypeId(), adapterConfig.getConfigId(),
-                                                adapterConfig.getOwner(), 1);
-                newestDDRRecord.setStart(serverCurrentTime.getMillis());
+                createNewDDRRecord = true;
             }
             else {
-                //flag for creating new ddrRecord
-                boolean createNewDDRRecord = false;
                 //pick the first ddrPrice that is valid for now
                 for (DDRPrice ddrPrice : ddrPrices) {
                     if (ddrPrice.isValidForTimestamp(serverCurrentTime.getMillis())) {
                         //check if the ddr already belong to the unitType
                         switch (ddrPrice.getUnitType()) {
-                            case SECOND:
+                            case SECOND: //check if ddr belongs to this second
                                 if (serverCurrentTime.minusSeconds(1).getMillis() > newestDDRRecord.getStart()) {
                                     createNewDDRRecord = true;
                                 }
                                 break;
-                            case MINUTE:
+                            case MINUTE: //check if ddr belongs to minute
                                 if (serverCurrentTime.minusMinutes(1).getMillis() > newestDDRRecord.getStart()) {
                                     createNewDDRRecord = true;
                                 }
                                 break;
-                            case HOUR:
+                            case HOUR: //check if ddr belongs to this hour
                                 if (serverCurrentTime.minusHours(1).getMillis() > newestDDRRecord.getStart()) {
                                     createNewDDRRecord = true;
                                 }
@@ -239,12 +242,12 @@ public class DDRUtils
                                     createNewDDRRecord = true;
                                 }
                                 break;
-                            case MONTH: //check if ddr belongs to today
+                            case MONTH: //check if ddr belongs to this month
                                 if (serverCurrentTime.minusMonths(1).getMillis() > newestDDRRecord.getStart()) {
                                     createNewDDRRecord = true;
                                 }
                                 break;
-                            case YEAR: //check if ddr belongs to today
+                            case YEAR: //check if ddr belongs to this year
                                 if (serverCurrentTime.minusYears(1).getMillis() > newestDDRRecord.getStart()) {
                                     createNewDDRRecord = true;
                                 }
@@ -255,15 +258,23 @@ public class DDRUtils
                         }
                         //create a new ddrRecord if not record found for the time
                         if (createNewDDRRecord) {
-                            newestDDRRecord = new DDRRecord(subscriptionDDRType.getTypeId(),
-                                                            adapterConfig.getConfigId(), adapterConfig.getOwner(), 1);
-                            newestDDRRecord.setStart(serverCurrentTime.getMillis());
                             break;
                         }
                     }
                 }
             }
-            newestDDRRecord.createOrUpdate();
+            //create new ddrRecord
+            if (createNewDDRRecord) {
+                newestDDRRecord = new DDRRecord(subscriptionDDRType.getTypeId(), adapterConfig.getConfigId(),
+                                                adapterConfig.getOwner(), 1);
+                newestDDRRecord.setStart(serverCurrentTime.getMillis());
+                newestDDRRecord.createOrUpdate();
+                //publish charges if needed
+                if(publishCharges) {
+                    Double ddrCost = calculateDDRCost(newestDDRRecord);
+                    publishDDREntryToQueue(newestDDRRecord.getAccountId(), ddrCost);
+                }
+            }
             return newestDDRRecord;
         }
         else {

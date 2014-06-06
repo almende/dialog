@@ -5,21 +5,17 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy.Return;
@@ -31,6 +27,7 @@ import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 
 public class VoiceXMLServletTest extends TestFramework {
@@ -53,7 +50,7 @@ public class VoiceXMLServletTest extends TestFramework {
         AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_BROADSOFT, TEST_PUBLIC_KEY, localAddressBroadsoft, url );
 
         //create session
-        getOrCreateSession( adapterConfig, remoteAddressVoice );
+        Session.getOrCreateSession( adapterConfig, remoteAddressVoice );
 
         //mock the Context
         UriInfo uriInfo = Mockito.mock( UriInfo.class );

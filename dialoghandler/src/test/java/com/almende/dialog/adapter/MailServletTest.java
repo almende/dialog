@@ -3,28 +3,24 @@ package com.almende.dialog.adapter;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Properties;
-
 import javax.mail.Message;
-import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
-
 import org.junit.Ignore;
 import org.junit.Test;
-
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.uuid.UUID;
 
@@ -43,7 +39,7 @@ public class MailServletTest extends TestFramework
         AdapterConfig adapterConfig = createEmailAdapter( "askfasttest@gmail.com", "askask2times", null, null, null,
             null, null, null, null, new UUID().toString(), null );
         //create session
-        getOrCreateSession( adapterConfig, remoteAddressEmail );
+        Session.getOrCreateSession( adapterConfig, remoteAddressEmail );
         
         //fetch and invoke the receieveMessage method
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
@@ -72,9 +68,9 @@ public class MailServletTest extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
             localAddressMail, initialAgentURL );
         //create session
-        getOrCreateSession( adapterConfig, remoteAddressEmail );
+        Session.getOrCreateSession( adapterConfig, remoteAddressEmail );
         
-        MimeMessage mimeMessage = new MimeMessage( Session.getDefaultInstance( new Properties(), null) );
+        MimeMessage mimeMessage = new MimeMessage( javax.mail.Session.getDefaultInstance( new Properties(), null) );
         mimeMessage.setFrom( new InternetAddress( remoteAddressEmail ) );
         MimeMultipart mimeMultipart = getTestMimeMultipart( remoteAddressEmail, localAddressMail, "dummyData", null );
         mimeMessage.setContent( mimeMultipart );
@@ -104,9 +100,9 @@ public class MailServletTest extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
             localAddressMail, "" );
         //create session
-        getOrCreateSession( adapterConfig, remoteAddressEmail );
+        Session.getOrCreateSession( adapterConfig, remoteAddressEmail );
 
-        MimeMessage mimeMessage = new MimeMessage( Session.getDefaultInstance( new Properties(), null) );
+        MimeMessage mimeMessage = new MimeMessage( javax.mail.Session.getDefaultInstance( new Properties(), null) );
         mimeMessage.setFrom( new InternetAddress( remoteAddressEmail ) );
         MimeMultipart mimeMultipart = getTestMimeMultipart( remoteAddressEmail, localAddressMail, "/help", null );
         mimeMessage.setContent( mimeMultipart );
@@ -140,7 +136,7 @@ public class MailServletTest extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
                                                            localAddressMail, initialAgentURL );
         //create session
-        getOrCreateSession( adapterConfig, remoteAddressEmail );
+        Session.getOrCreateSession( adapterConfig, remoteAddressEmail );
         TextMessage textMessage = mailAppointmentInteraction("hi");
         assertOutgoingTextMessage(textMessage);
     }
@@ -207,7 +203,7 @@ public class MailServletTest extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
             localAddressMail, "" );
         //create session
-        getOrCreateSession( adapterConfig, remoteAddressEmail );
+        Session.getOrCreateSession( adapterConfig, remoteAddressEmail );
 
         //fetch and invoke the receieveMessage method
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
@@ -249,7 +245,7 @@ public class MailServletTest extends TestFramework
      */
     private TextMessage mailAppointmentInteraction(String message) throws Exception
     {
-        MimeMessage mimeMessage = new MimeMessage( Session.getDefaultInstance( new Properties(), null) );
+        MimeMessage mimeMessage = new MimeMessage( javax.mail.Session.getDefaultInstance( new Properties(), null) );
         mimeMessage.setFrom( new InternetAddress( remoteAddressEmail ) );
         MimeMultipart mimeMultipart = getTestMimeMultipart( remoteAddressEmail, localAddressMail, message, null );
         mimeMessage.setContent( mimeMultipart );

@@ -69,57 +69,51 @@ public class VoiceXMLRESTProxy {
 		}
 	}
 	
-	/**
-	 * @Deprecated. Use broadcast calling mechanism instead. <br>
-	 * {@link VoiceXMLRESTProxy#dial(Map, String, String, AdapterConfig) dial} method
-	 * 
-	 * @param address
-	 * @param url
-	 * @param config
-	 * @return
-	 */
-	@Deprecated
-	public static String dial(String address, String url, AdapterConfig config)
-	{
-		try
-        {
-            address = PhoneNumberUtils.formatNumber( address, PhoneNumberFormat.E164 );
+    /**
+     * @Deprecated. Use broadcast calling mechanism instead. <br>
+     *              {@link VoiceXMLRESTProxy#dial(Map, String, String, AdapterConfig)
+     *              dial} method
+     * 
+     * @param address
+     * @param url
+     * @param config
+     * @return
+     */
+    @Deprecated
+    public static String dial(String address, String url, AdapterConfig config) {
+
+        try {
+            address = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
         }
-        catch ( Exception e )
-        {
-            log.severe( String.format( "Phonenumber: %s is not valid", address ) );
+        catch (Exception e) {
+            log.severe(String.format("Phonenumber: %s is not valid", address));
             return "";
         }
-		
-		String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT +"|"+config.getMyAddress()+"|"+address;
-		Session session = Session.getOrCreateSession(sessionKey);
-		if (session == null){
-			log.severe("VoiceXMLRESTProxy couldn't start new outbound Dialog, adapterConfig not found? "+sessionKey);
-			return "";
-		}
-		session.killed=false;
-		session.setStartUrl(url);
-		session.setDirection("outbound");
-		session.setRemoteAddress(address);
-		session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
-		session.setTrackingToken(UUID.randomUUID().toString());
-		
-		Question question = Question.fromURL(url,config.getConfigId(),address,config.getMyAddress());
+
+        Session session = Session.getOrCreateSession(config, address);
+        session.killed = false;
+        session.setStartUrl(url);
+        session.setDirection("outbound");
+        session.setRemoteAddress(address);
+        session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
+        session.setTrackingToken(UUID.randomUUID().toString());
+
+        Question question = Question.fromURL(url, config.getConfigId(), address, config.getMyAddress());
         session.setQuestion(question);
         session.storeSession();
-		
-		DDRWrapper.log(url,session.getTrackingToken(),session,"Dial",config);
-		
-		Broadsoft bs = new Broadsoft(config);
-		bs.startSubscription();
-		
-		String extSession = bs.startCall(address + "@outbound");
-		
-		session.setExternalSession(extSession);
-		session.storeSession();
-		
-		return sessionKey;
-	}
+
+        DDRWrapper.log(url, session.getTrackingToken(), session, "Dial", config);
+
+        Broadsoft bs = new Broadsoft(config);
+        bs.startSubscription();
+
+        String extSession = bs.startCall(address + "@outbound");
+
+        session.setExternalSession(extSession);
+        session.storeSession();
+
+        return session.getKey();
+    }
 
     /**
      * initiates a call to all the numbers in the addressNameMap and returns a
@@ -129,9 +123,7 @@ public class VoiceXMLRESTProxy {
     public static HashMap<String, String> dial( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
     throws Exception
     {
-        String sessionPrefix = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+config.getMyAddress()+"|" ;
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
-
         // If it is a broadcast don't provide the remote address because it is deceiving.
         String loadAddress = "";
         if(addressNameMap.size()==1)
@@ -145,14 +137,7 @@ public class VoiceXMLRESTProxy {
             try
             {
                 String formattedAddress = PhoneNumberUtils.formatNumber( address, PhoneNumberFormat.E164 );
-                String sessionKey = sessionPrefix + formattedAddress;
-                Session session = Session.getOrCreateSession( sessionKey );
-                if ( session == null )
-                {
-                    log.severe( "VoiceXMLRESTProxy couldn't start new outbound Dialog, adapterConfig not found? "
-                        + sessionKey );
-                    return null;
-                }
+                Session session = Session.getOrCreateSession( config, formattedAddress );
                 session.killed=false;
                 session.setStartUrl(url);
                 session.setDirection("outbound");
@@ -172,7 +157,7 @@ public class VoiceXMLRESTProxy {
                 }
                 session.setExternalSession( extSession );
                 session.storeSession();
-                resultSessionMap.put( formattedAddress, sessionKey );
+                resultSessionMap.put( formattedAddress, session.getKey() );
             }
             catch ( Exception e )
             {
@@ -259,7 +244,7 @@ public class VoiceXMLRESTProxy {
         }
         else if(direction.equals("inbound")) {
             //create a session for incoming only
-            session = Session.getOrCreateSession(sessionKey);
+            session = Session.getOrCreateSession(config, formattedRemoteId);
             url = config.getInitialAgentURL();
             Broadsoft bs = new Broadsoft( config );
             bs.startSubscription();
@@ -1304,8 +1289,8 @@ public class VoiceXMLRESTProxy {
                         session.setQuestion( question );
                         session.setRemoteAddress( remoteID );
                         //create a new ddr record and session to catch the redirect
-                        Session referralSession = Session.getOrCreateSession( AdapterAgent.ADAPTER_TYPE_BROADSOFT + "|"
-                        + session.getLocalAddress() + "|" + redirectedId );
+                        Session referralSession = Session.getOrCreateSession(AdapterConfig.getAdapterConfig(adapterID),
+                                                                             redirectedId);
                         if ( session.getDirection() != null )
                         {
                             DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(

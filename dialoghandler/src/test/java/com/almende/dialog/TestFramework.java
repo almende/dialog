@@ -5,7 +5,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
-
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.InternetHeaders;
@@ -14,15 +13,12 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.junit.After;
 import org.junit.Before;
 import org.w3c.dom.Document;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.example.agent.TestServlet;
-import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.meterware.servletunit.ServletRunner;
@@ -120,14 +116,6 @@ public class TestFramework
     
     public String createSessionKey(AdapterConfig adapterConfig, String responder) {
         return adapterConfig.getAdapterType() + "|" + adapterConfig.getMyAddress() + "|" + responder;
-    }
-    
-    public Session getOrCreateSession(AdapterConfig adapterConfig, String responder) 
-    throws Exception
-    {
-        String sessionKey = createSessionKey(adapterConfig, responder);
-        Session session = Session.getOrCreateSession( sessionKey, adapterConfig.getKeyword() );
-        return session;
     }
     
     public AdapterConfig createBroadsoftAdapter() throws Exception {

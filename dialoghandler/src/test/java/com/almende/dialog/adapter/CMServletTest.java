@@ -4,7 +4,6 @@ package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
@@ -13,12 +12,10 @@ import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.codehaus.plexus.util.StringInputStream;
 import org.codehaus.plexus.util.StringOutputStream;
 import org.junit.Test;
@@ -26,7 +23,6 @@ import org.mockito.Mockito;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CMStatus;
@@ -34,6 +30,7 @@ import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 
@@ -112,7 +109,7 @@ public class CMServletTest extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig( "SMS", TEST_PUBLIC_KEY, localAddressBroadsoft,
             initialAgentURL );
         //create session
-        getOrCreateSession( adapterConfig, remoteAddressVoice );
+        Session.getOrCreateSession( adapterConfig, remoteAddressVoice );
         TextMessage textMessage = smsAppointmentInteraction( "hi" );
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( textMessage.getAddress(), textMessage.getRecipientName() );

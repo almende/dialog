@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 import javax.ws.rs.core.UriInfo;
 import org.hamcrest.Matchers;
+import org.joda.time.DateTime;
 import org.junit.Test;
 import org.mockito.Mockito;
 import com.almende.dialog.TestFramework;
@@ -401,6 +402,58 @@ public class DDRRecordAgentTest extends TestFramework
         assertThat(ddrRecord.getStatus(), Matchers.is(CommunicationStatus.FINISHED));
     }
     
+    /**
+     * tests if the subscription ddrs are created properly for an HOURLY DDRPrice model
+     * @throws Exception 
+     */
+    @Test
+    public void subscriptionDDRsAreCreatedHourlyTest() throws Exception{
+        DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
+        //create an adapter
+        getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 0.5, "Test", UnitType.PART, null, null);
+        String adapterId = adapterAgent.createMBAdapter( "TEST", null, "", "", null, TEST_ACCOUNTID );
+        AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
+        //create a new price
+        getTestDDRPrice(DDRTypeCategory.SUBSCRIPTION_COST, 0.5, "Test", UnitType.HOUR,
+                        AdapterType.getByValue(adapterConfig.getAdapterType()), adapterConfig.getConfigId());
+        //check if the adapter is charged a subscription fee
+        DDRRecord ddrForSubscription = DDRUtils.createDDRForSubscription(adapterConfig);
+        assertThat(ddrForSubscription.getStart(), Matchers.greaterThan(serverCurrentTime.minusHours(1).getMillis()));
+        //assert two ddrs are created. 1 for adapter creation. 2nd for suscription
+        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( TEST_ACCOUNTID );
+        assertThat(allDdrRecords.size(), Matchers.is(2));
+    }
+    
+    /**
+     * tests if the subscription ddrs are created properly for a every SECOND
+     * DDRPrice model
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void subscriptionDDRsAreCreatedEverySecondTest() throws Exception {
+
+        DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
+        //create an adapter
+        getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 0.5, "Test", UnitType.PART, null, null);
+        String adapterId = adapterAgent.createMBAdapter("TEST", null, "", "", null, TEST_ACCOUNTID);
+        AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
+        //create a new price
+        getTestDDRPrice(DDRTypeCategory.SUBSCRIPTION_COST, 0.5, "Test", UnitType.SECOND,
+                        AdapterType.getByValue(adapterConfig.getAdapterType()), adapterConfig.getConfigId());
+        //check if the adapter is charged a subscription fee
+        DDRRecord ddrForSubscription1stSecond = DDRUtils.createDDRForSubscription(adapterConfig);
+        Thread.sleep(1000); //sleep for a second. ugly but works
+        DDRRecord ddrForSubscriptionFor2ndSecond = DDRUtils.createDDRForSubscription(adapterConfig);
+        assertThat(ddrForSubscription1stSecond.getStart(),
+                   Matchers.greaterThan(serverCurrentTime.minusSeconds(1).getMillis()));
+        assertThat(ddrForSubscriptionFor2ndSecond.getStart(),
+                   Matchers.greaterThan(ddrForSubscription1stSecond.getStart()));
+        //assert three ddrs are created. 1 for adapter creation. 2 for suscriptions
+        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( TEST_ACCOUNTID );
+        assertThat(allDdrRecords.size(), Matchers.is(3));
+    }
+    
     private Map<String, String> createDDRPricesAndAdapterAndSendOutBound( UnitType unitType, AdapterType adapterType,
         String message, Map<String, String> addressNameMap ) throws Exception
     {
@@ -419,7 +472,7 @@ public class DDRRecordAgentTest extends TestFramework
         switch ( adapterType )
         {
             case SMS:
-                adapterId = adapterAgent.createMBAdapter( "TEST", null, "5743|AskFast", "wrh58cggr", null,
+                adapterId = adapterAgent.createMBAdapter( "TEST", null, "", "", null,
                     TEST_ACCOUNTID );
                 //check if a ddr record is created by sending an outbound email
                 new MBSmsServlet().startDialog( addressNameMap, null, null, message, "Test Customer", "Test subject",
@@ -464,9 +517,13 @@ public class DDRRecordAgentTest extends TestFramework
     protected DDRPrice getTestDDRPrice( DDRTypeCategory category, double price, String name, UnitType unitType,
         AdapterType adapterType, String adapterId ) throws Exception
     {
-        Object ddrPriceObject = ddrRecordAgent.createDDRPriceWithNewDDRType( name, category.name(),
-            TimeUtils.getServerCurrentTimeInMillis(), TimeUtils.getCurrentServerTimePlusMinutes( 100 ), price, 0, 10,
-            1, unitType.name(), adapterType.name(), adapterId, null );
+
+        Object ddrPriceObject = ddrRecordAgent.createDDRPriceWithNewDDRType(name, category.name(),
+                                                                      TimeUtils.getServerCurrentTimeInMillis(),
+                                                                      TimeUtils.getCurrentServerTimePlusMinutes(100),
+                                                                      price, 0, 10, 1, unitType.name(),
+                                                                      adapterType != null ? adapterType.name() : null,
+                                                                      adapterId, null);
         TypeUtil<DDRPrice> injector = new TypeUtil<DDRPrice>(){};
         return injector.inject( ddrPriceObject );
     }

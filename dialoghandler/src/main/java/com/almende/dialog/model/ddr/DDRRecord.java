@@ -90,37 +90,35 @@ public class DDRRecord
     }
     
     /**
-     * fetch the ddr records based the input parameters. fetches the records that matches to all the 
-     * parameters given
+     * fetch the ddr records based the input parameters. fetches the records
+     * that matches to all the parameters given
+     * 
      * @param adapterId
      * @param accountId
      * @param fromAddress
      * @param ddrTypeId
      * @param status
+     * @param startTimestamp
      * @return
      */
-    public static List<DDRRecord> getDDRRecords( String adapterId, String accountId, String fromAddress,
-        String ddrTypeId, CommunicationStatus status )
-    {
+    public static List<DDRRecord> getDDRRecords(String adapterId, String accountId, String fromAddress,
+                                                String ddrTypeId, CommunicationStatus status) {
+
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        RootFindCommand<DDRRecord> query = datastore.find().type( DDRRecord.class );
+        RootFindCommand<DDRRecord> query = datastore.find().type(DDRRecord.class);
         //fetch accounts that match
-        query = query.addFilter( "accountId", FilterOperator.EQUAL, accountId );
-        if ( adapterId != null )
-        {
-            query = query.addFilter( "adapterId", FilterOperator.EQUAL, adapterId );
+        query = query.addFilter("accountId", FilterOperator.EQUAL, accountId);
+        if (adapterId != null) {
+            query = query.addFilter("adapterId", FilterOperator.EQUAL, adapterId);
         }
-        if ( fromAddress != null )
-        {
-            query = query.addFilter( "fromAddress", FilterOperator.EQUAL, fromAddress );
+        if (fromAddress != null) {
+            query = query.addFilter("fromAddress", FilterOperator.EQUAL, fromAddress);
         }
-        if ( ddrTypeId != null )
-        {
-            query = query.addFilter( "ddrTypeId", FilterOperator.EQUAL, ddrTypeId );
+        if (ddrTypeId != null) {
+            query = query.addFilter("ddrTypeId", FilterOperator.EQUAL, ddrTypeId);
         }
-        if ( status != null )
-        {
-            query = query.addFilter( "status", FilterOperator.EQUAL, status.name() );
+        if (status != null) {
+            query = query.addFilter("status", FilterOperator.EQUAL, status.name());
         }
         return query.now().toArray();
     }

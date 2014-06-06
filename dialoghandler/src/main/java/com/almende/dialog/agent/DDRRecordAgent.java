@@ -79,26 +79,27 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
     
     /**
      * get a specific DDR record if it is owned by the account
+     * 
      * @param id
      * @param accountId
      * @return
      * @throws Exception
      */
-    public Object getDDRRecords( @Name( "adapterId" ) @Optional String adapterId,
-        @Name( "accountId" ) String accountId, @Name( "fromAddress" ) @Optional String fromAddress,
-        @Name( "typeId" ) @Optional String typeId, @Name( "communicationStatus" ) @Optional String status,
-        @Name( "shouldGenerateCosts" ) @Optional Boolean shouldGenerateCosts, 
-        @Name( "shouldIncludeServiceCosts" ) @Optional Boolean shouldIncludeServiceCosts) throws Exception
-    {
+    public Object
+        getDDRRecords(@Name("adapterId") @Optional String adapterId, @Name("accountId") String accountId,
+                      @Name("fromAddress") @Optional String fromAddress, @Name("typeId") @Optional String typeId,
+                      @Name("communicationStatus") @Optional String status,
+                      @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
+                      @Name("shouldIncludeServiceCosts") @Optional Boolean shouldIncludeServiceCosts) throws Exception {
+
         CommunicationStatus communicationStatus = status != null && !status.isEmpty() ? CommunicationStatus
-            .fromJson( status ) : null;
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords( adapterId, accountId, fromAddress, typeId, communicationStatus );
-        if ( shouldGenerateCosts != null && shouldGenerateCosts )
-        {
-            for ( DDRRecord ddrRecord : ddrRecords )
-            {
-                ddrRecord.setShouldGenerateCosts( shouldGenerateCosts );
-                ddrRecord.setShouldIncludeServiceCosts( shouldIncludeServiceCosts );
+                                        .fromJson(status) : null;
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterId, accountId, fromAddress, typeId,
+                                                             communicationStatus);
+        if (shouldGenerateCosts != null && shouldGenerateCosts) {
+            for (DDRRecord ddrRecord : ddrRecords) {
+                ddrRecord.setShouldGenerateCosts(shouldGenerateCosts);
+                ddrRecord.setShouldIncludeServiceCosts(shouldIncludeServiceCosts);
             }
         }
         return ddrRecords;

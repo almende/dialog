@@ -1,10 +1,12 @@
 package com.almende.dialog.util;
 
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import org.joda.time.DateTime;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
@@ -34,8 +36,7 @@ public class DDRUtils
     
     /** creates a DDR Record for this adapterid and owner. <br>
      * Preconditions: <br>
-     * 1. expects to find a {@link DDRType} of Type {@link DDRTypeCategory#ADAPTER_PURCHASE} <br>
-     * 2. {@link DDRPrice#getUnitType()} = {@link UnitType#PART} in the datastore <br>
+     * Expects to find a {@link DDRType} of Type {@link DDRTypeCategory#ADAPTER_PURCHASE} <br>
      * @param config AdapterConfig having a non-null {@link AdapterConfig#getConfigId()} and {@link AdapterConfig#getOwner()} 
      * @throws Exception
      */
@@ -46,10 +47,7 @@ public class DDRUtils
         {
             log.info( String.format( "Applying charges for account: %s and adapter: %s with address: %s",
                 config.getOwner(), config.getConfigId(), config.getMyAddress() ) );
-            List<DDRPrice> adapterPurchaseDDRPrices = DDRPrice.getDDRPrices( adapterPurchaseDDRType.getTypeId(),
-                AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), null, null );
-            if ( adapterPurchaseDDRPrices != null && !adapterPurchaseDDRPrices.isEmpty()
-                && config.getConfigId() != null && config.getOwner() != null )
+            if ( config.getConfigId() != null && config.getOwner() != null )
             {
                 DDRRecord ddrRecord = new DDRRecord( adapterPurchaseDDRType.getTypeId(), config.getConfigId(),
                     config.getOwner(), 1 );
@@ -188,29 +186,89 @@ public class DDRUtils
     }
     
     /**
-     * create a ddr for an adapter being created and charge a monthly fee for example
+     * create a ddr for an adapter being created and charge a monthly fee for
+     * example
+     * 
      * @param adapterConfig
      * @return
      * @throws Exception
      */
-    //TODO: not fully implemented
-    public static DDRRecord createDDRForSubscription(AdapterConfig adapterConfig) throws Exception
-    {
-        DDRType subscriptionDDRType = DDRType.getDDRType( DDRTypeCategory.SUBSCRIPTION_COST );
-        if(subscriptionDDRType != null)
-        {
-            String subscriptionStorageKey = DDRTypeCategory.SUBSCRIPTION_COST + "_" + subscriptionDDRType.getTypeId();
-            Session subscriptionStorage = Session.getOrCreateSession( subscriptionStorageKey );
-            if(subscriptionStorage == null)
-            {
-                //store the current adapterid in the storage
-                Session.storeString( subscriptionStorageKey, adapterConfig.getConfigId());
-                subscriptionStorage = Session.getOrCreateSession( subscriptionStorageKey );
+    public static DDRRecord createDDRForSubscription(AdapterConfig adapterConfig) throws Exception {
+
+        DDRType subscriptionDDRType = DDRType.getDDRType(DDRTypeCategory.SUBSCRIPTION_COST);
+        DDRRecord newestDDRRecord = null;
+        if (subscriptionDDRType != null) {
+            List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(subscriptionDDRType.getTypeId(),
+                                                             AdapterType.getByValue(adapterConfig.getAdapterType()),
+                                                             adapterConfig.getConfigId(), null, null);
+            //fetch the ddr based on the details
+            List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterConfig.getConfigId(), adapterConfig.getOwner(),
+                                                                 null, subscriptionDDRType.getTypeId(), null);
+            DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
+            newestDDRRecord = fetchNewestDdrRecord(ddrRecords);
+            if (newestDDRRecord == null) {
+                newestDDRRecord = new DDRRecord(subscriptionDDRType.getTypeId(), adapterConfig.getConfigId(),
+                                                adapterConfig.getOwner(), 1);
+                newestDDRRecord.setStart(serverCurrentTime.getMillis());
             }
-            subscriptionStorage.getExtras()
-                .put( "timestamp", String.valueOf( TimeUtils.getServerCurrentTimeInMillis() ) );
+            else {
+                //flag for creating new ddrRecord
+                boolean createNewDDRRecord = false;
+                //pick the first ddrPrice that is valid for now
+                for (DDRPrice ddrPrice : ddrPrices) {
+                    if (ddrPrice.isValidForTimestamp(serverCurrentTime.getMillis())) {
+                        //check if the ddr already belong to the unitType
+                        switch (ddrPrice.getUnitType()) {
+                            case SECOND:
+                                if (serverCurrentTime.minusSeconds(1).getMillis() > newestDDRRecord.getStart()) {
+                                    createNewDDRRecord = true;
+                                }
+                                break;
+                            case MINUTE:
+                                if (serverCurrentTime.minusMinutes(1).getMillis() > newestDDRRecord.getStart()) {
+                                    createNewDDRRecord = true;
+                                }
+                                break;
+                            case HOUR:
+                                if (serverCurrentTime.minusHours(1).getMillis() > newestDDRRecord.getStart()) {
+                                    createNewDDRRecord = true;
+                                }
+                                break;
+                            case DAY: //check if ddr belongs to today
+                                if (serverCurrentTime.minusDays(1).getMillis() > newestDDRRecord.getStart()) {
+                                    createNewDDRRecord = true;
+                                }
+                                break;
+                            case MONTH: //check if ddr belongs to today
+                                if (serverCurrentTime.minusMonths(1).getMillis() > newestDDRRecord.getStart()) {
+                                    createNewDDRRecord = true;
+                                }
+                                break;
+                            case YEAR: //check if ddr belongs to today
+                                if (serverCurrentTime.minusYears(1).getMillis() > newestDDRRecord.getStart()) {
+                                    createNewDDRRecord = true;
+                                }
+                                break;
+                            default:
+                                throw new Exception("DDR cannot be created for Subsciption for UnitType: " +
+                                                    ddrPrice.getUnitType().name());
+                        }
+                        //create a new ddrRecord if not record found for the time
+                        if (createNewDDRRecord) {
+                            newestDDRRecord = new DDRRecord(subscriptionDDRType.getTypeId(),
+                                                            adapterConfig.getConfigId(), adapterConfig.getOwner(), 1);
+                            newestDDRRecord.setStart(serverCurrentTime.getMillis());
+                            break;
+                        }
+                    }
+                }
+            }
+            newestDDRRecord.createOrUpdate();
+            return newestDDRRecord;
         }
-        return null;
+        else {
+            throw new Exception("No Subscription DDRType found");
+        }
     }
     
     public static void publishDDREntryToQueue( String accountId, Double totalCost ) throws Exception
@@ -622,5 +680,21 @@ public class DDRUtils
 
 //        return value;
         return Math.round(value * Math.pow(10, precision)) / Math.pow(10, precision);
+    }
+    
+    /**
+     * simple method to return the newest DDRRecord from the list
+     * @param ddrRecords
+     * @return
+     */
+    private static DDRRecord fetchNewestDdrRecord(Collection<DDRRecord> ddrRecords){
+        DDRRecord selecteDdrRecord = null;
+        for (DDRRecord ddrRecord : ddrRecords) {
+            if (selecteDdrRecord == null ||
+                (ddrRecord.getStart() != null && selecteDdrRecord.getStart() < ddrRecord.getStart())) {
+                selecteDdrRecord = ddrRecord;
+            }
+        }
+        return selecteDdrRecord;
     }
 }

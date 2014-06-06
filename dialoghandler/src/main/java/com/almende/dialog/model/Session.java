@@ -146,6 +146,7 @@ public class Session{
                 String localaddress = split[1];
                 AdapterConfig config = null;
                 ArrayList<AdapterConfig> configs = AdapterConfig.findAdapters(type, localaddress, null);
+                // This assume there is a default keyword
                 if (configs.size() == 0) {
                     log.warning("No adapter found for new session type: " + type + " address: " + localaddress);
                     return null;
@@ -174,22 +175,31 @@ public class Session{
                                  " keyword: " + keyword);
                     }
                 }
-                //TODO: check account/pubkey usage here
-                session = new Session();
-                session.setAdapterID(config.getConfigId());
-                session.setAccountId(config.getOwner());
-                session.setRemoteAddress(split[2]);
-                session.setLocalAddress(localaddress);
-                session.setType(type);
-                session.key = key;
-                session.creationTimestamp = String.valueOf(TimeUtils.getServerCurrentTimeInMillis());
-                session.storeSession();
-                log.info("new session created with id: " + session.key);
+                session = getOrCreateSession(config, split[2]);
             }
             else {
                 log.severe("getSession: incorrect key given:" + key);
             }
         }
+        return session;
+    }
+    
+    public static Session getOrCreateSession(AdapterConfig config, String remoteAddress) {
+        
+        String key = config.getAdapterType() + "|" + config.getMyAddress() + "|" + remoteAddress;
+                                        
+        //TODO: check account/pubkey usage here
+        Session session = new Session();
+        session.setAdapterID(config.getConfigId());
+        session.setAccountId(config.getOwner());
+        session.setRemoteAddress(remoteAddress);
+        session.setLocalAddress(config.getMyAddress());
+        session.setType(config.getAdapterType());
+        session.key = key;
+        session.creationTimestamp = String.valueOf(TimeUtils.getServerCurrentTimeInMillis());
+        session.storeSession();
+        log.info("new session created with id: " + session.key);
+        
         return session;
     }
     

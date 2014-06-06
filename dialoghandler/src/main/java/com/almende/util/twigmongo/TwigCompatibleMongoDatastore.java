@@ -83,7 +83,6 @@ public class TwigCompatibleMongoDatastore {
 					collectionName);
 			BasicDBObject searchQuery = new BasicDBObject();
 			
-			Class<?> keyFieldType = keyField.getField().getType();
 			if ( ( keyField.getField().getType().equals( long.class ) && ( (long) key ) == 0 )
                 || ( keyField.getField().getType().equals( Long.class ) && key == null ) )
             {

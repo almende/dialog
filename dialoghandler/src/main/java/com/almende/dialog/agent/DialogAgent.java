@@ -142,98 +142,95 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 			@Name("adapterID") @Optional String adapterID,
 			@Name("accountID") String accountId,
 			@Name("bearerToken") String bearerToken) throws JSONRPCException {
-		HashMap<String, String> resultSessionMap;
-		if (adapterType != null && !adapterType.equals("") && adapterID != null
-				&& !adapterID.equals("")) {
-			throw new JSONRPCException(
-					"Choose adapterType or adapterID not both");
-		}
-		log.setLevel(Level.INFO);
-		log.info(String.format("pub: %s pri %s adapterType %s", accountId,
-				bearerToken, adapterType));
-		// Check accountID/bearer Token against OAuth KeyServer
-		if (Settings.KEYSERVER != null) {
-			if (!KeyServerLib.checkAccount(accountId, bearerToken)) {
-				throw new JSONRPCException(CODE.INVALID_REQUEST,
-						"Invalid token given");
-			}
-		}
-		log.info("KeyServer says ok!");
-		log.info("Trying to find config");
-		AdapterConfig config = null;
-		if (adapterID != null) {
-			config = AdapterConfig.getAdapterConfig(adapterID);
-		} else {
-			final List<AdapterConfig> adapterConfigs = AdapterConfig
-					.findAdapters(adapterType, null, null);
-			for (AdapterConfig cfg : adapterConfigs) {
-				if (cfg.getOwner().equals(accountId)) {
-					config = cfg;
-					break;
-				}
-			}
-		}
-		if (config != null) {
-			if (config.getOwner() != null
-					&& !config.getOwner().equals(accountId)) {
-				throw new JSONRPCException(
-						"You are not allowed to use this adapter!");
-			}
-			
-                        log.info(String.format("Config found: %s of Type: %s with address: %s", config.getConfigId(),
-                                               config.getAdapterType(), config.getMyAddress()));
-			adapterType = config.getAdapterType();
-			try {
-                if ( adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_XMPP ) )
-                {
-                    resultSessionMap = new XMPPServlet().startDialog( addressMap, addressCcMap, addressBccMap, url,
-                        senderName, subject, config );
+    
+            HashMap<String, String> resultSessionMap;
+            if (adapterType != null && !adapterType.equals("") && adapterID != null && !adapterID.equals("")) {
+                throw new JSONRPCException("Choose adapterType or adapterID not both");
+            }
+            log.setLevel(Level.INFO);
+            log.info(String.format("pub: %s pri %s adapterType %s", accountId, bearerToken, adapterType));
+            // Check accountID/bearer Token against OAuth KeyServer
+            if (Settings.KEYSERVER != null) {
+                if (!KeyServerLib.checkAccount(accountId, bearerToken)) {
+                    throw new JSONRPCException(CODE.INVALID_REQUEST, "Invalid token given");
                 }
-                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
-					// fetch the first address in the map
-					if (!addressMap.keySet().isEmpty()) {
-						resultSessionMap = VoiceXMLRESTProxy.dial(addressMap,
-								url, senderName, config);
-					} else {
-						throw new Exception(
-								"Address should not be empty to setup a call");
-					}
-				} else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_EMAIL)) {
-					resultSessionMap = new MailServlet().startDialog( addressMap, addressCcMap, addressBccMap, url,
-		                    senderName, subject, config );
-				} else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_SMS)) {
-					resultSessionMap = new MBSmsServlet().startDialog(
-							addressMap, null, null, url, senderName, subject, config);
-				} else if (adapterType.toUpperCase().equals("CM")) {
-					resultSessionMap = new CMSmsServlet().startDialog(
-							addressMap, null, null, url, senderName, subject, config);
-				} else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_TWITTER)) {
-				    HashMap<String, String> formattedTwitterAddresses = new HashMap<String, String>( addressMap.size() );
-	                //convert all addresses to start with @
-	                for ( String address : addressMap.keySet() )
-	                {
-	                    String formattedTwitterAddress = address.startsWith( "@" ) ? address : ("@" + address);
-	                    formattedTwitterAddresses.put( formattedTwitterAddress, addressMap.get( address ) );
-	                }
-	                resultSessionMap = new TwitterServlet().startDialog( formattedTwitterAddresses, null, null, url,
-	                    senderName, subject, config );
-				} else {
-					throw new Exception(
-							"Unknown type given: either broadsoft or phone or mail:"
-									+ adapterType.toUpperCase());
-				}
-			} catch (Exception e) {
-				JSONRPCException jse = new JSONRPCException(
-						CODE.REMOTE_EXCEPTION, "Failed to call out!", e);
-				log.log(Level.WARNING,
-						"OutboundCallWithMap, failed to call out!", e);
-				throw jse;
-			}
-		} else {
-			throw new JSONRPCException("Invalid adapter found");
-		}
-		
-		return resultSessionMap;
+            }
+            log.info("KeyServer says ok!");
+            log.info("Trying to find config");
+            AdapterConfig config = null;
+            if (adapterID != null) {
+                config = AdapterConfig.getAdapterConfig(adapterID);
+            } else {
+                // If no adapterId is given. Load the first one of the type.
+                // TODO: Add default field to adapter (to be able to load default adapter)
+                final List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters(adapterType, null, null);
+                for (AdapterConfig cfg : adapterConfigs) {
+                    if (cfg.getOwner().equals(accountId)) {
+                        config = cfg;
+                        break;
+                    }
+                }
+            }
+            if (config != null) {
+                if (config.getOwner() != null && !config.getOwner().equals(accountId)) {
+                    throw new JSONRPCException("You are not allowed to use this adapter!");
+                }
+    
+                log.info(String.format("Config found: %s of Type: %s with address: %s", config.getConfigId(),
+                                       config.getAdapterType(), config.getMyAddress()));
+                adapterType = config.getAdapterType();
+                try {
+                    if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_XMPP)) {
+                        resultSessionMap = new XMPPServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
+                                                                         senderName, subject, config);
+                    }
+                    else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
+                        // fetch the first address in the map
+                        if (!addressMap.keySet().isEmpty()) {
+                            resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, url, senderName, config);
+                        }
+                        else {
+                            throw new Exception("Address should not be empty to setup a call");
+                        }
+                    }
+                    else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_EMAIL)) {
+                        resultSessionMap = new MailServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
+                                                                         senderName, subject, config);
+                    }
+                    else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                        resultSessionMap = new MBSmsServlet().startDialog(addressMap, null, null, url, senderName, subject,
+                                                                          config);
+                    }
+                    else if (adapterType.toUpperCase().equals("CM")) {
+                        resultSessionMap = new CMSmsServlet().startDialog(addressMap, null, null, url, senderName, subject,
+                                                                          config);
+                    }
+                    else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWITTER)) {
+                        HashMap<String, String> formattedTwitterAddresses = new HashMap<String, String>(addressMap.size());
+                        //convert all addresses to start with @
+                        for (String address : addressMap.keySet()) {
+                            String formattedTwitterAddress = address.startsWith("@") ? address : ("@" + address);
+                            formattedTwitterAddresses.put(formattedTwitterAddress, addressMap.get(address));
+                        }
+                        resultSessionMap = new TwitterServlet().startDialog(formattedTwitterAddresses, null, null, url,
+                                                                            senderName, subject, config);
+                    }
+                    else {
+                        throw new Exception("Unknown type given: either broadsoft or phone or mail:" +
+                                            adapterType.toUpperCase());
+                    }
+                }
+                catch (Exception e) {
+                    JSONRPCException jse = new JSONRPCException(CODE.REMOTE_EXCEPTION, "Failed to call out!", e);
+                    log.log(Level.WARNING, "OutboundCallWithMap, failed to call out!", e);
+                    throw jse;
+                }
+            }
+            else {
+                throw new JSONRPCException("Invalid adapter found");
+            }
+    
+            return resultSessionMap;
 	}
 	
 	public String changeAgent(@Name("url") String url,

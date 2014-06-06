@@ -339,7 +339,6 @@ public class DDRRecord
                     return DDRUtils.calculateCommunicationDDRCost( this, shouldIncludeServiceCosts );
                 case ADAPTER_PURCHASE:
                 case SERVICE_COST:
-                case SUBSCRIPTION_COST:
                 {
                     //fetch the ddrPrice
                     List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices( ddrTypeId, null, adapterId, UnitType.PART, null );
@@ -347,6 +346,17 @@ public class DDRRecord
                     {
                         return DDRUtils.calculateDDRCost( this, ddrPrices.iterator().next() );
                     }
+                    break;
+                }
+                case SUBSCRIPTION_COST:
+                {
+                    //fetch the ddrPrice
+                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices( ddrTypeId, null, adapterId, null, null );
+                    if ( ddrPrices != null && !ddrPrices.isEmpty() )
+                    {
+                        return DDRUtils.calculateDDRCost( this, ddrPrices.iterator().next() );
+                    }
+                    break;
                 }
                 default:
                     break;

@@ -137,7 +137,9 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
     public String stopTwitterInboundSceduler()
     {
         String schedulerId = getState().get("twitterScedulerTaskId", String.class);
-        getScheduler().cancelTask(schedulerId);
+        if (schedulerId != null) {
+            getScheduler().cancelTask(schedulerId);
+        }
         getState().remove( "twitterScedulerTaskId" );
         return schedulerId;
     }

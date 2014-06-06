@@ -288,7 +288,7 @@ public class DDRUtils
         {
             try
             {
-                log.info( String.format( "Publishing costs: for account: %s", accountId ) );
+                log.info( String.format( "Publishing costs: %s for account: %s", totalCost , accountId ) );
                 rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory
                                                                              : new ConnectionFactory();
                 rabbitMQConnectionFactory.setHost( "localhost" );
@@ -545,6 +545,7 @@ public class DDRUtils
                 case SERVICE_COST:
                 case SUBSCRIPTION_COST:
                     totalCost = ddrPrice.getPrice();
+                    break;
                 default:
                     throw new Exception( "DDR not implemented for this category: " + ddrType.getCategory() );
             }

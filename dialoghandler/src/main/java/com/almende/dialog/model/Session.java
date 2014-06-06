@@ -235,10 +235,11 @@ public class Session{
      * used to mimick the String store entity. 
      * @return the first value found in the {@link Session#extras}
      */
-    public static String getString( String sessionKey )
-    {
-        Session session = getOrCreateSession( sessionKey );
-        return !session.getExtras().isEmpty() ? session.getExtras().values().iterator().next() : null;
+    public static String getString(String sessionKey) {
+
+        Session session = getSession(sessionKey);
+        return session != null && !session.getExtras().isEmpty() ? session.getExtras().values().iterator().next()
+                                                                : null;
     }
     
     public String getKey()
@@ -263,6 +264,7 @@ public class Session{
         session.storeSession();
         return session;
     }
+    
     public String getLanguage()
     {
         return language;

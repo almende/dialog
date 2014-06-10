@@ -233,61 +233,58 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             return resultSessionMap;
 	}
 	
-	public String changeAgent(@Name("url") String url,
-			@Name("adapterType") @Optional String adapterType,
-			@Name("adapterID") @Optional String adapterID,
-			@Name("accountId") String accountId,
-			@Name("bearerToken") String bearerToken) throws Exception {
-		
-		if (adapterType != null && !adapterType.equals("") && adapterID != null
-				&& !adapterID.equals("")) {
-			throw new Exception("Choose adapterType or adapterID not both");
-		}
-		log.setLevel(Level.INFO);
-		log.info(String.format("pub: %s pri %s adapterType %s", accountId,
-				bearerToken, adapterType));
-		// Check accountID/bearer Token against OAuth KeyServer
-		if (Settings.KEYSERVER != null) {
-			if (!KeyServerLib.checkAccount(accountId, bearerToken)) {
-				throw new JSONRPCException("Invalid token given");
-			}
-		}
-		log.info("KeyServer says ok!");
-		log.info("Trying to find config");
-		AdapterConfig config = null;
-		if (adapterID != null) {
-			config = AdapterConfig.getAdapterConfig(adapterID);
-		} else {
-			final List<AdapterConfig> adapterConfigs = AdapterConfig
-					.findAdapters(adapterType, null, null);
-			for (AdapterConfig cfg : adapterConfigs) {
-				if (cfg.getPublicKey().equals(accountId)) {
-					config = cfg;
-					break;
-				}
-			}
-		}
-		if (config != null) {
-			if (config.getPublicKey() != null
-					&& !config.getPublicKey().equals(accountId)) {
-				throw new JSONRPCException(
-						"You are not allowed to change this adapter!");
-			}
-			
-			log.info("Config found: " + config.getConfigId());
-			TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-			config.setDialogWithURL( "Dialog Agent", url);
-			datastore.store(config);
-			
-			ObjectNode result = JOM.createObjectNode();
-			result.put("id", config.getConfigId());
-			result.put("type", config.getAdapterType());
-            result.put( "url", config.getOrCreateDialog() != null ? config.getOrCreateDialog().getUrl() : null );
-			return result.toString();
-		} else {
-			throw new Exception("Invalid adapter found");
-		}
-	}
+    public String changeAgent(@Name("url") String url, @Name("adapterType") @Optional String adapterType,
+                              @Name("adapterID") @Optional String adapterID, @Name("accountId") String accountId,
+                              @Name("bearerToken") String bearerToken) throws Exception {
+
+        if (adapterType != null && !adapterType.equals("") && adapterID != null && !adapterID.equals("")) {
+            throw new Exception("Choose adapterType or adapterID not both");
+        }
+        log.setLevel(Level.INFO);
+        log.info(String.format("pub: %s pri %s adapterType %s", accountId, bearerToken, adapterType));
+        // Check accountID/bearer Token against OAuth KeyServer
+        if (Settings.KEYSERVER != null) {
+            if (!KeyServerLib.checkAccount(accountId, bearerToken)) {
+                throw new JSONRPCException("Invalid token given");
+            }
+        }
+        log.info("KeyServer says ok!");
+        log.info("Trying to find config");
+        AdapterConfig config = null;
+        if (adapterID != null) {
+            config = AdapterConfig.getAdapterConfig(adapterID);
+        }
+        else {
+            final List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters(adapterType, null, null);
+            for (AdapterConfig cfg : adapterConfigs) {
+                if (cfg.getPublicKey().equals(accountId)) {
+                    config = cfg;
+                    break;
+                }
+            }
+        }
+        if (config != null) {
+            if (config.getPublicKey() != null && !config.getPublicKey().equals(accountId)) {
+                throw new JSONRPCException("You are not allowed to change this adapter!");
+            }
+
+            log.info("Config found: " + config.getConfigId());
+            TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+            Dialog dialog = Dialog.createDialog("Dialog created on agent update", config.getURLForInboundScenario(),
+                                                config.getOwner());
+            config.getProperties().put(AdapterConfig.DIALOG_ID_KEY, dialog.getId());
+            datastore.store(config);
+
+            ObjectNode result = JOM.createObjectNode();
+            result.put("id", config.getConfigId());
+            result.put("type", config.getAdapterType());
+            result.put("url", config.getURLForInboundScenario());
+            return result.toString();
+        }
+        else {
+            throw new Exception("Invalid adapter found");
+        }
+    }
 	
 	public List<AdapterConfig> getOwnAdapters(
 			@Name("adapterType") @Optional String adapterType,

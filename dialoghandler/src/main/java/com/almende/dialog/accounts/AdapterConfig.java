@@ -1,13 +1,13 @@
 package com.almende.dialog.accounts;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -19,7 +19,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
@@ -30,18 +29,17 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.almende.util.uuid.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 
 @Path("/adapters")
-@JsonPropertyOrder({"configId", "dialogId", "initialAgentURL"})
 public class AdapterConfig {
 	static final Logger log = Logger.getLogger(AdapterConfig.class.getName());
 	static final ObjectMapper om = new ObjectMapper();
 	public static final String ADAPTER_CREATION_TIME_KEY = "ADAPTER_CREATION_TIME";
+	public static final String DIALOG_ID_KEY = "DIALOG_ID";
 
 	@Id
 	public String configId;
@@ -53,7 +51,6 @@ public class AdapterConfig {
 	String myAddress = "";
 	String keyword = null;
 	String status = "";
-	String dialogId = null;
 	//cache the dialog if its ever fetched to reduce read overhead
 	@JsonIgnore
 	private Dialog cachedDialog = null;
@@ -77,47 +74,45 @@ public class AdapterConfig {
 		accounts = new ArrayList<String>();
 	};
 	
-	@POST
-	@Consumes("application/json")
-	@Produces("application/json")
-	@JsonIgnore
-	public Response createConfig(String json) {
-		try {
-			AdapterConfig newConfig = new AdapterConfig();
-			newConfig.status = "OPEN";
+    @POST
+    @Consumes("application/json")
+    @Produces("application/json")
+    @JsonIgnore
+    public Response createConfig(String json) {
 
-			newConfig = om.readerForUpdating(newConfig).readValue(json);
-			if (adapterExists(newConfig.getAdapterType(), newConfig.getMyAddress(), newConfig.getKeyword()))
-			{
-				return Response.status(Status.CONFLICT).build();
-			}
-			if(newConfig.getConfigId() == null)
-			{
-			    newConfig.configId = new UUID().toString();
-			}
-			
-			//change the casing to lower in case adatertype if email or xmpp
-			if(newConfig.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_EMAIL ) || 
-			    newConfig.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_XMPP ))
-			{
-			    newConfig.setMyAddress( newConfig.getMyAddress() != null ? newConfig.getMyAddress().toLowerCase() 
-			                                                               : null );
-			}
-			newConfig.getProperties().put( ADAPTER_CREATION_TIME_KEY, TimeUtils.getServerCurrentTimeInMillis() );
-			TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-			datastore.store(newConfig);
-			
-			if(newConfig.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
-				Broadsoft bs = new Broadsoft(newConfig);
-				bs.hideCallerId(newConfig.isAnonymous());
-			}
-			
-			return Response.ok(om.writeValueAsString(newConfig)).build();
-		} catch (Exception e) {
-			log.severe("CreateConfig: Failed to store new config");
-		}
-		return Response.status(Status.BAD_REQUEST).build();
-	}
+        try {
+            AdapterConfig newConfig = new AdapterConfig();
+            newConfig.status = "OPEN";
+
+            newConfig = om.readerForUpdating(newConfig).readValue(json);
+            if (adapterExists(newConfig.getAdapterType(), newConfig.getMyAddress(), newConfig.getKeyword())) {
+                return Response.status(Status.CONFLICT).build();
+            }
+            if (newConfig.getConfigId() == null) {
+                newConfig.configId = new UUID().toString();
+            }
+
+            //change the casing to lower in case adatertype if email or xmpp
+            if (newConfig.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_EMAIL) ||
+                newConfig.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_XMPP)) {
+                newConfig.setMyAddress(newConfig.getMyAddress() != null ? newConfig.getMyAddress().toLowerCase() : null);
+            }
+            newConfig.getProperties().put(ADAPTER_CREATION_TIME_KEY, TimeUtils.getServerCurrentTimeInMillis());
+            TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+            datastore.store(newConfig);
+
+            if (newConfig.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
+                Broadsoft bs = new Broadsoft(newConfig);
+                bs.hideCallerId(newConfig.isAnonymous());
+            }
+
+            return Response.ok(om.writeValueAsString(newConfig)).build();
+        }
+        catch (Exception e) {
+            log.severe("CreateConfig: Failed to store new config");
+        }
+        return Response.status(Status.BAD_REQUEST).build();
+    }
 
 	@PUT
 	@Path("{uuid}")
@@ -450,8 +445,9 @@ public class AdapterConfig {
 		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
 				AdapterConfig.class);
 
-		if (accountId != null)
-			cmd.addFilter("accounts", FilterOperator.IN, accountId);
+		if (accountId != null) {
+			cmd.addFilter("accounts", FilterOperator.IN, Arrays.asList(accountId));
+		}
 
 		Iterator<AdapterConfig> config = cmd.now();
 
@@ -533,85 +529,57 @@ public class AdapterConfig {
 		this.adapterType = adapterType;
 	}
 
-	/**
-	 * Initial agent URL is deprecated since v. 2.0.1 of DialogAgent. 
-	 * Please fetch the {@link Dialog} from the {@link AdapterConfig#getDialogId()}.
-	 * This method still checks for any linked dialog and fetches that if present. 
-	 * @return
-	 */
-	@Deprecated
-	public String getInitialAgentURL() {
-//	    try
-//        {
-//	        Dialog dialog = getOrCreateDialog();
-//            if( dialog!= null && dialog.getUrl() != null && !dialog.getUrl().isEmpty())
-//            {
-//                return dialog.getUrl();
-//            }
-//        }
-//        catch ( Exception e )
-//        {
-//            log.severe( String.format( "Fetching Dialog failed. Error: %s", e.getLocalizedMessage() ) );
-//        }
-		return initialAgentURL;
-	}
-
-	/**
-     * Initial agent URL is deprecated since v. 2.0.1 of DialogAgent. 
-     * Please set the {@link Dialog} from the {@link AdapterConfig#setDialogId()} 
+    /**
+     * Fetchs the initialAgentURL by looking up if there is any dialogId
+     * configured in {@link AdapterConfig#properties} If it is not found.
+     * returns the initialAgentURL
+     * 
      * @return
-	 * @throws Exception 
      */
-    @Deprecated
-	public void setInitialAgentURL(String initialAgentURL) throws Exception {
-		this.initialAgentURL = initialAgentURL;
-//		Dialog dialog = getOrCreateDialog();
-//        if ( dialog != null )
-//        {
-//            //unlink hte dialog if url is empty
-//            if(initialAgentURL == null || initialAgentURL.isEmpty())
-//            {
-//                dialogId = null;
-//                update();
-//            }
-//            else if(!initialAgentURL.equals( dialog.getUrl()))
-//            {
-//                Dialog newDialog = Dialog.createDialog(
-//                    String.format( "Dialog created for: %s with new initialAgentUrl", myAddress ), initialAgentURL,
-//                    owner );
-//                dialogId = newDialog != null ? newDialog.getId() : null;
-//                update();
-//            }
-//        }
-	}
+    @JsonIgnore
+    public String getURLForInboundScenario() {
+
+        if (getProperties().get(DIALOG_ID_KEY) != null) {
+            try {
+                if (cachedDialog == null || !cachedDialog.getId().equals(getProperties().get(DIALOG_ID_KEY).toString())) {
+                    cachedDialog = Dialog.getDialog(getProperties().get(DIALOG_ID_KEY).toString(), null);
+                }
+                if (cachedDialog != null) {
+                    return cachedDialog.getUrl();
+                }
+                else { //remove the key tag if the dialog is not found
+                    getProperties().remove(DIALOG_ID_KEY);
+                }
+            }
+            catch (Exception e) {
+                log.severe(String.format("Dialog fetch failed for id: %s. Error: %s", getProperties()
+                                                .get(DIALOG_ID_KEY), e.toString()));
+            }
+        }
+        return initialAgentURL;
+    }
     
     /**
-     * creates or updates the dialog linked with this adapter. returns null if the url is empty
-     * @param name
-     * @param url
+     * Please use the {@link AdapterConfig#getURLForInboundScenario()} to fetch the url from 
+     * either the linked dialog or the initialAgentURL configured
      * @return
      * @throws Exception
      */
-    public Dialog setDialogWithURL(String name, String url) throws Exception
-    {
-//        cachedDialog = getOrCreateDialog();
-//        if(cachedDialog != null && !cachedDialog.getUrl().equals( url ))
-//        {
-//            cachedDialog.setName( name );
-//            cachedDialog.setUrl( url );
-//            cachedDialog.storeOrUpdate();
-//        }
-//        else if(cachedDialog == null)
-//        {
-//            cachedDialog = Dialog.createDialog( name, url, owner );
-//        }
-//        dialogId = cachedDialog != null ? cachedDialog.getId() : null;
-//        return cachedDialog;
-        initialAgentURL = url;
-        return new Dialog( name, url );
+    public String getInitialAgentURL() {
+        
+        return initialAgentURL;
+    }
+
+    /**
+     * Please set the {@link Dialog} id from the{@link AdapterConfig#setDialogId()}
+     * @return
+     * @throws Exception
+     */
+    public void setInitialAgentURL(String initialAgentURL) throws Exception {
+
+        this.initialAgentURL = initialAgentURL;
     }
     
-	
 	public String getAddress() {
 		return address;
 	}
@@ -739,42 +707,6 @@ public class AdapterConfig {
     {
         this.properties = extras;
     }
-
-    public String getDialogId()
-    {
-        return dialogId;
-    }
-
-    public void setDialogId( String dialogId )
-    {
-        this.dialogId = dialogId;
-    }
-    
-    /**
-     * gets the dialog if this adapter is linked to a DialogId. If not, this method will create a new
-     * Dialog with url from {@link AdapterConfig#initialAgentURL InitialAgentURL}
-     * @return
-     * @throws Exception
-     */
-    @JsonIgnore
-    public Dialog getOrCreateDialog() throws Exception
-    {
-//        if(cachedDialog == null || !cachedDialog.getId().equals( dialogId ))
-//        {
-//            cachedDialog = ( dialogId != null && !dialogId.isEmpty() ) ? Dialog.getDialog( dialogId, owner ) : Dialog
-//                .createDialog( "Default Dialog for: " + myAddress, initialAgentURL, owner );
-//        }
-//        String newDialogId = cachedDialog != null ? cachedDialog.getId() : null;
-//        //if any change between the new dialogId and the old one.. update this adapter
-//        if ( ( newDialogId != null && !newDialogId.isEmpty() && !newDialogId.equals( dialogId ) )
-//            || ( dialogId != null && !dialogId.isEmpty() && !dialogId.equals( newDialogId ) ) )
-//        {
-//            dialogId = newDialogId;
-//            update();
-//        }
-//        return cachedDialog;
-        return new Dialog( "Test dialog", initialAgentURL );
-    }
     
     public static void delete( String configId )
     {
@@ -788,5 +720,11 @@ public class AdapterConfig {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         AdapterConfig config = datastore.load( AdapterConfig.class, configId );
         datastore.delete( config );
+    }
+
+    @JsonIgnore
+    public void setDialogId(String dialogId) {
+        
+        getProperties().put(DIALOG_ID_KEY, dialogId); 
     }
 }

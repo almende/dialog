@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.XMPPException;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.MailServlet;
 import com.almende.dialog.adapter.TwitterServlet;
 import com.almende.dialog.adapter.TwitterServlet.TwitterEndpoint;
@@ -265,7 +266,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.setOwner( accountId );
         config.addAccount( accountId );
         config.setAnonymous( false );
-        config.setDialogWithURL( "Agent for: "+ emailAddress, initialAgentURL );
+        config.setInitialAgentURL(initialAgentURL );
         AdapterConfig newConfig = createAdapter( config );
         return newConfig.getConfigId();
     }
@@ -480,7 +481,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         {
             if ( adapter.getInitialAgentURL() != null )
             {
-                config.setDialogWithURL( "Agent for: "+ config.getMyAddress(), adapter.getInitialAgentURL() );
+                config.setInitialAgentURL(adapter.getInitialAgentURL() );
             }
             if ( adapter.isAnonymous() != null )
             {
@@ -555,6 +556,12 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
                                             .equalsIgnoreCase(ADAPTER_TYPE_XMPP))) {
             config.setMyAddress(config.getMyAddress().toLowerCase());
         }
+        //check if there is an initialAgent url given. Create a dialog if it is
+        if(config.getURLForInboundScenario() != null) {
+            Dialog dialog = Dialog.createDialog("Dialog created on adapter creation", config.getURLForInboundScenario(),
+                                                config.getOwner());
+            config.getProperties().put(AdapterConfig.DIALOG_ID_KEY, dialog.getId());
+        }
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         datastore.store(config);
@@ -604,7 +611,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.setOwner( accountId );
         config.addAccount( accountId );
         config.setAnonymous( false );
-        config.setDialogWithURL( "Agent for: "+ xmppAddress, initialAgentURL );
+        config.setInitialAgentURL(initialAgentURL);
         AdapterConfig newConfig = createAdapter( config );
         return newConfig;
     }

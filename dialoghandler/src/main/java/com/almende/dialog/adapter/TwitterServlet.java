@@ -11,10 +11,8 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.joda.time.DateTime;
 import org.scribe.builder.ServiceBuilder;
 import org.scribe.builder.api.TwitterApi;
@@ -23,9 +21,9 @@ import org.scribe.model.Response;
 import org.scribe.model.Token;
 import org.scribe.model.Verb;
 import org.scribe.oauth.OAuthService;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.tools.Twitter;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -359,37 +357,32 @@ public class TwitterServlet extends TextServlet implements Runnable {
 		return count;
 	}
 	
-	/**
-	 * updates the corresponding adapter with the agent URL
-	 * 
-	 * @param resp
-	 * @param adapterId
-	 * @param agentURL
-	 * @throws IOException
-	 */
-	protected void updateAgentURL(PrintWriter out, String adapterId,
-			String agentURL) throws Exception {
-		AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
-		adapterConfig.setDialogWithURL( "Twitter inbound Agent", agentURL );
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		datastore.store(adapterConfig);
-		out.print("<html>"
-				+ "<head>"
-				+ "<title>Authorize Dialog Handler</title>"
-				+ "<style>"
-				+ "body {width: 700px;}"
-				+ "body, th, td, input {font-family: arial; font-size: 10pt; color: #4d4d4d;}"
-				+ "</style>"
-				+ "</head>"
-				+ "<body>"
-				+ "<h1>Agent updated</h1>"
-				+ "<p>"
-				+ "All tweets mentioning you ("
-				+ adapterConfig.getMyAddress()
-				+ ") and all direct messages to you will be handled by the agent: <a href='"
-				+ agentURL + "'>" + agentURL + "</a></p>" + "</body>"
-				+ "</html>");
-	}
+    /**
+     * updates the corresponding adapter with the agent URL
+     * 
+     * @param resp
+     * @param adapterId
+     * @param agentURL
+     * @throws IOException
+     */
+    protected void updateAgentURL(PrintWriter out, String adapterId, String agentURL) throws Exception {
+
+        AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
+        //check if there is an initialAgent url given. Create a dialog if it is
+        if (agentURL != null) {
+            Dialog dialog = Dialog.createDialog("Twitter inbound Agent", agentURL, adapterConfig.getOwner());
+            adapterConfig.getProperties().put(AdapterConfig.DIALOG_ID_KEY, dialog.getId());
+        }
+        adapterConfig.setInitialAgentURL(agentURL);
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        datastore.store(adapterConfig);
+        out.print("<html>" + "<head>" + "<title>Authorize Dialog Handler</title>" + "<style>" + "body {width: 700px;}" +
+                  "body, th, td, input {font-family: arial; font-size: 10pt; color: #4d4d4d;}" + "</style>" +
+                  "</head>" + "<body>" + "<h1>Agent updated</h1>" + "<p>" + "All tweets mentioning you (" +
+                  adapterConfig.getMyAddress() +
+                  ") and all direct messages to you will be handled by the agent: <a href='" + agentURL + "'>" +
+                  agentURL + "</a></p>" + "</body>" + "</html>");
+    }
 	
 	private boolean followUser(OAuthService service, Token accessToken,
 			String userToBeFollowed) {

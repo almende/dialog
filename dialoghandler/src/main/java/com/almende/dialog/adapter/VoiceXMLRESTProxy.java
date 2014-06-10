@@ -245,7 +245,7 @@ public class VoiceXMLRESTProxy {
         else if(direction.equals("inbound")) {
             //create a session for incoming only
             session = Session.getOrCreateSession(config, formattedRemoteId);
-            url = config.getInitialAgentURL();
+            url = config.getURLForInboundScenario();
             Broadsoft bs = new Broadsoft( config );
             bs.startSubscription();
         }

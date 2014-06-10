@@ -455,11 +455,11 @@ abstract public class TextServlet extends HttpServlet {
                 Question question = session.getQuestion();
                 boolean start = false;
                 if (question == null) {
-                    if (config.getInitialAgentURL() != null && config.getInitialAgentURL().equals("")) {
+                    if (config.getURLForInboundScenario() != null && config.getURLForInboundScenario().equals("")) {
                         question = Question.fromURL(this.host + DEMODIALOG, config.getConfigId(), address, localaddress);
                     }
                     else {
-                        question = Question.fromURL(config.getInitialAgentURL(), config.getConfigId(), address,
+                        question = Question.fromURL(config.getURLForInboundScenario(), config.getConfigId(), address,
                                                     localaddress);
                     }
                     session.setDirection("inbound");
@@ -495,7 +495,7 @@ abstract public class TextServlet extends HttpServlet {
                 }
                 else {
                     log.severe(String.format("Question is null. Couldnt fetch Question from session, nor initialAgentURL: %s nor from demoDialog",
-                                             config.getInitialAgentURL(), this.host + DEMODIALOG));
+                                             config.getURLForInboundScenario(), this.host + DEMODIALOG));
                 }
             }
     

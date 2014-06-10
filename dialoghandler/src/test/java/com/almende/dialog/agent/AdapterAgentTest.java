@@ -1,13 +1,18 @@
 package com.almende.dialog.agent;
 
+import static org.junit.Assert.assertThat;
+import java.util.ArrayList;
+import org.hamcrest.Matchers;
 import org.junit.Ignore;
 import org.junit.Test;
-
 import com.almende.dialog.TestFramework;
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.uuid.UUID;
+import com.askfast.commons.entity.Adapter;
 
 public class AdapterAgentTest extends TestFramework
 {
@@ -23,7 +28,7 @@ public class AdapterAgentTest extends TestFramework
         //create mail adapter
         String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType", QuestionInRequest.SIMPLE_COMMENT.name() );
         url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
-        createEmailAdapter( "askfasttest@gmail.com", "askask2times", null, null, null, null, null, null, null,
+        createEmailAdapter( "askfasttest@gmail.com", "", null, null, null, null, null, null, null,
             new UUID().toString(), url );
         //fetch and invoke the receieveMessage method
         new AdapterAgent().checkInBoundEmails();
@@ -37,9 +42,98 @@ public class AdapterAgentTest extends TestFramework
         //create mail adapter
         String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType", QuestionInRequest.SIMPLE_COMMENT.name() );
         url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
-        createEmailAdapter( "askfasttest@gmail.com", "askask2times", null, null, null, null, null, null, null,
+        createEmailAdapter( "askfasttest@gmail.com", "", null, null, null, null, null, null, null,
             new UUID().toString(), url );
         //fetch and invoke the receieveMessage method
         new AdapterAgent().checkInBoundEmails();
+    }
+    
+    /**
+     * test if an adapter initially having an initialAgentURL, being updated with a dialogId, will return the
+     * dialog url
+     * @throws Exception 
+     */
+    @Test
+    public void updatingDialogIdInAdapterTest() throws Exception {
+        String testMessage = "testMessage";
+        String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType", QuestionInRequest.SIMPLE_COMMENT.name() );
+        url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
+        createEmailAdapter( "askfasttest@gmail.com", "", null, null, null, null, null, null, null,
+            TEST_PRIVATE_KEY, url );
+        //fetch the adapter again
+        ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(TEST_PRIVATE_KEY);
+        assertThat(adapterConfigs.size(), Matchers.is(1));
+        AdapterConfig config = adapterConfigs.iterator().next();
+        assertThat(config.getInitialAgentURL(), Matchers.is(url));
+        assertThat(config.getURLForInboundScenario(), Matchers.is(url));
+        
+        //create a dialog and attach it to the user
+        String dialogURL = url + "&dummy=test";
+        Dialog dialog = Dialog.createDialog("Test dialog", dialogURL, TEST_PRIVATE_KEY);
+        Adapter adapter = new Adapter();
+        adapter.setDialogId(dialog.getId());
+        new AdapterAgent().updateAdapter(TEST_PRIVATE_KEY, config.getConfigId(), adapter);
+        
+        //refetch the adapter
+        config = AdapterConfig.getAdapterConfig(config.getConfigId());
+        assertThat(config.getInitialAgentURL(), Matchers.is(url));
+        assertThat(config.getURLForInboundScenario(), Matchers.is(dialogURL));
+    }
+    
+    /**
+     * test if updating initialAgentURL to "" (empty), still returns the dialog url
+     * @throws Exception 
+     */
+    @Test
+    public void updatingEmptyInitialAgentURLTest() throws Exception {
+        String testMessage = "testMessage";
+        String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType", QuestionInRequest.SIMPLE_COMMENT.name() );
+        url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
+        createEmailAdapter( "askfasttest@gmail.com", "", null, null, null, null, null, null, null,
+            TEST_PRIVATE_KEY, url );
+        //fetch the adapter again
+        ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(TEST_PRIVATE_KEY);
+        assertThat(adapterConfigs.size(), Matchers.is(1));
+        AdapterConfig config = adapterConfigs.iterator().next();
+        assertThat(config.getInitialAgentURL(), Matchers.is(url));
+        assertThat(config.getURLForInboundScenario(), Matchers.is(url));
+        
+        //create a dialog and attach it to the user
+        String dialogURL = url + "&dummy=test";
+        Dialog dialog = Dialog.createDialog("Test dialog", dialogURL, TEST_PRIVATE_KEY);
+        Adapter adapter = new Adapter();
+        adapter.setInitialAgentURL("");
+        adapter.setDialogId(dialog.getId());
+        new AdapterAgent().updateAdapter(TEST_PRIVATE_KEY, config.getConfigId(), adapter);
+        
+        //refetch the adapter
+        config = AdapterConfig.getAdapterConfig(config.getConfigId());
+        assertThat(config.getInitialAgentURL(), Matchers.is(""));
+        assertThat(config.getURLForInboundScenario(), Matchers.is(dialogURL));
+    }
+    
+    /**
+     * test if updating dialogID to "" (empty), still returns the initialAgentURL
+     * @throws Exception 
+     */
+    @Test
+    public void updatingEmptyDialogURLTest() throws Exception {
+        
+        //create an adapter with a dialogId
+        updatingDialogIdInAdapterTest();
+      //fetch the adapter again
+        ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(TEST_PRIVATE_KEY);
+        assertThat(adapterConfigs.size(), Matchers.is(1));
+        AdapterConfig config = adapterConfigs.iterator().next();
+        Adapter adapter = new Adapter();
+        adapter.setDialogId("");
+        new AdapterAgent().updateAdapter(TEST_PRIVATE_KEY, config.getConfigId(), adapter);
+        
+        //refetch the adapter
+        AdapterConfig refetchedConfig = AdapterConfig.getAdapterConfig(config.getConfigId());
+        assertThat(refetchedConfig.getInitialAgentURL(), Matchers.is(config.getInitialAgentURL()));
+        assertThat(refetchedConfig.getURLForInboundScenario(), Matchers.is(config.getInitialAgentURL()));
+        assertThat(refetchedConfig.getURLForInboundScenario(), Matchers.is(refetchedConfig.getInitialAgentURL()));
+        assertThat(refetchedConfig.getProperties().get(AdapterConfig.DIALOG_ID_KEY), Matchers.nullValue());
     }
 }

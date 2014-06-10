@@ -548,7 +548,7 @@ public class AdapterConfig {
                     return cachedDialog.getUrl();
                 }
                 else { //remove the key tag if the dialog is not found
-                    getProperties().remove(DIALOG_ID_KEY);
+                    setDialogId(null);
                 }
             }
             catch (Exception e) {
@@ -724,7 +724,13 @@ public class AdapterConfig {
 
     @JsonIgnore
     public void setDialogId(String dialogId) {
-        
-        getProperties().put(DIALOG_ID_KEY, dialogId); 
+
+        if (dialogId == null || dialogId.isEmpty()) {
+            getProperties().remove(DIALOG_ID_KEY);
+        }
+        else 
+        {
+            getProperties().put(DIALOG_ID_KEY, dialogId);
+        }
     }
 }

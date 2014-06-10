@@ -63,9 +63,17 @@ public class TimeUtils
         return getServerCurrentTime().plusMinutes( minutes ).getMillis();
     }
 
+    /**
+     * formats the supplied time in millis to the one specifiedin the format.
+     * @param pDateTime
+     * @param format E.g. "dd-MM-yyyy HH:mm:ss Z"
+     * @return
+     */
     public static String getStringFormatFromDateTime( long pDateTime, String format )
     {
-        return new SimpleDateFormat( format ).format( new Date( pDateTime ) );
+        SimpleDateFormat dateFormat = new SimpleDateFormat();
+        dateFormat.setTimeZone(getServerTimeZone());
+        return dateFormat.format( new Date( pDateTime ) );
     }
 
     /**

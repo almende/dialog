@@ -1346,7 +1346,7 @@ public class VoiceXMLRESTProxy {
     }
     
     /**
-     * returns the TTS URL from voiceRSS.
+     * returns the TTS URL from tts.ask-fast
      * 
      * @param textForSpeech
      * @param language
@@ -1367,7 +1367,7 @@ public class VoiceXMLRESTProxy {
             e.printStackTrace();
             log.severe( e.getLocalizedMessage() );
         }
-        return "http://api.voicerss.org/?key=f299376e06a6449488aa818790b9ffd1&src=" + textForSpeech + "&hl=" + language
-            + "&c=" + contentType + "&r=" + speed + "&f=" + format + "&type=.wav";
+        return "https://tts.ask-fast.com/api/parse?text=" + textForSpeech + "&lang=" + language
+            + "&codec=" + contentType + "&speed=" + speed + "&format=" + format + "&type=.wav";
     }
 }

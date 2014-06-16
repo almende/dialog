@@ -144,6 +144,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<servlet-name>xmppservlet</servlet-name>
 		<url-pattern>/xmpp/*</url-pattern>
 	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>CLXUSSDServlet</servlet-name>
+		<servlet-class>com.almende.dialog.adapter.CLXUSSDServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>CLXUSSDServlet</servlet-name>
+		<url-pattern>/ussd/*</url-pattern>
+	</servlet-mapping>
 
 	<servlet>
 		<servlet-name>facebookprivateservlet</servlet-name>

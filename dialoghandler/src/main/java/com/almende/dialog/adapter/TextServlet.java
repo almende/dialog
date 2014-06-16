@@ -217,14 +217,24 @@ abstract public class TextServlet extends HttpServlet {
             senderName = senderName != null ? senderName : "Ask-Fast";
             addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
             Map<String, String> formattedAddressNameToMap = new HashMap<String, String>();
-            if (config.getAdapterType().equals("CM") || config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+            if (config.getAdapterType().equals("CM") ||
+                config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
                 for (String address : addressNameMap.keySet()) {
-                    String formattedAddress = PhoneNumberUtils.formatNumber(address, null);
-                    formattedAddressNameToMap.put(formattedAddress, addressNameMap.get(address));
+                    try {
+                        String formattedAddress = PhoneNumberUtils.formatNumber(address, null);
+                        formattedAddressNameToMap.put(formattedAddress, addressNameMap.get(address));
+                    }
+                    catch (Exception e) {
+                        log.warning(String.format("Address: %s is invalid for mode: %s. Ignoring it", address,
+                                                  config.getAdapterType()));
+                    }
                 }
             }
             else {
-                formattedAddressNameToMap = addressNameMap != null && !addressNameMap.isEmpty() ? addressNameMap : (addressCcNameMap != null && !addressCcNameMap.isEmpty() ? addressCcNameMap : addressBccNameMap);
+                formattedAddressNameToMap = addressNameMap != null && !addressNameMap.isEmpty() ? addressNameMap
+                                                                                               : (addressCcNameMap != null &&
+                                                                                                  !addressCcNameMap.isEmpty() ? addressCcNameMap
+                                                                                                                             : addressBccNameMap);
             }
             String localaddress = config.getMyAddress();            
             url = encodeURLParams(url);
@@ -245,7 +255,7 @@ abstract public class TextServlet extends HttpServlet {
                 Map<String, Object> extras = new HashMap<String, Object>();
                 extras.put(Question.MEDIA_PROPERTIES, question.getMedia_properties());
                 // add addresses in cc and bcc map
-                HashMap<String, String> fullAddressMap = new HashMap<String, String>(addressNameMap);
+                HashMap<String, String> fullAddressMap = new HashMap<String, String>(formattedAddressNameToMap);
                 if (addressCcNameMap != null) {
                     fullAddressMap.putAll(addressCcNameMap);
                     extras.put(MailServlet.CC_ADDRESS_LIST_KEY, addressCcNameMap);

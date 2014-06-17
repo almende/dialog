@@ -36,10 +36,17 @@ public class CLXUSSDServlet extends TextServlet {
 			String fromName, String to, String toName,
 			Map<String, Object> extras, AdapterConfig config) throws Exception {
 
-		System.out.println("Send message text: " + message);
-
-		CLXUSSD clxussd = new CLXUSSD(config.getAccessToken(),
-				config.getAccessTokenSecret(), config);
+		
+		//CLXUSSD clxussd = new CLXUSSD(config.getAccessToken(),
+			//	config.getAccessTokenSecret(), config);
+		
+		CLXUSSD clxussd = new CLXUSSD("ASKFastBV_h_ugw0",
+				"qMA3gBY5", config);
+		clxussd.sendMessage(message, subject, from, fromName, to, toName, extras, config);
+		
+		//TODO: implement subscrtipion for 2 way communication
+		
+		/*
 		String subId = config.getXsiSubscription();
 		
 		
@@ -51,7 +58,7 @@ public class CLXUSSDServlet extends TextServlet {
 		if (extras.get("questionType").equals("comment")) {
 			
 
-		}
+		}*/
  
 		return 0;
 	}
@@ -74,16 +81,19 @@ public class CLXUSSDServlet extends TextServlet {
 			HttpServletResponse resp) throws Exception {
 		
 		String postBody= extractPostRequestBody(req);
-		System.out.println("message resieved: "+ postBody );
+		Session ses = Session.getSession(AdapterAgent.ADAPTER_TYPE_USSD, "", getTo(postBody));
 		
+		 
+		System.out.println("message resieved: "+ postBody );
 		
 		if(postBody.contains("open_session")){
 			String sessionId = getSessionId(postBody);
 			
-			resp.getWriter().println("<?xml version=\"1.0\"?>	<umsprot version=\"1\"><prompt_req reqid=\"0\" sessionid=\"" + sessionId+ "\">Welcome to the USSD demo!Please enter your name:</prompt_req></umsprot>");
+			resp.getWriter().println("<?xml version=\"1.0\"?>	<umsprot version=\"1\"><prompt_req reqid=\"0\" sessionid=\"" + sessionId+ "\">Carl, which is your favorite band? 1. The Rolling Stones 2. The XX 3. Joy Division</prompt_req></umsprot>");
 			System.out.println("responded with session id:"+sessionId);
 			return null;
 		}
+		
 		else if(postBody.contains("promp_req")){
 			TextMessage msg = buildMessageFromXML(postBody);
 			if (msg != null) {
@@ -109,6 +119,15 @@ public class CLXUSSDServlet extends TextServlet {
 	}
 	
 	static String getSessionId (String postBody){
+		
+		String sessionId =postBody;
+		sessionId = sessionId.substring(sessionId.indexOf("sessionid")+11);
+		sessionId = sessionId.substring(0,sessionId.indexOf("\" requesttime"));
+		
+		return sessionId;
+	}
+	
+	static String getTo (String postBody){
 		
 		String sessionId =postBody;
 		sessionId = sessionId.substring(sessionId.indexOf("sessionid")+11);

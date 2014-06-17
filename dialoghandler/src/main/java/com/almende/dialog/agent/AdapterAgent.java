@@ -43,6 +43,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	public static final int EMAIL_SCHEDULER_INTERVAL = 30 * 1000; //30seconds
 	public static final int TWITTER_SCHEDULER_INTERVAL = 61 * 1000; //61seconds
 	private static final Logger log = Logger.getLogger( AdapterAgent.class.getSimpleName() );
+	public static final String ADAPTER_TYPE_USSD = "ussd";
 	
     @Override
     protected void onCreate()
@@ -394,6 +395,31 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		
 		return newConfig.getConfigId();
 	}
+	
+	public String createUSSDAdapter(@Name("address") String address,
+			@Name("keyword") @Optional String keyword,
+			@Name("username") String username,
+			@Name("password") String password,
+			@Name("preferredLanguage") @Optional String preferredLanguage,
+			@Name("accountId") @Optional String accountId) throws Exception {
+		preferredLanguage = (preferredLanguage==null ? "nl" : preferredLanguage);
+		
+		AdapterConfig config = new AdapterConfig();
+		config.setAdapterType(ADAPTER_TYPE_SMS);
+		config.setMyAddress(address);
+		config.setKeyword(keyword);
+		config.setPreferred_language(preferredLanguage);
+		config.setPublicKey(accountId);
+		config.setOwner(accountId);
+		config.addAccount(accountId);
+		config.setAnonymous(false);
+		config.setAccessToken(username);
+		config.setAccessTokenSecret(password);		
+		AdapterConfig newConfig = createAdapter(config);
+		
+		return newConfig.getConfigId();
+	}
+	
 	
     public String attachTwitterAdapterToUser( @Name( "adapterID" ) @Optional String adapterID,
         @Name( "twitterUserName" ) @Optional String twitterUserName, @Name( "accountId" ) String accountId )

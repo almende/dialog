@@ -32,6 +32,7 @@ import org.znerd.xmlenc.XMLOutputter;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
@@ -79,27 +80,10 @@ public class CLXUSSD {
         if(fromName==null)
             fromName = from;
 
-        // TODO: Check message for special chars, if so change dcs.		
-        HashMap<String, String> addressNameMap = new HashMap<String, String>();
-        addressNameMap.put( to, toName );
-        String reference = null;
-        if(extras != null)
-        {
-            reference = extras.get( USSD_DELIVERY_STATUS_KEY ) != null ? extras.get( USSD_DELIVERY_STATUS_KEY )
-                .toString() : null;
-        }
-        
-        Boolean fusion = false;
-        if(fusion){
-        	this.userName = "ASKFastBV_h_gw4";
-        	this.password = "zSY3bXE2";
-        }
-        
-        
         //Change spaces for %20 for the url
         message = message.replace(" ", "%20");
         // construct the URL for the request
-        String url = server + "?username=";
+        String url = server + "/sendsms?username=";
         url += userName;
         url += "&password=";
         url += password;
@@ -114,11 +98,11 @@ public class CLXUSSD {
 		WebResource webResource = client.resource(url  );
 		String response = webResource.get(String.class);
 		System.out.println("ussd send message response: "+response);
- 
         
         return countMessageParts( message );
     }
     
+    // Not used 
     public int sendXML( String message, String subject, String from, String fromName,
             String to, Map<String, Object> extras, AdapterConfig config ) throws Exception {
     	
@@ -128,7 +112,8 @@ public class CLXUSSD {
     	return 0;
     }
 
-
+    
+    // not used CLX does not allow for this
     public String startSubScription(String to, AdapterConfig config) {
     	
     	System.out.println("start subscription");
@@ -148,6 +133,8 @@ public class CLXUSSD {
     	 Client client = ParallelInit.getClient();
 		WebResource webResource = client.resource(URL  );
          
+		
+		
          if ( retryCounter.get( webResource.toString() ) == null )
          {
              retryCounter.put( webResource.toString(), 0 );
@@ -183,6 +170,7 @@ public class CLXUSSD {
     	
     }
     
+    // not used because CLX api does not allow for this
     private String getSubscriptionId(String xml) {
     	try {
     		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
@@ -337,4 +325,9 @@ public class CLXUSSD {
 			        }
 			        return result;
 			    }
+
+	public static Session createSession(String sessionKey) {
+		// TODO Auto-generated method stub
+		return Session.storeString(sessionKey, "");
+	}
 }

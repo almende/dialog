@@ -5,7 +5,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -15,21 +14,21 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CLXUSSD;
+import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.util.DDRUtils;
 
 public class CLXUSSDServlet extends TextServlet {
 
 	private static final long serialVersionUID = -1195021911106214263L;
 	protected static final com.almende.dialog.Logger dialogLog =  new com.almende.dialog.Logger();
 	private static final String servletPath = "/ussd/";
-	private static final boolean USE_KEYWORDS = true;
 	
 	@Override
 	protected int sendMessage(String message, String subject, String from,
@@ -40,8 +39,7 @@ public class CLXUSSDServlet extends TextServlet {
 		//CLXUSSD clxussd = new CLXUSSD(config.getAccessToken(),
 			//	config.getAccessTokenSecret(), config);
 		
-		CLXUSSD clxussd = new CLXUSSD("ASKFastBV_h_ugw0",
-				"qMA3gBY5", config);
+		CLXUSSD clxussd = new CLXUSSD();
 		clxussd.sendMessage(message, subject, from, fromName, to, toName, extras, config);
 		
 		//TODO: implement subscrtipion for 2 way communication
@@ -81,7 +79,7 @@ public class CLXUSSDServlet extends TextServlet {
 			HttpServletResponse resp) throws Exception {
 		
 		String postBody= extractPostRequestBody(req);
-		Session ses = Session.getSession(AdapterAgent.ADAPTER_TYPE_USSD, "", getTo(postBody));
+//		Session ses = Session.getSession(AdapterAgent.ADAPTER_TYPE_USSD, "", getTo(postBody));
 		
 		 
 		System.out.println("message resieved: "+ postBody );
@@ -111,10 +109,11 @@ public class CLXUSSDServlet extends TextServlet {
 	}
 	
 	static String extractPostRequestBody(HttpServletRequest request) throws IOException {
-	    if ("POST".equalsIgnoreCase(request.getMethod())) {
-	        Scanner s = new Scanner(request.getInputStream(), "UTF-8").useDelimiter("\\A");
-	        return s.hasNext() ? s.next() : "";
-	    }
+//	    if ("POST".equalsIgnoreCase(request.getMethod())) {
+//	      
+//			Scanner s = new Scanner(request.getInputStream(), "UTF-8").useDelimiter("\\A");
+//	        return s.hasNext() ? s.next() : "";
+//	    }
 	    return "";
 	}
 	
@@ -156,6 +155,8 @@ public class CLXUSSDServlet extends TextServlet {
 	protected void doErrorPost(HttpServletRequest req, HttpServletResponse res)
 			throws IOException {}
 	
+	
+	@SuppressWarnings("unused")
 	private HashMap<String, String> getPostData(HttpServletRequest req) {
 		StringBuilder sb = new StringBuilder();
 	    try {
@@ -185,6 +186,7 @@ public class CLXUSSDServlet extends TextServlet {
 		
 		return data;
 	}
+	@SuppressWarnings("unused")
 	private String buildXmlQuestion (String question, String subId) {
 		String xml = "<?xml version=\"1.0\"?><umsprot version=\"1\"><prompt_req reqid=\"0\" sessionid=\""+subId+"\">"+question+"</prompt_req></umsprot>";
 		
@@ -216,15 +218,14 @@ public class CLXUSSDServlet extends TextServlet {
 	@Override
 	protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig,
 			String fromAddress) throws Exception {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig,
 			Map<String, String> toAddress, String message) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,
+	            1 );
 	}
 }
 

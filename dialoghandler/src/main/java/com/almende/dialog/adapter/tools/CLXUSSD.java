@@ -1,39 +1,21 @@
 package com.almende.dialog.adapter.tools;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Executor;
-import java.util.concurrent.FutureTask;
 import java.util.logging.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicResponseHandler;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.znerd.xmlenc.XMLOutputter;
 
-import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -47,31 +29,16 @@ public class CLXUSSD {
     private static final Logger log = Logger.getLogger(CLXUSSD.class.getName()); 
 	private static HashMap<String, Integer> retryCounter = new HashMap<String, Integer>();
 
-	private static String server = "http://93.158.78.4:3800";
-	private static String server_bu = "http://195.84.167.34:3800";   // backup http server of clx ussd
+//	private static String server = "http://93.158.78.4:3800";
+//	private static String server_bu = "http://195.84.167.34:3800";   // backup http server of clx ussd
 	private static String server_ssl = "https://93.158.78.4:3801";   // primary https server of clx ussd
-	private static String server_ssl_bu = "https://195.84.167.34:3801";   // backup https server of clx ussd
-	private static String localdevelopmentServer = "http://localhost:8082/dialoghandler/rest/xssdTest/";
+//	private static String server_ssl_bu = "https://195.84.167.34:3801";   // backup https server of clx ussd
+//	private static String localdevelopmentServer = "http://localhost:8082/dialoghandler/rest/xssdTest/";
 	private static String keyWord = "AskFastBV_USSDgw0_gpbLurkJ";
 	
 	
-	private AdapterConfig config = null;
-	
 	private static Integer MAX_RETRY_COUNT = 3;
 	
-	private final String USER_AGENT = "Mozilla/5.0";
-	
-	private String userName = "";
-	private String password = "";
-	private String userID = "";
-
-	
-	public CLXUSSD(String userName, String password, AdapterConfig config) {
-		this.userName = userName;
-		this.password = password;
-		this.config = config;
-		
-	}
 	
     public int sendMessage( String message, String subject, String from, String fromName,
         String to, String toName, Map<String, Object> extras,AdapterConfig config ) throws Exception
@@ -83,10 +50,10 @@ public class CLXUSSD {
         //Change spaces for %20 for the url
         message = message.replace(" ", "%20");
         // construct the URL for the request
-        String url = server + "/sendsms?username=";
-        url += userName;
+        String url = server_ssl + "/sendsms?username=";
+        url += config.getAccessToken();
         url += "&password=";
-        url += password;
+        url += config.getAccessTokenSecret();
         url += "&from=";
         url += from;
         url += "&to=";
@@ -105,10 +72,10 @@ public class CLXUSSD {
     // Not used 
     public int sendXML( String message, String subject, String from, String fromName,
             String to, Map<String, Object> extras, AdapterConfig config ) throws Exception {
-    	
-    	Client client = ParallelInit.getClient();
-    	WebResource webResource = client.resource(server);
-    	String result = sendRequestWithRetry( webResource, null, HTTPMethod.POST, message);
+//    	
+//    	Client client = ParallelInit.getClient();
+//    	WebResource webResource = client.resource(server_ssl);
+//    	//String result = sendRequestWithRetry( webResource, null, HTTPMethod.POST, message);
     	return 0;
     }
 
@@ -127,7 +94,7 @@ public class CLXUSSD {
     	
     	//TODO: setup real url
     	
-    	String URL =  server+ "/sendsms?username=ASKFastBV_h_ugw0&password=qMA3gBY5&to="+to+"&text="+keyWord+"&from=31624107792";
+    	String URL =  server_ssl+ "/sendsms?username=ASKFastBV_h_ugw0&password=qMA3gBY5&to="+to+"&text="+keyWord+"&from=31624107792";
     	System.out.println(URL);
     	
     	 Client client = ParallelInit.getClient();
@@ -204,7 +171,8 @@ public class CLXUSSD {
      * @since 9/9/2013 for v0.4.0
      * @return
      */
-    private StringWriter createXMLRequest( String message, String from, String fromName, String reference,
+    @SuppressWarnings("unused")
+	private StringWriter createXMLRequest( String message, String from, String fromName, String reference,
         Map<String, String> addressNameMap, String dcs )
     {
    	      

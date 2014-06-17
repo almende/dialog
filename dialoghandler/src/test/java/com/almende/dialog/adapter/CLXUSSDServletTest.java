@@ -1,26 +1,18 @@
 package com.almende.dialog.adapter;
 
-import java.io.ByteArrayInputStream;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
+import org.junit.Test;
 
 import com.almende.dialog.TestFramework;
-import com.almende.dialog.agent.DialogAgent;
-import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.util.ParallelInit;
-import com.sun.jersey.api.client.Client;
 
-import org.junit.Test;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 
 public class CLXUSSDServletTest extends TestFramework{
 	
@@ -39,7 +31,7 @@ public class CLXUSSDServletTest extends TestFramework{
 		
 		getOrCreateSession(adapterConfig, "31648901147");
 		
-		String sessionKey = createSessionKey(adapterConfig, remoteAdressVoice2);
+		//String sessionKey = createSessionKey(adapterConfig, remoteAdressVoice2);
 		String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType",
 	            QuestionInRequest.SIMPLE_COMMENT.name() );
 	        url = ServerUtils.getURLWithQueryParams( url, "question", message );
@@ -78,10 +70,7 @@ public class CLXUSSDServletTest extends TestFramework{
 
 	@Test
 	public void outBoundMenuMessageSenderNameNotNullTest() throws Exception {
-		
-		
-		String subject = "hallo";
-		
+
 		HashMap<String,String> addressNameMap = new HashMap<String,String>();
 		addressNameMap.put(remoteAdressVoice2, senderName);
 		
@@ -95,7 +84,6 @@ public class CLXUSSDServletTest extends TestFramework{
 	        outBoundUSSDCallXMLTest( addressNameMap, adapterConfig, message, QuestionInRequest.SIMPLE_COMMENT,
 	            senderName, "outBoundBroadcastCallSenderNameNotNullTest" );
 
-	        Client client = ParallelInit.getClient();
 	}
 	
 

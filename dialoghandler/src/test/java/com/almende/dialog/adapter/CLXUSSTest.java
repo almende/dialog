@@ -3,9 +3,6 @@ package com.almende.dialog.adapter;
 
 import org.junit.Test;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.adapter.tools.CLXUSSD;
 
@@ -18,7 +15,7 @@ public class CLXUSSTest extends TestFramework{
 		String senderName ="AskFastTest";
 		String subject = "hallo";
 		
-		CLXUSSD clxussd = new CLXUSSD("ASKFastBV_h_ugw0","qMA3gBY5",null);
+		CLXUSSD clxussd = new CLXUSSD();
 		clxussd.sendMessage(message, subject, subject, subject, remoteAdressUSSD, senderName,null,null);
 	}
 	/*

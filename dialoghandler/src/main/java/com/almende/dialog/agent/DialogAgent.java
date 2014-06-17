@@ -16,6 +16,7 @@ import com.almende.dialog.adapter.CLXUSSDServlet;
 import com.almende.dialog.adapter.CMSmsServlet;
 import com.almende.dialog.adapter.MBSmsServlet;
 import com.almende.dialog.adapter.MailServlet;
+import com.almende.dialog.adapter.NotificareServlet;
 import com.almende.dialog.adapter.TwitterServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.adapter.XMPPServlet;
@@ -209,6 +210,10 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                     }
                     else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_USSD)) {
     					resultSessionMap = new CLXUSSDServlet().startDialog(
+    							addressMap, null, null, url, senderName, subject, config);
+    				}
+                    else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_PUSH)) {
+    					resultSessionMap = new NotificareServlet().startDialog(
     							addressMap, null, null, url, senderName, subject, config);
     				}
                     else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWITTER)) {

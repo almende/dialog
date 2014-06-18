@@ -32,7 +32,7 @@ public class CLXUSSD {
 //	private static String server = "http://93.158.78.4:3800";
 //	private static String server_bu = "http://195.84.167.34:3800";   // backup http server of clx ussd
 	private static String server_ssl = "https://93.158.78.4:3801";   // primary https server of clx ussd
-//	private static String server_ssl_bu = "https://195.84.167.34:3801";   // backup https server of clx ussd
+	private static String server_ssl_bu = "https://195.84.167.34:3801";   // backup https server of clx ussd
 //	private static String localdevelopmentServer = "http://localhost:8082/dialoghandler/rest/xssdTest/";
 	private static String keyWord = "AskFastBV_USSDgw0_gpbLurkJ";
 	
@@ -63,8 +63,35 @@ public class CLXUSSD {
 
         Client client = ParallelInit.getClient();
 		WebResource webResource = client.resource(url  );
-		String response = webResource.get(String.class);
-		System.out.println("ussd send message response: "+response);
+
+        if ( retryCounter.get( webResource.toString() ) == null )
+        {
+            retryCounter.put( webResource.toString(), 0 );
+        }
+        HashMap<String, String> queryKeyValue = new HashMap<String, String>();
+
+        while ( retryCounter.get( webResource.toString() ) != null
+            && retryCounter.get( webResource.toString() ) < MAX_RETRY_COUNT )
+        {
+            try
+            {
+            	if(MAX_RETRY_COUNT == 1){
+            		url = url.replace(server_ssl, server_ssl_bu);
+            		webResource = client.resource(url  );
+            	}
+            	
+                String result = sendRequestWithRetry( webResource, queryKeyValue, HTTPMethod.GET,null);
+                log.info( "Send result from USSD: " + result );
+                retryCounter.remove( webResource.toString() );
+                break;
+            }
+            catch ( Exception ex )
+            {
+                log.severe( "Problems getting Notificare connection out:" + ex.getMessage() );
+                Integer retry = retryCounter.get( webResource.toString() );
+                retryCounter.put( webResource.toString(), ++retry );
+            }
+		}
         
         return countMessageParts( message );
     }

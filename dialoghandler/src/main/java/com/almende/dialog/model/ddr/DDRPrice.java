@@ -2,7 +2,9 @@ package com.almende.dialog.model.ddr;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import org.bson.types.ObjectId;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.util.twigmongo.FilterOperator;
@@ -38,6 +40,8 @@ public class DDRPrice
         CALL( AdapterAgent.ADAPTER_TYPE_BROADSOFT ),
         EMAIL( AdapterAgent.ADAPTER_TYPE_EMAIL ),
         FACEBOOK( AdapterAgent.ADAPTER_TYPE_FACEBOOK ),
+        USSD( AdapterAgent.ADAPTER_TYPE_USSD ),
+        PUSH( AdapterAgent.ADAPTER_TYPE_PUSH ),
         TWITTER( AdapterAgent.ADAPTER_TYPE_TWITTER );
 
         private String value;

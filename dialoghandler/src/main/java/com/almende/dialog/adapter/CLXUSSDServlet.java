@@ -17,11 +17,10 @@ import org.w3c.dom.Node;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CLXUSSD;
-import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 
 public class CLXUSSDServlet extends TextServlet {

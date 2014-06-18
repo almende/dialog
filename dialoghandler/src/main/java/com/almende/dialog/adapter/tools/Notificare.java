@@ -24,7 +24,6 @@ public class Notificare {
     private static String serverUrl = "https://push.notifica.re/notification/broadcast";
     private static final Logger log = Logger.getLogger(Notificare.class.getName()); 
 
-	
 	public Notificare(){
 
 	}
@@ -37,12 +36,10 @@ public class Notificare {
     		jsonMap.put("type","re.notifica.notification.Alert");
     		jsonMap.put("ttl","3600");
     		jsonMap.put( "sound","default");
-    		jsonMap.put( "schedule", "true");    		
     		
     		Client client = ParallelInit.getClient();
     		client.addFilter(new LoggingFilter(System.out));
     		WebResource webResource = client.resource(serverUrl) ;
-    		
     		webResource.addFilter(new HTTPBasicAuthFilter(config.getAccessToken(),config.getAccessTokenSecret() ));
             
             if ( retryCounter.get( webResource.toString() ) == null )
@@ -57,7 +54,7 @@ public class Notificare {
                 try
                 {
                     String result = sendRequestWithRetry( webResource, queryKeyValue, HTTPMethod.POST, om.writeValueAsString(jsonMap));
-                    log.info( "Subscription result from Notificare: " + result );
+                    log.info( "Result from Notificare: " + result );
                     retryCounter.remove( webResource.toString() );
                     break;
                 }

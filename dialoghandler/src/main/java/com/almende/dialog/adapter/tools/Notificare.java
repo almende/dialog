@@ -44,7 +44,6 @@ public class Notificare {
     		WebResource webResource = client.resource(serverUrl) ;
     		
     		webResource.addFilter(new HTTPBasicAuthFilter(config.getAccessToken(),config.getAccessTokenSecret() ));
-    		webResource.type(MediaType.APPLICATION_JSON).post(om.writeValueAsString(jsonMap)); 
             
             if ( retryCounter.get( webResource.toString() ) == null )
             {
@@ -57,7 +56,7 @@ public class Notificare {
             {
                 try
                 {
-                    String result = sendRequestWithRetry( webResource, queryKeyValue, HTTPMethod.GET, null);
+                    String result = sendRequestWithRetry( webResource, queryKeyValue, HTTPMethod.POST, om.writeValueAsString(jsonMap));
                     log.info( "Subscription result from Notificare: " + result );
                     retryCounter.remove( webResource.toString() );
                     break;
@@ -70,7 +69,7 @@ public class Notificare {
                 }
     		}  
             return 0; 
-        } 
+        }
     
     private String sendRequestWithRetry( WebResource webResource, Map<String, String> queryKeyValue, HTTPMethod method, String payload )
 		    throws UnsupportedEncodingException

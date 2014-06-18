@@ -17,7 +17,7 @@ import com.almende.dialog.util.ServerUtils;
 
 public class CLXUSSDServletTest extends TestFramework{
 	
-	private static final String message = "How are you doing?";
+	private static final String message = "How are you doing? today";
 	private static final String remoteAdressVoice2 = "31624107792";
 	private static final String senderName ="ASk Fast test";
 	
@@ -29,6 +29,10 @@ public class CLXUSSDServletTest extends TestFramework{
 		addressNameMap.put(remoteAdressVoice2, senderName);
 		
 		AdapterConfig adapterConfig = createAdapterConfig("ussd","31624107792","","");
+		// for test ser real password and username
+		adapterConfig.setAccessToken("ASKFastBV_h_ugw0");
+		adapterConfig.setAccessTokenSecret("qMA3gBY5");
+		adapterConfig.update();
 		
 		Session.getOrCreateSession(adapterConfig, "31648901147");
 		

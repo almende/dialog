@@ -620,70 +620,73 @@ public class DDRUtils
     public static boolean stopCostsAtCallHangup( String sessionKey, boolean pushToQueue )
     {
         Session session = Session.getSession(sessionKey);
-        AdapterConfig adapterConfig = session.getAdapterConfig();
         boolean result = false;
-        //stop costs
-        try
-        {
-            log.info( String.format( "stopping charges for session: %s", ServerUtils.serialize( session ) ) );
+        if (session != null) {
+            AdapterConfig adapterConfig = session.getAdapterConfig();
+            //stop costs
+            try {
+                log.info(String.format("stopping charges for session: %s", ServerUtils.serialize(session)));
                 DDRRecord ddrRecord = null;
                 //if no ddr is seen for this session. try to fetch it based on the timestamps
                 if (session.getDdrRecordId() == null) {
                     ddrRecord = DDRRecord.getDDRRecord(sessionKey);
                 }
-                if ( session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
-                                                session.getDirection() != null) {
-                ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
-                                                       adapterConfig.getOwner(),
-                                                       Long.parseLong(session.getStartTimestamp()),
-                                                       session.getAnswerTimestamp() != null ? Long.parseLong(session
-                                                                                       .getAnswerTimestamp()) : null,
-                                                       Long.parseLong(session.getReleaseTimestamp()));
-                //push session to queue when the call is picked up but no costs are attached or
-                //when the ddrRecord is found but no answerTimestamp is seen. (Try to process it again later: when the answer ccxml comes in later on)
-                boolean candidateToBePushedToQueue = false; 
-                if (ddrRecord == null && session.getAnswerTimestamp() != null) {
-                    String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
+                if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
+                    session.getDirection() != null) {
+                    ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
+                                                           adapterConfig.getOwner(),
+                                                           Long.parseLong(session.getStartTimestamp()),
+                                                           session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
+                                                                                               : null,
+                                                           Long.parseLong(session.getReleaseTimestamp()));
+                    //push session to queue when the call is picked up but no costs are attached or
+                    //when the ddrRecord is found but no answerTimestamp is seen. (Try to process it again later: when the answer ccxml comes in later on)
+                    boolean candidateToBePushedToQueue = false;
+                    if (ddrRecord == null && session.getAnswerTimestamp() != null) {
+                        String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
+                                                            session.getKey());
+                        log.severe(errorMessage);
+                        dialogLog.severe(adapterConfig, errorMessage);
+                        candidateToBePushedToQueue = true;
+                    }
+                    else if (ddrRecord != null && session.getAnswerTimestamp() == null) {
+                        String warningMessage = String.format("No costs added. Looks like a hangup! for session: %s",
+                                                              session.getKey());
+                        log.warning(warningMessage);
+                        candidateToBePushedToQueue = true;
+                    }
+                    if (candidateToBePushedToQueue && pushToQueue) { //push the session details to queue
+                        session.pushSessionToQueue();
+                        return result;
+                    }
+
+                    //publish charges
+                    Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
+                    publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
+                    result = true;
+                }
+                //if answerTimestamp and releastTimestamp is not found, add it to the queue
+                else {
+                    String errorMessage = String.format("No costs added to communication currently for session: %s, as no answerTimestamp or releaseTimestamp is found",
                                                         session.getKey());
                     log.severe(errorMessage);
                     dialogLog.severe(adapterConfig, errorMessage);
-                    candidateToBePushedToQueue = true;
+                    if (pushToQueue) { //push the session details to queue
+                        session.pushSessionToQueue();
+                    }
                 }
-                else if(ddrRecord != null && session.getAnswerTimestamp() == null) {
-                    String warningMessage = String.format("No costs added. Looks like a hangup! for session: %s",
-                                                        session.getKey());
-                    log.warning(warningMessage);
-                    candidateToBePushedToQueue = true;
-                }
-                if (candidateToBePushedToQueue && pushToQueue) { //push the session details to queue
-                    session.pushSessionToQueue();
-                    return result;
-                }
-                    
-                //publish charges
-                Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
-                publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
-                result = true;
             }
-            //if answerTimestamp and releastTimestamp is not found, add it to the queue
-            else {
-                String errorMessage = String.format("No costs added to communication currently for session: %s, as no answerTimestamp or releaseTimestamp is found",
-                                                    session.getKey());
+            catch (Exception e) {
+                String errorMessage = String.format("Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s \n Error: %s. Pushing to queue",
+                                                    session.getDirection(), session.getAdapterID(),
+                                                    adapterConfig.getMyAddress(), session.getRemoteAddress(),
+                                                    session.getLocalAddress(), e.getLocalizedMessage());
                 log.severe(errorMessage);
-                dialogLog.severe(adapterConfig, errorMessage);
+                dialogLog.severe(session.getAdapterConfig().getConfigId(), errorMessage);
                 if (pushToQueue) { //push the session details to queue
                     session.pushSessionToQueue();
                 }
             }
-        }
-        catch ( Exception e )
-        {
-            String errorMessage = String.format(
-                    "Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s \n Error: %s",
-                    session.getDirection(), session.getAdapterID(), adapterConfig.getMyAddress(),
-                    session.getRemoteAddress(), session.getLocalAddress(), e.getLocalizedMessage() );
-            log.severe( errorMessage );
-            dialogLog.severe( session.getAdapterConfig().getConfigId(), errorMessage );
         }
         return result;
     }

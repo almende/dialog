@@ -126,7 +126,7 @@ public class SessionAgent extends Agent {
         //if the ddr is processed succesfully then delete the scheduled task
         Session session = Session.getSession(sessionKey);
         String schedulerId = null;
-        if (session == null || DDRUtils.stopCostsAtCallHangup(sessionKey, false) ||
+        if (session == null || DDRUtils.stopCostsAtCallHangup(sessionKey, true) ||
             updateSessionScedulerRunCount(sessionKey) >= SESSION_SCHEDULER_MAX_COUNT) {
             if (!ServerUtils.isInUnitTestingEnvironment()) {
                 schedulerId = getState().get(SESSION_SCHEDULER_NAME_PREFIX + sessionKey, String.class);

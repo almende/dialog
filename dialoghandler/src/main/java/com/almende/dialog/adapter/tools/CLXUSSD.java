@@ -3,6 +3,7 @@ package com.almende.dialog.adapter.tools;
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -47,22 +48,20 @@ public class CLXUSSD {
         String to, String toName, Map<String, Object> extras,AdapterConfig config ) throws Exception
     {
         
-        if(fromName==null)
+        if(fromName==null || fromName=="")
             fromName = from;
 
-        //Change spaces for %20 for the url
-        message = message.replace(" ", "%20");
         // construct the URL for the request
         String url = server_ssl + "/sendsms?username=";
-        url += config.getAccessToken();
+        url += URLEncoder.encode(config.getAccessToken(), "UTF-8") ;
         url += "&password=";
-        url += config.getAccessTokenSecret();
+        url += URLEncoder.encode(config.getAccessTokenSecret(), "UTF-8");
         url += "&from=";
-        url += from;
+        url += URLEncoder.encode(from, "UTF-8");
         url += "&to=";
-        url += to;
+        url += URLEncoder.encode(to, "UTF-8");
         url += "&text=";
-        url += message;
+        url += URLEncoder.encode(message, "UTF-8");
 
         Client client = hostIgnoringClient();
 		WebResource webResource = client.resource(url  );

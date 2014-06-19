@@ -59,6 +59,7 @@ public class VoiceXMLRESTProxy {
 	protected String EXCEPTION_URL="exception";
 	
 	private String host = "";
+	
 	public static void killSession(Session session){
 		
 		AdapterConfig config = session.getAdapterConfig();
@@ -368,6 +369,19 @@ public class VoiceXMLRESTProxy {
             extras.put( "sessionKey", sessionKey );
             question = question.event( "timeout", "No answer received", extras, responder );
             session.setQuestion( question );
+            if (question != null) {
+                String retryLimit = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT);
+                retryLimit = retryLimit != null ? retryLimit : String.valueOf(Question.DEFAULT_MAX_QUESTION_LOAD);
+                Integer retryCount = session.getRetryCount();
+                retryCount = retryCount != null ? retryCount : 0;
+                if (retryCount < Integer.parseInt(retryLimit)) {
+                    session.setRetryCount(++retryCount);
+                }
+                else {
+                    //hangup so set question to null
+                    question = null;
+                }
+            }
             session.storeSession();
             return handleQuestion( question, session.getAdapterConfig().getConfigId(), responder, sessionKey );
         }
@@ -425,9 +439,12 @@ public class VoiceXMLRESTProxy {
                                                              session.getReleaseTimestamp());
                 timeMap.put("referredCalledId", session.getExtras().get("referredCalledId"));
                 timeMap.put("sessionKey", session.getKey());
+                if(session.getExtras() != null && !session.getExtras().isEmpty()) {
+                    timeMap.putAll(session.getExtras());
+                }
                 handleQuestion(null, session.getAdapterConfig().getConfigId(), session.getRemoteAddress(),
                                session.getKey());
-                session.getQuestion().event("hangup", "Hangup", session.getExtras(), session.getRemoteAddress());
+                session.getQuestion().event("hangup", "Hangup", timeMap, session.getRemoteAddress());
                 DDRWrapper.log(session.getQuestion(), session, "Hangup");
             }
             else {
@@ -751,7 +768,7 @@ public class VoiceXMLRESTProxy {
         String ttsURL = getTTSURL( textForSpeech, language, contentType, speed, format );
         return Response.seeOther( new URI( ttsURL ) ).build();
     }
-    
+
     /**
      * simple endpoint for repeating a question based on its session and question id
      * @param sessionKey
@@ -1125,96 +1142,97 @@ public class VoiceXMLRESTProxy {
 		return sw.toString();
 	}
 
-    /** renders/updates the xml for recording an audio and posts it to the user on the callback 
-     * @param question
-     * @param prompts
-     * @param sessionKey
-     * @param outputter
-     * @throws IOException
-     * @throws UnsupportedEncodingException
-     */
-    protected void renderVoiceMailQuestion( Question question, ArrayList<String> prompts, String sessionKey,
-        XMLOutputter outputter ) throws IOException, UnsupportedEncodingException
-    {
-		//assign a default voice mail length if one is not specified
-		String voiceMessageLengthProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_LENGTH );
-		voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
-		if(!voiceMessageLengthProperty.endsWith("s"))
-		{
-			log.warning("Voicemail length must be end with 's'. E.g. 40s. Found: "+ voiceMessageLengthProperty);
-			voiceMessageLengthProperty += "s";
-		}
+	/** renders/updates the xml for recording an audio and posts it to the user on the callback 
+	     * @param question
+	     * @param prompts
+	     * @param sessionKey
+	     * @param outputter
+	     * @throws IOException
+	     * @throws UnsupportedEncodingException
+	     */
+    protected void renderVoiceMailQuestion(Question question, ArrayList<String> prompts, String sessionKey,
+                                           XMLOutputter outputter) throws IOException, UnsupportedEncodingException {
 
-		String dtmfTerm = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.DTMF_TERMINATE );
-		dtmfTerm = dtmfTerm != null ? dtmfTerm : "true";
-		String voiceMailBeep = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_BEEP );
-		voiceMailBeep = voiceMailBeep != null ? voiceMailBeep : "true";
+        //assign a default voice mail length if one is not specified
+        String voiceMessageLengthProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                           MediaPropertyKey.VOICE_MESSAGE_LENGTH);
+        voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
+        if (!voiceMessageLengthProperty.endsWith("s")) {
+            log.warning("Voicemail length must be end with 's'. E.g. 40s. Found: " + voiceMessageLengthProperty);
+            voiceMessageLengthProperty += "s";
+        }
 
-		// Fetch the upload url
-		//String host = this.host.replace("rest/", "");
-		String uuid = UUID.randomUUID().toString();
-		String filename = uuid+".wav";
-		String storedAudiofile = host+"download/"+filename;
+        String dtmfTerm = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.DTMF_TERMINATE);
+        dtmfTerm = dtmfTerm != null ? dtmfTerm : "true";
+        String voiceMailBeep = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_BEEP);
+        voiceMailBeep = voiceMailBeep != null ? voiceMailBeep : "true";
 
-		MyBlobStore store = new MyBlobStore();
-		String uploadURL = store.createUploadUrl(filename, "/dialoghandler/rest/download/audio.vxml");
+        // Fetch the upload url
+        //String host = this.host.replace("rest/", "");
+        String uuid = UUID.randomUUID().toString();
+        String filename = uuid + ".wav";
+        String storedAudiofile = host + "download/" + filename;
 
-		outputter.startTag("form");
-			outputter.attribute("id", "ComposeMessage");
-			outputter.startTag("record");
-				outputter.attribute("name", "file");
-				outputter.attribute("beep", voiceMailBeep);
-				outputter.attribute("maxtime", voiceMessageLengthProperty);
-				outputter.attribute("dtmfterm", dtmfTerm);
-				//outputter.attribute("finalsilence", "3s");
-				for (String prompt : prompts){
-					outputter.startTag("prompt");
-						outputter.attribute("timeout", "5s");
-						outputter.startTag("audio");
-							outputter.attribute("src", prompt);
-						outputter.endTag();
-					outputter.endTag();
-				}
-				outputter.startTag("noinput");
-					for (String prompt : prompts){
-						outputter.startTag("prompt");
-							outputter.startTag("audio");
-								outputter.attribute("src", prompt);
-							outputter.endTag();
-						outputter.endTag();
-					}
-					/*outputter.startTag("goto");
-						outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
-					outputter.endTag();*/
-				outputter.endTag();
-			outputter.endTag();
-			
-			outputter.startTag("subdialog");
-				outputter.attribute("name", "saveWav");
-				outputter.attribute("src", uploadURL);
-				outputter.attribute("namelist", "file");
-				outputter.attribute("method", "post");
-				outputter.attribute("enctype", "multipart/form-data");
-				outputter.startTag("filled");
-					outputter.startTag("if");
-						outputter.attribute("cond", "saveWav.response='SUCCESS'");
-						outputter.startTag("goto");
-							outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answerInput="+URLEncoder.encode(storedAudiofile, "UTF-8"));
-						outputter.endTag();
-					outputter.startTag("else");
-					outputter.endTag();
-						for (String prompt : prompts){
-							outputter.startTag("prompt");
-								outputter.startTag("audio");
-									outputter.attribute("src", prompt);
-								outputter.endTag();
-							outputter.endTag();
-						}
-					outputter.endTag();
-				outputter.endTag();
-			outputter.endTag();
-		outputter.endTag();
-	}
+        MyBlobStore store = new MyBlobStore();
+        String uploadURL = store.createUploadUrl(filename, "/dialoghandler/rest/download/audio.vxml");
+
+        outputter.startTag("form");
+        outputter.attribute("id", "ComposeMessage");
+            outputter.startTag("record");
+                    outputter.attribute("name", "file");
+                    outputter.attribute("beep", voiceMailBeep);
+                    outputter.attribute("maxtime", voiceMessageLengthProperty);
+                    outputter.attribute("dtmfterm", dtmfTerm);
+                    //outputter.attribute("finalsilence", "3s");
+                    for (String prompt : prompts){
+                            outputter.startTag("prompt");
+                                    outputter.attribute("timeout", "5s");
+                                    outputter.startTag("audio");
+                                            outputter.attribute("src", prompt);
+                                    outputter.endTag();
+                            outputter.endTag();
+                    }
+                    outputter.startTag("noinput");
+                            for (String prompt : prompts){
+                                    outputter.startTag("prompt");
+                                            outputter.startTag("audio");
+                                                    outputter.attribute("src", prompt);
+                                            outputter.endTag();
+                                    outputter.endTag();
+                            }
+                            /*outputter.startTag("goto");
+                                    outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+                            outputter.endTag();*/
+                    outputter.endTag();
+            outputter.endTag();
+        
+            outputter.startTag("subdialog");
+                    outputter.attribute("name", "saveWav");
+                    outputter.attribute("src", uploadURL);
+                    outputter.attribute("namelist", "file");
+                    outputter.attribute("method", "post");
+                    outputter.attribute("enctype", "multipart/form-data");
+                    outputter.startTag("filled");
+                            outputter.startTag("if");
+                                    outputter.attribute("cond", "saveWav.response='SUCCESS'");
+                                    outputter.startTag("goto");
+                                            outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answerInput="+URLEncoder.encode(storedAudiofile, "UTF-8"));
+                                    outputter.endTag();
+                            outputter.startTag("else");
+                            outputter.endTag();
+                                    for (String prompt : prompts){
+                                            outputter.startTag("prompt");
+                                                    outputter.startTag("audio");
+                                                            outputter.attribute("src", prompt);
+                                                    outputter.endTag();
+                                            outputter.endTag();
+                                    }
+                            outputter.endTag();
+                    outputter.endTag();
+            outputter.endTag();
+        outputter.endTag();
+    }
+	        
 	
 	private Response handleQuestion(Question question, String adapterID,String remoteID,String sessionKey)
 	{

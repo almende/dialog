@@ -369,6 +369,19 @@ public class VoiceXMLRESTProxy {
             extras.put( "sessionKey", sessionKey );
             question = question.event( "timeout", "No answer received", extras, responder );
             session.setQuestion( question );
+            if (question != null) {
+                String retryLimit = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT);
+                retryLimit = retryLimit != null ? retryLimit : String.valueOf(Question.DEFAULT_MAX_QUESTION_LOAD);
+                Integer retryCount = session.getRetryCount();
+                retryCount = retryCount != null ? retryCount : 0;
+                if (retryCount < Integer.parseInt(retryLimit)) {
+                    session.setRetryCount(++retryCount);
+                }
+                else {
+                    //hangup so set question to null
+                    question = null;
+                }
+            }
             session.storeSession();
             return handleQuestion( question, session.getAdapterConfig().getConfigId(), responder, sessionKey );
         }
@@ -426,9 +439,12 @@ public class VoiceXMLRESTProxy {
                                                              session.getReleaseTimestamp());
                 timeMap.put("referredCalledId", session.getExtras().get("referredCalledId"));
                 timeMap.put("sessionKey", session.getKey());
+                if(session.getExtras() != null && !session.getExtras().isEmpty()) {
+                    timeMap.putAll(session.getExtras());
+                }
                 handleQuestion(null, session.getAdapterConfig().getConfigId(), session.getRemoteAddress(),
                                session.getKey());
-                session.getQuestion().event("hangup", "Hangup", session.getExtras(), session.getRemoteAddress());
+                session.getQuestion().event("hangup", "Hangup", timeMap, session.getRemoteAddress());
                 DDRWrapper.log(session.getQuestion(), session, "Hangup");
             }
             else {

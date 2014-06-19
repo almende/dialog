@@ -5,16 +5,13 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CLXUSSD;
 import com.almende.dialog.agent.AdapterAgent;
@@ -57,19 +54,23 @@ public class CLXUSSDServlet extends TextServlet {
 
 		}*/
  
-		return 0;
+		return 1;
 	}
 
-	@Override
-	protected int broadcastMessage(String message, String subject, String from,
-			String senderName, Map<String, String> addressNameMap,
-			Map<String, Object> extras, AdapterConfig config) throws Exception {
-		for ( String address : addressNameMap.keySet() )
-        {
-            sendMessage( message, subject, from, senderName, address, addressNameMap.get( address ), extras, config );
+    @Override
+    protected
+        int
+        broadcastMessage(String message, String subject, String from, String senderName,
+                         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config)
+                                                                                                              throws Exception {
+
+        int count = 0;
+        for (String address : addressNameMap.keySet()) {
+            count += sendMessage(message, subject, from, senderName, address, addressNameMap.get(address), extras,
+                                 config);
         }
-		return 0;
-	}
+        return count;
+    }
 	
 
 	
@@ -81,13 +82,13 @@ public class CLXUSSDServlet extends TextServlet {
 //		Session ses = Session.getSession(AdapterAgent.ADAPTER_TYPE_USSD, "", getTo(postBody));
 		
 		 
-		System.out.println("message resieved: "+ postBody );
+		log.info("message resieved: "+ postBody );
 		
 		if(postBody.contains("open_session")){
 			String sessionId = getSessionId(postBody);
 			
 			resp.getWriter().println("<?xml version=\"1.0\"?>	<umsprot version=\"1\"><prompt_req reqid=\"0\" sessionid=\"" + sessionId+ "\">Carl, which is your favorite band? 1. The Rolling Stones 2. The XX 3. Joy Division</prompt_req></umsprot>");
-			System.out.println("responded with session id:"+sessionId);
+			log.info("responded with session id:"+sessionId);
 			return null;
 		}
 		
@@ -193,7 +194,7 @@ public class CLXUSSDServlet extends TextServlet {
 	}
 	
 	private TextMessage buildMessageFromXML(String xml) {
-		System.out.println("input xml :" + xml+" :end");
+		log.info("input xml :" + xml+" :end");
 		TextMessage msg = new TextMessage();
 		try {
 			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();

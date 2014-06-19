@@ -4,16 +4,13 @@ import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.ws.rs.core.MediaType;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
-import com.sun.jersey.api.client.filter.LoggingFilter;
 import com.thetransactioncompany.cors.HTTPMethod;
 
 public class Notificare {
@@ -38,7 +35,6 @@ public class Notificare {
     		jsonMap.put( "sound","default");
     		
     		Client client = ParallelInit.getClient();
-    		client.addFilter(new LoggingFilter(System.out));
     		WebResource webResource = client.resource(serverUrl) ;
     		webResource.addFilter(new HTTPBasicAuthFilter(config.getAccessToken(),config.getAccessTokenSecret() ));
             

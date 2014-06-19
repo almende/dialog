@@ -329,7 +329,7 @@ abstract public class TextServlet extends HttpServlet {
                 }
             }
             else {
-                sessionKeyMap.put("Ërror", "Question JSON not found in url: " + url);
+                sessionKeyMap.put("Error", "Question JSON not found in url: " + url);
             }
             return sessionKeyMap;
 	}

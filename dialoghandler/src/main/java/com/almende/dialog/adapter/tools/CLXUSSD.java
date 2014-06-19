@@ -1,19 +1,24 @@
+
 package com.almende.dialog.adapter.tools;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSession;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.util.ParallelInit;
@@ -34,61 +39,62 @@ public class CLXUSSD {
 //	private static String server = "http://93.158.78.4:3800";
 //	private static String server_bu = "http://195.84.167.34:3800";   // backup http server of clx ussd
 	private static String server_ssl = "https://93.158.78.4:3801";   // primary https server of clx ussd
-	private static String server_ssl_bu = "https://195.84.167.34:3801";   // backup https server of clx ussd
+//	private static String server_ssl_bu = "https://195.84.167.34:3801";   // backup https server of clx ussd
 //	private static String localdevelopmentServer = "http://localhost:8082/dialoghandler/rest/xssdTest/";
 	private static String keyWord = "AskFastBV_USSDgw0_gpbLurkJ";
 	private static Integer MAX_RETRY_COUNT = 3;
 	
 	
-    public int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
-                           Map<String, Object> extras, AdapterConfig config) throws Exception {
-
-        if (fromName == null)
+    public int sendMessage( String message, String subject, String from, String fromName,
+        String to, String toName, Map<String, Object> extras,AdapterConfig config ) throws Exception
+    {
+        
+        if(fromName==null || fromName=="")
             fromName = from;
 
-        //Change spaces for %20 for the url
-        message = message.replace(" ", "%20");
         // construct the URL for the request
         String url = server_ssl + "/sendsms?username=";
-        url += config.getAccessToken();
+        url += URLEncoder.encode(config.getAccessToken(), "UTF-8") ;
         url += "&password=";
-        url += config.getAccessTokenSecret();
+        url += URLEncoder.encode(config.getAccessTokenSecret(), "UTF-8");
         url += "&from=";
-        url += from;
+        url += URLEncoder.encode(from, "UTF-8");
         url += "&to=";
-        url += to;
+        url += URLEncoder.encode(to, "UTF-8");
         url += "&text=";
-        url += message;
+        url += URLEncoder.encode(message, "UTF-8");
 
         Client client = hostIgnoringClient();
 		WebResource webResource = client.resource(url  );
 
-        if (retryCounter.get(webResource.toString()) == null) {
-            retryCounter.put(webResource.toString(), 0);
+        if ( retryCounter.get( webResource.toString() ) == null )
+        {
+            retryCounter.put( webResource.toString(), 0 );
         }
         HashMap<String, String> queryKeyValue = new HashMap<String, String>();
 
-        while (retryCounter.get(webResource.toString()) != null &&
-               retryCounter.get(webResource.toString()) < MAX_RETRY_COUNT) {
-            try {
-                if (MAX_RETRY_COUNT == 1) {
-                    url = url.replace(server_ssl, server_ssl_bu);
-                    webResource = client.resource(url);
-                }
-
-                String result = sendRequestWithRetry(webResource, queryKeyValue, HTTPMethod.GET, null);
-                log.info(String.format("Send result: %s from USSD with url: %s", result, url));
-                retryCounter.remove(webResource.toString());
+        while ( retryCounter.get( webResource.toString() ) != null
+            && retryCounter.get( webResource.toString() ) < MAX_RETRY_COUNT )
+        {
+            try
+            {
+                String result = sendRequestWithRetry( webResource, queryKeyValue, HTTPMethod.GET,null);
+                log.info( "Send result from USSD: " + result + " url: "+url );
+                retryCounter.remove( webResource.toString() );
                 break;
             }
-            catch (Exception ex) {
-                log.severe("Problems getting Notificare connection out:" + ex.getMessage());
-                Integer retry = retryCounter.get(webResource.toString());
-                retryCounter.put(webResource.toString(), ++retry);
+            catch ( Exception ex )
+            {
+                log.severe( "Problems getting USSD connection out:" + ex.getMessage() + " url: "+ url );
+                Integer retry = retryCounter.get( webResource.toString() );
+                retryCounter.put( webResource.toString(), ++retry );
             }
-        }
-
-        return countMessageParts(message);
+            finally{
+                client.destroy();
+            }
+		}
+        
+        return countMessageParts( message );
     }
     
     // Not used 
@@ -127,50 +133,59 @@ public class CLXUSSD {
     
     // not used CLX does not allow for this
     public String startSubScription(String to, AdapterConfig config) {
+    	
+    	System.out.println("start subscription");
+    	
+    	if ( config.getXsiSubscription() != null && !config.getXsiSubscription().equals( "" ) )
+        {
+			String subId = updateSubscription();
+            if ( subId != null )
+				return subId;
+		}
+    	
+    	//TODO: setup real url
+    	
+    	String URL =  server_ssl+ "/sendsms?username=ASKFastBV_h_ugw0&password=qMA3gBY5&to="+to+"&text="+keyWord+"&from=31624107792";
+    	System.out.println(URL);
+    	
+    	 Client client = ParallelInit.getClient();
+		WebResource webResource = client.resource(URL  );
+         
+		
+		
+         if ( retryCounter.get( webResource.toString() ) == null )
+         {
+             retryCounter.put( webResource.toString(), 0 );
+         }
+         HashMap<String, String> queryKeyValue = new HashMap<String, String>();
 
-        log.info("start subscription");
-
-        if (config.getXsiSubscription() != null && !config.getXsiSubscription().equals("")) {
-            String subId = updateSubscription();
-            if (subId != null)
-                return subId;
-        }
-
-        //TODO: setup real url
-
-        String URL = server_ssl + "/sendsms?username=ASKFastBV_h_ugw0&password=qMA3gBY5&to=" + to + "&text=" + keyWord +
-                     "&from=31624107792";
-
-        Client client = ParallelInit.getClient();
-        WebResource webResource = client.resource(URL);
-
-        if (retryCounter.get(webResource.toString()) == null) {
-            retryCounter.put(webResource.toString(), 0);
-        }
-        HashMap<String, String> queryKeyValue = new HashMap<String, String>();
-
-        while (retryCounter.get(webResource.toString()) != null &&
-               retryCounter.get(webResource.toString()) < MAX_RETRY_COUNT) {
-            try {
-                String result = sendRequestWithRetry(webResource, queryKeyValue, HTTPMethod.GET, null);
-                log.info(String.format("Subscription result: %s from USSD with url: %s", result, URL));
-                //flush retryCount
-                retryCounter.remove(webResource.toString());
-                String subId = getSubscriptionId(result);
-                if (subId != null) {
-                    if (AdapterConfig.updateSubscription(config.getConfigId(), subId))
-
-                        return subId;
-                }
-                break;
-            }
-            catch (Exception ex) {
-                log.severe("Problems getting USSD connection out:" + ex.getMessage());
-                Integer retry = retryCounter.get(webResource.toString());
-                retryCounter.put(webResource.toString(), ++retry);
-            }
-        }
-        return null;
+         while ( retryCounter.get( webResource.toString() ) != null
+             && retryCounter.get( webResource.toString() ) < MAX_RETRY_COUNT )
+         {
+             try
+             {
+                 String result = sendRequestWithRetry( webResource, queryKeyValue, HTTPMethod.GET, null);
+                 log.info( "Subscription result from USSD: " + result );
+                 //flush retryCount
+                 retryCounter.remove( webResource.toString() );
+                 String subId = getSubscriptionId( result );
+                 if ( subId != null )
+                 {
+                     if ( AdapterConfig.updateSubscription( config.getConfigId(), subId ) )
+                    	
+ 					return subId;
+ 			}
+                 break;
+             }
+             catch ( Exception ex )
+             {
+                 log.severe( "Problems getting USSD connection out:" + ex.getMessage() );
+                 Integer retry = retryCounter.get( webResource.toString() );
+                 retryCounter.put( webResource.toString(), ++retry );
+             }
+ 		}
+		return null;
+    	
     }
     
     // not used because CLX api does not allow for this

@@ -3,9 +3,7 @@ package com.almende.dialog.agent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
-
 import org.jivesoftware.smack.XMPPException;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.MailServlet;
@@ -526,31 +524,29 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return config;
 	}
 	
-    public Object updateAdapter( @Name( "accoutId" ) String accountId, @Name( "adapterId" ) String adapterId,
-        @Name( "adapter" ) Adapter adapter ) throws Exception
-    {
-        AdapterConfig config = (AdapterConfig) getAdapter( accountId, adapterId );
-        if ( config != null )
-        {
-            if ( adapter.getInitialAgentURL() != null )
-            {
-                config.setInitialAgentURL(adapter.getInitialAgentURL() );
+    public Object updateAdapter(@Name("accoutId") String accountId, @Name("adapterId") String adapterId,
+                                @Name("adapter") Adapter adapter) throws Exception {
+
+        AdapterConfig config = (AdapterConfig) getAdapter(accountId, adapterId);
+        if (config != null) {
+            if (adapter.getInitialAgentURL() != null) {
+                config.setInitialAgentURL(adapter.getInitialAgentURL());
             }
-            if ( adapter.isAnonymous() != null )
-            {
-                config.setAnonymous( adapter.isAnonymous() );
+            if (adapter.isAnonymous() != null) {
+                config.setAnonymous(adapter.isAnonymous());
             }
-            if ( adapter.getDialogId() != null )
-            {
-                config.setDialogId( adapter.getDialogId() );
+            if (adapter.getDialogId() != null) {
+                config.setDialogId(adapter.getDialogId());
+            }
+            if (adapter.getAccountType() != null) {
+                config.setAccountType(adapter.getAccountType());
             }
             config.update();
             return config;
         }
-        else
-        {
-            throw new Exception( String.format( "Adapter: %s with address:%s probably does not belong to account: %s",
-                adapter, adapter.getMyAddress(), accountId ) );
+        else {
+            throw new Exception(String.format("Adapter: %s with address:%s probably does not belong to account: %s",
+                                              adapter, adapter.getMyAddress(), accountId));
         }
     }
 	

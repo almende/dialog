@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Ask.Bootstrap</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ask Bootstrap: a compilation of frameworks with handy scripts and styles, ready for cooking a new project or web app immediately.">
+    <meta name="author" content="Compiled and maintained by Cengiz Ulusoy. Refer to 'copyrights' section for licences of the components used in this project.">
+
+    <!-- Le styles -->
+    <link href="/src/css/bootstrap.css" rel="stylesheet">
+    <link href="/src/css/responsive.css" rel="stylesheet">
+    
+    <link href="/docs/js/google/prettify/prettify.css" rel="stylesheet">
+    
+    <link href="/docs/css/docs.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+    <!-- Le fav and touch icons -->
+    <link rel="shortcut icon" href="/src/img/ico/favicon.ico">
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/src/img/ico/apple-touch-icon-144-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="/src/img/ico/apple-touch-icon-114-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/src/img/ico/apple-touch-icon-72-precomposed.png">
+    <link rel="apple-touch-icon-precomposed" href="/src/img/ico/apple-touch-icon-57-precomposed.png">
+    
+  </head>
+
+  <body>
+
+    <!-- Navbar
+    ================================================== -->
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="/docs/index.html">Ask.Bootstrap</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="">
+                <a href="/docs/index.html">Home</a>
+              </li>
+              <li class="">
+                <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+              </li>
+              <li class="">
+                <a href="/docs/base-css/typography.html">Base CSS</a>
+              </li>
+              <li class="">
+                <a href="/docs/components/dropdowns.html">Components</a>
+              </li>
+              <li class="active">
+                <a href="/docs/javascript/overview.html">JavaScript</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- Subhead
+================================================== -->
+<header class="jumbotron subhead">
+  <div class="container">
+    <h1>JavaScript</h1>
+    <p class="lead">Bring Bootstrap's components to life&mdash;now with 13 custom jQuery plugins.
+  </div>
+</header>
+
+  <div class="container">
+
+    <!-- Docs nav
+    ================================================== -->
+    <div class="row">
+      <div class="span3">
+        <ul class="nav nav-tabs nav-stacked">
+          <li><a href="/docs/javascript/overview.html"><i class="icon-chevron-right"></i> Overview</a></li>
+          <li><a href="/docs/javascript/transitions.html"><i class="icon-chevron-right"></i> Transitions</a></li>
+          <li><a href="/docs/javascript/modals.html"><i class="icon-chevron-right"></i> Modal</a></li>
+          <li><a href="/docs/javascript/dropdowns.html"><i class="icon-chevron-right"></i> Dropdown</a></li>
+          <li><a href="/docs/javascript/scrollspy.html"><i class="icon-chevron-right"></i> Scrollspy</a></li>
+          <li><a href="/docs/javascript/tabs.html"><i class="icon-chevron-right"></i> Tab</a></li>
+          <li><a href="/docs/javascript/tooltips.html"><i class="icon-chevron-right"></i> Tooltip</a></li>
+          <li><a href="/docs/javascript/popovers.html"><i class="icon-chevron-right"></i> Popover</a></li>
+          <li><a href="/docs/javascript/alerts.html"><i class="icon-chevron-right"></i> Alert</a></li>
+          <li><a href="/docs/javascript/buttons.html"><i class="icon-chevron-right"></i> Button</a></li>
+          <li><a href="/docs/javascript/collapse.html"><i class="icon-chevron-right"></i> Collapse</a></li>
+          <li><a href="/docs/javascript/carousel.html"><i class="icon-chevron-right"></i> Carousel</a></li>
+          <li><a href="/docs/javascript/typeahead.html"><i class="icon-chevron-right"></i> Typeahead</a></li>
+          <li><a href="/docs/javascript/affix.html"><i class="icon-chevron-right"></i> Affix</a></li>
+          <li><a href="/docs/javascript/tables.html"><i class="icon-chevron-right"></i> Tables</a></li>
+          <li class="active"><a href="/docs/javascript/daterange.html"><i class="icon-chevron-right"></i> Date Range</a></li>
+          <li><a href="/docs/javascript/chosen.html"><i class="icon-chevron-right"></i> Chosen</a></li>
+        </ul>
+      </div>
+      <div class="span9">
+
+
+          <!-- Affix
+          ================================================== -->
+          <section id="tables">
+            <div class="page-header">
+              <h1>Date Range Picker <small>daterangepicker.js</small></h1>
+            </div>
+            
+            <h2>Credits</h2>
+            <p>
+						  <strong>Author:</strong> <a class="external" href="http://www.dangrossman.info/" target="_new">Dan Grossman</a><br>
+							<strong>Version:</strong> 1.0<br>
+							<strong>Licence:</strong> Licensed under Apache License v2.0
+						</p>
+
+            <hr class="bs-docs-separator">
+
+            <h2>Introduction</h2>
+            <p>
+							For basic use cases like collecting event or reservation dates, you can attach it to a text input to pop up two clickable calendars to choose dates from. For more advanced use cases, you can attach a date range picker to any element, pre-define your own date ranges for the user to choose from, and set a custom callback function to receive the chosen dates.
+						</p>
+						<p>The date range picker relies on jQuery, Datejs for parsing strings into dates and defining custom ranges, and the Twitter Bootstrap CSS.</p>
+
+            <hr class="bs-docs-separator">
+
+            <h2>Usage</h2>
+            
+            <h3>Simple example</h3>
+            
+				<div class="well">
+
+					<form class="form-horizontal">
+					  <fieldset>
+					    <div class="control-group">
+					      <label class="control-label" for="reservation">Reservation dates:</label>
+					      <div class="controls">
+					        <div class="input-prepend">
+					          <span class="add-on"><i class="icon-calendar"></i></span><input type="text" name="reservation" id="reservation" />
+					        </div>
+					      </div>
+					    </div>
+					  </fieldset>
+					</form>
+					
+				</div>
+
+<pre class="prettyprint linenums">
+$('#element').daterangepicker(options, callback);
+</pre>
+						
+						<p>The examples below show how to use the (optional) options and callback parameters.</p>
+
+<pre class="prettyprint linenums">
+&lt;form class="form-horizontal"&gt;
+  &lt;fieldset&gt;
+    &lt;div class="control-group"&gt;
+      &lt;label class="control-label" for="reservation"&gt;Reservation dates:&lt;/label&gt;
+      &lt;div class="controls"&gt;
+        &lt;div class="input-prepend"&gt;
+          &lt;span class="add-on"&gt;&lt;i class="icon-calendar"&gt;&lt;/i&gt;&lt;/span&gt;&lt;input type="text" name="reservation" id="reservation" /&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/fieldset&gt;
+&lt;/form&gt;
+ 
+&lt;script type="text/javascript"&gt;
+$(document).ready(function() {
+    $('#reservation').daterangepicker();
+});
+&lt;/script&gt; 
+</pre>
+						
+						<h3>Pre-defined Ranges &amp; Callback Example</h3>
+
+						<div class="well">
+		
+						    <div id="reportrange" class="pull-right" style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc;">
+						        <i class="icon-calendar icon-large"></i>
+						        <span></span> <b class="caret" style="margin-top: 8px"></b>
+						    </div>
+		
+						</div>
+				
+						<p>Start by telling tablesorter to sort your table when the document is loaded:</p>
+
+<pre class="prettyprint linenums">
+&lt;div id="reportrange" class="pull-right"&gt;
+    &lt;i class="icon-calendar icon-large"&gt;&lt;/i&gt;
+    &lt;span&gt;&lt;?php echo date("F j, Y", strtotime('-30 day')); ?&gt; - &lt;?php echo date("F j, Y"); ?&gt;&lt;/span&gt; &lt;b class="caret"&gt;&lt;/b&gt;
+&lt;/div&gt;
+ 
+&lt;script type="text/javascript"&gt;
+$('#reportrange').daterangepicker(
+    {
+        ranges: {
+            'Today': ['today', 'today'],
+            'Yesterday': ['yesterday', 'yesterday'],
+            'Last 7 Days': [Date.today().add({ days: -6 }), 'today'],
+            'Last 30 Days': [Date.today().add({ days: -29 }), 'today'],
+            'This Month': [Date.today().moveToFirstDayOfMonth(), Date.today().moveToLastDayOfMonth()],
+            'Last Month': [Date.today().moveToFirstDayOfMonth().add({ months: -1 }), Date.today().moveToFirstDayOfMonth().add({ days: -1 })]
+        }
+    }, 
+    function(start, end) {
+        $('#reportrange span').html(start.toString('MMMM d, yyyy') + ' - ' + end.toString('MMMM d, yyyy'));
+    }
+);
+&lt;/script&gt;
+</pre>
+					
+					
+					
+					
+					
+					        </section>
+
+
+
+      </div>
+    </div>
+
+  </div>
+
+
+
+    <!-- Footer
+    ================================================== -->
+    <footer class="footer">
+      <div class="container" style="font-size:12px;">
+        <p class="pull-right"><a href="#">Back to top</a><br><br></p>
+        
+        <p>Ask.Bootstrap (v 0.1.0) is a front-end framework combinations of mainly <a href="http://html5boilerplate.com/">HTML5 Boilerplate</a>, <a href="http://twitter.github.com/bootstrap/">Twitter Bootstrap</a> with other additional handy libraries.<br>
+        Project is maintained by <a href="http://www.twitter.com/cengizism" target="_blank">Cengiz Ulusoy</a> at <a href="http://www.ask-cs.nl/" target="_blank">Ask Community Systems</a>, Rotterdam.<br>
+        Please read <a href="/docs/index.html#copyrights">copyrights</a> section for more information about the creators of the frameworks and components used in this project.</p>
+        
+        <ul class="footer-links">
+          <li class="">
+            <a href="/docs/index.html">Home</a>
+          </li>
+          <li class="">
+            <a href="/docs/scaffolding/global_styles.html">Scaffolding</a>
+          </li>
+          <li class="">
+            <a href="/docs/base-css/typography.html">Base CSS</a>
+          </li>
+          <li class="">
+            <a href="/docs/components/dropdowns.html">Components</a>
+          </li>
+          <li class="">
+            <a href="/docs/javascript/overview.html">JavaScript</a>
+          </li>
+        </ul>
+        
+      </div>
+    </footer>
+
+
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    
+    <script src="/src/js/libs/jquery/jquery.js"></script>
+    <script src="/src/js/libs/bootstrap/bootstrap.js"></script>
+    <script src="/src/js/libs/vendor/prefixfree.min.js"></script>
+    
+    <script src="/docs/js/google/prettify/prettify.js"></script>
+    
+    <script src="/src/js/libs/vendor/date.js"></script>
+    <script src="/src/js/libs/vendor/daterangepicker.js"></script>
+    
+    <script src="/src/js/main.js"></script>
+    
+    <script src="/docs/js/application.js"></script>
+
+					<script type="text/javascript">
+					$(document).ready(function() {
+						$('#reservation').daterangepicker();
+						$('#reportrange').daterangepicker(
+							{
+								ranges: {
+									'Today': ['today', 'today'],
+									'Yesterday': ['yesterday', 'yesterday'],
+									'Last 7 Days': [Date.today().add({ days: -6 }), 'today'],
+									'Last 30 Days': [Date.today().add({ days: -29 }), 'today'],
+									'This Month': [Date.today().moveToFirstDayOfMonth(), Date.today().moveToLastDayOfMonth()],
+									'Last Month': [Date.today().moveToFirstDayOfMonth().add({ months: -1 }), Date.today().moveToFirstDayOfMonth().add({ days: -1 })]
+								},
+								opens: 'left',
+								format: 'MM/dd/yyyy',
+								startDate: Date.today().add({ days: -29 }),
+								endDate: Date.today(),
+								minDate: '01/01/2012',
+								maxDate: '12/31/2013',
+						        	locale: {
+						            		applyLabel: 'Submit',
+						           		fromLabel: 'From',
+						            		toLabel: 'To',
+						            		customRangeLabel: 'Custom Range',
+						            		daysOfWeek: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr','Sa'],
+						            		monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+						            		firstDay: 1
+						        	}
+							}, 
+							function(start, end) {
+								$('#reportrange span').html(start.toString('MMMM d, yyyy') + ' - ' + end.toString('MMMM d, yyyy'));
+							}
+						);
+
+						//Set the initial state of the picker label
+						$('#reportrange span').html(Date.today().add({ days: -29 }).toString('MMMM d, yyyy') + ' - ' + Date.today().toString('MMMM d, yyyy'));
+					});
+					</script>
+
+  </body>
+</html>

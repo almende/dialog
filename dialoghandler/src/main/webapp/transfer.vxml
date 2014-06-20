@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<vxml version="2.1">
+
+<form>
+  <block>
+    <prompt>
+      <audio src="/dialoghandler/WaitSound.wav"/>
+      <audio src="/dialoghandler/WaitSound.wav"/>
+      <audio src="/dialoghandler/WaitSound.wav"/>
+      <audio src="/dialoghandler/WaitSound.wav"/>
+      <audio src="/dialoghandler/WaitSound.wav"/>
+      <audio src="/dialoghandler/WaitSound.wav"/>
+    </prompt>
+  </block>
+</form>
+</vxml>

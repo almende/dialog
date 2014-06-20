@@ -43,10 +43,8 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.util.ParallelInit;
+import com.almende.util.myBlobstore.MyBlobStore;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
 
 @Path("/vxml/")
 public class VoiceXMLRESTProxy {
@@ -763,37 +761,6 @@ public class VoiceXMLRESTProxy {
      */
     @GET
     @Path( "retry" )
-    public Response retryQuestion( @QueryParam( "sessionKey" ) String sessionKey,
-        @QueryParam( "question_id" ) String questionId ) throws Exception
-    {
-        String resultQuestion = "";
-        Session session = Session.getSession( sessionKey );
-        if ( questionId != null && sessionKey != null )
-        {
-            resultQuestion = Session.getString(questionId + "_" + sessionKey);
-        }
-        else if ( sessionKey != null )
-        {
-            resultQuestion = Session.getString( "question_" + session.getRemoteAddress() + "_"
-                + session.getLocalAddress() );
-        }
-        if(resultQuestion != null)
-        {
-            Question question = ServerUtils.deserialize( resultQuestion, false, Question.class );
-            return handleQuestion( question, session.getAdapterID(), session.getRemoteAddress(), sessionKey );
-        }
-        return Response.ok( "" ).build();
-    }
-
-    /**
-     * simple endpoint for repeating a question based on its session and question id
-     * @param sessionKey
-     * @param questionId
-     * @return
-     * @throws Exception 
-     */
-    @GET
-    @Path( "retry" )
     public Response retryQuestion( @QueryParam( "sessionKey" ) String sessionKey ) throws Exception
     {
         Session session = Session.getSession( sessionKey );
@@ -1169,87 +1136,85 @@ public class VoiceXMLRESTProxy {
     protected void renderVoiceMailQuestion( Question question, ArrayList<String> prompts, String sessionKey,
         XMLOutputter outputter ) throws IOException, UnsupportedEncodingException
     {
-        //assign a default voice mail length if one is not specified
-        String voiceMessageLengthProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_LENGTH );
-        voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
-        if(!voiceMessageLengthProperty.endsWith("s"))
-        {
-            log.warning("Voicemail length must be end with 's'. E.g. 40s. Found: "+ voiceMessageLengthProperty);
-            voiceMessageLengthProperty += "s";
-        }
-        
-        String dtmfTerm = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.DTMF_TERMINATE );
-        dtmfTerm = dtmfTerm != null ? dtmfTerm : "true";
-        String voiceMailBeep = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_BEEP );
-        voiceMailBeep = voiceMailBeep != null ? voiceMailBeep : "true";
-        
-        // Fetch the upload url
-        String storedAudiofile = this.host+"upload/"+UUID.randomUUID().toString()+".wav";
-        Client client = ParallelInit.getClient();
-        WebResource webResource = client.resource(storedAudiofile+"?url");
-        String uploadURL = "";
-        try {
-            uploadURL = webResource.type("application/json").get(String.class);
-        } catch(Exception e){
-        }
-        uploadURL = uploadURL.replace(this.host, "/");
-        
-        outputter.startTag("form");
-            outputter.attribute("id", "ComposeMessage");
-            outputter.startTag("record");
-                outputter.attribute("name", "file");
-                outputter.attribute("beep", voiceMailBeep);
-                outputter.attribute("maxtime", voiceMessageLengthProperty);
-                outputter.attribute("dtmfterm", dtmfTerm);
-                //outputter.attribute("finalsilence", "3s");
-                for (String prompt : prompts){
-                    outputter.startTag("prompt");
-                        outputter.attribute("timeout", "5s");
-                        outputter.startTag("audio");
-                            outputter.attribute("src", prompt);
-                        outputter.endTag();
-                    outputter.endTag();
-                }
-                outputter.startTag("noinput");
-                    for (String prompt : prompts){
-                        outputter.startTag("prompt");
-                            outputter.startTag("audio");
-                                outputter.attribute("src", prompt);
-                            outputter.endTag();
-                        outputter.endTag();
-                    }
-                    /*outputter.startTag("goto");
-                        outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
-                    outputter.endTag();*/
-                outputter.endTag();
-            outputter.endTag();
-            
-            outputter.startTag("subdialog");
-                outputter.attribute("name", "saveWav");
-                outputter.attribute("src", uploadURL);
-                outputter.attribute("namelist", "file");
-                outputter.attribute("method", "post");
-                outputter.attribute("enctype", "multipart/form-data");
-                outputter.startTag("filled");
-                    outputter.startTag("if");
-                        outputter.attribute("cond", "saveWav.response='SUCCESS'");
-                        outputter.startTag("goto");
-                            outputter.attribute("next", getAnswerUrl()+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answer_input="+URLEncoder.encode(storedAudiofile, "UTF-8"));
-                        outputter.endTag();
-                    outputter.startTag("else");
-                    outputter.endTag();
-                        for (String prompt : prompts){
-                            outputter.startTag("prompt");
-                                outputter.startTag("audio");
-                                    outputter.attribute("src", prompt);
-                                outputter.endTag();
-                            outputter.endTag();
-                        }
-                    outputter.endTag();
-                outputter.endTag();
-            outputter.endTag();
-        outputter.endTag();
-    }
+		//assign a default voice mail length if one is not specified
+		String voiceMessageLengthProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_LENGTH );
+		voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
+		if(!voiceMessageLengthProperty.endsWith("s"))
+		{
+			log.warning("Voicemail length must be end with 's'. E.g. 40s. Found: "+ voiceMessageLengthProperty);
+			voiceMessageLengthProperty += "s";
+		}
+
+		String dtmfTerm = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.DTMF_TERMINATE );
+		dtmfTerm = dtmfTerm != null ? dtmfTerm : "true";
+		String voiceMailBeep = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_BEEP );
+		voiceMailBeep = voiceMailBeep != null ? voiceMailBeep : "true";
+
+		// Fetch the upload url
+		//String host = this.host.replace("rest/", "");
+		String uuid = UUID.randomUUID().toString();
+		String filename = uuid+".wav";
+		String storedAudiofile = host+"download/"+filename;
+
+		MyBlobStore store = new MyBlobStore();
+		String uploadURL = store.createUploadUrl(filename, "/dialoghandler/rest/download/audio.vxml");
+
+		outputter.startTag("form");
+			outputter.attribute("id", "ComposeMessage");
+			outputter.startTag("record");
+				outputter.attribute("name", "file");
+				outputter.attribute("beep", voiceMailBeep);
+				outputter.attribute("maxtime", voiceMessageLengthProperty);
+				outputter.attribute("dtmfterm", dtmfTerm);
+				//outputter.attribute("finalsilence", "3s");
+				for (String prompt : prompts){
+					outputter.startTag("prompt");
+						outputter.attribute("timeout", "5s");
+						outputter.startTag("audio");
+							outputter.attribute("src", prompt);
+						outputter.endTag();
+					outputter.endTag();
+				}
+				outputter.startTag("noinput");
+					for (String prompt : prompts){
+						outputter.startTag("prompt");
+							outputter.startTag("audio");
+								outputter.attribute("src", prompt);
+							outputter.endTag();
+						outputter.endTag();
+					}
+					/*outputter.startTag("goto");
+						outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+					outputter.endTag();*/
+				outputter.endTag();
+			outputter.endTag();
+			
+			outputter.startTag("subdialog");
+				outputter.attribute("name", "saveWav");
+				outputter.attribute("src", uploadURL);
+				outputter.attribute("namelist", "file");
+				outputter.attribute("method", "post");
+				outputter.attribute("enctype", "multipart/form-data");
+				outputter.startTag("filled");
+					outputter.startTag("if");
+						outputter.attribute("cond", "saveWav.response='SUCCESS'");
+						outputter.startTag("goto");
+							outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answerInput="+URLEncoder.encode(storedAudiofile, "UTF-8"));
+						outputter.endTag();
+					outputter.startTag("else");
+					outputter.endTag();
+						for (String prompt : prompts){
+							outputter.startTag("prompt");
+								outputter.startTag("audio");
+									outputter.attribute("src", prompt);
+								outputter.endTag();
+							outputter.endTag();
+						}
+					outputter.endTag();
+				outputter.endTag();
+			outputter.endTag();
+		outputter.endTag();
+	}
 	
 	private Response handleQuestion(Question question, String adapterID,String remoteID,String sessionKey)
 	{

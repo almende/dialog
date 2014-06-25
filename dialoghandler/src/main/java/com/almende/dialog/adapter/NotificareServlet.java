@@ -29,7 +29,6 @@ public  class NotificareServlet extends TextServlet {
 	protected int sendMessage(String message, String subject, String from,
 			String fromName, String to, String toName,
 			Map<String, Object> extras, AdapterConfig config) throws Exception{
-		System.out.println("notificare start");
 		
 		Map<String, Object> extra = new HashMap<String,Object>();
 		Session ses = Session.getSession(getAdapterType(),config.getMyAddress(),to);
@@ -76,8 +75,8 @@ public  class NotificareServlet extends TextServlet {
 		if ("POST".equalsIgnoreCase(req.getMethod())) {
 	        responseBody = URLDecoder.decode( CharStreams.toString(req.getReader()),"UTF-8");
 	    }
+		resp.getWriter().println("<p>thanks for you response</p>");
 		message = parseQuestion(responseBody);
-		System.out.println("response body "+responseBody);
 		
 	    return message;
 	}
@@ -92,7 +91,6 @@ public  class NotificareServlet extends TextServlet {
 	      String value = URLDecoder.decode(fields[1], "UTF-8");
 	      map.put(name, value);
 	    }
-	    System.out.println("map: "+map);
 	    Session ses = Session.getSession(map.get("sessionkey"));
 	    message.setBody(map.get("answer"));
 	    message.setAddress(ses.getRemoteAddress());

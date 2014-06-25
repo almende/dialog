@@ -186,7 +186,7 @@ abstract public class TextServlet extends HttpServlet {
             Session.storeString("question_" + address + "_" + localaddress, res.question.toJSON());
         }
         if (question != null) {
-            extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, res.reply, extras);
+            extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, res.reply, sessionKey, extras);
         }
 
         DDRWrapper.log(question, session, "Start", config);
@@ -276,14 +276,13 @@ abstract public class TextServlet extends HttpServlet {
                 }
                 if (config.getAdapterType().equalsIgnoreCase("cm") ||
                     config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                    extras = CMStatus.storeSMSRelatedData(loadAddress, localaddress, config, question, res.reply,
+                    extras = CMStatus.storeSMSRelatedData(loadAddress, localaddress, config, question, res.reply, session.getKey(),
                                                           extras);
                 }
                 session.storeSession();
                 // Add key to the map (for the return)
                 sessionKeyMap.put(loadAddress, session.getKey());
                 sessions.add(session);
-
             }
             else {
                 // Form the question without the responders address, because we don't know which one.
@@ -300,7 +299,7 @@ abstract public class TextServlet extends HttpServlet {
                     if (config.getAdapterType().equalsIgnoreCase("cm") ||
                         config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
                         extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, res.reply,
-                                                              extras);
+                                                              session.getKey(), extras);
                     }
                     //save this session
                     session.storeSession();
@@ -381,209 +380,209 @@ abstract public class TextServlet extends HttpServlet {
 		}
 	}
 	
-	/**
-	 * processes any message (based on a Dialog) and takes actions like sending,
-	 * broadcasting corresponding messages.
-	 * 
-	 * @param msg
-	 * @return
-	 * @throws Exception
-	 */
-	protected int processMessage(TextMessage msg) throws Exception {
-		String localaddress = msg.getLocalAddress();
-		String address = msg.getAddress();
-		String subject = msg.getSubject();
-		String body = msg.getBody();
-		String toName = msg.getRecipientName();
-		String keyword = msg.getKeyword();
-		String fromName = "Ask-Fast";
-		int count = 0;
-		
-            Map<String, Object> extras = msg.getExtras();
-            AdapterConfig config;
-            Session session = Session.getOrCreateSession(getAdapterType() + "|" + localaddress + "|" + address, keyword);
-            // If session is null it means the adapter is not found.
-            if (session == null) {
-                log.info("No session so retrieving config");
-                config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress);
-                if (config.getAdapterType().equalsIgnoreCase("cm") ||
-                    config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                    extras = CMStatus.storeSMSRelatedData(address, localaddress, config, null, getNoConfigMessage(), extras);
-                }
-                count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress, fromName, address, toName,
-                                                   extras, config);
-                // Create new session to store the send in the ddr.
-                session = new Session();
-                session.setDirection("inbound");
-                session.setRemoteAddress(address);
-                session.setTrackingToken(UUID.randomUUID().toString());
-                for (int i = 0; i < count; i++) {
-                    DDRWrapper.log(null, null, session, "Send", config);
-                }
-                session.storeSession();
-                return count;
+    /**
+     * processes any message (based on a Dialog) and takes actions like sending,
+     * broadcasting corresponding messages.
+     * 
+     * @param msg
+     * @return
+     * @throws Exception
+     */
+    protected int processMessage(TextMessage msg) throws Exception {
+
+        String localaddress = msg.getLocalAddress();
+        String address = msg.getAddress();
+        String subject = msg.getSubject();
+        String body = msg.getBody();
+        String toName = msg.getRecipientName();
+        String keyword = msg.getKeyword();
+        String fromName = "Ask-Fast";
+        int count = 0;
+
+        Map<String, Object> extras = msg.getExtras();
+        AdapterConfig config;
+        Session session = Session.getOrCreateSession(getAdapterType() + "|" + localaddress + "|" + address, keyword);
+        // If session is null it means the adapter is not found.
+        if (session == null) {
+            log.info("No session so retrieving config");
+            config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress);
+            if (config.getAdapterType().equalsIgnoreCase("cm") ||
+                config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                extras = CMStatus.storeSMSRelatedData(address, localaddress, config, null, getNoConfigMessage(),
+                                                      session.getKey(), extras);
             }
-    
-            config = session.getAdapterConfig();
-            // TODO: Remove this check, this is now to support backward
-            // compatibility (write patch)
-            if (config == null) {
-                log.info("Session doesn't contain config, so searching it again");
-                config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress, keyword);
-                if (config == null) {
-                    config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress);
-                    try {
-                        if (config.getAdapterType().equalsIgnoreCase("cm") ||
-                            config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                            extras = CMStatus.storeSMSRelatedData(address, localaddress, config, null,
-                                                                  getNoConfigMessage(), extras);
-                        }
-                        count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress, fromName, address,
-                                                           toName, extras, config);
-                    }
-                    catch (Exception ex) {
-                        log.severe(ex.getLocalizedMessage());
-                    }
-                    for (int i = 0; i < count; i++) {
-                        DDRWrapper.log(null, null, session, "Send", config);
-                    }
-                    return count;
-                }
-                session.setAdapterID(config.getConfigId());
-            }
-    
-            String preferred_language = session.getLanguage();
-    
-            EscapeInputCommand escapeInput = new EscapeInputCommand();
-            escapeInput.skip = false;
-            escapeInput.body = body;
-            escapeInput.preferred_language = preferred_language;
-            escapeInput.reply = "I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
-    
-            if (!escapeInput.skip && escapeInput.body.toLowerCase().trim().charAt(0) == '/') {
-                count = processEscapeInputCommand(msg, fromName, config, escapeInput, session);
-                log.info(escapeInput.toString());
-            }
-            if (!escapeInput.skip) {
-                if (escapeInput.preferred_language == null) {
-                    escapeInput.preferred_language = "nl";
-                }
-    
-                Question question = session.getQuestion();
-                boolean start = false;
-                if (question == null) {
-                    if (config.getURLForInboundScenario() != null && config.getURLForInboundScenario().equals("")) {
-                        question = Question.fromURL(this.host + DEMODIALOG, config.getConfigId(), address, localaddress);
-                    }
-                    else {
-                        question = Question.fromURL(config.getURLForInboundScenario(), config.getConfigId(), address,
-                                                    localaddress);
-                    }
-                    session.setDirection("inbound");
-                    DDRWrapper.log(question, session, "Start", config);
-                    start = true;
-                }
-    
-                if (question != null) {
-                    question.setPreferred_language(preferred_language);
-                    // Do not answer a question, when it's the first and the type is
-                    // comment or referral anyway.
-                    if (!(start && (question.getType().equalsIgnoreCase("comment") || question.getType()
-                                                    .equalsIgnoreCase("referral")))) {
-                        question = question.answer(address, config.getConfigId(), null, escapeInput.body, null);
-                    }
-                    Return replystr = formQuestion(question, config.getConfigId(), address);
-                    // fix for bug: #15 https://github.com/almende/dialog/issues/15
-                    escapeInput.reply = URLDecoder.decode(replystr.reply, "UTF-8");
-                    question = replystr.question;
-                    fromName = getNickname(question);
-    
-                    extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, escapeInput.reply,
-                                                          extras);
-                    if (question == null) {
-                        session.drop();
-                        DDRWrapper.log(question, session, "Hangup", config);
-                    }
-                    else {
-                        session.setQuestion(question);
-                        session.storeSession();
-                        DDRWrapper.log(question, session, "Answer", config);
-                    }
-                }
-                else {
-                    log.severe(String.format("Question is null. Couldnt fetch Question from session, nor initialAgentURL: %s nor from demoDialog",
-                                             config.getURLForInboundScenario(), this.host + DEMODIALOG));
-                }
-            }
-    
-            try {
-                count = sendMessageAndAttachCharge(escapeInput.reply, subject, localaddress, fromName, address, toName,
-                                                   extras, config);
-            }
-            catch (Exception ex) {
-                log.severe("Message sending failed. Message: " + ex.getLocalizedMessage());
-            }
+            count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress, fromName, address, toName,
+                                               extras, config);
+            // Create new session to store the send in the ddr.
+            session = new Session();
+            session.setDirection("inbound");
+            session.setRemoteAddress(address);
+            session.setTrackingToken(UUID.randomUUID().toString());
             for (int i = 0; i < count; i++) {
                 DDRWrapper.log(null, null, session, "Send", config);
             }
+            session.storeSession();
             return count;
-	}
+        }
+
+        config = session.getAdapterConfig();
+        // TODO: Remove this check, this is now to support backward
+        // compatibility (write patch)
+        if (config == null) {
+            log.info("Session doesn't contain config, so searching it again");
+            config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress, keyword);
+            if (config == null) {
+                config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress);
+                try {
+                    if (config.getAdapterType().equalsIgnoreCase("cm") ||
+                        config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                        extras = CMStatus.storeSMSRelatedData(address, localaddress, config, null,
+                                                              getNoConfigMessage(), session.getKey(), extras);
+                    }
+                    count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress, fromName, address,
+                                                       toName, extras, config);
+                }
+                catch (Exception ex) {
+                    log.severe(ex.getLocalizedMessage());
+                }
+                for (int i = 0; i < count; i++) {
+                    DDRWrapper.log(null, null, session, "Send", config);
+                }
+                return count;
+            }
+            session.setAdapterID(config.getConfigId());
+        }
+
+        String preferred_language = session.getLanguage();
+
+        EscapeInputCommand escapeInput = new EscapeInputCommand();
+        escapeInput.skip = false;
+        escapeInput.body = body;
+        escapeInput.preferred_language = preferred_language;
+        escapeInput.reply = "I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
+
+        if (!escapeInput.skip && escapeInput.body.toLowerCase().trim().charAt(0) == '/') {
+            count = processEscapeInputCommand(msg, fromName, config, escapeInput, session);
+            log.info(escapeInput.toString());
+        }
+        if (!escapeInput.skip) {
+            if (escapeInput.preferred_language == null) {
+                escapeInput.preferred_language = "nl";
+            }
+
+            Question question = session.getQuestion();
+            boolean start = false;
+            if (question == null) {
+                if (config.getURLForInboundScenario() != null && config.getURLForInboundScenario().equals("")) {
+                    question = Question.fromURL(this.host + DEMODIALOG, config.getConfigId(), address, localaddress);
+                }
+                else {
+                    question = Question.fromURL(config.getURLForInboundScenario(), config.getConfigId(), address,
+                                                localaddress);
+                }
+                session.setDirection("inbound");
+                DDRWrapper.log(question, session, "Start", config);
+                start = true;
+            }
+
+            if (question != null) {
+                question.setPreferred_language(preferred_language);
+                // Do not answer a question, when it's the first and the type is
+                // comment or referral anyway.
+                if (!(start && (question.getType().equalsIgnoreCase("comment") || question.getType()
+                                                .equalsIgnoreCase("referral")))) {
+                    question = question.answer(address, config.getConfigId(), null, escapeInput.body, null);
+                }
+                Return replystr = formQuestion(question, config.getConfigId(), address);
+                // fix for bug: #15 https://github.com/almende/dialog/issues/15
+                escapeInput.reply = URLDecoder.decode(replystr.reply, "UTF-8");
+                question = replystr.question;
+                fromName = getNickname(question);
+
+                extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, escapeInput.reply,
+                                                      session.getKey(), extras);
+                if (question == null) {
+                    session.drop();
+                    DDRWrapper.log(question, session, "Hangup", config);
+                }
+                else {
+                    session.setQuestion(question);
+                    session.storeSession();
+                    DDRWrapper.log(question, session, "Answer", config);
+                }
+            }
+            else {
+                log.severe(String.format("Question is null. Couldnt fetch Question from session, nor initialAgentURL: %s nor from demoDialog",
+                                         config.getURLForInboundScenario(), this.host + DEMODIALOG));
+            }
+        }
+
+        try {
+            count = sendMessageAndAttachCharge(escapeInput.reply, subject, localaddress, fromName, address, toName,
+                                               extras, config);
+        }
+        catch (Exception ex) {
+            log.severe("Message sending failed. Message: " + ex.getLocalizedMessage());
+        }
+        for (int i = 0; i < count; i++) {
+            DDRWrapper.log(null, null, session, "Send", config);
+        }
+        return count;
+    }
 	
     /**
-	 * processses any escape command entered by the user
-	 * @return
-	 */
-	private int processEscapeInputCommand(TextMessage msg, String fromName,
-            AdapterConfig config, EscapeInputCommand escapeInput, Session session)
-            throws Exception {
-        log.info(String.format("escape charecter seen.. input %s",
-                escapeInput.body));
+     * processses any escape command entered by the user
+     * 
+     * @return
+     */
+    private int processEscapeInputCommand(TextMessage msg, String fromName, AdapterConfig config,
+                                          EscapeInputCommand escapeInput, Session session) throws Exception {
+
+        log.info(String.format("escape charecter seen.. input %s", escapeInput.body));
         int result = 0;
         String cmd = escapeInput.body.toLowerCase().substring(1);
         if (cmd.startsWith("language=")) {
             escapeInput.preferred_language = cmd.substring(9);
-            if (escapeInput.preferred_language.indexOf(' ') != -1) escapeInput.preferred_language = escapeInput.preferred_language
-                    .substring(0, escapeInput.preferred_language.indexOf(' '));
-            
-            session.setLanguage( escapeInput.preferred_language );
-            
-            escapeInput.reply = "Ok, switched preferred language to:"
-                    + escapeInput.preferred_language;
+            if (escapeInput.preferred_language.indexOf(' ') != -1)
+                escapeInput.preferred_language = escapeInput.preferred_language
+                                                .substring(0, escapeInput.preferred_language.indexOf(' '));
+
+            session.setLanguage(escapeInput.preferred_language);
+
+            escapeInput.reply = "Ok, switched preferred language to:" + escapeInput.preferred_language;
             escapeInput.body = "";
-            
-            HashMap<String, String> addressNameMap = new HashMap<String, String>(
-                    1);
+
+            HashMap<String, String> addressNameMap = new HashMap<String, String>(1);
             addressNameMap.put(msg.getAddress(), msg.getRecipientName());
-            Map<String, Object> extras = CMStatus.storeSMSRelatedData(msg.getAddress(),
-                    msg.getLocalAddress(), config, null, escapeInput.reply,
-                    null);
-            result = broadcastMessageAndAttachCharge( escapeInput.reply, msg.getSubject(),
-                    msg.getLocalAddress(), fromName, addressNameMap, extras,
-                    config);
-        } else if (cmd.startsWith("reset")) {
+            Map<String, Object> extras = CMStatus.storeSMSRelatedData(msg.getAddress(), msg.getLocalAddress(), config,
+                                                                      null, session.getKey(), escapeInput.reply, null);
+            result = broadcastMessageAndAttachCharge(escapeInput.reply, msg.getSubject(), msg.getLocalAddress(),
+                                                     fromName, addressNameMap, extras, config);
+        }
+        else if (cmd.startsWith("reset")) {
             session.drop();
         }
-        
+
         else if (cmd.startsWith("help")) {
             String[] command = cmd.split(" ");
             if (command.length == 1) {
-                escapeInput.reply = "The following commands are understood:\n"
-                        + "/help <command>\n" + "/reset \n"
-                        + "/language=<lang_code>\n";
-            } else {
+                escapeInput.reply = "The following commands are understood:\n" + "/help <command>\n" + "/reset \n"
+                                    + "/language=<lang_code>\n";
+            }
+            else {
                 if (command[1].equals("reset")) {
                     escapeInput.reply = "/reset will return you to Charlotte's initial question.";
                 }
-                
+
                 if (command[1].equals("language")) {
                     escapeInput.reply = "/language=<lang_code>, switches the preferred language to the provided lang_code. (e.g. /language=nl)";
                 }
-                
+
                 if (command[1].equals("help")) {
                     escapeInput.reply = "/help <command>, provides a help text about the provided command (e.g. /help reset)";
                 }
             }
-            
+
             escapeInput.skip = true;
         }
         session.storeSession();

@@ -25,6 +25,7 @@ import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.util.ParallelInit;
+import com.askfast.commons.entity.AccountType;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
@@ -269,7 +270,6 @@ abstract public class TextServlet extends HttpServlet {
                 if(loadAddress!=null) {
                     
                     Session session = Session.getOrCreateSession(config, loadAddress);
-                    //Session session = Session.getOrCreateSession(sessionKey, keyword);
                     String preferred_language = session != null ? session.getLanguage() : null;
                     if (preferred_language == null) {
                         preferred_language = config.getPreferred_language();
@@ -314,6 +314,15 @@ abstract public class TextServlet extends HttpServlet {
                     senderName = fromName;
                 }
                 subject = subject != null && !subject.isEmpty() ? subject : "Message from Ask-Fast";
+                //play trial account audio if the account is trial
+                if(config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)){
+                    if (question.getPreferred_language() != null && (question.getPreferred_language().equals("nl") || question.getPreferred_language().equals("nl-nl"))) {
+                        res.reply = "Dit is een proefaccount. Overweeg alstublieft om uw account te upgraden. \n" + res.reply;
+                    }
+                    else {
+                        res.reply = "This is a trial account. Please consider upgrading your account. \n" + res.reply;
+                    }
+                }
                 // fix for bug: #15 https://github.com/almende/dialog/issues/15
                 res.reply = URLDecoder.decode(res.reply, "UTF-8");
                 int count = broadcastMessageAndAttachCharge(res.reply, subject, localaddress, senderName,

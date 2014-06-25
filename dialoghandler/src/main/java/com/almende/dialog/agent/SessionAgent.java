@@ -126,11 +126,14 @@ public class SessionAgent extends Agent {
         //if the ddr is processed succesfully then delete the scheduled task
         Session session = Session.getSession(sessionKey);
         String schedulerId = null;
+        Integer updateSessionScedulerRunCount = updateSessionScedulerRunCount(sessionKey);
         if (session == null || DDRUtils.stopCostsAtCallHangup(sessionKey, true) ||
-            updateSessionScedulerRunCount(sessionKey) >= SESSION_SCHEDULER_MAX_COUNT) {
+            updateSessionScedulerRunCount > SESSION_SCHEDULER_MAX_COUNT) {
             if (!ServerUtils.isInUnitTestingEnvironment()) {
                 schedulerId = getState().get(SESSION_SCHEDULER_NAME_PREFIX + sessionKey, String.class);
-                getScheduler().cancelTask(schedulerId);
+                if (schedulerId != null) {
+                    getScheduler().cancelTask(schedulerId);
+                }
                 getState().remove(SESSION_SCHEDULER_NAME_PREFIX + sessionKey);
             }
             //remove the session if its already processed

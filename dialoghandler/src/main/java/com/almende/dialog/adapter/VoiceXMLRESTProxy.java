@@ -31,6 +31,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
 import com.almende.dialog.DDRWrapper;
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
@@ -44,6 +45,7 @@ import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.myBlobstore.MyBlobStore;
+import com.askfast.commons.entity.AccountType;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 
 @Path("/vxml/")
@@ -57,6 +59,7 @@ public class VoiceXMLRESTProxy {
 	
 	protected String TIMEOUT_URL="timeout";
 	protected String EXCEPTION_URL="exception";
+	private boolean playTrialAccountAudio = false;
 	
 	private String host = "";
 
@@ -267,11 +270,15 @@ public class VoiceXMLRESTProxy {
         Question question = session.getQuestion();
         if(question == null) {
             question = Question.fromURL(url,session.getAdapterConfig().getConfigId(),remoteID,localID);
-            session.setQuestion( question );
         }
         DDRWrapper.log(question,session,"Start",config);
         
         if (session.getQuestion() != null) {
+            //play trial account audio if the account is trial
+            if(config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)){
+                playTrialAccountAudio = true;
+            }
+            session.setQuestion(question);
             //create ddr record
             try {
                 DDRRecord ddrRecord = null;
@@ -281,7 +288,7 @@ public class VoiceXMLRESTProxy {
                 else {
                     ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, remoteID, 1);
                 }
-                session.setDdrRecordId(ddrRecord.getId());
+                session.setDdrRecordId( ddrRecord != null ? ddrRecord.getId() : null);
             }
             catch (Exception e) {
                 String errorMessage = String.format("Creating DDR records failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
@@ -293,7 +300,7 @@ public class VoiceXMLRESTProxy {
             finally {
                 session.storeSession();
             }
-            return handleQuestion( question, config.getConfigId(), remoteID, sessionKey );
+            return handleQuestion( question, config, remoteID, sessionKey );
         }
         else {
             return Response.ok().build();
@@ -336,7 +343,7 @@ public class VoiceXMLRESTProxy {
                 session = Session.getSession( sessionKey );
                 session.setQuestion( question );
                 session.storeSession();
-                return handleQuestion( question, session.getAdapterConfig().getConfigId(), responder, sessionKey );
+                return handleQuestion( question, session.getAdapterConfig(), responder, sessionKey );
             } else {
                 log.warning( "No question found in session!" );
             }
@@ -369,8 +376,21 @@ public class VoiceXMLRESTProxy {
             extras.put( "sessionKey", sessionKey );
             question = question.event( "timeout", "No answer received", extras, responder );
             session.setQuestion( question );
+            if (question != null) {
+                String retryLimit = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT);
+                retryLimit = retryLimit != null ? retryLimit : String.valueOf(Question.DEFAULT_MAX_QUESTION_LOAD);
+                Integer retryCount = session.getRetryCount();
+                retryCount = retryCount != null ? retryCount : 0;
+                if (retryCount < Integer.parseInt(retryLimit)) {
+                    session.setRetryCount(++retryCount);
+                }
+                else {
+                    //hangup so set question to null
+                    question = null;
+                }
+            }
             session.storeSession();
-            return handleQuestion( question, session.getAdapterConfig().getConfigId(), responder, sessionKey );
+            return handleQuestion( question, session.getAdapterConfig(), responder, sessionKey );
         }
         return Response.ok( reply ).build();
     }
@@ -397,7 +417,7 @@ public class VoiceXMLRESTProxy {
 			session = Session.getSession( sessionKey );
 			session.setQuestion( question );
 			session.storeSession();
-			return handleQuestion(question,session.getAdapterID(),responder,sessionKey);
+			return handleQuestion(question,session.getAdapterConfig(),responder,sessionKey);
 		}
 		return Response.ok(reply).build();
 	}
@@ -426,9 +446,11 @@ public class VoiceXMLRESTProxy {
                                                              session.getReleaseTimestamp());
                 timeMap.put("referredCalledId", session.getExtras().get("referredCalledId"));
                 timeMap.put("sessionKey", session.getKey());
-                handleQuestion(null, session.getAdapterConfig().getConfigId(), session.getRemoteAddress(),
-                               session.getKey());
-                session.getQuestion().event("hangup", "Hangup", session.getExtras(), session.getRemoteAddress());
+                if(session.getExtras() != null && !session.getExtras().isEmpty()) {
+                    timeMap.putAll(session.getExtras());
+                }
+                handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(), session.getKey());
+                session.getQuestion().event("hangup", "Hangup", timeMap, session.getRemoteAddress());
                 DDRWrapper.log(session.getQuestion(), session, "Hangup");
             }
             else {
@@ -767,7 +789,8 @@ public class VoiceXMLRESTProxy {
         Session session = Session.getSession( sessionKey );
         if(session.getQuestion() != null)
         {
-            return handleQuestion( session.getQuestion(), session.getAdapterID(), session.getRemoteAddress(), sessionKey );
+            return handleQuestion(session.getQuestion(), session.getAdapterConfig(), session.getRemoteAddress(),
+                                  sessionKey);
         }
         return Response.ok( "" ).build();
     }
@@ -808,7 +831,7 @@ public class VoiceXMLRESTProxy {
 				//question = question.answer(null, adapterID, null, null);
 				break;
 			} else 	if (question.getType().equalsIgnoreCase("referral")) {
-				if(!question.getUrl().startsWith("tel:")) {
+				if(question.getUrl() != null && !question.getUrl().startsWith("tel:")) {
 					question = Question.fromURL(question.getUrl(),adapterID,address);
 					//question = question.answer(null, null, null);
 //					break;
@@ -1216,119 +1239,109 @@ public class VoiceXMLRESTProxy {
                         outputter.endTag();
                     outputter.endTag();
 	}
-	
-	private Response handleQuestion(Question question, String adapterID,String remoteID,String sessionKey)
-	{
-		String result="<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>";
-		Return res = formQuestion(question,adapterID,remoteID);
-		if(question !=null && !question.getType().equalsIgnoreCase("comment"))
-			question = res.question;
-		
-		log.info( "question formed at handleQuestion is: "+ ServerUtils.serializeWithoutException( question ));
-		log.info( "prompts formed at handleQuestion is: "+ res.prompts );
+    
+    private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, String sessionKey) {
 
-        if ( question != null )
-        {
+        String result = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>";
+        Return res = formQuestion(question, adapterConfig.getConfigId(), remoteID);
+        if (question != null && !question.getType().equalsIgnoreCase("comment"))
+            question = res.question;
+        //if the adapter is a trial adapter, add a introductory node
+        if (playTrialAccountAudio) {
+            res.prompts = res.prompts != null ? res.prompts : new ArrayList<String>();
+            String trialAudioURL = getTrialAudioURL(question.getPreferred_language());
+            res.prompts.add(0, trialAudioURL);
+            playTrialAccountAudio = false;
+        }
+        log.info("question formed at handleQuestion is: " + ServerUtils.serializeWithoutException(question));
+        log.info("prompts formed at handleQuestion is: " + res.prompts);
+
+        if (question != null) {
             question.generateIds();
-            Session session = Session.getSession( sessionKey );
-            session.setQuestion( question );
-            session.setRemoteAddress( remoteID );
+            Session session = Session.getSession(sessionKey);
+            session.setQuestion(question);
+            session.setRemoteAddress(remoteID);
             session.storeSession();
-            
+
             //convert all text prompts to speech 
-            if(res.prompts != null)
-            {
-                String language = question.getPreferred_language().contains( "-" ) ? question.getPreferred_language()
-                                                                                   : "nl-nl";
-                String ttsSpeedProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TSS_SPEED );
+            if (res.prompts != null) {
+                String language = question.getPreferred_language().contains("-") ? question.getPreferred_language()
+                                                                                : "nl-nl";
+                String ttsSpeedProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                         MediaPropertyKey.TSS_SPEED);
                 ttsSpeedProperty = ttsSpeedProperty != null ? ttsSpeedProperty : "0";
                 ArrayList<String> promptsCopy = new ArrayList<String>();
-                for ( String prompt : res.prompts )
-                {
-                    if ( !prompt.startsWith( "dtmfKey://" ) )
-                    {
-                        if ( !prompt.endsWith( ".wav" ) )
-                        {
-                            promptsCopy.add( getTTSURL( prompt, language, "wav", ttsSpeedProperty, null ) );
+                for (String prompt : res.prompts) {
+                    if (!prompt.startsWith("dtmfKey://")) {
+                        if (!prompt.endsWith(".wav")) {
+                            promptsCopy.add(getTTSURL(prompt, language, "wav", ttsSpeedProperty, null));
                         }
-                        else
-                        {
-                            promptsCopy.add( prompt );
+                        else {
+                            promptsCopy.add(prompt);
                         }
                     }
                 }
                 res.prompts = promptsCopy;
             }
-            
-            if ( question.getType().equalsIgnoreCase( "closed" ) )
-            {
-                result = renderClosedQuestion( question, res.prompts, sessionKey );
+
+            if (question.getType().equalsIgnoreCase("closed")) {
+                result = renderClosedQuestion(question, res.prompts, sessionKey);
             }
-            else if ( question.getType().equalsIgnoreCase( "open" ) )
-            {
-                result = renderOpenQuestion( question, res.prompts, sessionKey );
+            else if (question.getType().equalsIgnoreCase("open")) {
+                result = renderOpenQuestion(question, res.prompts, sessionKey);
             }
-            else if ( question.getType().equalsIgnoreCase( "referral" ) )
-            {
-                if ( question.getUrl().startsWith( "tel:" ) )
-                {
+            else if (question.getType().equalsIgnoreCase("referral")) {
+                if (question.getUrl() != null && question.getUrl().startsWith("tel:")) {
                     // added for release0.4.2 to store the question in the session,
                     //for triggering an answered event
-                    log.info( String.format( "current session key before referral is: %s and remoteId %s", sessionKey,
-                        remoteID ) );
-                    try
-                    {
-                        String redirectedId = PhoneNumberUtils.formatNumber( question.getUrl().replace( "tel:", "" ),
-                            null );
+                    log.info(String.format("current session key before referral is: %s and remoteId %s", sessionKey,
+                                           remoteID));
+                    try {
+                        String redirectedId = PhoneNumberUtils
+                                                        .formatNumber(question.getUrl().replace("tel:", ""), null);
                         //update url with formatted redirecteId. RFC3966 returns format tel:<blabla> as expected
-                        question.setUrl( PhoneNumberUtils.formatNumber( redirectedId, PhoneNumberFormat.RFC3966 ) );
+                        question.setUrl(PhoneNumberUtils.formatNumber(redirectedId, PhoneNumberFormat.RFC3966));
                         //store the remoteId as its lost while trying to trigger the answered event
                         HashMap<String, String> extras = new HashMap<String, String>();
-                        extras.put( "referredCalledId", redirectedId );
-                        session.getExtras().putAll( extras );
-                        session.setQuestion( question );
-                        session.setRemoteAddress( remoteID );
+                        extras.put("referredCalledId", redirectedId);
+                        session.getExtras().putAll(extras);
+                        session.setQuestion(question);
+                        session.setRemoteAddress(remoteID);
                         //create a new ddr record and session to catch the redirect
-                        Session referralSession = Session.getOrCreateSession(AdapterConfig.getAdapterConfig(adapterID),
-                                                                             redirectedId);
-                        if ( session.getDirection() != null )
-                        {
-                            DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(
-                                AdapterConfig.getAdapterConfig( adapterID ), redirectedId, 1 );
-                            referralSession.setDdrRecordId(ddrRecord.getId() );
-                            referralSession.setDirection( session.getDirection() );
+                        Session referralSession = Session.getOrCreateSession(adapterConfig, redirectedId);
+                        if (session.getDirection() != null) {
+                            DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
+                                                                                                  redirectedId, 1);
+                            referralSession.setDdrRecordId(ddrRecord.getId());
+                            referralSession.setDirection(session.getDirection());
                         }
                         referralSession.storeSession();
                         session.storeSession();
                     }
-                    catch ( Exception e )
-                    {
-                        log.severe( String.format( "Phonenumber: %s is not valid",
-                            question.getUrl().replace( "tel:", "" ) ) );
+                    catch (Exception e) {
+                        log.severe(String.format("Phonenumber: %s is not valid", question.getUrl().replace("tel:", "")));
                     }
-                    result = renderComment( question, res.prompts, sessionKey );
+                    result = renderComment(question, res.prompts, sessionKey);
                 }
             }
-            else if ( res.prompts.size() > 0 )
-            {
-                result = renderComment( question, res.prompts, sessionKey );
+            else if (res.prompts.size() > 0) {
+                result = renderComment(question, res.prompts, sessionKey);
             }
         }
-        else if ( res.prompts.size() > 0 )
-        {
-            result = renderComment( null, res.prompts, sessionKey );
+        else if (res.prompts.size() > 0) {
+            result = renderComment(null, res.prompts, sessionKey);
         }
-        else
-        {
-            log.info( "Going to hangup? So clear Session?" );
+        else {
+            log.info("Going to hangup? So clear Session?");
         }
-		log.info("Sending xml: "+result);
-		return Response.ok(result).build();
-	}
+        log.info("Sending xml: " + result);
+        return Response.ok(result).build();
+    }
 	
-	protected String getAnswerUrl() {
-		return "answer";
-	}
+    protected String getAnswerUrl() {
+
+        return "answer";
+    }
 	
     /**
      * @param startTime
@@ -1369,5 +1382,22 @@ public class VoiceXMLRESTProxy {
         }
         return "http://tts.ask-fast.com/api/parse?text=" + textForSpeech + "&lang=" + language
             + "&codec=" + contentType + "&speed=" + speed + "&format=" + format + "&type=.wav";
+    }
+    
+    /**
+     * returns the baseURL for the audio of the trial account 
+     * @return
+     * @throws Exception
+     */
+    private String getTrialAudioURL(String language) {
+
+        String agentURL = Settings.HOST + "dialoghandler";
+        if (language != null && (language.equals("nl") || language.equals("nl-nl"))) {
+            agentURL += "/nl_trial_message.wav";
+        }
+        else {
+            agentURL += "/en_trial_message.wav";
+        }
+        return agentURL;
     }
 }

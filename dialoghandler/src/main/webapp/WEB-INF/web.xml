@@ -90,6 +90,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<servlet-name>smshandler</servlet-name>
 		<url-pattern>/sms/cm/*</url-pattern>
 	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>NotificareServlet</servlet-name>
+		<servlet-class>com.almende.dialog.adapter.NotificareServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>NotificareServlet</servlet-name>
+		<url-pattern>/push/*</url-pattern>
+	</servlet-mapping>
 
 	<servlet>
 		<servlet-name>asksmshandler</servlet-name>
@@ -144,6 +153,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<servlet-name>xmppservlet</servlet-name>
 		<url-pattern>/xmpp/*</url-pattern>
 	</servlet-mapping>
+<<<<<<< HEAD
 	
 	<servlet>
 		<servlet-name>CLXUSSDServlet</servlet-name>
@@ -153,6 +163,8 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<servlet-name>CLXUSSDServlet</servlet-name>
 		<url-pattern>/ussd/*</url-pattern>
 	</servlet-mapping>
+=======
+>>>>>>> Notificare
 
 	<servlet>
 		<servlet-name>facebookprivateservlet</servlet-name>

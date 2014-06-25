@@ -124,7 +124,9 @@ public class Session{
     public static void drop( String key )
     {
         Session session = getSession( key );
-        session.drop();
+        if (session != null) {
+            session.drop();
+        }
     }
     
     public static Session getOrCreateSession(String key) {

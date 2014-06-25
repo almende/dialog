@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.EventCallback;
@@ -32,6 +31,8 @@ public class CMStatus implements Serializable
     private String code = "";
     private String errorCode = "";
     private String errorDescription = "";
+    private String sessionKey = null;
+    private String accountId = null;
     
     public void store()
     {
@@ -58,26 +59,27 @@ public class CMStatus implements Serializable
      * @param extras
      * @throws Exception
      */
-    public static Map<String, Object> storeSMSRelatedData( String address, String localaddress,
-        AdapterConfig config, Question question, String smsText, Map<String, Object> extras ) throws Exception
-    {
+    public static Map<String, Object> storeSMSRelatedData(String address, String localaddress, AdapterConfig config,
+                                                          Question question, String smsText, String sessionKey,
+                                                          Map<String, Object> extras) throws Exception {
+
         extras = extras != null ? extras : new HashMap<String, Object>();
         // check if SMS delivery notification is requested
-        if ( config.getAdapterType().equalsIgnoreCase( "cm" )
-            || config.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_SMS ) )
-        {
-            String smsStatusKey = generateSMSReferenceKey( config.getConfigId(), localaddress, address );
-            EventCallback deliveryEventCallback = question != null ? question.getEventCallback( "delivered" ) : null;
+        if (config.getAdapterType().equalsIgnoreCase("cm") ||
+            config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+            String smsStatusKey = generateSMSReferenceKey(config.getConfigId(), localaddress, address);
+            EventCallback deliveryEventCallback = question != null ? question.getEventCallback("delivered") : null;
             CMStatus cmStatus = new CMStatus();
-            cmStatus.setAdapterID( config.getConfigId() );
-            cmStatus.setLocalAddress( localaddress );
-            cmStatus.setRemoteAddress( address );
-            cmStatus.setReference( smsStatusKey );
-            cmStatus.setSms( smsText );
-            extras.put( CM.SMS_DELIVERY_STATUS_KEY, smsStatusKey );
-            if ( deliveryEventCallback != null )
-            {
-                cmStatus.setCallback( deliveryEventCallback.getCallback() );
+            cmStatus.setAdapterID(config.getConfigId());
+            cmStatus.setLocalAddress(localaddress);
+            cmStatus.setRemoteAddress(address);
+            cmStatus.setReference(smsStatusKey);
+            cmStatus.setAccountId(config.getOwner());
+            cmStatus.setSessionKey(sessionKey);
+            cmStatus.setSms(smsText);
+            extras.put(CM.SMS_DELIVERY_STATUS_KEY, smsStatusKey);
+            if (deliveryEventCallback != null) {
+                cmStatus.setCallback(deliveryEventCallback.getCallback());
             }
             cmStatus.store();
         }
@@ -203,5 +205,25 @@ public class CMStatus implements Serializable
     public void setLocalAddress( String localAddress )
     {
         this.localAddress = localAddress;
+    }
+    
+    public String getSessionKey() {
+    
+        return sessionKey;
+    }
+    
+    public void setSessionKey(String sessionKey) {
+    
+        this.sessionKey = sessionKey;
+    }
+    
+    public void setAccountId(String accountId) {
+
+        this.accountId  = accountId;
+    }
+    
+    public String getAccountId() {
+
+        return accountId;
     }
 }

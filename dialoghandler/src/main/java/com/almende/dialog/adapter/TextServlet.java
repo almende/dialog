@@ -145,194 +145,201 @@ abstract public class TextServlet extends HttpServlet {
 	}
 	
     /**
-	 * @deprecated use
-	 *             {@link TextServlet#startDialog(Map, String, String, AdapterConfig)
-	 *             startDialog} instead.
-	 */
-	@Deprecated
-	public String startDialog(String address, String url, AdapterConfig config)
-			throws Exception {
-		if (config.getAdapterType().equalsIgnoreCase("CM")
-				|| config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-			address = PhoneNumberUtils.formatNumber(address, null);
-		}
-		String localaddress = config.getMyAddress();
-		String sessionKey = getAdapterType() + "|" + localaddress + "|" + address;
-		Session session = Session.getOrCreateSession(sessionKey, config.getKeyword());
-		if (session == null) {
-			log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? "
-					+ sessionKey);
-			return "";
-		}
-		session.setAccountId( config.getOwner());
-		session.setDirection("outbound");
-		session.setTrackingToken(UUID.randomUUID().toString());
-        String preferred_language = session.getLanguage();
-        if ( preferred_language == null )
-        {
-            preferred_language = config.getPreferred_language();
-            session.setLanguage( preferred_language );
+     * @deprecated use
+     *             {@link TextServlet#startDialog(Map, String, String, AdapterConfig)
+     *             startDialog} instead.
+     */
+    @Deprecated
+    public String startDialog(String address, String url, AdapterConfig config) throws Exception {
+
+        if (config.getAdapterType().equalsIgnoreCase("CM") ||
+            config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+            address = PhoneNumberUtils.formatNumber(address, null);
         }
-		session.storeSession();
-		
-		url = encodeURLParams(url);
-		Question question = Question.fromURL(url, config.getConfigId(), address);
-		
-		question.setPreferred_language(preferred_language);
-		Return res = formQuestion(question, config.getConfigId(), address);
-		String fromName = getNickname(res.question);
-		
-		Map<String, Object> extras = null;
-		if (res.question != null) {
-			Session.storeString("question_" + address + "_" + localaddress,
-					res.question.toJSON());
-		}
-		if (question != null) {
-			extras = CMStatus.storeSMSRelatedData(address, localaddress, config,
-					question, res.reply, extras);
-		}
-		
-		DDRWrapper.log(question, session, "Start", config);
-		int count = sendMessageAndAttachCharge(res.reply, "Message from DH", localaddress,
-				fromName, address, "", extras, config);
-		for (int i = 0; i < count; i++) {
-			DDRWrapper.log(question, session, "Send", config);
-		}
-		return sessionKey;
-	}
+        String localaddress = config.getMyAddress();
+        String sessionKey = getAdapterType() + "|" + localaddress + "|" + address;
+        Session session = Session.getOrCreateSession(sessionKey, config.getKeyword());
+        if (session == null) {
+            log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? " + sessionKey);
+            return "";
+        }
+        session.setAccountId(config.getOwner());
+        session.setDirection("outbound");
+        session.setTrackingToken(UUID.randomUUID().toString());
+        String preferred_language = session.getLanguage();
+        if (preferred_language == null) {
+            preferred_language = config.getPreferred_language();
+            session.setLanguage(preferred_language);
+        }
+        url = encodeURLParams(url);
+        Question question = Question.fromURL(url, config.getConfigId(), address);
+
+        question.setPreferred_language(preferred_language);
+        Return res = formQuestion(question, config.getConfigId(), address);
+        //store the question in the session
+        session.setQuestion(res.question);
+        session.storeSession();
+        String fromName = getNickname(res.question);
+
+        Map<String, Object> extras = null;
+        if (res.question != null) {
+            Session.storeString("question_" + address + "_" + localaddress, res.question.toJSON());
+        }
+        if (question != null) {
+            extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, res.reply, extras);
+        }
+
+        DDRWrapper.log(question, session, "Start", config);
+        int count = sendMessageAndAttachCharge(res.reply, "Message from DH", localaddress, fromName, address, "",
+                                               extras, config);
+        for (int i = 0; i < count; i++) {
+            DDRWrapper.log(question, session, "Send", config);
+        }
+        return sessionKey;
+    }
 	
-	/**
-	 * updated startDialog with Broadcast functionality
-	 * 
-	 * @throws Exception
-	 */
-	public HashMap<String, String> startDialog(
-			Map<String, String> addressNameMap,
-			Map<String, String> addressCcNameMap,
-			Map<String, String> addressBccNameMap, String url,
-			String senderName, String subject, AdapterConfig config)
-			throws Exception {
-	    
-	    
-            senderName = senderName != null ? senderName : "Ask-Fast";
-            addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
-            Map<String, String> formattedAddressNameToMap = new HashMap<String, String>();
-            if (config.getAdapterType().equals("CM") ||
-                config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                for (String address : addressNameMap.keySet()) {
-                    try {
-                        String formattedAddress = PhoneNumberUtils.formatNumber(address, null);
-                        formattedAddressNameToMap.put(formattedAddress, addressNameMap.get(address));
-                    }
-                    catch (Exception e) {
-                        log.warning(String.format("Address: %s is invalid for mode: %s. Ignoring it", address,
-                                                  config.getAdapterType()));
-                    }
+    /**
+     * updated startDialog with Broadcast functionality
+     * 
+     * @throws Exception
+     */
+    public HashMap<String, String> startDialog(Map<String, String> addressNameMap,
+                                               Map<String, String> addressCcNameMap,
+                                               Map<String, String> addressBccNameMap, String url, String senderName,
+                                               String subject, AdapterConfig config) throws Exception {
+
+        senderName = senderName != null ? senderName : "Ask-Fast";
+        addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
+        Map<String, String> formattedAddressNameToMap = new HashMap<String, String>();
+        if (config.getAdapterType().equals("CM") ||
+            config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+            for (String address : addressNameMap.keySet()) {
+                try {
+                    String formattedAddress = PhoneNumberUtils.formatNumber(address, null);
+                    formattedAddressNameToMap.put(formattedAddress, addressNameMap.get(address));
                 }
+                catch (Exception e) {
+                    log.warning(String.format("Address: %s is invalid for mode: %s. Ignoring it", address,
+                                              config.getAdapterType()));
+                }
+            }
+        }
+        else {
+            formattedAddressNameToMap = addressNameMap != null && !addressNameMap.isEmpty() ? addressNameMap
+                                                                                           : (addressCcNameMap != null &&
+                                                                                              !addressCcNameMap.isEmpty() ? addressCcNameMap
+                                                                                                                         : addressBccNameMap);
+        }
+        String localaddress = config.getMyAddress();
+        url = encodeURLParams(url);
+
+        HashMap<String, String> sessionKeyMap = new HashMap<String, String>();
+        ArrayList<Session> sessions = new ArrayList<Session>();
+
+        // If it is a broadcast don't provide the remote address because it is
+        // deceiving.
+        String loadAddress = null;
+        if (formattedAddressNameToMap.size() == 1)
+            loadAddress = formattedAddressNameToMap.keySet().iterator().next();
+
+        // fetch question
+        Question question = Question.fromURL(url, config.getConfigId(), loadAddress);
+        if (question != null) {
+            // store the extra information
+            Map<String, Object> extras = new HashMap<String, Object>();
+            extras.put(Question.MEDIA_PROPERTIES, question.getMedia_properties());
+            // add addresses in cc and bcc map
+            HashMap<String, String> fullAddressMap = new HashMap<String, String>(formattedAddressNameToMap);
+            if (addressCcNameMap != null) {
+                fullAddressMap.putAll(addressCcNameMap);
+                extras.put(MailServlet.CC_ADDRESS_LIST_KEY, addressCcNameMap);
+            }
+            if (addressBccNameMap != null) {
+                fullAddressMap.putAll(addressBccNameMap);
+                extras.put(MailServlet.BCC_ADDRESS_LIST_KEY, addressBccNameMap);
+            }
+
+            Return res = null;
+            if (loadAddress != null) {
+
+                Session session = Session.getOrCreateSession(config, loadAddress);
+                session.setDirection("outbound");
+                session.setAccountId(config.getOwner());
+                String preferred_language = session != null ? session.getLanguage() : null;
+                if (preferred_language == null) {
+                    preferred_language = config.getPreferred_language();
+                }
+                question.setPreferred_language(preferred_language);
+                res = formQuestion(question, config.getConfigId(), loadAddress);
+                if (res.question != null) {
+                    session.setQuestion(res.question);
+                }
+                if (config.getAdapterType().equalsIgnoreCase("cm") ||
+                    config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                    extras = CMStatus.storeSMSRelatedData(loadAddress, localaddress, config, question, res.reply,
+                                                          extras);
+                }
+                session.storeSession();
+                // Add key to the map (for the return)
+                sessionKeyMap.put(loadAddress, session.getKey());
+                sessions.add(session);
+
             }
             else {
-                formattedAddressNameToMap = addressNameMap != null && !addressNameMap.isEmpty() ? addressNameMap
-                                                                                               : (addressCcNameMap != null &&
-                                                                                                  !addressCcNameMap.isEmpty() ? addressCcNameMap
-                                                                                                                             : addressBccNameMap);
-            }
-            String localaddress = config.getMyAddress();            
-            url = encodeURLParams(url);
-    
-            HashMap<String, String> sessionKeyMap = new HashMap<String, String>();
-            ArrayList<Session> sessions = new ArrayList<Session>();
-    
-            // If it is a broadcast don't provide the remote address because it is
-            // deceiving.
-            String loadAddress = null;
-            if (formattedAddressNameToMap.size() == 1)
-                loadAddress = formattedAddressNameToMap.keySet().iterator().next();
-    
-            // fetch question
-            Question question = Question.fromURL(url, config.getConfigId(), loadAddress);
-            if (question != null) {
-                // store the extra information
-                Map<String, Object> extras = new HashMap<String, Object>();
-                extras.put(Question.MEDIA_PROPERTIES, question.getMedia_properties());
-                // add addresses in cc and bcc map
-                HashMap<String, String> fullAddressMap = new HashMap<String, String>(formattedAddressNameToMap);
-                if (addressCcNameMap != null) {
-                    fullAddressMap.putAll(addressCcNameMap);
-                    extras.put(MailServlet.CC_ADDRESS_LIST_KEY, addressCcNameMap);
-                }
-                if (addressBccNameMap != null) {
-                    fullAddressMap.putAll(addressBccNameMap);
-                    extras.put(MailServlet.BCC_ADDRESS_LIST_KEY, addressBccNameMap);
-                }
-                
-                Return res = null;
-                if(loadAddress!=null) {
-                    
-                    Session session = Session.getOrCreateSession(config, loadAddress);
-                    //Session session = Session.getOrCreateSession(sessionKey, keyword);
-                    String preferred_language = session != null ? session.getLanguage() : null;
-                    if (preferred_language == null) {
-                        preferred_language = config.getPreferred_language();
+                // Form the question without the responders address, because we don't know which one.
+                res = formQuestion(question, config.getConfigId(), null);
+                for (String address : fullAddressMap.keySet()) {
+                    // store the session first
+                    Session session = Session.getOrCreateSession(config, address);
+                    session.setAccountId(config.getOwner());
+                    session.setDirection("outbound");
+
+                    if (res.question != null) {
+                        session.setQuestion(res.question);
                     }
-                    question.setPreferred_language(preferred_language);
-                    res = formQuestion(question, config.getConfigId(), loadAddress);
+                    if (config.getAdapterType().equalsIgnoreCase("cm") ||
+                        config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                        extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, res.reply,
+                                                              extras);
+                    }
+                    //save this session
+                    session.storeSession();
                     // Add key to the map (for the return)
-                    sessionKeyMap.put(loadAddress, session.getKey());
+                    sessionKeyMap.put(address, session.getKey());
                     sessions.add(session);
-                    
-                } else {
-                    // Form the question without the responders address, because we don't know which one.
-                    res = formQuestion(question, config.getConfigId(), null);
-                    for (String address : fullAddressMap.keySet()) {
-                        // store the session first
-                        Session session = Session.getOrCreateSession(config, address);
-                        session.setAccountId(config.getOwner());
-                        session.setDirection("outbound");
-        
-                        if (res.question != null) {
-                            session.setQuestion(res.question);
-                        }
-                        if (config.getAdapterType().equalsIgnoreCase("cm") ||
-                            config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                            extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, res.reply, extras);
-                        }
-                        //save this session
-                        session.storeSession();
-                        // Add key to the map (for the return)
-                        sessionKeyMap.put(address, session.getKey());
-                        sessions.add(session);
-                        DDRWrapper.log(question, session, "Start", config);
-                    }
+                    DDRWrapper.log(question, session, "Start", config);
                 }
-                String fromName = getNickname(res.question);
-                log.info(String.format("fromName: %s senderName %s", fromName, senderName));
-                // assign senderName with localAdress, if senderName is missing
-                // priority is as: nickname >> senderName >> myAddress
-                if (fromName == null || fromName.isEmpty()) {
-                    senderName = senderName != null && !senderName.isEmpty() ? senderName : localaddress;
-                } else {
-                    senderName = fromName;
-                }
-                subject = subject != null && !subject.isEmpty() ? subject : "Message from Ask-Fast";
-                // fix for bug: #15 https://github.com/almende/dialog/issues/15
-                res.reply = URLDecoder.decode(res.reply, "UTF-8");
-                int count = broadcastMessageAndAttachCharge(res.reply, subject, localaddress, senderName,
-                                                            formattedAddressNameToMap, extras, config);
-    
-                for (Session session1 : sessions) {
-                    for (int i = 0; i < count; i++) {
-                        DDRWrapper.log(question, session1, "Send", config);
-                    }
-                }
-                if (count < 1) {
-                    log.severe("Error generating XML");
-                }
+            }
+            String fromName = getNickname(res.question);
+            log.info(String.format("fromName: %s senderName %s", fromName, senderName));
+            // assign senderName with localAdress, if senderName is missing
+            // priority is as: nickname >> senderName >> myAddress
+            if (fromName == null || fromName.isEmpty()) {
+                senderName = senderName != null && !senderName.isEmpty() ? senderName : localaddress;
             }
             else {
-                sessionKeyMap.put("Ërror", "Question JSON not found in url: " + url);
+                senderName = fromName;
             }
-            return sessionKeyMap;
-	}
+            subject = subject != null && !subject.isEmpty() ? subject : "Message from Ask-Fast";
+            // fix for bug: #15 https://github.com/almende/dialog/issues/15
+            res.reply = URLDecoder.decode(res.reply, "UTF-8");
+            int count = broadcastMessageAndAttachCharge(res.reply, subject, localaddress, senderName,
+                                                        formattedAddressNameToMap, extras, config);
+
+            for (Session session1 : sessions) {
+                for (int i = 0; i < count; i++) {
+                    DDRWrapper.log(question, session1, "Send", config);
+                }
+            }
+            if (count < 1) {
+                log.severe("Error generating XML");
+            }
+        }
+        else {
+            sessionKeyMap.put("Ërror", "Question JSON not found in url: " + url);
+        }
+        return sessionKeyMap;
+    }
 	
 	public static void killSession(Session session) {
 	    session.drop();

@@ -4,16 +4,13 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Map;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.CMStatus;
@@ -201,7 +198,7 @@ public class CMSmsServlet extends TextServlet {
         log.info( String.format(
             "CM SR: reference: %s, sent: %s, received: %s, to: %s, statusCode: %s errorCode: %s, errorDesc: %s",
             reference, sent, received, to, code, errorCode, errorDescription ) );
-        if ( reference != null )
+        if ( reference != null && !reference.isEmpty() )
         {
             CMStatus cmStatus = CMStatus.fetch( reference );
             if ( cmStatus == null )

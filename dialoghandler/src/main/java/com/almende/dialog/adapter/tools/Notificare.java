@@ -1,7 +1,6 @@
 package com.almende.dialog.adapter.tools;
 
 import java.io.UnsupportedEncodingException;
-
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,7 +8,9 @@ import java.util.logging.Logger;
 
 import javax.ws.rs.core.MediaType;
 
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.NotificareServlet;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.Client;
@@ -23,7 +24,6 @@ public class Notificare {
 	private static final Integer MAX_RETRY_COUNT = 3;
     private static HashMap<String, Integer> retryCounter = new HashMap<String, Integer>();
     private static String serverUrlDevice = "https://push.notifica.re/notification/user/";
-    private static String serveletpath = "sandbox.ask-fast.com/dialoghandler/push";
     private static final Logger log = Logger.getLogger(Notificare.class.getName()); 
 
 	public Notificare(){
@@ -59,11 +59,11 @@ public class Notificare {
     			HashMap<String, Object> yesMap = new HashMap<String, Object>();
     			yesMap.put("type","re.notifica.action.Callback");
     			yesMap.put("label", "Yes");
-    			yesMap.put("target", String.format(serveletpath+"?answer=Yes&sessionkey=%s",
+    			yesMap.put("target", String.format( getEntireServeletPath()+"?answer=Yes&sessionkey=%s",
     					URLEncoder.encode((String) extras.get("sessionKey"),"UTF-8")));
     			noMap.put("type", "re.notifica.action.Callback");
     			noMap.put("label", "No");
-    			noMap.put("target",String.format(serveletpath+"?answer=No&sessionkey=%s",
+    			noMap.put("target",String.format(getEntireServeletPath()+"?answer=No&sessionkey=%s",
     					URLEncoder.encode((String) extras.get("sessionKey"),"UTF-8")) );
     			actions[0]=yesMap;
     			actions[1]=noMap;
@@ -105,6 +105,10 @@ public class Notificare {
     		}  
             return 0; 
         }
+    
+    private String getEntireServeletPath(){
+    	return Settings.HOST+"/dailoghandler"+NotificareServlet.servletPath;
+    }
     
     private String makeHtml(String message, String sessionKey) throws UnsupportedEncodingException{
     	
@@ -167,10 +171,10 @@ public class Notificare {
     			+ "</style> "
     			+ "</head> "
     			+ "<body> "
-    			+ "<form action=\"http://askfastvincent.ngrok.com/dialoghandler/push\" method=\"post\" class=\"basic-grey\">     "
+    			+ "<form action=\""+getEntireServeletPath()+"\" method=\"post\" class=\"basic-grey\">     "
     			+ "<h1>"+URLEncoder.encode(message, "UTF-8")+"</h1>     "
     			+ "<label>         <span>answer :</span>         "
-    			+ "<input id=\"name\" type=\"text\" name=\"answer\"  /> "
+    			+ "<input id=\"answer\" type=\"text\" name=\"answer\"  /> "
     			+ "<input type=\"hidden\" name=\"sessionkey\" value=\""+URLEncoder.encode(sessionKey,"UTF-8")+"\">     </label>     "
     			+ " <label>         <span>&nbsp;</span>         "
     			+ "<input type=\"submit\" class=\"button\" value=\"Send\" />     </label>    "

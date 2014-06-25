@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Notificare;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -23,8 +24,7 @@ public  class NotificareServlet extends TextServlet {
 
 	private static final long serialVersionUID = 1L;
 	protected static final com.almende.dialog.Logger dialogLog =  new com.almende.dialog.Logger();
-	private static final String adapterType = "push";
-	private static final String servletPath = "/push/";
+	public static final String servletPath = "/push/";
 	
 	@Override
 	protected int sendMessage(String message, String subject, String from,
@@ -111,7 +111,7 @@ public  class NotificareServlet extends TextServlet {
 
 	@Override
 	protected String getAdapterType() {
-		return adapterType;
+		return AdapterAgent.ADAPTER_TYPE_PUSH;
 	}
 
 	@Override

@@ -31,7 +31,8 @@ public class CMStatus implements Serializable
     private String code = "";
     private String errorCode = "";
     private String errorDescription = "";
-    private String session = null;
+    private String sessionKey = null;
+    private String accountId = null;
     
     public void store()
     {
@@ -73,7 +74,8 @@ public class CMStatus implements Serializable
             cmStatus.setLocalAddress(localaddress);
             cmStatus.setRemoteAddress(address);
             cmStatus.setReference(smsStatusKey);
-            cmStatus.setSession(sessionKey);
+            cmStatus.setAccountId(config.getOwner());
+            cmStatus.setSessionKey(sessionKey);
             cmStatus.setSms(smsText);
             extras.put(CM.SMS_DELIVERY_STATUS_KEY, smsStatusKey);
             if (deliveryEventCallback != null) {
@@ -205,13 +207,23 @@ public class CMStatus implements Serializable
         this.localAddress = localAddress;
     }
     
-    public String getSession() {
+    public String getSessionKey() {
     
-        return session;
+        return sessionKey;
     }
     
-    public void setSession(String session) {
+    public void setSessionKey(String sessionKey) {
     
-        this.session = session;
+        this.sessionKey = sessionKey;
+    }
+    
+    public void setAccountId(String accountId) {
+
+        this.accountId  = accountId;
+    }
+    
+    public String getAccountId() {
+
+        return accountId;
     }
 }

@@ -16,8 +16,10 @@ import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.CMStatus;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
@@ -271,6 +273,34 @@ public class CMSmsServlet extends TextServlet {
             {
                 log.info( "Reference: " + reference + ". No delivered callback found." );
                 dialogLog.info( cmStatus.getAdapterID(), "No delivered callback found for reference: " + reference );
+            }
+            //fetch ddr corresponding to this
+            if(cmStatus.getSessionKey() != null) {
+                Session session = Session.getSession(cmStatus.getSessionKey());
+                if(session != null && session.getDdrRecordId() != null) {
+                    DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), cmStatus.getAccountId());
+                    if(ddrRecord != null) {
+                        if (errorCode == null || errorCode.isEmpty()) {
+                            ddrRecord.setStatus(CommunicationStatus.DELIVERED);
+                        }
+                        else {
+                            ddrRecord.setStatus(CommunicationStatus.ERROR);
+                            ddrRecord.setAdditionalInfo(cmStatus.getErrorDescription());
+                        }
+                        ddrRecord.createOrUpdate();
+                    }
+                    else {
+                        log.warning(String.format("No ddr record found for id: %s", session.getDdrRecordId()));
+                    }
+                }
+                else {
+                    log.warning(String.format("No session found for id: %s", cmStatus.getSessionKey()));
+                }
+                //drop the session when the callback is seen
+                Session.drop(cmStatus.getSessionKey());
+            }
+            else {
+                log.warning(String.format("No session attached for cm status: %s", cmStatus.getReference()));
             }
             cmStatus.store();
             return cmStatus;

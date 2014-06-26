@@ -271,10 +271,8 @@ abstract public class TextServlet extends HttpServlet {
                     preferred_language = config.getPreferred_language();
                 }
                 question.setPreferred_language(preferred_language);
+                session.setQuestion(question);
                 res = formQuestion(question, config.getConfigId(), loadAddress);
-                if (res.question != null) {
-                    session.setQuestion(res.question);
-                }
 
                 if (config.getAdapterType().equalsIgnoreCase("cm") ||
                     config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
@@ -294,10 +292,8 @@ abstract public class TextServlet extends HttpServlet {
                     Session session = Session.getOrCreateSession(config, address);
                     session.setAccountId(config.getOwner());
                     session.setDirection("outbound");
+                    session.setQuestion(question);
 
-                    if (res.question != null) {
-                        session.setQuestion(res.question);
-                    }
                     if (config.getAdapterType().equalsIgnoreCase("cm") ||
                         config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
                         extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, res.reply,

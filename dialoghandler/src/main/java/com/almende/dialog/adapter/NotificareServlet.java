@@ -18,7 +18,6 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.google.common.io.CharStreams;
 
-
 public  class NotificareServlet extends TextServlet {
 	
 
@@ -30,16 +29,15 @@ public  class NotificareServlet extends TextServlet {
 	protected int sendMessage(String message, String subject, String from,
 			String fromName, String to, String toName,
 			Map<String, Object> extras, AdapterConfig config) throws Exception{
-
 		
 		Map<String, Object> extra = new HashMap<String,Object>();
 		Session ses = Session.getSession(getAdapterType(),config.getMyAddress(),to);
 		extra.put("questionType", ses.getQuestion().getType());
 		extra.put("sessionKey",ses.key);
+		extra.putAll(extras);
 		Notificare notificare = new Notificare();
 		notificare.sendMessage(message, subject, from, fromName, to, toName, extra, config);
 		return 1;
-
 	}
 
 	@Override
@@ -53,7 +51,6 @@ public  class NotificareServlet extends TextServlet {
                                  config);
         }
         return count;
-
 	}
 
 	@Override
@@ -79,13 +76,25 @@ public  class NotificareServlet extends TextServlet {
 		if ("POST".equalsIgnoreCase(req.getMethod())) {
 	        responseBody = URLDecoder.decode( CharStreams.toString(req.getReader()),"UTF-8");
 	    }
-		resp.getWriter().println("<p>thanks for you response</p>");
+		resp.getWriter().println(getHtmlResponse("Thank you for you response"));
 		message = parseQuestion(responseBody);
 		
 	    return message;
 	}
 	
-	TextMessage parseQuestion(String postBody) throws Exception{
+	private String getHtmlResponse(String message){
+		String html = "<html> <head> "
+				+ "<link rel=\"stylesheet\" type=\"text/css\" href=\"http://static.ask-cs.com/askfast/base.css\"> "
+				+ "<link rel=\"stylesheet\" type=\"text/css\" href=\"http://static.ask-cs.com/askfast/layout.css\"> "
+				+ "<link rel=\"stylesheet\" type=\"text/css\"  href=\"http://static.ask-cs.com/askfast/skeleton.css\"> "
+				+ "</head> <div class=\"container\" >"
+				+ "<div class=\"sixteen columns\">"
+				+ "<h4>"+message+"</h4><hr>"
+				+ "</div></div></body></html>";
+		return html;
+	}
+	
+	private TextMessage parseQuestion(String postBody) throws Exception{
 		TextMessage message = new TextMessage();
 		Map <String, String> map = new HashMap<String, String>();
 		String[] pairs = postBody.split("\\&");
@@ -103,7 +112,6 @@ public  class NotificareServlet extends TextServlet {
 		return message;
 	}
 	
-
 	@Override
 	protected String getServletPath() {
 		return servletPath;

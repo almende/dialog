@@ -5,11 +5,8 @@ import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.ws.rs.core.MediaType;
-
 import org.apache.http.HttpException;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.NotificareServlet;
@@ -45,7 +42,7 @@ public class Notificare {
     		// if the question type is 'open' prepare an html form with a reaction field to push to the client.
     		if( extras.get("questionType").equals("open") && !to.isEmpty()){
     			if(!subject.isEmpty()){
-    				jsonMap.replace("message", subject);
+    				jsonMap.put("message", subject);
     			}
     			
     			Object[] content = new Object[1];

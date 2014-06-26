@@ -60,6 +60,7 @@ public class DDRRecord
     Boolean shouldGenerateCosts = false;
     @JsonIgnore
     Boolean shouldIncludeServiceCosts = false;
+    String additionalInfo;
     
     public DDRRecord(){}
     
@@ -124,7 +125,8 @@ public class DDRRecord
     }
     
     /**
-     * fetch the ddr record for a particular Session 
+     * fetch the ddr record for a particular Session. This inverts the lookup. Normally used when a 
+     * ddr is not found corresponding to a session {@link Session#getDdrRecordId()} 
      * @param session
      * @return
      * @throws Exception 
@@ -363,5 +365,15 @@ public class DDRRecord
             }
         }
         return 0.0;
+    }
+
+    public String getAdditionalInfo() {
+    
+        return additionalInfo;
+    }
+
+    public void setAdditionalInfo(String additionalInfo) {
+    
+        this.additionalInfo = additionalInfo;
     }
 }

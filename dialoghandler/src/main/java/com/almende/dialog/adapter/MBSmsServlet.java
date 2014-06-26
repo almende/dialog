@@ -7,10 +7,8 @@ import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.agent.AdapterAgent;
@@ -30,16 +28,16 @@ public class MBSmsServlet extends TextServlet {
 	private static final String servletPath = "/sms/mb/";
 	private static final boolean USE_KEYWORDS = false;
 	
-	@Override
-    protected int sendMessage( String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config ) throws Exception
-    {
-		
-        String[] tokens = config.getAccessToken().split( "\\|" );
-		
-        CM cm = new CM( tokens[0], tokens[1], config.getAccessTokenSecret() );
-        return cm.sendMessage( message, subject, from, fromName, to, toName, extras, config );
-	}
+
+    @Override
+    protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
+                              Map<String, Object> extras, AdapterConfig config) throws Exception {
+
+        String[] tokens = config.getAccessToken().split("\\|");
+
+        CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
+        return cm.sendMessage(message, subject, from, fromName, to, toName, extras, config);
+    }
 	
     @Override
     protected int broadcastMessage( String message, String subject, String from, String senderName,

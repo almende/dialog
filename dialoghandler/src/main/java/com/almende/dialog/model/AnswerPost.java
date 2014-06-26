@@ -12,8 +12,9 @@ public class AnswerPost implements Serializable {
 	String answer_text;
 	String responder;
 	Map<String, Object> extras;  
-
+	
 	public AnswerPost(){}
+	
 	public AnswerPost(String question_id,String answer_id,String answer_text,String responder){
 		this.question_id = question_id;
 		this.answer_id = answer_id;

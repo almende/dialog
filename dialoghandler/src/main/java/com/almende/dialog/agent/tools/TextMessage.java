@@ -14,7 +14,7 @@ public class TextMessage {
 	private boolean extractKeyword = false;
 	private Map<String, Object> extras = null;
 	
-	public TextMessage(){}
+    public TextMessage(){}
 	
 	public TextMessage(boolean extractKeyword){
 		this.extractKeyword = extractKeyword;

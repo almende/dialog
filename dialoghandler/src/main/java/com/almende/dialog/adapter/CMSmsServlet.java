@@ -4,23 +4,22 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Map;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.CMStatus;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
@@ -201,7 +200,7 @@ public class CMSmsServlet extends TextServlet {
         log.info( String.format(
             "CM SR: reference: %s, sent: %s, received: %s, to: %s, statusCode: %s errorCode: %s, errorDesc: %s",
             reference, sent, received, to, code, errorCode, errorDescription ) );
-        if ( reference != null )
+        if ( reference != null && !reference.isEmpty() )
         {
             CMStatus cmStatus = CMStatus.fetch( reference );
             if ( cmStatus == null )
@@ -274,6 +273,34 @@ public class CMSmsServlet extends TextServlet {
             {
                 log.info( "Reference: " + reference + ". No delivered callback found." );
                 dialogLog.info( cmStatus.getAdapterID(), "No delivered callback found for reference: " + reference );
+            }
+            //fetch ddr corresponding to this
+            if(cmStatus.getSessionKey() != null) {
+                Session session = Session.getSession(cmStatus.getSessionKey());
+                if(session != null && session.getDdrRecordId() != null) {
+                    DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), cmStatus.getAccountId());
+                    if(ddrRecord != null) {
+                        if (errorCode == null || errorCode.isEmpty()) {
+                            ddrRecord.setStatus(CommunicationStatus.DELIVERED);
+                        }
+                        else {
+                            ddrRecord.setStatus(CommunicationStatus.ERROR);
+                            ddrRecord.setAdditionalInfo(cmStatus.getErrorDescription());
+                        }
+                        ddrRecord.createOrUpdate();
+                    }
+                    else {
+                        log.warning(String.format("No ddr record found for id: %s", session.getDdrRecordId()));
+                    }
+                }
+                else {
+                    log.warning(String.format("No session found for id: %s", cmStatus.getSessionKey()));
+                }
+                //drop the session when the callback is seen
+                Session.drop(cmStatus.getSessionKey());
+            }
+            else {
+                log.warning(String.format("No session attached for cm status: %s", cmStatus.getReference()));
             }
             cmStatus.store();
             return cmStatus;

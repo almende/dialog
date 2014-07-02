@@ -5,11 +5,18 @@ import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+
 import javax.ws.rs.core.MediaType;
+
 import org.apache.http.HttpException;
+import org.apache.maven.wagon.ResourceDoesNotExistException;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.NotificareServlet;
+import com.almende.dialog.model.Answer;
+import com.almende.dialog.model.Question;
+import com.almende.dialog.model.Session;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.jersey.api.client.Client;
@@ -31,53 +38,62 @@ public class Notificare {
 	}
 	
     public int sendMessage( String message, String subject, String from, String fromName,
-            String to, String toName, Map<String, Object> extras, AdapterConfig config ) throws Exception {
+            String to, String toName, AdapterConfig config, Session session ) throws Exception {
     		
     		HashMap<String, Object> jsonMap = new HashMap<String, Object>();
     		jsonMap.put("message", message);
     		jsonMap.put( "sound","default");
-    		
     		Client client = ParallelInit.getClient();
     		WebResource webResource = client.resource("");
+    		Question question = session.getQuestion();
+    		if(question != null && session != null){	
+    			
     		// if the question type is 'open' prepare an html form with a reaction field to push to the client.
-    		if( extras.get("questionType").equals("open") && !to.isEmpty()){
-    			if(!subject.isEmpty()){
-    				jsonMap.put("message", subject);
-    			}
-    			
-    			Object[] content = new Object[1];
-    			HashMap<String, Object> contentMap = new HashMap<String, Object>();
-    			contentMap.put("type", "re.notifica.content.HTML");
-    			contentMap.put("data",makeHtml(message, (String) extras.get("sessionKey")));
-    			content[0]=contentMap;
-        		jsonMap.put("type","re.notifica.notification.WebView");
-    			jsonMap.put("content", content);
-    			webResource = client.resource(serverUrlDevice+URLEncoder.encode(to,"UTF-8"));
-    		}
-    		//is it a closed question prepare a menu with 2 callback buttons. 
-    		else if(extras.get("questionType").equals("closed") && !to.isEmpty()){
-    			
-    			Object[] actions = new Object[2];
-    			HashMap<String, Object> noMap = new HashMap<String, Object>();
-    			HashMap<String, Object> yesMap = new HashMap<String, Object>();
-    			yesMap.put("type","re.notifica.action.Callback");
-    			yesMap.put("label", "Yes");
-    			yesMap.put("target", String.format(serveletpath+"?answer=Yes&sessionkey=%s",
-    					URLEncoder.encode((String) extras.get("sessionKey"),"UTF-8")));
-    			noMap.put("type", "re.notifica.action.Callback");
-    			noMap.put("label", "No");
-    			noMap.put("target",String.format(serveletpath+"?answer=No&sessionkey=%s",
-    					URLEncoder.encode((String) extras.get("sessionKey"),"UTF-8")) );
-    			actions[0]=yesMap;
-    			actions[1]=noMap;
-        		jsonMap.put("type","re.notifica.notification.Alert");
-    			jsonMap.put("actions", actions);
-    			webResource = client.resource(serverUrlDevice+URLEncoder.encode(to,"UTF-8"));
-    		}
-    		// if it is a broadcast change url
-    		else{
-        		jsonMap.put("type","re.notifica.notification.Alert");
-    			webResource = client.resource(serverUrlDevice+URLEncoder.encode(to,"UTF-8"));
+    		if(  question.getType().equals("open") && !to.isEmpty()){
+				if (!subject.isEmpty()) {
+					jsonMap.put("message", subject);
+				}
+
+				Object[] content = new Object[1];
+				HashMap<String, Object> contentMap = new HashMap<String, Object>();
+				contentMap.put("type", "re.notifica.content.HTML");
+				contentMap.put("data", makeHtml(message, session.getKey()));
+				content[0] = contentMap;
+				jsonMap.put("type", "re.notifica.notification.WebView");
+				jsonMap.put("content", content);
+				webResource = client.resource(serverUrlDevice
+						+ URLEncoder.encode(to, "UTF-8"));
+			}
+			// is it a closed question prepare a menu with 2 callback buttons.
+			else if (session.getQuestion().getType().equals("closed")
+					&& !to.isEmpty()) {
+
+				Object[] actions = new Object[question.getAnswers().size()];
+				for (int i = 0; i < question.getAnswers().size(); i++) {
+					HashMap<String, Object> answerMap = new HashMap<String, Object>();
+					Answer answer = question.getAnswers().get(i);
+					answerMap.put("type", "re.notifica.action.Callback");
+					answerMap.put("label", answer.getAnswer_expandedtext());
+					answerMap.put("target", String.format(serveletpath
+							+ "?answer=" + answer.getAnswer_text()
+							+ "&sessionkey=%s",
+							URLEncoder.encode(session.getKey(), "UTF-8")));
+					actions[i] = answerMap;
+				}
+				jsonMap.put("type", "re.notifica.notification.Alert");
+				jsonMap.put("actions", actions);
+				webResource = client.resource(serverUrlDevice
+						+ URLEncoder.encode(to, "UTF-8"));
+			}
+			// if it is a broadcast change url
+			else {
+				jsonMap.put("type", "re.notifica.notification.Alert");
+				webResource = client.resource(serverUrlDevice
+						+ URLEncoder.encode(to, "UTF-8"));
+			}
+		}
+    		else {
+    			throw new ResourceDoesNotExistException("No session or questions found" );
     		}
 
     		
@@ -117,7 +133,7 @@ public class Notificare {
     	String html = "<html> "
     			+ "<head> "
     			+ "<link rel=\"stylesheet\" type=\"text/css\" href=\"http://static.ask-cs.com/askfast/base.css\"> "
-    			+ "<link rel=\"stylesheet\" type=\"text/css\" href=\"hhttp://static.ask-cs.com/askfast/layout.css\"> "
+    			+ "<link rel=\"stylesheet\" type=\"text/css\" href=\"http://static.ask-cs.com/askfast/layout.css\"> "
     			+ "<link rel=\"stylesheet\" type=\"text/css\" href=\"http://static.ask-cs.com/askfast/skeleton.css\"> "
     			+ "</head> <div class=\"container\" padding-top=100px>"
     			+ "<div class=\"sixteen columns\">"

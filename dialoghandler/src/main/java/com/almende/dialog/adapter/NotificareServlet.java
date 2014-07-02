@@ -30,13 +30,9 @@ public  class NotificareServlet extends TextServlet {
 			String fromName, String to, String toName,
 			Map<String, Object> extras, AdapterConfig config) throws Exception{
 		
-		Map<String, Object> extra = new HashMap<String,Object>();
 		Session ses = Session.getSession(getAdapterType(),config.getMyAddress(),to);
-		extra.put("questionType", ses.getQuestion().getType());
-		extra.put("sessionKey",ses.key);
-		extra.putAll(extras);
 		Notificare notificare = new Notificare();
-		notificare.sendMessage(message, subject, from, fromName, to, toName, extra, config);
+		notificare.sendMessage(message, subject, from, fromName, to, toName, config,ses);
 		return 1;
 	}
 
@@ -76,9 +72,8 @@ public  class NotificareServlet extends TextServlet {
 		if ("POST".equalsIgnoreCase(req.getMethod())) {
 	        responseBody = URLDecoder.decode( CharStreams.toString(req.getReader()),"UTF-8");
 	    }
-		resp.getWriter().println(getHtmlResponse("Thank you for you response"));
 		message = parseQuestion(responseBody);
-		
+		resp.getWriter().println(getHtmlResponse("Thank you for you response"));
 	    return message;
 	}
 	

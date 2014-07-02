@@ -1,21 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <cronentries>
-	<!-- <cron> -->
-	<!-- <url>/facebook_wall</url> -->
-	<!-- <description>Check facebook messages</description> -->
-	<!-- <schedule>every 1 minutes from 8:00 to 18:00</schedule> -->
-	<!-- <timezone>Europe/Amsterdam</timezone> -->
-	<!-- </cron> -->
-	<cron>
-		<url>/twitter</url>
-		<description>Check tweets mentioning you</description>
-		<schedule>every 1 minutes from 8:00 to 18:00</schedule>
-		<timezone>Europe/Amsterdam</timezone>
-	</cron>
-	<cron>
-		<url>/twitter/direct_messages</url>
-		<description>Check twitter messages</description>
-		<schedule>every 1 minutes from 8:00 to 18:00</schedule>
-		<timezone>Europe/Amsterdam</timezone>
-	</cron>
+<!--   <cron> -->
+<!--     <url>/facebook_wall</url> -->
+<!--     <description>Check facebook messages</description> -->
+<!--     <schedule>every 1 minutes from 8:00 to 18:00</schedule> -->
+<!--     <timezone>Europe/Amsterdam</timezone> -->
+<!--   </cron> -->
+  
+<!--   <cron> -->
+<!--     <url>/twitter</url> -->
+<!--     <description>Check twitter messages</description> -->
+<!--     <schedule>every 1 minutes from 8:00 to 18:00</schedule> -->
+<!--     <timezone>Europe/Amsterdam</timezone> -->
+<!--   </cron> -->
 </cronentries>

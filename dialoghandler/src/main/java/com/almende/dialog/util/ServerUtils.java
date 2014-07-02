@@ -61,7 +61,7 @@ public class ServerUtils
     {
         return oMapper.readValue( jsonString, type );
     }
-    
+
     public static <T> T deserialize( String jsonString, boolean throwException, TypeReference<T> type ) throws Exception
     {
         try

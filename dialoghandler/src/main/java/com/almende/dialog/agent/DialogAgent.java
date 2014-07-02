@@ -8,12 +8,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
+import com.almende.dialog.adapter.CLXUSSDServlet;
 import com.almende.dialog.adapter.CMSmsServlet;
 import com.almende.dialog.adapter.MBSmsServlet;
 import com.almende.dialog.adapter.MailServlet;
+import com.almende.dialog.adapter.NotificareServlet;
 import com.almende.dialog.adapter.TwitterServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.adapter.XMPPServlet;
@@ -205,6 +208,14 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         resultSessionMap = new CMSmsServlet().startDialog(addressMap, null, null, url, senderName, subject,
                                                                           config);
                     }
+                    else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_USSD)) {
+    					resultSessionMap = new CLXUSSDServlet().startDialog(
+    							addressMap, null, null, url, senderName, subject, config);
+    				}
+                    else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_PUSH)) {
+    					resultSessionMap = new NotificareServlet().startDialog(
+    							addressMap, null, null, url, senderName, subject, config);
+    				}
                     else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWITTER)) {
                         HashMap<String, String> formattedTwitterAddresses = new HashMap<String, String>(addressMap.size());
                         //convert all addresses to start with @

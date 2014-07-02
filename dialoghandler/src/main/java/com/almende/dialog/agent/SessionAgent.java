@@ -102,8 +102,8 @@ public class SessionAgent extends Agent {
                 ObjectNode params = JOM.createObjectNode();
                 params.put("sessionKey", sessionKey);
                 JSONRequest req = new JSONRequest("postProcessSessions", params);
-                id = getScheduler().createTask(req, SESSION_SCHEDULER_INTERVAL, true, true);
-                getState().put(SESSION_SCHEDULER_NAME_PREFIX + sessionKey, id);
+                String schedulerId = getScheduler().createTask(req, SESSION_SCHEDULER_INTERVAL, true, true);
+                getState().put(SESSION_SCHEDULER_NAME_PREFIX + sessionKey, schedulerId);
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -126,12 +126,18 @@ public class SessionAgent extends Agent {
         //if the ddr is processed succesfully then delete the scheduled task
         Session session = Session.getSession(sessionKey);
         String schedulerId = null;
-        if (session == null || DDRUtils.stopCostsAtCallHangup(sessionKey, false) ||
-            updateSessionScedulerRunCount(sessionKey) >= SESSION_SCHEDULER_MAX_COUNT) {
+        Integer updateSessionScedulerRunCount = updateSessionScedulerRunCount(sessionKey);
+        if (session == null || DDRUtils.stopCostsAtCallHangup(sessionKey, true) ||
+            updateSessionScedulerRunCount > SESSION_SCHEDULER_MAX_COUNT) {
             if (!ServerUtils.isInUnitTestingEnvironment()) {
                 schedulerId = getState().get(SESSION_SCHEDULER_NAME_PREFIX + sessionKey, String.class);
-                getScheduler().cancelTask(schedulerId);
+                if (schedulerId != null) {
+                    getScheduler().cancelTask(schedulerId);
+                }
+                //remove the schedulerId from the state
                 getState().remove(SESSION_SCHEDULER_NAME_PREFIX + sessionKey);
+                //remove the scheduler run count from the state
+                getState().remove(SESSION_SCHEDULER_NAME_PREFIX + sessionKey + "_count");
             }
             //remove the session if its already processed
             log.info(String.format("Session %s processed. Deleting..", sessionKey));
@@ -154,9 +160,9 @@ public class SessionAgent extends Agent {
         String schedulerId = getState().get(SESSION_SCHEDULER_NAME_PREFIX + sessionKey, String.class);
         if (schedulerId != null) {
             getScheduler().cancelTask(schedulerId);
-            getState().remove(SESSION_SCHEDULER_NAME_PREFIX + sessionKey);
-            getState().remove(SESSION_SCHEDULER_NAME_PREFIX + sessionKey + "_count");
         }
+        getState().remove(SESSION_SCHEDULER_NAME_PREFIX + sessionKey);
+        getState().remove(SESSION_SCHEDULER_NAME_PREFIX + sessionKey + "_count");
         //remove the session if its already processed
         log.info(String.format("Stopped session %s processing.", sessionKey));
         Session session = Session.getSession(sessionKey);

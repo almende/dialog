@@ -25,13 +25,14 @@ import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.util.ParallelInit;
+import com.askfast.commons.entity.AccountType;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
-	protected static final Logger	log				= Logger.getLogger(TextServlet.class
-															.getSimpleName());
-	protected static final int		LOOP_DETECTION	= 10;
-	protected static final String	DEMODIALOG		= "/charlotte/";
+
+    protected static final Logger log = Logger.getLogger(TextServlet.class.getSimpleName());
+    protected static final int LOOP_DETECTION = 10;
+    protected static final String DEMODIALOG = "/charlotte/";
 	
 	/**
 	 * @deprecated use
@@ -270,14 +271,13 @@ abstract public class TextServlet extends HttpServlet {
                     preferred_language = config.getPreferred_language();
                 }
                 question.setPreferred_language(preferred_language);
+                session.setQuestion(question);
                 res = formQuestion(question, config.getConfigId(), loadAddress);
-                if (res.question != null) {
-                    session.setQuestion(res.question);
-                }
+
                 if (config.getAdapterType().equalsIgnoreCase("cm") ||
                     config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                    extras = CMStatus.storeSMSRelatedData(loadAddress, localaddress, config, question, res.reply, session.getKey(),
-                                                          extras);
+                    extras = CMStatus.storeSMSRelatedData(loadAddress, localaddress, config, question, res.reply,
+                                                          session.getKey(), extras);
                 }
                 session.storeSession();
                 // Add key to the map (for the return)
@@ -292,10 +292,8 @@ abstract public class TextServlet extends HttpServlet {
                     Session session = Session.getOrCreateSession(config, address);
                     session.setAccountId(config.getOwner());
                     session.setDirection("outbound");
+                    session.setQuestion(question);
 
-                    if (res.question != null) {
-                        session.setQuestion(res.question);
-                    }
                     if (config.getAdapterType().equalsIgnoreCase("cm") ||
                         config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
                         extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, res.reply,
@@ -320,6 +318,17 @@ abstract public class TextServlet extends HttpServlet {
                 senderName = fromName;
             }
             subject = subject != null && !subject.isEmpty() ? subject : "Message from Ask-Fast";
+            //play trial account audio if the account is trial
+            if (config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)) {
+                if (question.getPreferred_language() != null &&
+                    (question.getPreferred_language().equals("nl") || question.getPreferred_language().equals("nl-nl"))) {
+                    res.reply = "Dit is een proefaccount. Overweeg alstublieft om uw account te upgraden. \n" +
+                                res.reply;
+                }
+                else {
+                    res.reply = "This is a trial account. Please consider upgrading your account. \n" + res.reply;
+                }
+            }
             // fix for bug: #15 https://github.com/almende/dialog/issues/15
             res.reply = URLDecoder.decode(res.reply, "UTF-8");
             int count = broadcastMessageAndAttachCharge(res.reply, subject, localaddress, senderName,
@@ -335,7 +344,7 @@ abstract public class TextServlet extends HttpServlet {
             }
         }
         else {
-            sessionKeyMap.put("Ërror", "Question JSON not found in url: " + url);
+            sessionKeyMap.put("Error", "Question JSON not found in url: " + url);
         }
         return sessionKeyMap;
     }
@@ -409,14 +418,13 @@ abstract public class TextServlet extends HttpServlet {
             if (config.getAdapterType().equalsIgnoreCase("cm") ||
                 config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
                 extras = CMStatus.storeSMSRelatedData(address, localaddress, config, null, getNoConfigMessage(),
-                                                      session.getKey(), extras);
+                                                      getAdapterType() + "|" + localaddress + "|" + address, extras);
             }
             count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress, fromName, address, toName,
                                                extras, config);
             // Create new session to store the send in the ddr.
-            session = new Session();
+            session = Session.getOrCreateSession(config, address);
             session.setDirection("inbound");
-            session.setRemoteAddress(address);
             session.setTrackingToken(UUID.randomUUID().toString());
             for (int i = 0; i < count; i++) {
                 DDRWrapper.log(null, null, session, "Send", config);

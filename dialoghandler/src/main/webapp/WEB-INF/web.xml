@@ -90,6 +90,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<servlet-name>smshandler</servlet-name>
 		<url-pattern>/sms/cm/*</url-pattern>
 	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>NotificareServlet</servlet-name>
+		<servlet-class>com.almende.dialog.adapter.NotificareServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>NotificareServlet</servlet-name>
+		<url-pattern>/push/*</url-pattern>
+	</servlet-mapping>
 
 	<servlet>
 		<servlet-name>asksmshandler</servlet-name>
@@ -143,6 +152,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 	<servlet-mapping>
 		<servlet-name>xmppservlet</servlet-name>
 		<url-pattern>/xmpp/*</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>CLXUSSDServlet</servlet-name>
+		<servlet-class>com.almende.dialog.adapter.CLXUSSDServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>CLXUSSDServlet</servlet-name>
+		<url-pattern>/ussd/*</url-pattern>
 	</servlet-mapping>
 
 	<servlet>

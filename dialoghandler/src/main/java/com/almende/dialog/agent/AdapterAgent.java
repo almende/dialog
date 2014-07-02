@@ -39,6 +39,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	public static final String ADAPTER_TYPE_EMAIL = "email";
 	public static final String ADAPTER_TYPE_XMPP = "xmpp";
 	public static final String ADAPTER_TYPE_TWITTER = "twitter";	
+	public static final String ADAPTER_TYPE_USSD = "ussd";
+	public static final String ADAPTER_TYPE_PUSH = "push";
 	public static final int EMAIL_SCHEDULER_INTERVAL = 30 * 1000; //30seconds
 	public static final int TWITTER_SCHEDULER_INTERVAL = 61 * 1000; //61seconds
 	private static final Logger log = Logger.getLogger( AdapterAgent.class.getSimpleName() );
@@ -284,6 +286,55 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         xmppServlet.listenForIncomingChats( newConfig );
         return newConfig.getConfigId();
     }
+    
+	public String createUSSDAdapter(@Name("address") String address,
+			@Name("keyword") @Optional String keyword,
+			@Name("username") String username,
+			@Name("password") String password,
+			@Name("preferredLanguage") @Optional String preferredLanguage,
+			@Name("accountId") @Optional String accountId) throws Exception {
+		preferredLanguage = (preferredLanguage==null ? "nl" : preferredLanguage);
+		
+		AdapterConfig config = new AdapterConfig();
+		config.setAdapterType(ADAPTER_TYPE_USSD);
+		config.setMyAddress(address);
+		config.setKeyword(keyword);
+		config.setPreferred_language(preferredLanguage);
+		config.setPublicKey(accountId);
+		config.setOwner(accountId);
+		config.addAccount(accountId);
+		config.setAnonymous(false);
+		config.setAccessToken(username);
+		config.setAccessTokenSecret(password);		
+		AdapterConfig newConfig = createAdapter(config);
+		
+		return newConfig.getConfigId();
+	}
+	
+	public String createPushAdapter(@Name("address") String address,
+			@Name("keyword") @Optional String keyword,
+			@Name("username") String username,
+			@Name("password") String password,
+			@Name("preferredLanguage") @Optional String preferredLanguage,
+			@Name("accountId") @Optional String accountId) throws Exception {
+		preferredLanguage = (preferredLanguage==null ? "nl" : preferredLanguage);
+		
+		AdapterConfig config = new AdapterConfig();
+		config.setAdapterType(ADAPTER_TYPE_PUSH);
+		config.setMyAddress(address);
+		config.setKeyword(keyword);
+		config.setPreferred_language(preferredLanguage);
+		config.setPublicKey(accountId);
+		config.setOwner(accountId);
+		config.addAccount(accountId);
+		config.setAnonymous(false);
+		config.setAccessToken(username);
+		config.setAccessTokenSecret(password);		
+		AdapterConfig newConfig = createAdapter(config);
+		
+		return newConfig.getConfigId();
+	}
+
 
     public String registerASKFastXMPPAdapter( @Name( "xmppAddress" ) String xmppAddress,
         @Name( "password" ) String password, @Name( "name" ) @Optional String name,
@@ -473,31 +524,29 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return config;
 	}
 	
-    public Object updateAdapter( @Name( "accoutId" ) String accountId, @Name( "adapterId" ) String adapterId,
-        @Name( "adapter" ) Adapter adapter ) throws Exception
-    {
-        AdapterConfig config = (AdapterConfig) getAdapter( accountId, adapterId );
-        if ( config != null )
-        {
-            if ( adapter.getInitialAgentURL() != null )
-            {
-                config.setInitialAgentURL(adapter.getInitialAgentURL() );
+    public Object updateAdapter(@Name("accoutId") String accountId, @Name("adapterId") String adapterId,
+                                @Name("adapter") Adapter adapter) throws Exception {
+
+        AdapterConfig config = (AdapterConfig) getAdapter(accountId, adapterId);
+        if (config != null) {
+            if (adapter.getInitialAgentURL() != null) {
+                config.setInitialAgentURL(adapter.getInitialAgentURL());
             }
-            if ( adapter.isAnonymous() != null )
-            {
-                config.setAnonymous( adapter.isAnonymous() );
+            if (adapter.isAnonymous() != null) {
+                config.setAnonymous(adapter.isAnonymous());
             }
-            if ( adapter.getDialogId() != null )
-            {
-                config.setDialogId( adapter.getDialogId() );
+            if (adapter.getDialogId() != null) {
+                config.setDialogId(adapter.getDialogId());
+            }
+            if (adapter.getAccountType() != null) {
+                config.setAccountType(adapter.getAccountType());
             }
             config.update();
             return config;
         }
-        else
-        {
-            throw new Exception( String.format( "Adapter: %s with address:%s probably does not belong to account: %s",
-                adapter, adapter.getMyAddress(), accountId ) );
+        else {
+            throw new Exception(String.format("Adapter: %s with address:%s probably does not belong to account: %s",
+                                              adapter, adapter.getMyAddress(), accountId));
         }
     }
 	

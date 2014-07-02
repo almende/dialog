@@ -28,6 +28,7 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.almende.util.uuid.UUID;
+import com.askfast.commons.entity.AccountType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -66,6 +67,8 @@ public class AdapterConfig {
 	Boolean anonymous=false;
 	
 	String owner=null;
+	//reducdant information to avoid linking to the accountServer to fetch the Account again
+	AccountType accountType = null;
 	List<String> accounts=null;
 	//store adapter specific data
 	Map<String, Object> properties = null;
@@ -732,5 +735,15 @@ public class AdapterConfig {
         {
             getProperties().put(DIALOG_ID_KEY, dialogId);
         }
+    }
+    
+    public AccountType getAccountType() {
+    
+        return accountType;
+    }
+    
+    public void setAccountType(AccountType accountType) {
+    
+        this.accountType = accountType;
     }
 }

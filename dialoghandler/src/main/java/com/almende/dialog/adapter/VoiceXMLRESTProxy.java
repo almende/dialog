@@ -271,6 +271,7 @@ public class VoiceXMLRESTProxy {
         if(question == null) {
             question = Question.fromURL(url,session.getAdapterConfig().getConfigId(),remoteID,localID);
         }
+        session.setQuestion(question);
         DDRWrapper.log(question,session,"Start",config);
         
         if (session.getQuestion() != null) {

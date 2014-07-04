@@ -172,6 +172,16 @@ public class SessionAgent extends Agent {
         return schedulerId;
     }
     
+    /**
+     * this function is added to remove a task based on the taskId
+     * @param taskId
+     * @return
+     */
+    public String stopProcessByTaskId(@Name("taskId") String taskId) {
+        getScheduler().cancelTask(taskId);
+        return taskId;
+    }
+    
     private Integer updateSessionScedulerRunCount(String sessionKey) {
 
         Integer sessionScheduleRunCount = null;

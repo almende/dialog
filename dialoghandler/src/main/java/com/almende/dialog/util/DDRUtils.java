@@ -208,7 +208,8 @@ public class DDRUtils
                                                              adapterConfig.getConfigId(), null, null);
             //fetch the ddr based on the details
             List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterConfig.getConfigId(), adapterConfig.getOwner(),
-                                                                 null, subscriptionDDRType.getTypeId(), null);
+                                                                 null, subscriptionDDRType.getTypeId(), null, null,
+                                                                 null, null, null);
             DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
             newestDDRRecord = fetchNewestDdrRecord(ddrRecords);
             //flag for creating new ddrRecord

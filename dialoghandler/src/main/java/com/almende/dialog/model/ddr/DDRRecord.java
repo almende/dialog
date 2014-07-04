@@ -1,23 +1,29 @@
 package com.almende.dialog.model.ddr;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-import org.bson.types.ObjectId;
+import org.mongojack.DBCursor;
+import org.mongojack.DBQuery;
+import org.mongojack.DBQuery.Query;
+import org.mongojack.Id;
+import org.mongojack.JacksonDBCollection;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
-import com.almende.util.twigmongo.annotations.Id;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.mongodb.DB;
 
 /**
  * The actual price charged as part of the service and/or communication cost
@@ -43,7 +49,9 @@ public class DDRRecord
     }
     
     @Id
-    public String id;
+    public String _id;
+    //used for backward compatibility as TwigMongoWrapper was used before. so it maintained two ids: id and _id in the datastore.
+    String id;
     String adapterId;
     String accountId;
     String fromAddress;
@@ -61,6 +69,10 @@ public class DDRRecord
     @JsonIgnore
     Boolean shouldIncludeServiceCosts = false;
     String additionalInfo;
+    /**
+     * total cost is not sent for any ddr generally
+     */
+    String totalCost;
     
     public DDRRecord(){}
     
@@ -74,7 +86,7 @@ public class DDRRecord
     
     public void createOrUpdate()
     {
-        id = id != null && !id.isEmpty() ? id : ObjectId.get().toStringMongod();
+        _id = _id != null && !_id.isEmpty() ? _id : org.bson.types.ObjectId.get().toStringMongod();
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         datastore.storeOrUpdate( this );
     }
@@ -93,35 +105,52 @@ public class DDRRecord
     /**
      * fetch the ddr records based the input parameters. fetches the records
      * that matches to all the parameters given
-     * 
      * @param adapterId
      * @param accountId
      * @param fromAddress
      * @param ddrTypeId
      * @param status
-     * @param startTimestamp
+     * @param startTime
+     * @param endTime
+     * @param offset
+     * @param limit fetchs 1000 records if limit is null or greater than 1000.
      * @return
      */
     public static List<DDRRecord> getDDRRecords(String adapterId, String accountId, String fromAddress,
-                                                String ddrTypeId, CommunicationStatus status) {
+                                                String ddrTypeId, CommunicationStatus status, Long startTime,
+                                                Long endTime, Integer offset, Integer limit) {
 
-        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        RootFindCommand<DDRRecord> query = datastore.find().type(DDRRecord.class);
+        limit = limit != null && limit <= 1000 ? limit : 1000;
+        offset = offset != null ? offset : 0;
+        JacksonDBCollection<DDRRecord, String> collection = getCollection();
+        ArrayList<Query> queryList = new ArrayList<Query>();
         //fetch accounts that match
-        query = query.addFilter("accountId", FilterOperator.EQUAL, accountId);
+        queryList.add(DBQuery.is("accountId", accountId));
         if (adapterId != null) {
-            query = query.addFilter("adapterId", FilterOperator.EQUAL, adapterId);
+            queryList.add(DBQuery.is("adapterId", adapterId));
         }
         if (fromAddress != null) {
-            query = query.addFilter("fromAddress", FilterOperator.EQUAL, fromAddress);
+            queryList.add(DBQuery.is("fromAddress", fromAddress));
         }
         if (ddrTypeId != null) {
-            query = query.addFilter("ddrTypeId", FilterOperator.EQUAL, ddrTypeId);
+            queryList.add(DBQuery.is("ddrTypeId", ddrTypeId));
         }
         if (status != null) {
-            query = query.addFilter("status", FilterOperator.EQUAL, status.name());
+            queryList.add(DBQuery.is("status", status.name()));
         }
-        return query.now().toArray();
+        if (startTime != null) {
+            queryList.add(DBQuery.greaterThanEquals("start", startTime));
+        }
+        if (endTime != null) {
+            queryList.add(DBQuery.lessThanEquals("start", endTime));
+        }
+        DBCursor<DDRRecord> cursor = collection.find(DBQuery.and(queryList.toArray(new Query[queryList.size()])))
+                                        .skip(offset).limit(limit);
+        ArrayList<DDRRecord> result = new ArrayList<DDRRecord>();
+        while (cursor.hasNext()) {
+            result.add(cursor.next());
+        }
+        return result;
     }
     
     /**
@@ -172,13 +201,35 @@ public class DDRRecord
         return null; 
     }
     
-    public String getId()
-    {
-        return id;
+    // -- getters and setters --
+    @JsonProperty("_id")
+    public String get_Id() {
+        
+        return _id;
     }
-    public void setId( String id )
-    {
-        this.id = id;
+    @JsonProperty("_id")
+    public void set_Id(String id) {
+    
+        this._id = id;
+    }
+    /**
+     * used for backward compatibility as TwigMongoWrapper was used before. so it maintained two ids: id and _id in the datastore.
+     * uses the {@link DDRRecord#get_Id()} itself
+     */
+    @JsonIgnore
+    public String getId() {
+        
+        return get_Id();
+    }
+    /**
+     * used for backward compatibility as TwigMongoWrapper was used before. so it maintained two ids: id and _id in the datastore.
+     * uses the {@link DDRRecord#set_Id(String)} itself
+     * @param id
+     */
+    @JsonIgnore
+    public void setId(String id) {
+    
+        set_Id(id);
     }
     public String getAdapterId()
     {
@@ -328,7 +379,6 @@ public class DDRRecord
         this.shouldIncludeServiceCosts = shouldIncludeServiceCosts;
     }
     
-    @JsonProperty("totalCost")
     public Double getTotalCost() throws Exception
     {
         if ( shouldGenerateCosts )
@@ -366,6 +416,17 @@ public class DDRRecord
         }
         return 0.0;
     }
+    
+    /**
+     * generally just used by JACKSON to (de)serialize the variable. 
+     * setting the value does not matter as the actual cost is always calculated lazily when the {@link DDRRecord#shouldGenerateCosts} is set 
+     * to true
+     * @param totalCost
+     */
+    public void setTotalCost(String totalCost) {
+        
+        this.totalCost = totalCost;
+    }
 
     public String getAdditionalInfo() {
     
@@ -375,5 +436,12 @@ public class DDRRecord
     public void setAdditionalInfo(String additionalInfo) {
     
         this.additionalInfo = additionalInfo;
+    }
+    
+    private static JacksonDBCollection<DDRRecord, String> getCollection() {
+
+        DB db = ParallelInit.getDatastore();
+        return JacksonDBCollection.wrap(db.getCollection(DDRRecord.class.getCanonicalName().toLowerCase() + "s"),
+                                        DDRRecord.class, String.class);
     }
 }

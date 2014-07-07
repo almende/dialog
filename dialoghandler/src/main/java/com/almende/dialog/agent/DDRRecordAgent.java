@@ -12,6 +12,7 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.agent.annotation.ThreadSafe;
@@ -147,8 +148,7 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
         DDRType ddrType = new DDRType();
         ddrType.setName( name );
         ddrType.setCategory( category );
-        ddrType.createOrUpdate();
-        return ddrType;
+        return ddrType.createOrUpdate();
     }
     
     /**
@@ -212,7 +212,8 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
             ddrPrice.setAdapterType(adapterType);
             ddrPrice.createOrUpdate();
             //start subscription scheduler if its of that type
-            if (ddrType.getCategory().equals(DDRTypeCategory.SUBSCRIPTION_COST)) {
+            if (ddrType.getCategory().equals(DDRTypeCategory.SUBSCRIPTION_COST) &&
+                !ServerUtils.isInUnitTestingEnvironment()) {
                 startSchedulerScedulerForDDRPrice(ddrPrice);
             }
             return ddrPrice;

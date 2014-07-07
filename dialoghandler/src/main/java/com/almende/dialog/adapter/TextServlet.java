@@ -668,6 +668,11 @@ abstract public class TextServlet extends HttpServlet {
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
         DDRUtils.publishDDREntryToQueue( config.getOwner(), totalCost );
+        //attach cost to ddr is prepaid type
+        if(AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+            ddrRecord.setTotalCost(totalCost);
+            ddrRecord.createOrUpdate();
+        }
         return count;
     }
     
@@ -677,7 +682,15 @@ abstract public class TextServlet extends HttpServlet {
         TextMessage receiveMessage = receiveMessage( req, resp );
         //attach charges for incoming
         AdapterConfig config = AdapterConfig.findAdapterConfig( getAdapterType(), receiveMessage.getLocalAddress() );
-        createDDRForIncoming( config, receiveMessage.getAddress() );
+        DDRRecord ddrRecord = createDDRForIncoming( config, receiveMessage.getAddress() );
+        //push the cost to hte queue
+        Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
+        //attach cost to ddr is prepaid type
+        if(AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+            ddrRecord.setTotalCost(totalCost);
+            ddrRecord.createOrUpdate();
+        }
+        DDRUtils.publishDDREntryToQueue( config.getOwner(), totalCost );
         return receiveMessage;
     }
 	    
@@ -695,6 +708,11 @@ abstract public class TextServlet extends HttpServlet {
         DDRRecord ddrRecord = createDDRForOutgoing( config, toAddressMap, message );
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
+        //attach cost to ddr is prepaid type
+        if(AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+            ddrRecord.setTotalCost(totalCost);
+            ddrRecord.createOrUpdate();
+        }
         DDRUtils.publishDDREntryToQueue( config.getOwner(), totalCost );
         return ddrRecord;
     }

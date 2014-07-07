@@ -16,6 +16,7 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.askfast.commons.entity.AccountType;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import com.rabbitmq.client.Channel;
@@ -52,6 +53,7 @@ public class DDRUtils
                 DDRRecord ddrRecord = new DDRRecord( adapterPurchaseDDRType.getTypeId(), config.getConfigId(),
                     config.getOwner(), 1 );
                 ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );
+                ddrRecord.setAccountType(config.getAccountType());
                 ddrRecord.createOrUpdate();
                 //publish charges
                 if (publishCharges) {
@@ -167,10 +169,10 @@ public class DDRUtils
      * @param releaseTime actual call hangup timestamp
      * @throws Exception
      */
-    public static DDRRecord updateDDRRecordOnCallStops( String ddrRecordId, String accountId,
+    public static DDRRecord updateDDRRecordOnCallStops( String ddrRecordId, AdapterConfig adapterConfig,
         Long startTime, Long answerTime, Long releaseTime ) throws Exception
     {
-        DDRRecord ddrRecord = DDRRecord.getDDRRecord( ddrRecordId, accountId );
+        DDRRecord ddrRecord = DDRRecord.getDDRRecord( ddrRecordId, adapterConfig.getOwner() );
         if ( ddrRecord != null )
         {
             ddrRecord.setStart( answerTime ); //initialize the startTime to the answerTime
@@ -268,6 +270,7 @@ public class DDRUtils
             if (createNewDDRRecord) {
                 newestDDRRecord = new DDRRecord(subscriptionDDRType.getTypeId(), adapterConfig.getConfigId(),
                                                 adapterConfig.getOwner(), 1);
+                newestDDRRecord.setAccountType(adapterConfig.getAccountType());
                 newestDDRRecord.setStart(serverCurrentTime.getMillis());
                 newestDDRRecord.createOrUpdate();
                 //publish charges if needed
@@ -601,6 +604,7 @@ public class DDRUtils
                 }
                 ddrRecord.setQuantity( quantity );
                 ddrRecord.setStatus( status );
+                ddrRecord.setAccountType(config.getAccountType());
                 ddrRecord.createOrUpdate();
                 return DDRRecord.getDDRRecord( ddrRecord.getId(), ddrRecord.getAccountId() );
             }
@@ -631,11 +635,12 @@ public class DDRUtils
                 //if no ddr is seen for this session. try to fetch it based on the timestamps
                 if (session.getDdrRecordId() == null) {
                     ddrRecord = DDRRecord.getDDRRecord(sessionKey);
+                    session.setDdrRecordId(ddrRecord.getId());
                 }
                 if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
                     session.getDirection() != null) {
                     ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
-                                                           adapterConfig.getOwner(),
+                                                           adapterConfig,
                                                            Long.parseLong(session.getStartTimestamp()),
                                                            session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
                                                                                                : null,
@@ -663,6 +668,11 @@ public class DDRUtils
 
                     //publish charges
                     Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
+                    //attach cost to ddr is prepaid type
+                    if(AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+                        ddrRecord.setTotalCost(totalCost);
+                        ddrRecord.createOrUpdate();
+                    }
                     publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
                     result = true;
                 }

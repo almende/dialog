@@ -1,9 +1,7 @@
 package com.almende.dialog.model.ddr;
 
 import java.util.List;
-
 import org.bson.types.ObjectId;
-
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
@@ -66,19 +64,21 @@ public class DDRType
      * create (if missing) or updates this document instance
      * @throws Exception throws an Exception if more than one DDRTypes are existing for this category
      */
-    public void createOrUpdate() throws Exception
+    public DDRType createOrUpdate() throws Exception
     {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         DDRType ddrType = getDDRType( category );
         if ( ddrType != null )
         {
             ddrType.name = this.name;
-            datastore.update( ddrType );
+            datastore.storeOrUpdate( ddrType );
+            return ddrType;
         }
         else 
         {
             typeId = typeId != null && !typeId.isEmpty() ? typeId : ObjectId.get().toStringMongod();
             datastore.storeOrUpdate( this );
+            return this;
         }
     }
     

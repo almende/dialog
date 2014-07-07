@@ -16,9 +16,7 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
-import com.almende.util.twigmongo.FilterOperator;
-import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
-import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
+import com.askfast.commons.entity.AccountType;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -70,9 +68,15 @@ public class DDRRecord
     Boolean shouldIncludeServiceCosts = false;
     String additionalInfo;
     /**
+     * PRE_PAID accounts must have a fixed ddrCost. POST_PAID can have a variable one. 
+     * This can be got from the adapterId too, but just makes it more explicit
+     */
+    AccountType accountType;
+    
+    /**
      * total cost is not sent for any ddr generally
      */
-    String totalCost;
+    Double totalCost = 0.0;
     
     public DDRRecord(){}
     
@@ -84,20 +88,26 @@ public class DDRRecord
         this.quantity = quantity;
     }
     
-    public void createOrUpdate()
-    {
+    public void createOrUpdate() {
+
         _id = _id != null && !_id.isEmpty() ? _id : org.bson.types.ObjectId.get().toStringMongod();
-        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        datastore.storeOrUpdate( this );
+        JacksonDBCollection<DDRRecord, String> collection = getCollection();
+        DDRRecord existingDDRRecord = collection.findOneById(_id);
+        //update if existing
+        if(existingDDRRecord != null){
+            collection.updateById(_id, this);
+        }
+        else { //create one if missing
+            collection.insert(this);
+        }
     }
     
-    public static DDRRecord getDDRRecord(String id, String accountId) throws Exception
-    {
-        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        DDRRecord ddrRecord = datastore.load(DDRRecord.class, id);
-        if ( ddrRecord != null && ddrRecord.getAccountId() != null && !ddrRecord.getAccountId().equals( accountId ) )
-        {
-            throw new Exception( String.format( "DDR record: %s is not owned by account: %s", id, accountId ) );
+    public static DDRRecord getDDRRecord(String id, String accountId) throws Exception {
+
+        JacksonDBCollection<DDRRecord, String> coll = getCollection();
+        DDRRecord ddrRecord = coll.findOneById(id);
+        if (ddrRecord != null && ddrRecord.getAccountId() != null && !ddrRecord.getAccountId().equals(accountId)) {
+            throw new Exception(String.format("DDR record: %s is not owned by account: %s", id, accountId));
         }
         return ddrRecord;
     }
@@ -163,34 +173,38 @@ public class DDRRecord
     public static DDRRecord getDDRRecord(String sessionKey) {
 
         Session session = Session.getSession(sessionKey);
-        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        RootFindCommand<DDRRecord> query = datastore.find().type(DDRRecord.class);
+        JacksonDBCollection<DDRRecord, String> collection = getCollection();
+        ArrayList<Query> queryList = new ArrayList<Query>();
         //fetch accounts that match
-        query = query.addFilter("accountId", FilterOperator.EQUAL, session.getAccountId());
+        queryList.add(DBQuery.is("accountId", session.getAccountId()));
         if (session.getAdapterID() != null) {
-            query = query.addFilter("adapterId", FilterOperator.EQUAL, session.getAdapterID());
+            queryList.add(DBQuery.is("adapterId", session.getAdapterID()));
         }
         if (session.getDirection() != null) {
             HashMap<String, String> addressMap = new HashMap<String, String>(1);
             if (session.getDirection().equalsIgnoreCase("incoming")) {
-                query = query.addFilter("fromAddress", FilterOperator.EQUAL, session.getRemoteAddress());
+                queryList.add(DBQuery.is("fromAddress", session.getRemoteAddress()));
                 addressMap.put(session.getLocalAddress(), "");
-                query = query.addFilter("status", FilterOperator.EQUAL, CommunicationStatus.RECEIEVED.name());
+                queryList.add(DBQuery.is("status", CommunicationStatus.RECEIEVED));
             }
             else {
-                query = query.addFilter("fromAddress", FilterOperator.EQUAL, session.getLocalAddress());
+                queryList.add(DBQuery.is("fromAddress", session.getLocalAddress()));
                 addressMap.put(session.getRemoteAddress(), "");
-                query = query.addFilter("status", FilterOperator.EQUAL, CommunicationStatus.SENT.name());
+                queryList.add(DBQuery.is("status", CommunicationStatus.SENT));
             }
             try {
-                query = query.addFilter("toAddressString", FilterOperator.EQUAL, ServerUtils.serialize(addressMap));
+                queryList.add(DBQuery.is("toAddressString", ServerUtils.serialize(addressMap)));
             }
             catch (Exception e) {
                 e.printStackTrace();
                 log.severe("Error while serializing. Message: "+ e.toString());
             }
         }
-        List<DDRRecord> ddrRecordsForSession = query.now().toArray();
+        DBCursor<DDRRecord> cursor = collection.find(DBQuery.and(queryList.toArray(new Query[queryList.size()])));
+        ArrayList<DDRRecord> ddrRecordsForSession = new ArrayList<DDRRecord>();
+        while (cursor.hasNext()) {
+            ddrRecordsForSession.add(cursor.next());
+        }
         for (DDRRecord ddrRecord : ddrRecordsForSession) {
             //return the ddrRecord whose startTime matches the creationTime or answerTime of the session
             if(ddrRecord.getStart() != null && (ddrRecord.getStart().toString().equals(session.getCreationTimestamp()) ||
@@ -379,34 +393,30 @@ public class DDRRecord
         this.shouldIncludeServiceCosts = shouldIncludeServiceCosts;
     }
     
-    public Double getTotalCost() throws Exception
-    {
-        if ( shouldGenerateCosts )
-        {
+    public Double getTotalCost() throws Exception {
+
+        //generate the costs at runtime, only when requested and when the accountTYpe is not prepaid. Prepaid accounts
+        //have fixed costs
+        if (shouldGenerateCosts && (accountType == null || !accountType.equals(AccountType.PRE_PAID))) {
             DDRType ddrType = getDdrType();
-            switch ( ddrType.getCategory() )
-            {
+            switch (ddrType.getCategory()) {
                 case INCOMING_COMMUNICATION_COST:
                 case OUTGOING_COMMUNICATION_COST:
-                    return DDRUtils.calculateCommunicationDDRCost( this, shouldIncludeServiceCosts );
+                    return DDRUtils.calculateCommunicationDDRCost(this, shouldIncludeServiceCosts);
                 case ADAPTER_PURCHASE:
-                case SERVICE_COST:
-                {
+                case SERVICE_COST: {
                     //fetch the ddrPrice
-                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices( ddrTypeId, null, adapterId, UnitType.PART, null );
-                    if ( ddrPrices != null && !ddrPrices.isEmpty() )
-                    {
-                        return DDRUtils.calculateDDRCost( this, ddrPrices.iterator().next() );
+                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrTypeId, null, adapterId, UnitType.PART, null);
+                    if (ddrPrices != null && !ddrPrices.isEmpty()) {
+                        return DDRUtils.calculateDDRCost(this, ddrPrices.iterator().next());
                     }
                     break;
                 }
-                case SUBSCRIPTION_COST:
-                {
+                case SUBSCRIPTION_COST: {
                     //fetch the ddrPrice
-                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices( ddrTypeId, null, adapterId, null, null );
-                    if ( ddrPrices != null && !ddrPrices.isEmpty() )
-                    {
-                        return DDRUtils.calculateDDRCost( this, ddrPrices.iterator().next() );
+                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrTypeId, null, adapterId, null, null);
+                    if (ddrPrices != null && !ddrPrices.isEmpty()) {
+                        return DDRUtils.calculateDDRCost(this, ddrPrices.iterator().next());
                     }
                     break;
                 }
@@ -414,18 +424,19 @@ public class DDRRecord
                     break;
             }
         }
-        return 0.0;
+        return totalCost;
     }
     
     /**
-     * generally just used by JACKSON to (de)serialize the variable. 
-     * setting the value does not matter as the actual cost is always calculated lazily when the {@link DDRRecord#shouldGenerateCosts} is set 
+     * generally just used by JACKSON to (de)serialize the variable for all accounts except PRE_PAID. 
+     * Setting the value does not matter as the actual cost is calculated lazily when the {@link DDRRecord#shouldGenerateCosts} is set
+     * for all cases apart from for PRE_PAID customers.  
      * to true
      * @param totalCost
      */
-    public void setTotalCost(String totalCost) {
+    public void setTotalCost(Double totalCost) {
         
-        this.totalCost = totalCost;
+        this.totalCost = totalCost != null ? totalCost : 0.0;
     }
 
     public String getAdditionalInfo() {
@@ -436,6 +447,15 @@ public class DDRRecord
     public void setAdditionalInfo(String additionalInfo) {
     
         this.additionalInfo = additionalInfo;
+    }
+    
+    public AccountType getAccountType() {
+        
+        return accountType;
+    }
+    public void setAccountType(AccountType accountType) {
+    
+        this.accountType = accountType;
     }
     
     private static JacksonDBCollection<DDRRecord, String> getCollection() {

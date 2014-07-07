@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
+
 import javax.mail.Address;
 import javax.mail.Folder;
 import javax.mail.Message;
@@ -29,7 +30,9 @@ import javax.mail.search.ComparisonTerm;
 import javax.mail.search.ReceivedDateTerm;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import org.joda.time.DateTime;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -99,51 +102,74 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
      * HttpServletResponse)} so that it can be tested without any data mock-ups.
      * @since 3/09/2013
      */
-    private TextMessage receiveMessage( MimeMessage message, String recipient ) throws Exception
-    {
-        TextMessage msg = new TextMessage();
-        msg.setSubject( "RE: " + message.getSubject() );
-        if ( recipient != null && !recipient.equals( "" ) )
-        {
-            msg.setLocalAddress( recipient.toString() );
-        }
-        else
-        {
-            Address[] recipients = message.getAllRecipients();
-            if ( recipients.length > 0 )
-            {
-                InternetAddress recip = (InternetAddress) recipients[0];
-                msg.setLocalAddress( recip.getAddress() );
-            }
-            else
-                throw new Exception( "MailServlet: Can't determine local address! (Dev)" );
-        }
+	private TextMessage receiveMessage( MimeMessage message, String recipient ) throws Exception
+	{
+		TextMessage msg = new TextMessage();
+		msg.setSubject( "RE: " + message.getSubject() );
+		if ( recipient != null && !recipient.equals( "" ) )
+		{
+			msg.setLocalAddress( recipient.toString() );
+		}
+		else
+		{
+			Address[] recipients = message.getAllRecipients();
+			if ( recipients.length > 0 )
+			{
+				InternetAddress recip = (InternetAddress) recipients[0];
+				msg.setLocalAddress( recip.getAddress() );
+			}
+			else
+				throw new Exception( "MailServlet: Can't determine local address! (Dev)" );
+		}
 
-        Address[] senders = message.getFrom();
-        if ( senders != null && senders.length > 0 )
-        {
-            InternetAddress sender = (InternetAddress) senders[0];
-            msg.setAddress( sender.getAddress() );
-            msg.setRecipientName( sender.getPersonal() );
-        }
+		Address[] senders = message.getFrom();
+		if ( senders != null && senders.length > 0 )
+		{
+			InternetAddress sender = (InternetAddress) senders[0];
+			msg.setAddress( sender.getAddress() );
+			msg.setRecipientName( sender.getPersonal() );
+		}
 
-        Multipart mp = null;
-        if ( message.getContent() instanceof Multipart )
-        {
-            mp = (Multipart) message.getContent();
-        }
-        else
-        {
-            mp = new MimeMultipart();
-            mp.addBodyPart( new MimeBodyPart( new InternetHeaders(), message.getContent().toString().getBytes() ) );
-        }
-        if ( mp.getCount() > 0 )
-        {
-            msg.setBody( mp.getBodyPart( 0 ).getContent().toString() );
-            log.info( "Receive mail: " + msg.getBody() );
-        }
-        return msg;
-    }
+		Multipart mp = null;
+		if ( message.getContent() instanceof Multipart )
+		{
+			mp = (Multipart) message.getContent();
+		}
+		else
+		{
+			mp = new MimeMultipart();
+			mp.addBodyPart( new MimeBodyPart( new InternetHeaders(), message.getContent().toString().getBytes() ) );
+		}
+		if ( mp.getCount() > 0 )
+		{
+			msg.setBody( mp.getBodyPart( 0 ).getContent().toString() );
+			Session ses =  Session.getSession(AdapterAgent.ADAPTER_TYPE_EMAIL, msg.getLocalAddress(), msg.getAddress());    
+			if(ses.getQuestion().getType().equals("closed")){
+				msg.setBody(getFristLineOfEmail(msg, mp.getBodyPart( 0 ).getContentType()));
+				log.info("Receive mail trimmed down body: "+msg.getBody());
+			}else{
+				log.info( "Receive mail: " + msg.getBody() );
+			}
+		}
+		return msg;
+	}
+	
+	protected String getFristLineOfEmail(TextMessage message, String contentType)throws Exception{
+		String[] lines;
+		if(contentType.equals("text/html")){
+			lines = message.getBody().split("<br/?>");
+
+		}else{
+			lines =message.getBody().split("\r?\n"); 
+
+		}
+		for(int i =0; i < lines.length; i++){
+			if(!("".equals(lines[i]))) {
+				return lines[i];
+			}
+		}
+		return "";
+	}
 
     @Deprecated
     /**

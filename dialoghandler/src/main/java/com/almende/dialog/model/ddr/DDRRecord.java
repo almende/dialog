@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 import org.mongojack.DBCursor;
 import org.mongojack.DBQuery;
 import org.mongojack.DBQuery.Query;
+import org.mongojack.DBSort;
 import org.mongojack.Id;
 import org.mongojack.JacksonDBCollection;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -115,6 +116,7 @@ public class DDRRecord
     /**
      * fetch the ddr records based the input parameters. fetches the records
      * that matches to all the parameters given
+     * 
      * @param adapterId
      * @param accountId
      * @param fromAddress
@@ -123,7 +125,8 @@ public class DDRRecord
      * @param startTime
      * @param endTime
      * @param offset
-     * @param limit fetchs 1000 records if limit is null or greater than 1000.
+     * @param limit
+     *            fetchs 1000 records if limit is null or greater than 1000.
      * @return
      */
     public static List<DDRRecord> getDDRRecords(String adapterId, String accountId, String fromAddress,
@@ -154,13 +157,8 @@ public class DDRRecord
         if (endTime != null) {
             queryList.add(DBQuery.lessThanEquals("start", endTime));
         }
-        DBCursor<DDRRecord> cursor = collection.find(DBQuery.and(queryList.toArray(new Query[queryList.size()])))
-                                        .skip(offset).limit(limit);
-        ArrayList<DDRRecord> result = new ArrayList<DDRRecord>();
-        while (cursor.hasNext()) {
-            result.add(cursor.next());
-        }
-        return result;
+        return collection.find(DBQuery.and(queryList.toArray(new Query[queryList.size()]))).skip(offset).limit(limit)
+                                        .sort(DBSort.desc("start")).toArray();
     }
     
     /**

@@ -30,7 +30,7 @@ public class Notificare {
 	private static final Integer MAX_RETRY_COUNT = 3;
     private static HashMap<String, Integer> retryCounter = new HashMap<String, Integer>();
     private static String serverUrlDevice = "https://push.notifica.re/notification/user/";
-    private static String serveletpath = Settings.HOST+"/dialoghandler"+NotificareServlet.servletPath;
+    private static String serveletpath = "http://"+Settings.HOST+"/dialoghandler"+NotificareServlet.servletPath;
     private static final Logger log = Logger.getLogger(Notificare.class.getName()); 
 
 	public Notificare(){

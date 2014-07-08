@@ -374,13 +374,14 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		
 		TextMessage msg;
-		try {
-			msg = receiveMessageAndAttachCharge(req, res);
-		} catch (Exception ex) {
-			log.severe("Failed to parse received message: "
-					+ ex.getLocalizedMessage());
-			return;
-		}
+                try {
+                    msg = receiveMessageAndAttachCharge(req, res);
+                }
+                catch (Exception ex) {
+                    ex.printStackTrace();
+                    log.severe("Failed to parse received message: " + ex.getLocalizedMessage());
+                    return;
+                }
 		
 		try {
 			processMessage(msg);
@@ -531,6 +532,7 @@ abstract public class TextServlet extends HttpServlet {
                                                extras, config);
         }
         catch (Exception ex) {
+            ex.printStackTrace();
             log.severe("Message sending failed. Message: " + ex.getLocalizedMessage());
         }
         for (int i = 0; i < count; i++) {

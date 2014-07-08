@@ -475,12 +475,12 @@ abstract public class TextServlet extends HttpServlet {
             count = processEscapeInputCommand(msg, fromName, config, escapeInput, session);
             log.info(escapeInput.toString());
         }
+        Question question = session.getQuestion();
         if (!escapeInput.skip) {
             if (escapeInput.preferred_language == null) {
                 escapeInput.preferred_language = "nl";
             }
 
-            Question question = session.getQuestion();
             boolean start = false;
             if (question == null) {
                 if (config.getURLForInboundScenario() != null && config.getURLForInboundScenario().equals("")) {
@@ -511,15 +511,6 @@ abstract public class TextServlet extends HttpServlet {
 
                 extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, escapeInput.reply,
                                                       session.getKey(), extras);
-                if (question == null) {
-                    session.drop();
-                    DDRWrapper.log(question, session, "Hangup", config);
-                }
-                else {
-                    session.setQuestion(question);
-                    session.storeSession();
-                    DDRWrapper.log(question, session, "Answer", config);
-                }
             }
             else {
                 log.severe(String.format("Question is null. Couldnt fetch Question from session, nor initialAgentURL: %s nor from demoDialog",
@@ -528,8 +519,18 @@ abstract public class TextServlet extends HttpServlet {
         }
 
         try {
+            if (question != null) {
+                session.setQuestion(question);
+                session.storeSession();
+                DDRWrapper.log(question, session, "Answer", config);
+            }
             count = sendMessageAndAttachCharge(escapeInput.reply, subject, localaddress, fromName, address, toName,
                                                extras, config);
+            //flush the session is no more question is there
+            if (question == null) {
+                session.drop();
+                DDRWrapper.log(question, session, "Hangup", config);
+            }
         }
         catch (Exception ex) {
             ex.printStackTrace();

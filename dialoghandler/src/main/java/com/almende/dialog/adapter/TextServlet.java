@@ -674,11 +674,6 @@ abstract public class TextServlet extends HttpServlet {
             ddrRecord.setTotalCost(totalCost);
             ddrRecord.createOrUpdate();
         }
-        //fetch session and check if the session has to be flushed
-        for (String address : addressNameMap.keySet()) {
-            Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), address);
-            session.pushSessionToQueue();
-        }
         return count;
     }
     
@@ -686,6 +681,8 @@ abstract public class TextServlet extends HttpServlet {
     throws Exception
     {
         TextMessage receiveMessage = receiveMessage( req, resp );
+        //create a session
+        Session.getOrCreateSession(getAdapterType(), receiveMessage.getLocalAddress(), receiveMessage.getAddress());
         log.info("Incoming message received: "+ ServerUtils.serialize(receiveMessage));
         //attach charges for incoming
         AdapterConfig config = AdapterConfig.findAdapterConfig( getAdapterType(), receiveMessage.getLocalAddress() );
@@ -697,10 +694,6 @@ abstract public class TextServlet extends HttpServlet {
             ddrRecord.setTotalCost(totalCost);
             ddrRecord.createOrUpdate();
         }
-        DDRUtils.publishDDREntryToQueue( config.getOwner(), totalCost );
-        //fetch session and check if the session has to be flushed
-        Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), receiveMessage.getAddress());
-        session.pushSessionToQueue();
         return receiveMessage;
     }
 	    
@@ -723,10 +716,6 @@ abstract public class TextServlet extends HttpServlet {
             ddrRecord.setTotalCost(totalCost);
             ddrRecord.createOrUpdate();
         }
-        DDRUtils.publishDDREntryToQueue( config.getOwner(), totalCost );
-        //fetch session and check if the session has to be flushed
-        Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), address);
-        session.pushSessionToQueue();
         return ddrRecord;
     }
 }

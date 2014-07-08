@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
-
 import javax.mail.Address;
 import javax.mail.Folder;
 import javax.mail.Message;
@@ -30,9 +29,7 @@ import javax.mail.search.ComparisonTerm;
 import javax.mail.search.ReceivedDateTerm;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.joda.time.DateTime;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -144,7 +141,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
 		{
 			msg.setBody( mp.getBodyPart( 0 ).getContent().toString() );
 			Session ses =  Session.getSession(AdapterAgent.ADAPTER_TYPE_EMAIL, msg.getLocalAddress(), msg.getAddress());    
-			if(ses.getQuestion().getType().equals("closed")){
+			if(ses != null && ses.getQuestion().getType().equals("closed")){
 				msg.setBody(getFristLineOfEmail(msg, mp.getBodyPart( 0 ).getContentType()));
 				log.info("Receive mail trimmed down body: "+msg.getBody());
 			}else{

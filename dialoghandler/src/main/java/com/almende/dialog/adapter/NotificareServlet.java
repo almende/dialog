@@ -96,7 +96,7 @@ public  class NotificareServlet extends TextServlet {
 	      String value = URLDecoder.decode(fields[1], "UTF-8");
 	      map.put(name, value);
 	    }
-	    Session ses = Session.getSession(map.get("sessionkey"));
+	    Session ses = Session.getOrCreateSession(map.get("sessionkey"));
 	    message.setBody(map.get("answer"));
 	    message.setAddress(ses.getRemoteAddress());
 	    message.setLocalAddress(ses.getLocalAddress());

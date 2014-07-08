@@ -131,12 +131,16 @@ public class Session{
             session.drop();
         }
     }
+
+    public static Session getOrCreateSession(String adapterType, String localAddress, String address) {
+        return getOrCreateSession(adapterType + "|" + localAddress + "|" + address);
+    }
     
     public static Session getOrCreateSession(String key) {
 
         return getOrCreateSession(key, null);
     }
-
+    
     @JsonIgnore
     public static Session getOrCreateSession(String key, String keyword) {
 

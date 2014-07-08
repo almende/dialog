@@ -24,6 +24,7 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.RequestUtil;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AccountType;
 
@@ -680,6 +681,7 @@ abstract public class TextServlet extends HttpServlet {
     throws Exception
     {
         TextMessage receiveMessage = receiveMessage( req, resp );
+        log.info("Incoming message received: "+ ServerUtils.serialize(receiveMessage));
         //attach charges for incoming
         AdapterConfig config = AdapterConfig.findAdapterConfig( getAdapterType(), receiveMessage.getLocalAddress() );
         DDRRecord ddrRecord = createDDRForIncoming( config, receiveMessage.getAddress() );

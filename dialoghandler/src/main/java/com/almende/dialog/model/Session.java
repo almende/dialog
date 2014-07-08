@@ -103,6 +103,7 @@ public class Session{
             if (oldSession != null) {
                 String serializedSession = ServerUtils.serialize(this);
                 JOM.getInstance().readerForUpdating(oldSession).readValue(serializedSession);
+                oldSession.question = question;
                 datastore.storeOrUpdate(oldSession);
             }
             else {

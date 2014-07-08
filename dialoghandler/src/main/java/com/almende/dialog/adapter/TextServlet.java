@@ -519,11 +519,8 @@ abstract public class TextServlet extends HttpServlet {
         }
 
         try {
-            if (question != null) {
-                session.setQuestion(question);
-                session.storeSession();
-                DDRWrapper.log(question, session, "Answer", config);
-            }
+            session.setQuestion(question);
+            session.storeSession();
             count = sendMessageAndAttachCharge(escapeInput.reply, subject, localaddress, fromName, address, toName,
                                                extras, config);
             //flush the session is no more question is there

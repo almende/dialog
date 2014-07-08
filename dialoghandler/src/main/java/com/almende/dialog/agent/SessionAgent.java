@@ -126,8 +126,13 @@ public class SessionAgent extends Agent {
         //if the ddr is processed succesfully then delete the scheduled task
         Session session = Session.getSession(sessionKey);
         String schedulerId = null;
-        Integer updateSessionScedulerRunCount = updateSessionScedulerRunCount(sessionKey);
-        if (session == null || DDRUtils.stopCostsAtCallHangup(sessionKey, true) ||
+        Integer updateSessionScedulerRunCount = 0;
+        //maintain a counter for voicecalls. 
+        if (session != null && session.getAdapterConfig() != null &&
+            AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(session.getAdapterConfig().getAdapterType())) {
+            updateSessionScedulerRunCount = updateSessionScedulerRunCount(sessionKey);
+        }
+        if (session == null || DDRUtils.stopDDRCosts(sessionKey, true) ||
             updateSessionScedulerRunCount > SESSION_SCHEDULER_MAX_COUNT) {
             if (!ServerUtils.isInUnitTestingEnvironment()) {
                 schedulerId = getState().get(SESSION_SCHEDULER_NAME_PREFIX + sessionKey, String.class);

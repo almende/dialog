@@ -12,6 +12,7 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.agent.annotation.ThreadSafe;
@@ -111,17 +112,20 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
      * @return
      * @throws Exception
      */
-    public Object
-        getDDRRecords(@Name("adapterId") @Optional String adapterId, @Name("accountId") String accountId,
+    public Object getDDRRecords(@Name("adapterId") @Optional String adapterId, @Name("accountId") String accountId,
                       @Name("fromAddress") @Optional String fromAddress, @Name("typeId") @Optional String typeId,
                       @Name("communicationStatus") @Optional String status,
+                      @Name("startTime") @Optional Long startTime,
+                      @Name("endTime") @Optional Long endTime,
+                      @Name("offset") @Optional Integer offset,
+                      @Name("limit") @Optional Integer limit,
                       @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
                       @Name("shouldIncludeServiceCosts") @Optional Boolean shouldIncludeServiceCosts) throws Exception {
 
         CommunicationStatus communicationStatus = status != null && !status.isEmpty() ? CommunicationStatus
                                         .fromJson(status) : null;
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterId, accountId, fromAddress, typeId,
-                                                             communicationStatus);
+                                                             communicationStatus, startTime, endTime, offset, limit);
         if (shouldGenerateCosts != null && shouldGenerateCosts) {
             for (DDRRecord ddrRecord : ddrRecords) {
                 ddrRecord.setShouldGenerateCosts(shouldGenerateCosts);
@@ -144,8 +148,7 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
         DDRType ddrType = new DDRType();
         ddrType.setName( name );
         ddrType.setCategory( category );
-        ddrType.createOrUpdate();
-        return ddrType;
+        return ddrType.createOrUpdate();
     }
     
     /**
@@ -209,7 +212,8 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
             ddrPrice.setAdapterType(adapterType);
             ddrPrice.createOrUpdate();
             //start subscription scheduler if its of that type
-            if (ddrType.getCategory().equals(DDRTypeCategory.SUBSCRIPTION_COST)) {
+            if (ddrType.getCategory().equals(DDRTypeCategory.SUBSCRIPTION_COST) &&
+                !ServerUtils.isInUnitTestingEnvironment()) {
                 startSchedulerScedulerForDDRPrice(ddrPrice);
             }
             return ddrPrice;

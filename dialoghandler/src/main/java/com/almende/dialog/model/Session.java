@@ -50,6 +50,8 @@ public class Session{
     Question question = null;
     Map<String, String> extras = null;
     Integer retryCount = null;
+    @JsonIgnore
+    AdapterConfig adapterConfig = null;
 	
 	@JsonIgnore
 	public void kill(){
@@ -103,6 +105,7 @@ public class Session{
             if (oldSession != null) {
                 String serializedSession = ServerUtils.serialize(this);
                 JOM.getInstance().readerForUpdating(oldSession).readValue(serializedSession);
+                oldSession.question = question;
                 datastore.storeOrUpdate(oldSession);
             }
             else {
@@ -128,12 +131,16 @@ public class Session{
             session.drop();
         }
     }
+
+    public static Session getOrCreateSession(String adapterType, String localAddress, String address) {
+        return getOrCreateSession(adapterType + "|" + localAddress + "|" + address);
+    }
     
     public static Session getOrCreateSession(String key) {
 
         return getOrCreateSession(key, null);
     }
-
+    
     @JsonIgnore
     public static Session getOrCreateSession(String key, String keyword) {
 
@@ -219,9 +226,8 @@ public class Session{
     @JsonIgnore
     public AdapterConfig getAdapterConfig() {
 
-        if (getAdapterID() != null)
-            return AdapterConfig.getAdapterConfig(getAdapterID());
-        return null;
+        return adapterConfig != null ? adapterConfig : (adapterID != null ? AdapterConfig.getAdapterConfig(adapterID)
+                                                                         : null);
     }
 	
     public Map<String, String> getExtras()
@@ -282,12 +288,7 @@ public class Session{
 
     public void setQuestion(Question question) {
 
-        if (question == null) {
-            return;
-        }
-        else {
-            this.question = question;
-        }
+        this.question = question;
     }
     
     public Integer getRetryCount()

@@ -24,6 +24,7 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.RequestUtil;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AccountType;
 
@@ -373,13 +374,14 @@ abstract public class TextServlet extends HttpServlet {
 		}
 		
 		TextMessage msg;
-		try {
-			msg = receiveMessageAndAttachCharge(req, res);
-		} catch (Exception ex) {
-			log.severe("Failed to parse received message: "
-					+ ex.getLocalizedMessage());
-			return;
-		}
+                try {
+                    msg = receiveMessageAndAttachCharge(req, res);
+                }
+                catch (Exception ex) {
+                    ex.printStackTrace();
+                    log.severe("Failed to parse received message: " + ex.getLocalizedMessage());
+                    return;
+                }
 		
 		try {
 			processMessage(msg);
@@ -473,12 +475,12 @@ abstract public class TextServlet extends HttpServlet {
             count = processEscapeInputCommand(msg, fromName, config, escapeInput, session);
             log.info(escapeInput.toString());
         }
+        Question question = session.getQuestion();
         if (!escapeInput.skip) {
             if (escapeInput.preferred_language == null) {
                 escapeInput.preferred_language = "nl";
             }
 
-            Question question = session.getQuestion();
             boolean start = false;
             if (question == null) {
                 if (config.getURLForInboundScenario() != null && config.getURLForInboundScenario().equals("")) {
@@ -509,15 +511,6 @@ abstract public class TextServlet extends HttpServlet {
 
                 extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, escapeInput.reply,
                                                       session.getKey(), extras);
-                if (question == null) {
-                    session.drop();
-                    DDRWrapper.log(question, session, "Hangup", config);
-                }
-                else {
-                    session.setQuestion(question);
-                    session.storeSession();
-                    DDRWrapper.log(question, session, "Answer", config);
-                }
             }
             else {
                 log.severe(String.format("Question is null. Couldnt fetch Question from session, nor initialAgentURL: %s nor from demoDialog",
@@ -526,10 +519,18 @@ abstract public class TextServlet extends HttpServlet {
         }
 
         try {
+            session.setQuestion(question);
+            session.storeSession();
             count = sendMessageAndAttachCharge(escapeInput.reply, subject, localaddress, fromName, address, toName,
                                                extras, config);
+            //flush the session is no more question is there
+            if (question == null) {
+                session.drop();
+                DDRWrapper.log(question, session, "Hangup", config);
+            }
         }
         catch (Exception ex) {
+            ex.printStackTrace();
             log.severe("Message sending failed. Message: " + ex.getLocalizedMessage());
         }
         for (int i = 0; i < count; i++) {
@@ -668,6 +669,11 @@ abstract public class TextServlet extends HttpServlet {
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
         DDRUtils.publishDDREntryToQueue( config.getOwner(), totalCost );
+        //attach cost to ddr is prepaid type
+        if(AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+            ddrRecord.setTotalCost(totalCost);
+            ddrRecord.createOrUpdate();
+        }
         return count;
     }
     
@@ -675,9 +681,19 @@ abstract public class TextServlet extends HttpServlet {
     throws Exception
     {
         TextMessage receiveMessage = receiveMessage( req, resp );
+        //create a session
+        Session.getOrCreateSession(getAdapterType(), receiveMessage.getLocalAddress(), receiveMessage.getAddress());
+        log.info("Incoming message received: "+ ServerUtils.serialize(receiveMessage));
         //attach charges for incoming
         AdapterConfig config = AdapterConfig.findAdapterConfig( getAdapterType(), receiveMessage.getLocalAddress() );
-        createDDRForIncoming( config, receiveMessage.getAddress() );
+        DDRRecord ddrRecord = createDDRForIncoming( config, receiveMessage.getAddress() );
+        //push the cost to hte queue
+        Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
+        //attach cost to ddr is prepaid type
+        if(AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+            ddrRecord.setTotalCost(totalCost);
+            ddrRecord.createOrUpdate();
+        }
         return receiveMessage;
     }
 	    
@@ -695,7 +711,11 @@ abstract public class TextServlet extends HttpServlet {
         DDRRecord ddrRecord = createDDRForOutgoing( config, toAddressMap, message );
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
-        DDRUtils.publishDDREntryToQueue( config.getOwner(), totalCost );
+        //attach cost to ddr is prepaid type
+        if(AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+            ddrRecord.setTotalCost(totalCost);
+            ddrRecord.createOrUpdate();
+        }
         return ddrRecord;
     }
 }

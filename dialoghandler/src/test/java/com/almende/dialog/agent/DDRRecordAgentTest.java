@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.ws.rs.core.UriInfo;
@@ -32,6 +33,7 @@ import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
+import com.askfast.commons.entity.AccountType;
 
 
 public class DDRRecordAgentTest extends TestFramework
@@ -87,7 +89,7 @@ public class DDRRecordAgentTest extends TestFramework
         String createAdapter = adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null,
             null, null, TEST_ACCOUNTID, null );
         //check if a ddr record is created
-        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, TEST_ACCOUNTID, null, null, null, null, null );
+        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, TEST_ACCOUNTID, null, null, null, null, null, null, null, null, null );
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };
@@ -113,7 +115,7 @@ public class DDRRecordAgentTest extends TestFramework
         assertThat( ddrPrice.getDdrTypeId(), Matchers.notNullValue() );
         adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null, null, null, null, null );
         //check if a ddr record is created
-        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, null, null, null, null, null, null );
+        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, null, null, null, null, null, null, null, null, null, null );
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };
@@ -163,6 +165,72 @@ public class DDRRecordAgentTest extends TestFramework
         assertThat( assertCount, Matchers.is( 2 ) );
         assertThat( totalCost, Matchers.is( 10.5 ) );
     }
+    
+    /**
+     * check if a ddr created for a PRE_PAID accounts stays the same. cost is saved in the ds and not calculated at 
+     * request time.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void DDRStaysConsistentForPrePaidAccountTest() throws Exception
+    {
+        Map<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put( "inffo@ask.com", "Test" );
+        Map<String, String> resultMap = createDDRPricesAndAdapterAndSendOutBound( UnitType.PART, AdapterType.EMAIL,
+            "test", addressNameMap );
+
+        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
+        assertThat( allDdrRecords.size(), Matchers.is( 2 ) );
+
+        int assertCount = 0;
+        for ( DDRRecord ddrRecord : allDdrRecords )
+        {
+            if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
+            {
+                assertThat( ddrRecord.getFromAddress(), Matchers.is( MailServlet.DEFAULT_SENDER_EMAIL ) );
+                assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
+                assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
+                assertCount++;
+            }
+            else if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_ADAPTER_PRICE_KEY ) ) )
+            {
+                assertCount++;
+            }
+        }
+        assertThat( assertCount, Matchers.is( 2 ) );
+        //create a new DDRPrice in the same time range as the one existing.
+        List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(resultMap.get(DDR_COMMUNICATION_PRICE_KEY), null, null, null, null);
+        DDRPrice sameDateRangeDDRPrice = getTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.75,
+                                                         "new ddrPrice in the same time range", UnitType.PART,
+                                                         AdapterType.EMAIL, null);
+        assertThat( ddrPrices.size(), Matchers.is( 1 ) );
+        //update sameDateRange ddr price with above timestamp
+        sameDateRangeDDRPrice.setStartTime(ddrPrices.iterator().next().getStartTime());
+        sameDateRangeDDRPrice.setEndTime(ddrPrices.iterator().next().getEndTime());
+        sameDateRangeDDRPrice.createOrUpdate();
+        
+        //fetch the ddrRecords again!
+        allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
+        assertThat( allDdrRecords.size(), Matchers.is( 2 ) );
+        assertCount = 0;
+        for ( DDRRecord ddrRecord : allDdrRecords )
+        {
+            if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
+            {
+                assertThat( ddrRecord.getTotalCost(), Matchers.is( 0.5 ) );
+                assertThat( ddrRecord.getFromAddress(), Matchers.is( MailServlet.DEFAULT_SENDER_EMAIL ) );
+                assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
+                assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
+                assertCount++;
+            }
+            else if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_ADAPTER_PRICE_KEY ) ) )
+            {
+                assertCount++;
+            }
+        }
+        assertThat( assertCount, Matchers.is( 2 ) );
+    }
 
     /**
      * check if initiating an outgoing SMS will create a ddr record and add all its costs correctly
@@ -196,7 +264,10 @@ public class DDRRecordAgentTest extends TestFramework
                 assertThat( ddrCost, Matchers.is( 1.0 ) );
                 assertThat( ddrRecord.getQuantity(), Matchers.is( 2 ) );
                 assertThat( ddrRecord.getFromAddress(), Matchers.is( "TEST" ) );
-                assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
+                for (String address : addressNameMap.keySet()) {
+                    address = PhoneNumberUtils.formatNumber(address, null);
+                    assertThat( ddrRecord.getToAddress().get(address), Matchers.is("Test") );
+                }
                 assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
                 assertCount ++;
             }
@@ -257,7 +328,7 @@ public class DDRRecordAgentTest extends TestFramework
             assertThat( ddrRecord.getAdapterId(), Matchers.is( resultMap.get( ADAPTER_ID_KEY ) ) );
             if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
             {
-                assertThat( ddrCost, Matchers.is( 0.5 ) );
+                assertThat( ddrCost, Matchers.is( 0.0 ) );
                 assertThat( ddrRecord.getQuantity(), Matchers.is( 1 ) );
                 assertThat( ddrRecord.getFromAddress(), Matchers.is( localAddressBroadsoft + "@ask.ask.voipit.nl" ) );
                 assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
@@ -271,10 +342,15 @@ public class DDRRecordAgentTest extends TestFramework
             }
         }
         //hangup the call after 5 mins
-        long currentTimeInMillis = TimeUtils.getServerCurrentTimeInMillis();
-//        voiceXMLRESTProxy.hangup( "outbound", remoteAddressVoice, localAddressBroadsoft
-//            + "@ask.ask.voipit.nl", String.valueOf( currentTimeInMillis ), String.valueOf( currentTimeInMillis + 5000 ),
-//            String.valueOf( currentTimeInMillis + 5000 + ( 5 * 60 * 1000 ) ), null );
+      //send hangup ccxml with an answerTime
+        String hangupXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
+                                        "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" + localAddressBroadsoft +"@ask.ask.voipit.nl</subscriberId>" +
+                                        "<applicationId>cc</applicationId><subscriptionId>200fc376-e154-4930-a289-ae0da816707c</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
+                                        "\"http://schema.broadsoft.com/xsi-events\"><eventName>CallSessionEvent</eventName><call><callId>callhalf-12914560105:1</callId><extTrackingId>" +
+                                        "10669651:1</extTrackingId><personality>Originator</personality><callState>Released</callState><releaseCause>Temporarily Unavailable</releaseCause>" +
+                                        "<remoteParty><address>tel:" + remoteAddressVoice + "</address><callType>Network</callType></remoteParty><startTime>1401809063943</startTime>" +
+                                        "<answerTime>1401809070192</answerTime><releaseTime>1401809370000</releaseTime></call></eventData></Event>";
+        voiceXMLRESTProxy.receiveCCMessage(hangupXML);
         voiceXMLRESTProxy.hangup(Session.getSession(AdapterAgent.ADAPTER_TYPE_BROADSOFT + "|" + localAddressBroadsoft +
                                                     "@ask.ask.voipit.nl" + "|" +
                                                     addressNameMap.keySet().iterator().next()));
@@ -293,7 +369,7 @@ public class DDRRecordAgentTest extends TestFramework
                 assertThat( ddrRecord.getQuantity(), Matchers.is( 1 ) );
                 assertThat( ddrRecord.getFromAddress(), Matchers.is( "0854881000@ask.ask.voipit.nl" ) );
                 assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
-                assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
+                assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.FINISHED ) );
                 assertCount++;
             }
             else if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_ADAPTER_PRICE_KEY ) ) )
@@ -472,8 +548,8 @@ public class DDRRecordAgentTest extends TestFramework
         switch ( adapterType )
         {
             case SMS:
-                adapterId = adapterAgent.createMBAdapter( "TEST", null, "", "", null,
-                    TEST_ACCOUNTID );
+                adapterId = adapterAgent.createMBAdapter("TEST", "TEST", "1111|TEST", "test", null, TEST_ACCOUNTID);
+                updateAdapterAsTrial(adapterId);
                 //check if a ddr record is created by sending an outbound email
                 new MBSmsServlet().startDialog( addressNameMap, null, null, message, "Test Customer", "Test subject",
                     AdapterConfig.getAdapterConfig( adapterId ) );
@@ -482,18 +558,21 @@ public class DDRRecordAgentTest extends TestFramework
                 adapterId = adapterAgent.createEmailAdapter( MailServlet.DEFAULT_SENDER_EMAIL,
                     MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "Test", null, null, null, null, null, null,
                     TEST_ACCOUNTID, null );
+                updateAdapterAsTrial(adapterId);
                 new MailServlet().startDialog( addressNameMap, null, null, message, "Test Customer", "Test subject",
                     AdapterConfig.getAdapterConfig( adapterId ) );
                 break;
             case XMPP:
                 adapterId = adapterAgent.createXMPPAdapter( MailServlet.DEFAULT_SENDER_EMAIL,
                     MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "test", null, null, null, null, TEST_ACCOUNTID, null );
+                updateAdapterAsTrial(adapterId);
                 new XMPPServlet().startDialog( addressNameMap, null, null, message, "Test Customer", "Test subject",
                     AdapterConfig.getAdapterConfig( adapterId ) );
                 break;
             case CALL:
                 adapterId = adapterAgent.createBroadSoftAdapter( localAddressBroadsoft, null, "askask", null, TEST_ACCOUNTID,
                     false );
+                updateAdapterAsTrial(adapterId);
                 VoiceXMLRESTProxy.dial( addressNameMap, message, "Test Customer",
                     AdapterConfig.getAdapterConfig( adapterId ) );
                 break;
@@ -535,11 +614,18 @@ public class DDRRecordAgentTest extends TestFramework
      */
     private static Collection<DDRRecord> getDDRRecordsByAccountId( String accountId ) throws Exception
     {
-        Object ddrRecords = new DDRRecordAgent().getDDRRecords( null, accountId, null, null, null, null, null );
+        Object ddrRecords = new DDRRecordAgent().getDDRRecords( null, accountId, null, null, null, null, null, null, null, null, null );
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };
         Collection<DDRRecord> allDdrRecords = typesInjector.inject( ddrRecords );
         return allDdrRecords;
+    }
+    
+    private void updateAdapterAsTrial(String adapterId) {
+
+        AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
+        adapterConfig.setAccountType(AccountType.PRE_PAID);
+        adapterConfig.update();
     }
 }

@@ -4,10 +4,8 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Notificare;
 import com.almende.dialog.agent.AdapterAgent;
@@ -49,12 +47,11 @@ public  class NotificareServlet extends TextServlet {
         return count;
 	}
 
-	@Override
-	protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig,
-			String fromAddress) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
+        @Override
+        protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress) throws Exception {
+    
+            return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, fromAddress);
+        }
 
 	@Override
 	protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig,
@@ -99,7 +96,7 @@ public  class NotificareServlet extends TextServlet {
 	      String value = URLDecoder.decode(fields[1], "UTF-8");
 	      map.put(name, value);
 	    }
-	    Session ses = Session.getSession(map.get("sessionkey"));
+	    Session ses = Session.getOrCreateSession(map.get("sessionkey"));
 	    message.setBody(map.get("answer"));
 	    message.setAddress(ses.getRemoteAddress());
 	    message.setLocalAddress(ses.getLocalAddress());

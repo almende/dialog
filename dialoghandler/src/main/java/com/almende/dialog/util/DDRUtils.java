@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 import org.joda.time.DateTime;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.AdapterType;
@@ -615,14 +616,13 @@ public class DDRUtils
     }
     
     /**
-     * <b>used only with adapter type: broadsoft. </b> <br>
      * Returns true if a ddr is processed successfully for the given session. else false.
      * @param sessionKey
      * @param pushToQueue pushes the sessionKey to the rabbitMQ queue for postprocessing if a corresponding ddr is not
      * processed successfully
      * @return
      */
-    public static boolean stopCostsAtCallHangup( String sessionKey, boolean pushToQueue )
+    public static boolean stopDDRCosts( String sessionKey, boolean pushToQueue )
     {
         Session session = Session.getSession(sessionKey);
         boolean result = false;
@@ -637,54 +637,61 @@ public class DDRUtils
                     ddrRecord = DDRRecord.getDDRRecord(sessionKey);
                     session.setDdrRecordId(ddrRecord.getId());
                 }
-                if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
-                    session.getDirection() != null) {
-                    ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
-                                                           adapterConfig,
-                                                           Long.parseLong(session.getStartTimestamp()),
-                                                           session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
-                                                                                               : null,
-                                                           Long.parseLong(session.getReleaseTimestamp()));
-                    //push session to queue when the call is picked up but no costs are attached or
-                    //when the ddrRecord is found but no answerTimestamp is seen. (Try to process it again later: when the answer ccxml comes in later on)
-                    boolean candidateToBePushedToQueue = false;
-                    if (ddrRecord == null && session.getAnswerTimestamp() != null) {
-                        String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
+                if (AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(adapterConfig.getAdapterType())) {
+                    if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
+                        session.getDirection() != null) {
+                        ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
+                                                               adapterConfig,
+                                                               Long.parseLong(session.getStartTimestamp()),
+                                                               session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
+                                                                                                   : null,
+                                                               Long.parseLong(session.getReleaseTimestamp()));
+                        //push session to queue when the call is picked up but no costs are attached or
+                        //when the ddrRecord is found but no answerTimestamp is seen. (Try to process it again later: when the answer ccxml comes in later on)
+                        boolean candidateToBePushedToQueue = false;
+                        if (ddrRecord == null && session.getAnswerTimestamp() != null) {
+                            String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
+                                                                session.getKey());
+                            log.severe(errorMessage);
+                            dialogLog.severe(adapterConfig, errorMessage);
+                            candidateToBePushedToQueue = true;
+                        }
+                        else if (ddrRecord != null && session.getAnswerTimestamp() == null) {
+                            String warningMessage = String.format("No costs added. Looks like a hangup! for session: %s",
+                                                                  session.getKey());
+                            log.warning(warningMessage);
+                            candidateToBePushedToQueue = true;
+                        }
+                        if (candidateToBePushedToQueue && pushToQueue) { //push the session details to queue
+                            session.pushSessionToQueue();
+                            return result;
+                        }
+
+                        //publish charges
+                        Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
+                        //attach cost to ddr is prepaid type
+                        if (AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+                            ddrRecord.setTotalCost(totalCost);
+                            ddrRecord.createOrUpdate();
+                        }
+                        publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
+                        result = true;
+                    }
+                    //if answerTimestamp and releastTimestamp is not found, add it to the queue
+                    else {
+                        String errorMessage = String.format("No costs added to communication currently for session: %s, as no answerTimestamp or releaseTimestamp is found",
                                                             session.getKey());
                         log.severe(errorMessage);
                         dialogLog.severe(adapterConfig, errorMessage);
-                        candidateToBePushedToQueue = true;
+                        if (pushToQueue) { //push the session details to queue
+                            session.pushSessionToQueue();
+                        }
                     }
-                    else if (ddrRecord != null && session.getAnswerTimestamp() == null) {
-                        String warningMessage = String.format("No costs added. Looks like a hangup! for session: %s",
-                                                              session.getKey());
-                        log.warning(warningMessage);
-                        candidateToBePushedToQueue = true;
-                    }
-                    if (candidateToBePushedToQueue && pushToQueue) { //push the session details to queue
-                        session.pushSessionToQueue();
-                        return result;
-                    }
-
-                    //publish charges
-                    Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
-                    //attach cost to ddr is prepaid type
-                    if(AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
-                        ddrRecord.setTotalCost(totalCost);
-                        ddrRecord.createOrUpdate();
-                    }
-                    publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
-                    result = true;
                 }
-                //if answerTimestamp and releastTimestamp is not found, add it to the queue
-                else {
-                    String errorMessage = String.format("No costs added to communication currently for session: %s, as no answerTimestamp or releaseTimestamp is found",
-                                                        session.getKey());
-                    log.severe(errorMessage);
-                    dialogLog.severe(adapterConfig, errorMessage);
-                    if (pushToQueue) { //push the session details to queue
-                        session.pushSessionToQueue();
-                    }
+                //text adapter. delete the session if question is null
+                else if(session.getQuestion() == null){
+                    session.drop();
+                    result = true;
                 }
             }
             catch (Exception e) {

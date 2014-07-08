@@ -720,7 +720,7 @@ public class VoiceXMLRESTProxy {
                                         log.info(String.format("Call ended. session updated: %s",
                                                                ServerUtils.serialize(session)));
                                         //flush the keys if ddrProcessing was successful
-                                        if (DDRUtils.stopCostsAtCallHangup(session.getKey(), true)) {
+                                        if (DDRUtils.stopDDRCosts(session.getKey(), true)) {
                                             session.drop();
                                         }
                                         hangup(session);

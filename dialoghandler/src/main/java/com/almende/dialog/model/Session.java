@@ -50,6 +50,8 @@ public class Session{
     Question question = null;
     Map<String, String> extras = null;
     Integer retryCount = null;
+    @JsonIgnore
+    AdapterConfig adapterConfig = null;
 	
 	@JsonIgnore
 	public void kill(){
@@ -220,9 +222,8 @@ public class Session{
     @JsonIgnore
     public AdapterConfig getAdapterConfig() {
 
-        if (getAdapterID() != null)
-            return AdapterConfig.getAdapterConfig(getAdapterID());
-        return null;
+        return adapterConfig != null ? adapterConfig : (adapterID != null ? AdapterConfig.getAdapterConfig(adapterID)
+                                                                         : null);
     }
 	
     public Map<String, String> getExtras()
@@ -283,12 +284,7 @@ public class Session{
 
     public void setQuestion(Question question) {
 
-        if (question == null) {
-            return;
-        }
-        else {
-            this.question = question;
-        }
+        this.question = question;
     }
     
     public Integer getRetryCount()

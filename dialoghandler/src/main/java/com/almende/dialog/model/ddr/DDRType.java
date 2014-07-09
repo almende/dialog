@@ -34,6 +34,10 @@ public class DDRType
          */
         OUTGOING_COMMUNICATION_COST,
         /**
+         * usually used only with costs attached to calling when a call is setup.
+         */
+        START_UP_COST,
+        /**
          * service cost applied for performing/completing one dialog scenario
          */
         SERVICE_COST,

@@ -335,7 +335,12 @@ public class DDRUtils
      * DDRPrice with the most recent {@link DDRPrice#getEndTime() endTime} is
      * chosen if the {@link DDRRecord#getStart() startTime} doesnt fall between
      * {@link DDRPrice#getStartTime() startTime} and
-     * {@link DDRPrice#getEndTime() endTime}
+     * {@link DDRPrice#getEndTime() endTime}. <br>
+     * Following costs can be added: <br>
+     * 1. {@link DDRTypeCategory#INCOMING_COMMUNICATION_COST} If its an incoming ddr <br>
+     *  or {@link DDRTypeCategory#OUTGOING_COMMUNICATION_COST} If its an outgoing ddr <br>
+     * 2. {@link DDRTypeCategory#START_UP_COST} if its a ddr record linked to calling <br>
+     * 3. {@link DDRTypeCategory#SERVICE_COST} per dialog cost if includeServiceCosts is true <br>
      * @param ddrRecord
      * @param includeServiceCosts includes the service cost for this ddr too, if true. The service cost is 
      * ignored if it is lesser than the communiciation cost
@@ -406,14 +411,22 @@ public class DDRUtils
                 }
                 result = calculateDDRCost( ddrRecord, selectedDDRPrice );
             }
+            //always include start-up costs if the adapter is broadsoft
+            if(config != null && AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(config.getAdapterType()) && result > 0.0) {
+                DDRPrice startUpPrice = fetchDDRPrice(DDRTypeCategory.START_UP_COST,
+                                                      AdapterType.getByValue(config.getAdapterType()),
+                                                      config.getConfigId(), UnitType.PART, null);
+                Double startUpCost = startUpPrice != null ? startUpPrice.getPrice() : 0.0;
+                result += startUpCost;
+            }
         }
         //check if service costs are to be included, only include it if there is any communication costs
         if(includeServiceCosts != null && includeServiceCosts && result > 0.0)
         {
-            AdapterType adapterType = config != null ? AdapterType.getByValue( config.getAdapterType() ) : null;
             String adapterId = config != null ? config.getConfigId() : null;
-            DDRPrice ddrPriceForDialogService = fetchDDRPrice(DDRTypeCategory.SERVICE_COST, adapterType,
-                                                                       adapterId, UnitType.PART, null);
+            DDRPrice ddrPriceForDialogService = fetchDDRPrice(DDRTypeCategory.SERVICE_COST,
+                                                              AdapterType.getByValue(config.getAdapterType()),
+                                                              adapterId, UnitType.PART, null);
             Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
             //add the service cost if the communication cost is lesser than the service cost
             if ( result < serviceCost )

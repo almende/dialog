@@ -18,6 +18,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.codehaus.plexus.util.StringInputStream;
 import org.codehaus.plexus.util.StringOutputStream;
+import org.hamcrest.Matchers;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.w3c.dom.Document;
@@ -35,6 +37,7 @@ import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 
 
+@SuppressWarnings("deprecation")
 public class CMServletTest extends TestFramework
 {
     private static final String simpleQuestion = "How are you?";
@@ -199,7 +202,7 @@ public class CMServletTest extends TestFramework
     @Test
     public void parseSMSDeliveryStatusPayloadTest() throws Exception
     {
-        String testXml = getTestSMSStatusXML("0031614765863", "SMS-Status_0031614765863_0031636465236_1385978625000");
+        String testXml = getTestSMSStatusXML("0031614765863", "SMS-Status_0031613765863_0031636465236_1385978625000");
         Method handleStatusReport = fetchMethodByReflection( "handleDeliveryStatusReport", CMSmsServlet.class,
             String.class );
         CMSmsServlet cmSmsServlet = new CMSmsServlet();
@@ -212,6 +215,20 @@ public class CMServletTest extends TestFramework
         assertEquals( "200", cmStatus.getCode() );
         assertEquals( "0", cmStatus.getErrorCode() );
         assertEquals( "No Error", cmStatus.getErrorDescription() );
+    }
+    
+    @Test
+    public void hostInSMSReferenceIsParsedTest() throws Exception {
+
+        String reference = CMStatus.generateSMSReferenceKey(TEST_PRIVATE_KEY, "0031636465236", "0031613765863");
+        Assert.assertThat(reference, Matchers.containsString("http"));
+        String testXml = getTestSMSStatusXML("0031614765863",
+                                             "SMS-Status_0031613_0031636_http://sandbox.ask-fast.com");
+        Method handleStatusReport = fetchMethodByReflection("handleDeliveryStatusReport", CMSmsServlet.class,
+                                                            String.class);
+        CMSmsServlet cmSmsServlet = new CMSmsServlet();
+        Object reportReply = invokeMethodByReflection(handleStatusReport, cmSmsServlet, testXml);
+        Assert.assertThat(reportReply, Matchers.nullValue());
     }
     
     @Test

@@ -26,6 +26,7 @@ import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
+import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AccountType;
 
 @SuppressWarnings("serial")
@@ -657,17 +658,22 @@ abstract public class TextServlet extends HttpServlet {
      * @return the number of outbound messages done
      * @throws Exception
      */
-    private int broadcastMessageAndAttachCharge( String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
-    {
-        int count = broadcastMessage( message, subject, from, senderName, addressNameMap, extras, config );
-        //attach costs
-        DDRRecord ddrRecord = createDDRForOutgoing( config, addressNameMap, message );
+    private int broadcastMessageAndAttachCharge(String message, String subject, String from, String senderName,
+                                                Map<String, String> addressNameMap, Map<String, Object> extras,
+                                                AdapterConfig config) throws Exception {
+
+        addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
+        int count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config);
+        //attach costs for all members (even in cc and bcc if any)
+        if (extras != null) {
+            addressNameMap.putAll(addRecipientsInCCAndBCCToAddressMap(extras));
+        }
+        DDRRecord ddrRecord = createDDRForOutgoing(config, addressNameMap, message);
         //push the cost to hte queue
-        Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
-        DDRUtils.publishDDREntryToQueue( config.getOwner(), totalCost );
+        Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
+        DDRUtils.publishDDREntryToQueue(config.getOwner(), totalCost);
         //attach cost to ddr is prepaid type
-        if(AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+        if (AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
             ddrRecord.setTotalCost(totalCost);
             ddrRecord.createOrUpdate();
         }
@@ -714,5 +720,43 @@ abstract public class TextServlet extends HttpServlet {
             ddrRecord.createOrUpdate();
         }
         return ddrRecord;
+    }
+    
+    /**
+     * collates all the addresses in the cc and bcc
+     * @param extras
+     * @return
+     */
+    private HashMap<String, String> addRecipientsInCCAndBCCToAddressMap(Map<String, Object> extras) {
+
+        HashMap<String, String> addressNameMap = new HashMap<String, String>();
+        //add cc list
+        if (extras.get(MailServlet.CC_ADDRESS_LIST_KEY) != null) {
+            if (extras.get(MailServlet.CC_ADDRESS_LIST_KEY) instanceof Map) {
+                TypeUtil<HashMap<String, String>> injector = new TypeUtil<HashMap<String, String>>() {
+                };
+                HashMap<String, String> ccAddressNameMap = injector.inject(extras.get(MailServlet.CC_ADDRESS_LIST_KEY));
+                addressNameMap.putAll(ccAddressNameMap);
+            }
+            else {
+                log.severe(String.format("CC list seen but not of Map type: %s", ServerUtils
+                                                .serializeWithoutException(extras.get(MailServlet.CC_ADDRESS_LIST_KEY))));
+            }
+        }
+        //add bcc list
+        if (extras.get(MailServlet.BCC_ADDRESS_LIST_KEY) != null) {
+            if (extras.get(MailServlet.BCC_ADDRESS_LIST_KEY) instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, String> bccAddressNameMap = (Map<String, String>) extras
+                                                .get(MailServlet.BCC_ADDRESS_LIST_KEY);
+                addressNameMap.putAll(bccAddressNameMap);
+            }
+            else {
+                log.severe(String.format("BCC list seen but not of Map type: %s",
+                                         ServerUtils.serializeWithoutException(extras
+                                                                         .get(MailServlet.BCC_ADDRESS_LIST_KEY))));
+            }
+        }
+        return addressNameMap;
     }
 }

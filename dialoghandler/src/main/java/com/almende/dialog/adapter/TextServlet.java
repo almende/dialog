@@ -347,44 +347,47 @@ abstract public class TextServlet extends HttpServlet {
 	    session.drop();
 	}
 	
-	@Override
-	public void service(HttpServletRequest req, HttpServletResponse res)
-			throws IOException {
-		this.host = RequestUtil.getHost(req);
-		// log.warning("Starting to handle xmpp post: "+startTime+"/"+(new
-		// Date().getTime()));
-		boolean loading = ParallelInit.startThreads();
-		
-		if (req.getServletPath().endsWith("/error/")) {
-			doErrorPost(req, res);
-			return;
-		}
-		
-		if (loading) {
-			ParallelInit.getClient();
-			service(req, res);
-			return;
-		}
-		
-		TextMessage msg;
-                try {
-                    msg = receiveMessageAndAttachCharge(req, res);
-                }
-                catch (Exception ex) {
-                    ex.printStackTrace();
-                    log.severe("Failed to parse received message: " + ex.getLocalizedMessage());
-                    return;
-                }
-		
-		try {
-			processMessage(msg);
-			//set status 200 in hte response
-			res.setStatus(HttpServletResponse.SC_OK);
-		} catch (Exception e) {
-			log.severe(e.getLocalizedMessage());
-			e.printStackTrace();
-		}
-	}
+    @Override
+    public void service(HttpServletRequest req, HttpServletResponse res) throws IOException {
+
+        this.host = RequestUtil.getHost(req);
+        // log.warning("Starting to handle xmpp post: "+startTime+"/"+(new
+        // Date().getTime()));
+        boolean loading = ParallelInit.startThreads();
+
+        if (req.getServletPath().endsWith("/error/")) {
+            doErrorPost(req, res);
+            return;
+        }
+
+        if (loading) {
+            ParallelInit.getClient();
+            service(req, res);
+            return;
+        }
+
+        TextMessage msg;
+        try {
+            msg = receiveMessageAndAttachCharge(req, res);
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
+            log.severe("Failed to parse received message: " + ex.getLocalizedMessage());
+            return;
+        }
+
+        try {
+            log.info(String.format("Inbound text: %s seen from: %s to: %s", msg.getBody(), msg.getAddress(),
+                                   msg.getLocalAddress()));
+            processMessage(msg);
+            //set status 200 in hte response
+            res.setStatus(HttpServletResponse.SC_OK);
+        }
+        catch (Exception e) {
+            log.severe(e.getLocalizedMessage());
+            e.printStackTrace();
+        }
+    }
 	
     /**
      * processes any message (based on a Dialog) and takes actions like sending,

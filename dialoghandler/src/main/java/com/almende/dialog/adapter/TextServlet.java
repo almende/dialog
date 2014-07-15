@@ -184,7 +184,7 @@ abstract public class TextServlet extends HttpServlet {
         session.setQuestion(res.question);
         session.setLocalName(getSenderName(question, config, null));
         session.storeSession();
-        String fromName = getNickname(res.question);
+        String fromName = getSenderName(question, config, null);
 
         Map<String, Object> extras = null;
         if (res.question != null) {
@@ -448,6 +448,8 @@ abstract public class TextServlet extends HttpServlet {
                         extras = CMStatus.storeSMSRelatedData(address, localaddress, config, null,
                                                               getNoConfigMessage(), session.getKey(), extras);
                     }
+                    fromName = session.getLocalName() != null && !session.getLocalName().isEmpty() ? session
+                                                    .getLocalName() : getSenderName(null, config, null);
                     count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress, fromName, address,
                                                        toName, extras, config);
                 }
@@ -460,6 +462,7 @@ abstract public class TextServlet extends HttpServlet {
                 return count;
             }
             session.setAdapterID(config.getConfigId());
+            session.storeSession();
         }
 
         //check if the keyword matches that of the adapter keyword
@@ -511,7 +514,6 @@ abstract public class TextServlet extends HttpServlet {
                 // fix for bug: #15 https://github.com/almende/dialog/issues/15
                 escapeInput.reply = URLDecoder.decode(replystr.reply, "UTF-8");
                 question = replystr.question;
-                fromName = getNickname(question);
 
                 extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, escapeInput.reply,
                                                       session.getKey(), extras);

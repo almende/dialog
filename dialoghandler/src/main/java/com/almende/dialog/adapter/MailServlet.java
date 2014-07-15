@@ -210,7 +210,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
         try
         {
             log.info( String.format(
-                "sending email from: %s senderName: %s to: %s with params: host: %s port: %s user: %s ", from,
+                "sending email from: %s senderName: %s to: %s with host: %s port: %s user: %s ", from,
                 senderName, ServerUtils.serialize( addressNameMap ), sendingHost, sendingPort, username ) );
             //add to list
             if(senderName!=null)

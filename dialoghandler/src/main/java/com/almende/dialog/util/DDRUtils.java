@@ -593,7 +593,7 @@ public class DDRUtils
                                        String message) throws Exception {
 
         DDRType communicationCostDDRType = DDRType.getDDRType(category);
-        if (communicationCostDDRType != null) {
+        if (communicationCostDDRType != null && config != null) {
             log.info(String.format("Applying charges for account: %s and adapter: %s with address: %s",
                                    config.getOwner(), config.getConfigId(), config.getMyAddress()));
             if (config.getConfigId() != null && config.getOwner() != null) {

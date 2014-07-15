@@ -706,9 +706,9 @@ public class AdapterConfig {
         return properties;
     }
 
-    public void setProperties( Map<String, Object> extras )
+    public void setProperties( Map<String, Object> properties )
     {
-        this.properties = extras;
+        this.properties = properties;
     }
     
     public static void delete( String configId )

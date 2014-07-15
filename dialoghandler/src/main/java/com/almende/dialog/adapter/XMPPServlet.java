@@ -3,10 +3,8 @@ package com.almende.dialog.adapter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.jivesoftware.smack.AccountManager;
 import org.jivesoftware.smack.Chat;
 import org.jivesoftware.smack.ChatManagerListener;
@@ -22,7 +20,6 @@ import org.jivesoftware.smack.packet.Message.Body;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Presence.Mode;
 import org.jivesoftware.smack.packet.Presence.Type;
-
 import com.almende.dialog.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
@@ -205,17 +202,17 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
     }
     
     @Override
-    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress ) throws Exception
-    {
-        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
+
+        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, fromAddress, message);
     }
 
 
     @Override
-    protected DDRRecord createDDRForOutgoing( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
-    throws Exception
-    {
-        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, toAddress );
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
+                                             Map<String, String> toAddress, String message) throws Exception {
+
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, toAddress, message);
     }
     
     public static void registerASKFastXMPPAccount( String username, String password, String name, String email )

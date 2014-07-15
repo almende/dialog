@@ -11,7 +11,6 @@ import com.almende.dialog.adapter.tools.Notificare;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.google.common.io.CharStreams;
@@ -48,17 +47,17 @@ public  class NotificareServlet extends TextServlet {
 	}
 
         @Override
-        protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress) throws Exception {
+        protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
     
-            return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, fromAddress);
+            return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, fromAddress, message);
         }
 
-	@Override
-	protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig,
-			Map<String, String> toAddress, String message) throws Exception {
-        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,
-                1 );
-	}
+        @Override
+        protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
+                                                 Map<String, String> toAddress, String message) throws Exception {
+    
+            return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, null, toAddress, 1, message);
+        }
 
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req,

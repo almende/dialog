@@ -11,13 +11,14 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.CMStatus;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.exception.NotFoundException;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
@@ -25,6 +26,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
+import com.thetransactioncompany.cors.HTTPMethod;
 
 public class CMSmsServlet extends TextServlet {
 
@@ -32,6 +34,7 @@ public class CMSmsServlet extends TextServlet {
 	protected static final com.almende.dialog.Logger dialogLog =  new com.almende.dialog.Logger();
 	private static final String servletPath = "/_ah/sms/";
 	private static final String adapterType = "CM";
+	private static final String deliveryStatusPath = "/dialoghandler/sms/cm/deliveryStatus";
 	
 	@Override
 	protected int sendMessage(String message, String subject, String from,
@@ -55,7 +58,7 @@ public class CMSmsServlet extends TextServlet {
     @Override
     public void service( HttpServletRequest req, HttpServletResponse res ) throws IOException
     {
-        if ( req.getRequestURI().startsWith( "/dialoghandler/sms/cm/deliveryStatus" ) )
+        if ( req.getRequestURI().startsWith( deliveryStatusPath ) )
         {
             if ( req.getMethod().equals( "POST" ) )
             {
@@ -81,6 +84,17 @@ public class CMSmsServlet extends TextServlet {
             {
                 try
                 {
+                    String reference = req.getParameter("reference");
+                    //check the host in the CMStatus
+                    if (reference != null) {
+                        String hostFromReference = CMStatus.getHostFromReference(reference);
+                        //if sender 
+                        if (hostFromReference != null && !hostFromReference.contains((hostFromReference))) {
+                            log.info("CM delivery status is being redirect to: " + hostFromReference);
+                            hostFromReference += (req.getPathInfo() + req.getQueryString() != null ? req.getQueryString() : "");
+                            forwardToHost(hostFromReference, HTTPMethod.GET, null);
+                        }
+                    }
                     CMStatus cmStatus = handleDeliveryStatusReport( req.getParameter( "reference" ),
                         req.getParameter( "sent" ), req.getParameter( "received" ), req.getParameter( "to" ),
                         req.getParameter( "statuscode" ), req.getParameter( "errorcode" ),
@@ -128,42 +142,46 @@ public class CMSmsServlet extends TextServlet {
 			throws IOException {}
 	
     @Override
-    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress ) throws Exception
-    {
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
+
         // Needs implementation, but service not available at CM
         return null;
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
-    {
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
+                                             Map<String, String> toAddress, String message) throws Exception {
+
         //add costs with no.of messages * recipients
-        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,
-            CM.countMessageParts( message ) * toAddress.size() );
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, senderName, toAddress,
+                                                               CM.countMessageParts(message) * toAddress.size(),
+                                                               message);
     }
 
-	/**
-     * handles the status report based on xml payload sent by CM. 
-     * used by POST only. See {@link http://docs.cm.nl/http_SR.pdf} for more info.
+    /**
+     * handles the status report based on xml payload sent by CM. If the report
+     * points to a different HOST then a log is added and a NULL is returned.
+     * used by POST only. See {@link http://docs.cm.nl/http_SR.pdf} for more
+     * info.
+     * 
      * @param payload
      * @return
      */
-	private CMStatus handleDeliveryStatusReport( String payload )
-    {
-        try
-        {
-            log.info( "payload seen: "+ payload );
+    private CMStatus handleDeliveryStatusReport(String payload) {
+
+        try {
+            log.info("payload seen: " + payload);
             DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
             DocumentBuilder newDocumentBuilder = newInstance.newDocumentBuilder();
-            Document parse = newDocumentBuilder.parse( new ByteArrayInputStream(payload.getBytes("UTF-8")) );
-            Node sentNode = parse.getElementsByTagName( "MESSAGES" ).item( 0 ).getAttributes().getNamedItem("SENT" );
-            Node receivedNode = parse.getElementsByTagName( "MSG" ).item( 0 ).getAttributes().getNamedItem("RECEIVED" );
-            Node toNode = parse.getElementsByTagName( "TO" ).item(0 );
-            Node referenceNode = parse.getElementsByTagName( "REFERENCE" ).item(0 );
-            Node codeNode = parse.getElementsByTagName( "CODE" ).item(0 );
-            Node errorCodeNode = parse.getElementsByTagName( "ERRORCODE" ).item(0 );
-            Node errorDescNode = parse.getElementsByTagName( "ERRORDESCRIPTION" ).item(0 );
-            
+            Document parse = newDocumentBuilder.parse(new ByteArrayInputStream(payload.getBytes("UTF-8")));
+            Node sentNode = parse.getElementsByTagName("MESSAGES").item(0).getAttributes().getNamedItem("SENT");
+            Node receivedNode = parse.getElementsByTagName("MSG").item(0).getAttributes().getNamedItem("RECEIVED");
+            Node toNode = parse.getElementsByTagName("TO").item(0);
+            Node referenceNode = parse.getElementsByTagName("REFERENCE").item(0);
+            Node codeNode = parse.getElementsByTagName("CODE").item(0);
+            Node errorCodeNode = parse.getElementsByTagName("ERRORCODE").item(0);
+            Node errorDescNode = parse.getElementsByTagName("ERRORDESCRIPTION").item(0);
+
             String reference = referenceNode != null ? referenceNode.getTextContent() : null;
             String sent = sentNode != null ? sentNode.getTextContent() : null;
             String received = receivedNode != null ? receivedNode.getTextContent() : null;
@@ -171,12 +189,24 @@ public class CMSmsServlet extends TextServlet {
             String code = codeNode != null ? codeNode.getTextContent() : null;
             String errorCode = errorCodeNode != null ? errorCodeNode.getTextContent() : null;
             String errorDescription = errorDescNode != null ? errorDescNode.getTextContent() : null;
-            
-            return handleDeliveryStatusReport( reference, sent, received, to, code, errorCode, errorDescription );
+
+            //check the host in the CMStatus
+            if (reference != null) {
+                String hostFromReference = CMStatus.getHostFromReference(reference);
+                //if sender 
+                if (hostFromReference != null && !hostFromReference.contains((Settings.HOST))) {
+                    log.info("CM delivery status is being redirect to: " + hostFromReference);
+                    hostFromReference += deliveryStatusPath;
+                    String response = forwardToHost(hostFromReference, HTTPMethod.POST, payload);
+                    log.info("CM DLR response: "+ response);
+                    return null;
+                }
+            }
+
+            return handleDeliveryStatusReport(reference, sent, received, to, code, errorCode, errorDescription);
         }
-        catch ( Exception e )
-            {
-            log.severe( "Document parse failed. \nMessage: "+ e.getLocalizedMessage() );
+        catch (Exception e) {
+            log.severe("Document parse failed. \nMessage: " + e.getLocalizedMessage());
         }
         return null;
     }
@@ -194,122 +224,125 @@ public class CMSmsServlet extends TextServlet {
      * @return
      * @throws Exception
      */
-    private CMStatus handleDeliveryStatusReport( String reference, String sent, String received, String to,
-        String code, String errorCode, String errorDescription ) throws Exception
-    {
-        log.info( String.format(
-            "CM SR: reference: %s, sent: %s, received: %s, to: %s, statusCode: %s errorCode: %s, errorDesc: %s",
-            reference, sent, received, to, code, errorCode, errorDescription ) );
-        if ( reference != null && !reference.isEmpty() )
-        {
-            CMStatus cmStatus = CMStatus.fetch( reference );
-            if ( cmStatus == null )
-            {
-                log.warning( "CM status not found for reference: " + reference );
-                cmStatus = new CMStatus();
-                cmStatus.setReference( reference );
-                String[] referenceArray = reference.split( "_" );
-                if ( referenceArray.length == 5 )
-                {
-                    cmStatus.setAdapterID( referenceArray[1] );
-                    cmStatus.setLocalAddress( referenceArray[2] );
+    private CMStatus handleDeliveryStatusReport(String reference, String sent, String received, String to, String code,
+                                                String errorCode, String errorDescription) throws Exception {
+
+        log.info(String.format("CM SR: reference: %s, sent: %s, received: %s, to: %s, statusCode: %s errorCode: %s, errorDesc: %s",
+                               reference, sent, received, to, code, errorCode, errorDescription));
+        if (reference != null && !reference.isEmpty()) {
+            CMStatus cmStatus = CMStatus.fetch(reference);
+            if (cmStatus != null) {
+                if (sent != null) {
+                    cmStatus.setSentTimeStamp(sent);
                 }
-            }
-            if ( sent != null )
-            {
-                cmStatus.setSentTimeStamp( sent );
-            }
-            if ( received != null )
-            {
-                cmStatus.setDeliveredTimeStamp( received );
-            }
-            if ( to != null )
-            {
-                if ( !to.equals( cmStatus.getRemoteAddress() ) )
-                {
-                    log.warning( "To address dont match between entity and status callback from CM !!" );
+                if (received != null) {
+                    cmStatus.setDeliveredTimeStamp(received);
                 }
-                cmStatus.setRemoteAddress( to );
-            }
-            if ( code != null )
-            {
-                cmStatus.setCode( code );
-            }
-            if ( errorCode != null )
-            {
-                cmStatus.setErrorCode( errorCode );
-            }
-            if ( errorDescription != null )
-            {
-                cmStatus.setErrorDescription( errorDescription );
-            }
-            else if ( errorCode != null && !errorCode.isEmpty() )
-            {
-                cmStatus.setErrorDescription( erroCodeMapping( Integer.parseInt( errorCode ) ) );
-            }
-            if ( cmStatus.getCallback() != null && cmStatus.getCallback().startsWith( "http" ) )
-            {
-                Client client = ParallelInit.getClient();
-                WebResource webResource = client.resource( cmStatus.getCallback() );
-                try
-                {
-                    String callbackPayload = ServerUtils.serialize( cmStatus );
-                    if(ServerUtils.isInUnitTestingEnvironment())
-                    {
-                        TestServlet.logForTest( cmStatus );
+                if (to != null) {
+                    if (!to.equals(cmStatus.getRemoteAddress())) {
+                        log.warning("To address dont match between entity and status callback from CM !!");
                     }
-                    webResource.type( "text/plain" ).post( String.class, callbackPayload );
-                    dialogLog.info(
-                        cmStatus.getAdapterID(),
-                        String.format( "POST request with payload %s sent to: %s", callbackPayload,
-                            cmStatus.getCallback() ) );
+                    cmStatus.setRemoteAddress(to);
                 }
-                catch ( Exception ex )
-                {
-                    log.severe( "Callback failed. Message: " + ex.getLocalizedMessage() );
+                if (code != null) {
+                    cmStatus.setCode(code);
                 }
-            }
-            else
-            {
-                log.info( "Reference: " + reference + ". No delivered callback found." );
-                dialogLog.info( cmStatus.getAdapterID(), "No delivered callback found for reference: " + reference );
-            }
-            //fetch ddr corresponding to this
-            if(cmStatus.getSessionKey() != null) {
-                Session session = Session.getSession(cmStatus.getSessionKey());
-                if(session != null && session.getDdrRecordId() != null) {
-                    DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), cmStatus.getAccountId());
-                    if(ddrRecord != null) {
-                        if (errorCode == null || errorCode.isEmpty()) {
-                            ddrRecord.setStatus(CommunicationStatus.DELIVERED);
+                if (errorCode != null) {
+                    cmStatus.setErrorCode(errorCode);
+                }
+                if (errorDescription != null) {
+                    cmStatus.setErrorDescription(errorDescription);
+                }
+                else if (errorCode != null && !errorCode.isEmpty()) {
+                    cmStatus.setErrorDescription(erroCodeMapping(Integer.parseInt(errorCode)));
+                }
+                if (cmStatus.getCallback() != null && cmStatus.getCallback().startsWith("http")) {
+                    Client client = ParallelInit.getClient();
+                    WebResource webResource = client.resource(cmStatus.getCallback());
+                    try {
+                        String callbackPayload = ServerUtils.serialize(cmStatus);
+                        if (ServerUtils.isInUnitTestingEnvironment()) {
+                            TestServlet.logForTest(cmStatus);
                         }
-                        else {
-                            ddrRecord.setStatus(CommunicationStatus.ERROR);
-                            ddrRecord.setAdditionalInfo(cmStatus.getErrorDescription());
-                        }
-                        ddrRecord.createOrUpdate();
+                        webResource.type("text/plain").post(String.class, callbackPayload);
+                        dialogLog.info(cmStatus.getAdapterID(), String
+                                                        .format("POST request with payload %s sent to: %s",
+                                                                callbackPayload, cmStatus.getCallback()));
                     }
-                    else {
-                        log.warning(String.format("No ddr record found for id: %s", session.getDdrRecordId()));
+                    catch (Exception ex) {
+                        log.severe("Callback failed. Message: " + ex.getLocalizedMessage());
                     }
                 }
                 else {
-                    log.warning(String.format("No session found for id: %s", cmStatus.getSessionKey()));
+                    log.info("Reference: " + reference + ". No delivered callback found.");
+                    dialogLog.info(cmStatus.getAdapterID(), "No delivered callback found for reference: " + reference);
                 }
-                //drop the session when the callback is seen
-                Session.drop(cmStatus.getSessionKey());
+                //fetch ddr corresponding to this
+                if (cmStatus.getSessionKey() != null) {
+                    Session session = Session.getSession(cmStatus.getSessionKey());
+                    if (session != null && session.getDdrRecordId() != null) {
+                        DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), cmStatus.getAccountId());
+                        if (ddrRecord != null) {
+                            if (errorCode == null || errorCode.isEmpty()) {
+                                ddrRecord.setStatus(CommunicationStatus.DELIVERED);
+                            }
+                            else {
+                                ddrRecord.setStatus(CommunicationStatus.ERROR);
+                                ddrRecord.addAdditionalInfo("ERROR", cmStatus.getErrorDescription());
+                            }
+                            ddrRecord.createOrUpdate();
+                        }
+                        else {
+                            log.warning(String.format("No ddr record found for id: %s", session.getDdrRecordId()));
+                        }
+                    }
+                    else {
+                        log.warning(String.format("No session found for id: %s", cmStatus.getSessionKey()));
+                    }
+                    //drop the session when the callback is seen
+                    Session.drop(cmStatus.getSessionKey());
+                }
+                else {
+                    log.warning(String.format("No session attached for cm status: %s", cmStatus.getReference()));
+                }
+                cmStatus.store();
             }
-            else {
-                log.warning(String.format("No session attached for cm status: %s", cmStatus.getReference()));
-            }
-            cmStatus.store();
             return cmStatus;
         }
-        else
-        {
-            log.severe( "Reference code cannot be null" );
+        else {
+            log.severe("Reference code cannot be null");
             return null;
         }
+    }
+    
+    /**
+     * forward the CM delivery status to a different host with a POST request based on the 
+     * host attached in the reference
+     * @param host
+     * @param post 
+     * @param payload
+     * @return
+     */
+    private String forwardToHost(String host, HTTPMethod method, String payload) {
+
+        Client client = ParallelInit.getClient();
+        WebResource webResource = client.resource(host);
+        try {
+            switch (method) {
+                case GET:
+                    return webResource.type("text/plain").get(String.class);
+                case POST:
+                    return webResource.type("text/plain").post(String.class, payload);
+                default:
+                    throw new NotFoundException(String.format("METHOD %s not implemented", method));
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            log.severe(String.format("Failed to send CM DLR status to host: %s. Message: %s", host,
+                                     e.getLocalizedMessage()));
+        }
+        return null;
     }
     
     /**

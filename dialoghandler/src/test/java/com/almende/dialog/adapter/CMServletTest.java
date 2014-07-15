@@ -18,6 +18,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.codehaus.plexus.util.StringInputStream;
 import org.codehaus.plexus.util.StringOutputStream;
+import org.hamcrest.Matchers;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.w3c.dom.Document;
@@ -26,15 +28,18 @@ import org.w3c.dom.NodeList;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CMStatus;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
+import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 
 
+@SuppressWarnings("deprecation")
 public class CMServletTest extends TestFramework
 {
     private static final String simpleQuestion = "How are you?";
@@ -56,8 +61,7 @@ public class CMServletTest extends TestFramework
         url = ServerUtils.getURLWithQueryParams( url, "question", simpleQuestion );
         outBoundSMSCallXMLTest( addressNameMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT,
             senderName, "outBoundBroadcastCallSenderNameNotNullTest" );
-        assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, simpleQuestion, senderName,
-            "outBoundBroadcastCallSenderNameNotNullTest" );
+        assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, simpleQuestion, senderName );
     }
 
     @Test
@@ -71,8 +75,7 @@ public class CMServletTest extends TestFramework
         addressMap.put( remoteAddressVoice, null );
         outBoundSMSCallXMLTest( addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
             "outBoundSMSCallSenderNameNotNullTest" );
-        assertXMLGeneratedFromOutBoundCall( addressMap, adapterConfig, simpleQuestion, senderName,
-            "outBoundSMSCallSenderNameNotNullTest" );
+        assertXMLGeneratedFromOutBoundCall( addressMap, adapterConfig, simpleQuestion, senderName );
     }
     
     /**
@@ -91,7 +94,7 @@ public class CMServletTest extends TestFramework
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put( remoteAddressVoice, null );
         outBoundSMSCallXMLTest( addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, null, null );
-        assertXMLGeneratedFromOutBoundCall( addressMap, adapterConfig, simpleQuestion, myAddress, null );
+        assertXMLGeneratedFromOutBoundCall( addressMap, adapterConfig, simpleQuestion, myAddress );
     }
 
     /**
@@ -116,7 +119,7 @@ public class CMServletTest extends TestFramework
         String expectedQuestion = TestServlet.getResponseQuestionWithOptionsInString( TestServlet
             .getJsonAppointmentQuestion() );
         assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, expectedQuestion,
-            textMessage.getLocalAddress(), null );
+            textMessage.getLocalAddress() );
     }
 
     /**
@@ -142,7 +145,7 @@ public class CMServletTest extends TestFramework
         AdapterConfig adapterConfig = AdapterConfig.findAdapters( "SMS", localAddressBroadsoft, null ).iterator()
             .next();
         assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, expectedQuestion,
-            textMessage.getLocalAddress(), null);
+            textMessage.getLocalAddress());
     }
 
     /**
@@ -167,7 +170,7 @@ public class CMServletTest extends TestFramework
         AdapterConfig adapterConfig = AdapterConfig.findAdapters( "SMS", localAddressBroadsoft, null ).iterator()
             .next();
         assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, expectedQuestion,
-            textMessage.getLocalAddress(), null );
+            textMessage.getLocalAddress() );
     }
 
     /**
@@ -193,13 +196,13 @@ public class CMServletTest extends TestFramework
         AdapterConfig adapterConfig = AdapterConfig.findAdapters( "SMS", localAddressBroadsoft, null ).iterator()
             .next();
         assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, expectedQuestion,
-            textMessage.getLocalAddress(), null );
+            textMessage.getLocalAddress() );
     }
 
     @Test
     public void parseSMSDeliveryStatusPayloadTest() throws Exception
     {
-        String testXml = getTestSMSStatusXML("0031614765863", "SMS-Status_0031614765863_0031636465236_1385978625000");
+        String testXml = getTestSMSStatusXML("0031614765863", "SMS-Status_0031613765863_0031636465236_1385978625000");
         Method handleStatusReport = fetchMethodByReflection( "handleDeliveryStatusReport", CMSmsServlet.class,
             String.class );
         CMSmsServlet cmSmsServlet = new CMSmsServlet();
@@ -212,6 +215,63 @@ public class CMServletTest extends TestFramework
         assertEquals( "200", cmStatus.getCode() );
         assertEquals( "0", cmStatus.getErrorCode() );
         assertEquals( "No Error", cmStatus.getErrorDescription() );
+    }
+    
+    @Test
+    public void hostInSMSReferenceIsParsedTest() throws Exception {
+
+        String reference = CMStatus.generateSMSReferenceKey(TEST_PRIVATE_KEY, "0031636465236", "0031613765863");
+        Assert.assertThat(reference, Matchers.containsString("http"));
+        String testXml = getTestSMSStatusXML("0031614765863",
+                                             "SMS-Status_0031613_0031636_http://sandbox.ask-fast.com");
+        Method handleStatusReport = fetchMethodByReflection("handleDeliveryStatusReport", CMSmsServlet.class,
+                                                            String.class);
+        CMSmsServlet cmSmsServlet = new CMSmsServlet();
+        Object reportReply = invokeMethodByReflection(handleStatusReport, cmSmsServlet, testXml);
+        Assert.assertThat(reportReply, Matchers.nullValue());
+    }
+    
+    /**
+     * create a session, an adapter with keyword. call the inbound message processing method to test if it is 
+     * handled well. 
+     * @throws Exception
+     */
+    @Test
+    public void inboundMBSMSTest() throws Exception {
+
+        AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, TEST_PUBLIC_KEY, "0642500086",
+                                                       null);
+        //create a session with already a question (meaning a message is already sent)
+        Session session = Session.getOrCreateSession(smsAdapter,
+                                                     PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.APPOINTMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+        session.setStartUrl(url);
+        Question question = Question.fromURL(url, smsAdapter.getConfigId());
+        session.setQuestion(question);
+        session.storeSession();
+        
+        //setup test inbound data
+        Method receiveMessage = fetchMethodByReflection("receiveMessage", MBSmsServlet.class, HashMap.class);
+        MBSmsServlet mbSmsServlet = new MBSmsServlet();
+        HashMap<String, String> testInboundSMSData = new HashMap<String, String>();
+        testInboundSMSData.put("id", "87708ec0453c4d95a284ff4m68999827");
+        testInboundSMSData.put("message", "TEST yup");
+        testInboundSMSData.put("sender", remoteAddressVoice);
+        testInboundSMSData.put("body", "TEST yup");
+        testInboundSMSData.put("receiver", "0642500086");
+        Object textMessage = invokeMethodByReflection(receiveMessage, mbSmsServlet, testInboundSMSData);
+        
+        //process the message
+        Method processMessage = fetchMethodByReflection("processMessage", TextServlet.class, TextMessage.class);
+        invokeMethodByReflection(processMessage, mbSmsServlet, textMessage);
+
+        //assert that the outboudn message sent matches as expected
+        HashMap<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put(remoteAddressVoice, "");
+        assertXMLGeneratedFromOutBoundCall(addressNameMap, smsAdapter, TestServlet.APPOINTMENT_SECOND_QUESION,
+                                           smsAdapter.getMyAddress());
     }
     
     @Test
@@ -309,56 +369,48 @@ public class CMServletTest extends TestFramework
         }
     }
 
-    private void assertXMLGeneratedFromOutBoundCall( Map<String, String> addressNameMap, AdapterConfig adapterConfig,
-        String simpleQuestion, String senderName, String subject ) throws Exception
-    {
+    private void assertXMLGeneratedFromOutBoundCall(Map<String, String> addressNameMap, AdapterConfig adapterConfig,
+                                                    String simpleQuestion, String senderName) throws Exception {
+
         //fetch the xml generated
-        Document builder = getXMLDocumentBuilder( TestServlet.getLogObject().toString() );
-        NodeList messageNodeList = builder.getElementsByTagName( "MESSAGES" );
-        NodeList customerNodeList = builder.getElementsByTagName( "CUSTOMER" );
-        NodeList userNodeList = builder.getElementsByTagName( "USER" );
-        NodeList childMessageNodeList = builder.getElementsByTagName( "MSG" );
-        assertTrue( messageNodeList.getLength() == 1 );
-        assertTrue( customerNodeList.getLength() == 1 );
-        assertTrue( userNodeList.getLength() == 1 );
-        assertEquals( addressNameMap.size(), childMessageNodeList.getLength() );
+        Document builder = getXMLDocumentBuilder(TestServlet.getLogObject().toString());
+        NodeList messageNodeList = builder.getElementsByTagName("MESSAGES");
+        NodeList customerNodeList = builder.getElementsByTagName("CUSTOMER");
+        NodeList userNodeList = builder.getElementsByTagName("USER");
+        NodeList childMessageNodeList = builder.getElementsByTagName("MSG");
+        assertTrue(messageNodeList.getLength() == 1);
+        assertTrue(customerNodeList.getLength() == 1);
+        assertTrue(userNodeList.getLength() == 1);
+        assertEquals(addressNameMap.size(), childMessageNodeList.getLength());
         //fetch customerInfo from adapter
-        String[] customerInfo = adapterConfig.getAccessToken().split( "\\|" );
-        assertEquals( customerInfo[0], customerNodeList.item( 0 ).getAttributes().getNamedItem( "ID" ).getNodeValue() );
+        String[] customerInfo = adapterConfig.getAccessToken().split("\\|");
+        assertEquals(customerInfo[0], customerNodeList.item(0).getAttributes().getNamedItem("ID").getNodeValue());
 
-        assertEquals( customerInfo[1], userNodeList.item( 0 ).getAttributes().getNamedItem( "LOGIN" ).getNodeValue() );
+        assertEquals(customerInfo[1], userNodeList.item(0).getAttributes().getNamedItem("LOGIN").getNodeValue());
 
-        for ( int addressCount = 0 ; addressCount < addressNameMap.keySet().size(); addressCount++ )
-        {
-            Node msgNode = childMessageNodeList.item( addressCount );
+        for (int addressCount = 0; addressCount < addressNameMap.keySet().size(); addressCount++) {
+            Node msgNode = childMessageNodeList.item(addressCount);
             NodeList childNodes = msgNode.getChildNodes();
-            for ( int childNodeCount = 0; childNodeCount < childNodes.getLength(); childNodeCount++ )
-            {
-                Node childNode = childNodes.item( childNodeCount );
-                if ( childNode.getNodeName().equals( "CONCATENATIONTYPE" ) )
-                {
-                    assertEquals( "TEXT", childNode.getFirstChild().getNodeValue() );
+            for (int childNodeCount = 0; childNodeCount < childNodes.getLength(); childNodeCount++) {
+                Node childNode = childNodes.item(childNodeCount);
+                if (childNode.getNodeName().equals("CONCATENATIONTYPE")) {
+                    assertEquals("TEXT", childNode.getFirstChild().getNodeValue());
                 }
-                else if ( childNode.getNodeName().equals( "FROM" ) )
-                {
-                    assertEquals( senderName, childNode.getFirstChild().getNodeValue() );
+                else if (childNode.getNodeName().equals("FROM")) {
+                    assertEquals(senderName, childNode.getFirstChild().getNodeValue());
                 }
-                else if ( childNode.getNodeName().equals( "BODY" ) )
-                {
-                    assertEquals( simpleQuestion, childNode.getFirstChild().getNodeValue() );
+                else if (childNode.getNodeName().equals("BODY")) {
+                    assertEquals(simpleQuestion, childNode.getFirstChild().getNodeValue());
                 }
-                else if ( childNode.getNodeName().equals( "TO" ) )
-                {
+                else if (childNode.getNodeName().equals("TO")) {
                     boolean addressMatchFlag = false;
-                    for ( String address : addressNameMap.keySet() )
-                    {
-                        if ( PhoneNumberUtils.formatNumber( address, null ).equals(
-                            childNode.getFirstChild().getNodeValue() ) )
-                        {
+                    for (String address : addressNameMap.keySet()) {
+                        if (PhoneNumberUtils.formatNumber(address, null)
+                                                        .equals(childNode.getFirstChild().getNodeValue())) {
                             addressMatchFlag = true;
                         }
                     }
-                    assertTrue( addressMatchFlag );
+                    assertTrue(addressMatchFlag);
                 }
             }
         }

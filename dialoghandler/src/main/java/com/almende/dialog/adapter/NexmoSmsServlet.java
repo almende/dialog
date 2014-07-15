@@ -8,7 +8,6 @@ import javax.servlet.http.HttpServletResponse;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.PhoneNumberUtils;
@@ -82,16 +81,18 @@ public class NexmoSmsServlet extends TextServlet {
 	}
 	
 	@Override
-    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress, String message ) throws Exception
     {
-        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress, message );
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
-    {
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
+                                             Map<String, String> toAddress, String message) throws Exception {
+
         //add costs with no.of messages * recipients
-        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,
-            CM.countMessageParts( message ) * toAddress.size() );
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, senderName, toAddress,
+                                                               CM.countMessageParts(message) * toAddress.size(),
+                                                               message);
     }
 }

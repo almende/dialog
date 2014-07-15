@@ -8,13 +8,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.lang.NotImplementedException;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -194,15 +191,15 @@ public class AskSmsServlet extends TextServlet {
 	}
 
     @Override
-    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress ) throws Exception
-    {
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
+
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
-    throws Exception
-    {
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
+                                             Map<String, String> toAddress, String message) throws Exception {
+
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
     }
 }

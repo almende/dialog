@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.EventCallback;
@@ -92,9 +93,9 @@ public class CMStatus implements Serializable
      * @param address
      * @return
      */
-    private static String generateSMSReferenceKey( String adapterId, String localaddress, String address )
-    {
-        return adapterId + "_" + localaddress + "_" + address + "_" + TimeUtils.getServerCurrentTimeInMillis();
+    public static String generateSMSReferenceKey(String adapterId, String localaddress, String address) {
+
+        return adapterId + "_" + localaddress + "_" + address + "_" + "http://" + Settings.HOST;
     }
     
     public String getReference()
@@ -225,5 +226,20 @@ public class CMStatus implements Serializable
     public String getAccountId() {
 
         return accountId;
+    }
+
+    /**
+     * returns the HOST path set in the reference when an SMS is sent
+     * @param reference
+     * @return
+     */
+    public static String getHostFromReference(String reference) {
+        if(reference != null) {
+            String[] referenceArray = reference.split("_");
+            if(referenceArray.length == 4) {
+                return referenceArray[3].startsWith("http") ? referenceArray[3] : null;
+            }
+        }
+        return null;
     }
 }

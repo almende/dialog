@@ -279,15 +279,14 @@ public class VoiceXMLRESTProxy {
             if(config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)){
                 playTrialAccountAudio = true;
             }
-            session.setQuestion(question);
             //create ddr record
             try {
                 DDRRecord ddrRecord = null;
                 if (direction.equalsIgnoreCase("outbound")) {
-                    ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, remoteID, 1);
+                    ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, remoteID, 1, url);
                 }
                 else {
-                    ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, remoteID, 1);
+                    ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, remoteID, 1, url);
                 }
                 session.setDdrRecordId( ddrRecord != null ? ddrRecord.getId() : null);
             }
@@ -1310,7 +1309,8 @@ public class VoiceXMLRESTProxy {
                         Session referralSession = Session.getOrCreateSession(adapterConfig, redirectedId);
                         if (session.getDirection() != null) {
                             DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
-                                                                                                  redirectedId, 1);
+                                                                                                  redirectedId, 1,
+                                                                                                  question.getUrl());
                             referralSession.setDdrRecordId(ddrRecord.getId());
                             referralSession.setDirection(session.getDirection());
                         }

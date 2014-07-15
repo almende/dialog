@@ -19,7 +19,6 @@ import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.exception.NotFoundException;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
@@ -143,18 +142,20 @@ public class CMSmsServlet extends TextServlet {
 			throws IOException {}
 	
     @Override
-    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress ) throws Exception
-    {
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
+
         // Needs implementation, but service not available at CM
         return null;
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
-    {
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
+                                             Map<String, String> toAddress, String message) throws Exception {
+
         //add costs with no.of messages * recipients
-        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,
-            CM.countMessageParts( message ) * toAddress.size() );
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, senderName, toAddress,
+                                                               CM.countMessageParts(message) * toAddress.size(),
+                                                               message);
     }
 
     /**
@@ -287,7 +288,7 @@ public class CMSmsServlet extends TextServlet {
                             }
                             else {
                                 ddrRecord.setStatus(CommunicationStatus.ERROR);
-                                ddrRecord.setAdditionalInfo(cmStatus.getErrorDescription());
+                                ddrRecord.addAdditionalInfo("ERROR", cmStatus.getErrorDescription());
                             }
                             ddrRecord.createOrUpdate();
                         }

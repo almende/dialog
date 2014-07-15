@@ -16,7 +16,6 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CLXUSSD;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
-import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 
@@ -215,17 +214,18 @@ public class CLXUSSDServlet extends TextServlet {
 		return msg;
 	}
 
-	@Override
-	protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig,
-			String fromAddress) throws Exception {
-		return null;
-	}
+    @Override
+    protected DDRRecord
+        createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
 
-	@Override
-	protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig,
-			Map<String, String> toAddress, String message) throws Exception {
-		return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,
-	            1 );
-	}
+        return null;
+    }
+
+    @Override
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
+                                             Map<String, String> toAddress, String message) throws Exception {
+
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, null, toAddress, 1, message);
+    }
 }
 

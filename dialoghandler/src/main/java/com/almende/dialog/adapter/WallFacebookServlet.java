@@ -4,19 +4,15 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Map;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.joda.time.DateTime;
 import org.scribe.model.Token;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Facebook;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.util.ParallelInit;
@@ -159,16 +155,16 @@ public class WallFacebookServlet extends TextServlet {
     }
     
     @Override
-    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress ) throws Exception
-    {
-        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
+
+        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, fromAddress, message);
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
-    throws Exception
-    {
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
+                                             Map<String, String> toAddress, String message) throws Exception {
+
         //add costs with no.of messages * recipients
-        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress );
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, toAddress, message);
     }
 }

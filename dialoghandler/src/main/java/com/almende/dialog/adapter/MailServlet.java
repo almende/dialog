@@ -210,7 +210,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
         try
         {
             log.info( String.format(
-                "sending email from: %s senderName: %s to: %s with params: host: %s port: %s user: %s ", from,
+                "sending email from: %s senderName: %s to: %s with host: %s port: %s user: %s ", from,
                 senderName, ServerUtils.serialize( addressNameMap ), sendingHost, sendingPort, username ) );
             //add to list
             if(senderName!=null)
@@ -556,15 +556,15 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
     }
 
     @Override
-    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress ) throws Exception
+    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress, String message ) throws Exception
     {
-        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress );
+        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress, message );
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing( AdapterConfig adapterConfig, Map<String, String> toAddress, String message )
-    throws Exception
-    {
-        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, toAddress );
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
+                                             Map<String, String> toAddress, String message) throws Exception {
+
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, toAddress, message);
     }
 }

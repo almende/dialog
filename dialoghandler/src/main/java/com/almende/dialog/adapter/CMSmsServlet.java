@@ -19,7 +19,6 @@ import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.exception.NotFoundException;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
@@ -72,8 +71,8 @@ public class CMSmsServlet extends TextServlet {
                     {
                         jb.append( line );
                     }
-                    CMStatus cmStatus = handleDeliveryStatusReport( jb.toString() );
-                    res.getWriter().println( ServerUtils.serializeWithoutException( cmStatus ) );
+                    String response = handleDeliveryStatusReport( jb.toString() );
+                    res.getWriter().println( response );
                 }
                 catch ( Exception e )
                 {
@@ -85,6 +84,7 @@ public class CMSmsServlet extends TextServlet {
             {
                 try
                 {
+                    String responseText = "No result fetched";
                     String reference = req.getParameter("reference");
                     //check the host in the CMStatus
                     if (reference != null) {
@@ -93,14 +93,20 @@ public class CMSmsServlet extends TextServlet {
                         if (hostFromReference != null && !hostFromReference.contains((hostFromReference))) {
                             log.info("CM delivery status is being redirect to: " + hostFromReference);
                             hostFromReference += (req.getPathInfo() + req.getQueryString() != null ? req.getQueryString() : "");
-                            forwardToHost(hostFromReference, HTTPMethod.GET, null);
+                            responseText = forwardToHost(hostFromReference, HTTPMethod.GET, null);
+                        }
+                        else {
+                            CMStatus cmStatus = handleDeliveryStatusReport(req.getParameter("reference"),
+                                                                           req.getParameter("sent"),
+                                                                           req.getParameter("received"),
+                                                                           req.getParameter("to"),
+                                                                           req.getParameter("statuscode"),
+                                                                           req.getParameter("errorcode"),
+                                                                           req.getParameter("errordescription"));
+                            responseText = ServerUtils.serializeWithoutException( cmStatus );
                         }
                     }
-                    CMStatus cmStatus = handleDeliveryStatusReport( req.getParameter( "reference" ),
-                        req.getParameter( "sent" ), req.getParameter( "received" ), req.getParameter( "to" ),
-                        req.getParameter( "statuscode" ), req.getParameter( "errorcode" ),
-                        req.getParameter( "errordescription" ) );
-                    res.getWriter().println( ServerUtils.serializeWithoutException( cmStatus ) );
+                    res.getWriter().println(responseText);
                 }
                 catch ( Exception e )
                 {
@@ -108,6 +114,7 @@ public class CMSmsServlet extends TextServlet {
                     return;
                 }
             }
+            res.setStatus(HttpServletResponse.SC_OK);
         }
         else
         {
@@ -143,18 +150,20 @@ public class CMSmsServlet extends TextServlet {
 			throws IOException {}
 	
     @Override
-    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress ) throws Exception
-    {
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
+
         // Needs implementation, but service not available at CM
         return null;
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing( AdapterConfig adapterConfig, Map<String, String> toAddress, String message ) throws Exception
-    {
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
+                                             Map<String, String> toAddress, String message) throws Exception {
+
         //add costs with no.of messages * recipients
-        return DDRUtils.createDDRRecordOnOutgoingCommunication( adapterConfig, UnitType.PART, toAddress,
-            CM.countMessageParts( message ) * toAddress.size() );
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, senderName, toAddress,
+                                                               CM.countMessageParts(message) * toAddress.size(),
+                                                               message);
     }
 
     /**
@@ -166,7 +175,7 @@ public class CMSmsServlet extends TextServlet {
      * @param payload
      * @return
      */
-    private CMStatus handleDeliveryStatusReport(String payload) {
+    private String handleDeliveryStatusReport(String payload) {
 
         try {
             log.info("payload seen: " + payload);
@@ -196,13 +205,14 @@ public class CMSmsServlet extends TextServlet {
                 if (hostFromReference != null && !hostFromReference.contains((Settings.HOST))) {
                     log.info("CM delivery status is being redirect to: " + hostFromReference);
                     hostFromReference += deliveryStatusPath;
-                    String response = forwardToHost(hostFromReference, HTTPMethod.POST, payload);
-                    log.info("CM DLR response: "+ response);
-                    return null;
+                    return forwardToHost(hostFromReference, HTTPMethod.POST, payload);
+                }
+                else {
+                    CMStatus cmStatus = handleDeliveryStatusReport(reference, sent, received, to, code, errorCode,
+                                                                   errorDescription);
+                    return ServerUtils.serializeWithoutException(cmStatus);
                 }
             }
-
-            return handleDeliveryStatusReport(reference, sent, received, to, code, errorCode, errorDescription);
         }
         catch (Exception e) {
             log.severe("Document parse failed. \nMessage: " + e.getLocalizedMessage());
@@ -287,7 +297,7 @@ public class CMSmsServlet extends TextServlet {
                             }
                             else {
                                 ddrRecord.setStatus(CommunicationStatus.ERROR);
-                                ddrRecord.setAdditionalInfo(cmStatus.getErrorDescription());
+                                ddrRecord.addAdditionalInfo("ERROR", cmStatus.getErrorDescription());
                             }
                             ddrRecord.createOrUpdate();
                         }

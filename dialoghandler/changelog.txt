@@ -1,0 +1,6 @@
+DialogHandler
+https://github.com/almende/dialog/
+
+15-7-2014, version 1.0.0
+- feature: restarting versioning mechanism.
+- feature: updated with saving senderName in the session. So all email replies have the old name

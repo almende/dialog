@@ -72,34 +72,6 @@ public class TestFramework
     public static String fetchResponse( String httpMethods, String url, String payload )
     {
         String result = "";
-        //        if(url.startsWith( TestServlet.TEST_SERVLET_PATH ))
-        //        {
-        //            ServletUnitClient newClient = servletRunner.get().newClient();
-        //            WebRequest request = null;
-        //            switch ( httpMethods )
-        //            {
-        //                case HttpMethod.GET:
-        //                    request = new GetMethodWebRequest( url );
-        //                    break;
-        //                case HttpMethod.POST:
-        //                    request = new PostMethodWebRequest( url, payload != null ? new ByteArrayInputStream( payload.getBytes() ) : null, 
-        //                                                        MediaType.APPLICATION_JSON );
-        //                    break;
-        //                default:
-        //                    break;
-        //            }
-        //            try
-        //            {
-        //                WebResponse response = newClient.getResponse( request );
-        //                result = response.getText();
-        //            }
-        //            catch ( Exception e )
-        //            {
-        //                e.printStackTrace();
-        //            }
-        //        }
-        //        else 
-        //        {
         Client client = ParallelInit.getClient();
         WebResource webResource = client.resource( url );
         try
@@ -110,7 +82,6 @@ public class TestFramework
         {
             e.printStackTrace();
         }
-        //        }
         return result;
     }
     
@@ -131,6 +102,7 @@ public class TestFramework
         adapterConfig.setPublicKey( publicKey );
         adapterConfig.setMyAddress( myAddress );
         adapterConfig.setAccessToken( "1111|blabla" );
+        adapterConfig.setKeyword("TEST");
         adapterConfig.setInitialAgentURL( initiatAgentURL );
         String adapterConfigString = adapterConfig.createConfig( ServerUtils.serialize( adapterConfig ) ).getEntity()
             .toString();

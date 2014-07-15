@@ -34,6 +34,7 @@ public class Session{
     String startUrl;
     String remoteAddress;
     String localAddress;
+    String localName;
     String direction;
     String type;
     String externalSession;
@@ -524,5 +525,14 @@ public class Session{
 
         String sessionKey = adapterType + "|" + localAddress + "|" + remoteAddress;
         return getSession(sessionKey);
+    }
+
+    public String getLocalName() {
+    
+        return localName;
+    }
+    public void setLocalName(String localName) {
+    
+        this.localName = localName;
     }
 }

@@ -70,93 +70,91 @@ public class DDRUtils
     }
     
     /**
-     * creates a ddr record based on the adapterId and accoutnId from config. picks the quantify from the toAddress map 
-     * @param config
-     * @param unitType
-     * @param toAddress
-     * @throws Exception
-     */
-    public static DDRRecord createDDRRecordOnOutgoingCommunication( AdapterConfig config, Map<String, String> toAddress )
-    throws Exception
-    {
-        return createDDRRecordOnCommunication( config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, toAddress,
-            CommunicationStatus.SENT );
-    }
-    
-    
-    /**
-     * creates a ddr record based on the adapterId and accoutnId from config and the quantity 
+     * creates a ddr record based on the adapterId and accoutnId from config and
+     * the quantity
+     * 
      * @param config
      * @param toAddress
-     * @param quantity no of units to be charged. Typically for the SMS, it depends on the length of the SMS text and 
-     * the address list
+     * @param quantity
+     *            no of units to be charged. Typically for the SMS, it depends
+     *            on the length of the SMS text and the address list
+     * @param quantity
      * @throws Exception
      */
-    public static DDRRecord createDDRRecordOnOutgoingCommunication( AdapterConfig config, String toAddress, int quantity )
-    throws Exception
-    {
+    public static DDRRecord createDDRRecordOnOutgoingCommunication(AdapterConfig config, String toAddress,
+                                                                   int quantity, String message) throws Exception {
+
         HashMap<String, String> toAddressMap = new HashMap<String, String>();
-        toAddressMap.put( toAddress, "" );
-        return createDDRRecordOnCommunication( config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, toAddressMap,
-            CommunicationStatus.SENT, quantity );
+        toAddressMap.put(toAddress, "");
+        return createDDRRecordOnCommunication(config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, null, toAddressMap,
+                                              CommunicationStatus.SENT, quantity, message);
     }
     
     /**
      * creates a ddr record for incoming communication charges
+     * 
      * @param config
      * @param fromAddress
      * @param quantity
+     * @param message
      * @throws Exception
      */
-    public static DDRRecord createDDRRecordOnIncomingCommunication( AdapterConfig config, String fromAddress, int quantity )
-    throws Exception
-    {
+    public static DDRRecord createDDRRecordOnIncomingCommunication(AdapterConfig config, String fromAddress,
+                                                                   int quantity, String message) throws Exception {
+
         HashMap<String, String> fromAddressMap = new HashMap<String, String>();
-        fromAddressMap.put( fromAddress, "" );
-        return createDDRRecordOnCommunication( config, DDRTypeCategory.INCOMING_COMMUNICATION_COST, fromAddressMap,
-            CommunicationStatus.RECEIEVED, quantity );
+        fromAddressMap.put(fromAddress, "");
+        return createDDRRecordOnCommunication(config, DDRTypeCategory.INCOMING_COMMUNICATION_COST, null,
+                                              fromAddressMap, CommunicationStatus.RECEIEVED, quantity, message);
     }
     
     
     /**
-     * creates a ddr record based on the adapterId and accoutnId from config and the quantity based 
-     * on the number of recepients in the toAddress 
+     * creates a ddr record based on the adapterId and accoutnId from config and
+     * the quantity based on the number of recepients in the toAddress
+     * 
      * @param config
-     * @param unitType
-     * @param toAddress 
-     * the address list
+     * @param toAddress
+     *            the address list
      * @throws Exception
      */
-    public static DDRRecord createDDRRecordOnOutgoingCommunication( AdapterConfig config, UnitType unitType,
-        Map<String, String> toAddress) throws Exception
-    {
-        return createDDRRecordOnCommunication( config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, toAddress,
-            CommunicationStatus.SENT, toAddress.size() );
+    public static DDRRecord createDDRRecordOnOutgoingCommunication(AdapterConfig config, Map<String, String> toAddress,
+                                                                   String message) throws Exception {
+
+        return createDDRRecordOnCommunication(config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, null, toAddress,
+                                              CommunicationStatus.SENT, toAddress.size(), message);
     }
     
     /**
-     * creates a ddr record based on the adapterId and accoutnId from config and the quantity 
+     * creates a ddr record based on the adapterId and accoutnId from config and
+     * the quantity
+     * 
      * @param config
      * @param unitType
      * @param toAddress
-     * @param quantity no of units to be charged. Typically for the SMS, it depends on the length of the SMS text and 
-     * the address list
+     * @param quantity
+     *            no of units to be charged. Typically for the SMS, it depends
+     *            on the length of the SMS text and the address list
+     * @param message
+     *            actual message being sent. is saved in the addtionalInfo of
+     *            the ddrRecord
      * @throws Exception
      */
-    public static DDRRecord createDDRRecordOnOutgoingCommunication( AdapterConfig config, UnitType unitType,
-        Map<String, String> toAddress, int quantity ) throws Exception
-    {
-        return createDDRRecordOnCommunication( config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, toAddress,
-            CommunicationStatus.SENT, quantity );
+    public static DDRRecord createDDRRecordOnOutgoingCommunication(AdapterConfig config, String senderName,
+                                                                   Map<String, String> toAddress, int quantity,
+                                                                   String message) throws Exception {
+
+        return createDDRRecordOnCommunication(config, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, senderName,
+                                              toAddress, CommunicationStatus.SENT, quantity, message);
     }
     
-    public static DDRRecord createDDRRecordOnIncomingCommunication( AdapterConfig config, String fromAddress )
-    throws Exception
-    {
+    public static DDRRecord createDDRRecordOnIncomingCommunication(AdapterConfig config, String fromAddress,
+                                                                   String message) throws Exception {
+
         Map<String, String> fromAddresses = new HashMap<String, String>();
-        fromAddresses.put( fromAddress, "" );
-        return createDDRRecordOnCommunication( config, DDRTypeCategory.INCOMING_COMMUNICATION_COST, fromAddresses,
-            CommunicationStatus.RECEIEVED );
+        fromAddresses.put(fromAddress, "");
+        return createDDRRecordOnCommunication(config, DDRTypeCategory.INCOMING_COMMUNICATION_COST, fromAddresses,
+                                              CommunicationStatus.RECEIEVED, message);
     }
     
     /**
@@ -316,7 +314,9 @@ public class DDRUtils
     }
     
     /**
-     * creates a ddr record based on the input parameters and quantity is the size of the addresses map
+     * creates a ddr record based on the input parameters and quantity is the
+     * size of the addresses map
+     * 
      * @param config
      * @param category
      * @param unitType
@@ -324,10 +324,11 @@ public class DDRUtils
      * @param status
      * @throws Exception
      */
-    public static DDRRecord createDDRRecordOnCommunication( AdapterConfig config, DDRTypeCategory category,
-        Map<String, String> addresses, CommunicationStatus status ) throws Exception
-    {
-        return createDDRRecordOnCommunication( config, category, addresses, status, addresses.size() );
+    public static DDRRecord createDDRRecordOnCommunication(AdapterConfig config, DDRTypeCategory category,
+                                                           Map<String, String> addresses, CommunicationStatus status,
+                                                           String message) throws Exception {
+
+        return createDDRRecordOnCommunication(config, category, null, addresses, status, addresses.size(), message);
     }
     
     /**
@@ -573,58 +574,66 @@ public class DDRUtils
     
     /**
      * creates a ddr record based on the input parameters
-     * @param config picks the adpaterId, owner and myAddress from this 
-     * @param category 
+     * 
+     * @param config
+     *            picks the adpaterId, owner and myAddress from this
+     * @param category
+     * @param senderName
+     *            will be used as the DDRRecord's fromAddress (if not null and
+     *            outbound). Use null if {@link AdapterConfig#getMyAddress()} is
+     *            to be used.
      * @param unitType
      * @param addresses
      * @param status
      * @param quantity
      * @throws Exception
      */
-    private static DDRRecord createDDRRecordOnCommunication( AdapterConfig config, DDRTypeCategory category,
-        Map<String, String> addresses, CommunicationStatus status, int quantity ) throws Exception
-    {
-        DDRType communicationCostDDRType = DDRType.getDDRType( category );
-        if ( communicationCostDDRType != null )
-        {
-            log.info( String.format( "Applying charges for account: %s and adapter: %s with address: %s",
-                config.getOwner(), config.getConfigId(), config.getMyAddress() ) );
-            if ( config.getConfigId() != null && config.getOwner() != null )
-            {
-                DDRRecord ddrRecord = new DDRRecord( communicationCostDDRType.getTypeId(), config.getConfigId(),
-                    config.getOwner(), 1 );
+    private static DDRRecord createDDRRecordOnCommunication(AdapterConfig config, DDRTypeCategory category, String senderName,
+                                       Map<String, String> addresses, CommunicationStatus status, int quantity,
+                                       String message) throws Exception {
+
+        DDRType communicationCostDDRType = DDRType.getDDRType(category);
+        if (communicationCostDDRType != null && config != null) {
+            log.info(String.format("Applying charges for account: %s and adapter: %s with address: %s",
+                                   config.getOwner(), config.getConfigId(), config.getMyAddress()));
+            if (config.getConfigId() != null && config.getOwner() != null) {
+                DDRRecord ddrRecord = new DDRRecord(communicationCostDDRType.getTypeId(), config.getConfigId(),
+                                                    config.getOwner(), 1);
                 //default the start to the sessionCreationTime. This is expected to be updated with the actual
                 //timestamp for voice communication
                 //set the ddrRecord time with session creationTime.
                 Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), addresses.keySet()
                                                 .iterator().next());
                 if (session != null) {
-                    ddrRecord.setStart( session.getCreationTimestamp() != null ? Long.parseLong(session.getCreationTimestamp()) : null);
+                    ddrRecord.setStart(session.getCreationTimestamp() != null ? Long.parseLong(session
+                                                    .getCreationTimestamp()) : null);
                 }
-                switch ( status )
-                {
+                switch (status) {
                     case SENT:
-                        ddrRecord.setFromAddress( config.getMyAddress() );
-                        ddrRecord.setToAddress( addresses );
+                        String fromAddress = senderName != null && !senderName.isEmpty() ? senderName : config
+                                                        .getMyAddress();
+                        ddrRecord.setFromAddress(fromAddress);
+                        ddrRecord.setToAddress(addresses);
                         break;
                     case RECEIEVED:
-                        ddrRecord.setFromAddress( addresses.keySet().iterator().next() );
+                        ddrRecord.setFromAddress(addresses.keySet().iterator().next());
                         Map<String, String> toAddresses = new HashMap<String, String>();
-                        toAddresses.put( config.getMyAddress(), "" );
-                        ddrRecord.setToAddress( toAddresses );
+                        toAddresses.put(config.getMyAddress(), "");
+                        ddrRecord.setToAddress(toAddresses);
                         break;
                     default:
-                        throw new Exception("Unknown CommunicationStatus seen: "+ status.name());
+                        throw new Exception("Unknown CommunicationStatus seen: " + status.name());
                 }
-                ddrRecord.setQuantity( quantity );
-                ddrRecord.setStatus( status );
+                ddrRecord.setQuantity(quantity);
+                ddrRecord.setStatus(status);
                 ddrRecord.setAccountType(config.getAccountType());
+                ddrRecord.addAdditionalInfo("message", message);
                 ddrRecord.createOrUpdate();
-                return DDRRecord.getDDRRecord( ddrRecord.getId(), ddrRecord.getAccountId() );
+                return DDRRecord.getDDRRecord(ddrRecord.getId(), ddrRecord.getAccountId());
             }
         }
-        log.warning( String.format( "Not charging this communication from: %s adapterid: %s anything!!",
-            config.getMyAddress(), config.getConfigId() ) );
+        log.warning(String.format("Not charging this communication from: %s adapterid: %s anything!!",
+                                  config.getMyAddress(), config.getConfigId()));
         return null;
     }
     
@@ -683,7 +692,7 @@ public class DDRUtils
                         //publish charges
                         Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
                         //attach cost to ddr is prepaid type
-                        if (AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+                        if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
                             ddrRecord.setTotalCost(totalCost);
                             ddrRecord.createOrUpdate();
                         }

@@ -67,7 +67,7 @@ public class DDRRecord
     Boolean shouldGenerateCosts = false;
     @JsonIgnore
     Boolean shouldIncludeServiceCosts = false;
-    String additionalInfo;
+    Map<String, String> additionalInfo;
     /**
      * PRE_PAID accounts must have a fixed ddrCost. POST_PAID can have a variable one. 
      * This can be got from the adapterId too, but just makes it more explicit
@@ -437,14 +437,21 @@ public class DDRRecord
         this.totalCost = totalCost != null ? totalCost : 0.0;
     }
 
-    public String getAdditionalInfo() {
+    public Map<String, String> getAdditionalInfo() {
     
         return additionalInfo;
     }
 
-    public void setAdditionalInfo(String additionalInfo) {
+    public void setAdditionalInfo(Map<String, String> additionalInfo) {
     
         this.additionalInfo = additionalInfo;
+    }
+    
+    @JsonIgnore
+    public void addAdditionalInfo(String key, String value) {
+        
+        additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, String>();
+        additionalInfo.put(key, value);
     }
     
     public AccountType getAccountType() {

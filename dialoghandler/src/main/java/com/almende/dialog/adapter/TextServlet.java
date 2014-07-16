@@ -413,8 +413,9 @@ abstract public class TextServlet extends HttpServlet {
         if (session == null) {
             log.info("No session so retrieving config");
             config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress);
-            if (config.getAdapterType().equalsIgnoreCase("cm") ||
-                config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+            if (config != null &&
+                (config.getAdapterType().equalsIgnoreCase("cm") || config.getAdapterType()
+                                                .equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS))) {
                 extras = CMStatus.storeSMSRelatedData(address, localaddress, config, null, getNoConfigMessage(),
                                                       getAdapterType() + "|" + localaddress + "|" + address, extras);
             }

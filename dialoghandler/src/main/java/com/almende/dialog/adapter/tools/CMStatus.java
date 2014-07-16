@@ -4,15 +4,16 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+import org.bson.types.ObjectId;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.annotations.Id;
+import com.askfast.commons.utils.TimeUtils;
 
 
 public class CMStatus implements Serializable
@@ -89,13 +90,15 @@ public class CMStatus implements Serializable
     
     /**
      * generates a reference key used to track delivery status of an SMS
+     * 
      * @param localaddress
      * @param address
      * @return
      */
     public static String generateSMSReferenceKey(String adapterId, String localaddress, String address) {
 
-        return adapterId + "_" + localaddress + "_" + address + "_" + "http://" + Settings.HOST;
+        return ObjectId.get().toStringMongod() + "_" + adapterId + "_" + localaddress + "_" + address + "_" +
+               "http://" + Settings.HOST;
     }
     
     public String getReference()
@@ -236,8 +239,8 @@ public class CMStatus implements Serializable
     public static String getHostFromReference(String reference) {
         if(reference != null) {
             String[] referenceArray = reference.split("_");
-            if(referenceArray.length == 4) {
-                return referenceArray[3].startsWith("http") ? referenceArray[3] : null;
+            if(referenceArray.length == 5) {
+                return referenceArray[4].startsWith("http") ? referenceArray[4] : null;
             }
         }
         return null;

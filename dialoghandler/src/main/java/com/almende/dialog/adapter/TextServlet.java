@@ -670,15 +670,34 @@ abstract public class TextServlet extends HttpServlet {
     private int sendMessageAndAttachCharge( String message, String subject, String from, String fromName, String to,
         String toName, Map<String, Object> extras, AdapterConfig config ) throws Exception
     {
-        int count = sendMessage( message, subject, from, fromName, to, toName, extras, config );
         //attach costs
-        attachOutgoingCost( config, fromName, to, message );
+        HashMap<String, String> toAddressMap = new HashMap<String, String>();
+        toAddressMap.put( to, toName );
+        DDRRecord ddrRecord = createDDRForOutgoing( config, fromName, toAddressMap, message );
+        //store the ddrRecord in the session
+        if (ddrRecord != null) {
+            Session session = Session.getSession(getAdapterType(), config.getMyAddress(), to);
+            session.setDdrRecordId(ddrRecord.getId());
+            session.storeSession();
+        }
+        //send the message
+        int count = sendMessage( message, subject, from, fromName, to, toName, extras, config );
+        //push the cost to hte queue
+        Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
+        //attach cost to ddr is prepaid type
+        if(ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+            ddrRecord.setTotalCost(totalCost);
+            ddrRecord.createOrUpdate();
+        }
         return count;
     }
 	    
     /**
-     * broadcasts a message and charges the owner of the adapter for outbound communication
-     * @param message message to be sent
+     * First creates a ddr record, broadcasts a message and charges the owner of
+     * the adapter for outbound communication
+     * 
+     * @param message
+     *            message to be sent
      * @param subject
      * @param from
      * @param senderName
@@ -692,23 +711,26 @@ abstract public class TextServlet extends HttpServlet {
                                                 Map<String, String> addressNameMap, Map<String, Object> extras,
                                                 AdapterConfig config) throws Exception {
 
+        //create all the ddrRecords first
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
-        int count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config);
+        HashMap<String, String> copyOfAddressNameMap = new HashMap<String, String>(addressNameMap);
         //attach costs for all members (even in cc and bcc if any)
         if (extras != null) {
-            addressNameMap.putAll(addRecipientsInCCAndBCCToAddressMap(extras));
+            copyOfAddressNameMap.putAll(addRecipientsInCCAndBCCToAddressMap(extras));
         }
-        DDRRecord ddrRecord = createDDRForOutgoing(config, senderName, addressNameMap, message);
+        DDRRecord ddrRecord = createDDRForOutgoing(config, senderName, copyOfAddressNameMap, message);
         //store the ddrRecord in the session
-        if(ddrRecord != null) {
-            for (String address : addressNameMap.keySet()) {
+        if (ddrRecord != null) {
+            for (String address : copyOfAddressNameMap.keySet()) {
                 Session session = Session.getSession(getAdapterType(), config.getMyAddress(), address);
-                if(session != null) {
+                if (session != null) {
                     session.setDdrRecordId(ddrRecord.getId());
                     session.storeSession();
                 }
             }
         }
+        //broadcast the message
+        int count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config);
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
         DDRUtils.publishDDREntryToQueue(config.getOwner(), totalCost);
@@ -749,34 +771,6 @@ abstract public class TextServlet extends HttpServlet {
         return receiveMessage;
     }
 
-    /**
-     * helper method to convert the address to map in turn calls {@link TextServlet#createDDRForOutgoing(AdapterConfig, Map, String)}
-     * @param config
-     * @param address
-     * @param message
-     * @throws Exception
-     */
-    private DDRRecord attachOutgoingCost( AdapterConfig config, String senderName, String address, String message ) throws Exception
-    {
-        HashMap<String, String> toAddressMap = new HashMap<String, String>();
-        toAddressMap.put( address, "" );
-        DDRRecord ddrRecord = createDDRForOutgoing( config, senderName, toAddressMap, message );
-        //store the ddrRecord in the session
-        if (ddrRecord != null) {
-            Session session = Session.getSession(getAdapterType(), config.getMyAddress(), address);
-            session.setDdrRecordId(ddrRecord.getId());
-            session.storeSession();
-        }
-        //push the cost to hte queue
-        Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
-        //attach cost to ddr is prepaid type
-        if(ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
-            ddrRecord.setTotalCost(totalCost);
-            ddrRecord.createOrUpdate();
-        }
-        return ddrRecord;
-    }
-    
     /**
      * collates all the addresses in the cc and bcc
      * @param extras

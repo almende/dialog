@@ -605,8 +605,7 @@ public class DDRUtils
                 Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), addresses.keySet()
                                                 .iterator().next());
                 if (session != null) {
-                    ddrRecord.setStart(session.getCreationTimestamp() != null ? Long.parseLong(session
-                                                    .getCreationTimestamp()) : null);
+                    ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
                 }
                 switch (status) {
                     case SENT:

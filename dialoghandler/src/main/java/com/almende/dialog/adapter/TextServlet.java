@@ -544,10 +544,12 @@ abstract public class TextServlet extends HttpServlet {
             count = sendMessageAndAttachCharge(escapeInput.reply, subject, localaddress, fromName, address, toName,
                                                extras, config);
             //flush the session is no more question is there
-            if (session.getQuestion() == null) {
+            if (question == null) {
                 //dont flush the session yet if its an sms. the DLR callback needs a session.
                 //instead just mark the session that it can be killed 
                 if(AdapterAgent.ADAPTER_TYPE_SMS.equalsIgnoreCase(config.getAdapterType())) {
+                    //refetch session
+                    session = Session.getSession(Session.getSessionKey(config, address));
                     session.setKilled(true);
                     session.storeSession();
                 }
@@ -677,8 +679,10 @@ abstract public class TextServlet extends HttpServlet {
         //store the ddrRecord in the session
         if (ddrRecord != null) {
             Session session = Session.getSession(getAdapterType(), config.getMyAddress(), to);
-            session.setDdrRecordId(ddrRecord.getId());
-            session.storeSession();
+            if (session != null) {
+                session.setDdrRecordId(ddrRecord.getId());
+                session.storeSession();
+            }
         }
         //send the message
         int count = sendMessage( message, subject, from, fromName, to, toName, extras, config );

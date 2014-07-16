@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import org.junit.Ignore;
 import org.mongojack.DBCursor;
 import org.mongojack.DBQuery;
 import org.mongojack.DBQuery.Query;
@@ -63,6 +64,8 @@ public class DDRRecord
     Long start;
     Long duration;
     CommunicationStatus status;
+    Map<String, CommunicationStatus> statusPerAddress;
+    
     @JsonIgnore
     Boolean shouldGenerateCosts = false;
     @JsonIgnore
@@ -322,10 +325,12 @@ public class DDRRecord
     {
         this.duration = duration;
     }
+    @Ignore
     public CommunicationStatus getStatus()
     {
         return status;
     }
+    @Ignore
     public void setStatus( CommunicationStatus status )
     {
         this.status = status;
@@ -468,5 +473,52 @@ public class DDRRecord
         DB db = ParallelInit.getDatastore();
         return JacksonDBCollection.wrap(db.getCollection(DDRRecord.class.getCanonicalName().toLowerCase() + "s"),
                                         DDRRecord.class, String.class);
+    }
+
+    
+    public Map<String, CommunicationStatus> getStatusPerAddress() {
+
+        statusPerAddress = statusPerAddress != null ? statusPerAddress : new HashMap<String, CommunicationStatus>();
+        //if status is there but statusPerAddress is empty, use status
+        if (statusPerAddress.isEmpty() && status != null) {
+            
+            try {
+                Map<String, String> toAddresses = ServerUtils.deserialize(toAddressString, false,
+                                                                          new TypeReference<Map<String, String>>() {});
+                if (toAddresses != null) {
+                    for (String address : toAddresses.keySet()) {
+                        statusPerAddress.put(address, status);
+                    }
+                }
+            }
+            catch (Exception e) {
+                log.severe(String.format("ToAddress map couldnt be deserialized: %s", toAddressString));
+            }
+        }
+        return statusPerAddress;
+    }
+
+    public void setStatusPerAddress(Map<String, CommunicationStatus> statusPerAddress) {
+    
+        this.statusPerAddress = statusPerAddress;
+    }
+    
+    /**
+     * add a status per address
+     * @param address
+     * @param status
+     */
+    public void addStatusForAddress(String address, CommunicationStatus status) {
+        address = address.contains(".") ? address.replaceAll(".", "-") : address;
+        getStatusPerAddress().put(address, status);
+    }
+    
+    /**
+     * return status based on address
+     * @param address
+     * @param status
+     */
+    public CommunicationStatus getStatusForAddress(String address) {
+        return getStatusPerAddress().get(address);
     }
 }

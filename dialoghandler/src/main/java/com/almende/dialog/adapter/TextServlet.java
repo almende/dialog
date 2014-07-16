@@ -28,6 +28,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.utils.TimeUtils;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
@@ -283,6 +284,10 @@ abstract public class TextServlet extends HttpServlet {
                     extras = CMStatus.storeSMSRelatedData(loadAddress, localaddress, config, question, res.reply,
                                                           session.getKey(), extras);
                 }
+                //check if session can be killed??
+                if(res == null || res.question == null) {
+                    session.setKilled(true);
+                }
                 session.storeSession();
                 // Add key to the map (for the return)
                 sessionKeyMap.put(loadAddress, session.getKey());
@@ -303,6 +308,10 @@ abstract public class TextServlet extends HttpServlet {
                         config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
                         extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, res.reply,
                                                               session.getKey(), extras);
+                    }
+                    //check if session can be killed??
+                    if(res == null || res.question == null) {
+                        session.setKilled(true);
                     }
                     //save this session
                     session.storeSession();
@@ -690,6 +699,16 @@ abstract public class TextServlet extends HttpServlet {
             addressNameMap.putAll(addRecipientsInCCAndBCCToAddressMap(extras));
         }
         DDRRecord ddrRecord = createDDRForOutgoing(config, senderName, addressNameMap, message);
+        //store the ddrRecord in the session
+        if(ddrRecord != null) {
+            for (String address : addressNameMap.keySet()) {
+                Session session = Session.getSession(getAdapterType(), config.getMyAddress(), address);
+                if(session != null) {
+                    session.setDdrRecordId(ddrRecord.getId());
+                    session.storeSession();
+                }
+            }
+        }
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
         DDRUtils.publishDDREntryToQueue(config.getOwner(), totalCost);
@@ -705,11 +724,21 @@ abstract public class TextServlet extends HttpServlet {
 
         TextMessage receiveMessage = receiveMessage(req, resp);
         //create a session
-        Session.getOrCreateSession(getAdapterType(), receiveMessage.getLocalAddress(), receiveMessage.getAddress());
+        Session session = Session.getOrCreateSession(getAdapterType(), receiveMessage.getLocalAddress(), receiveMessage.getAddress());
+        //update the current timestamp
+        if (session != null) {
+            session.setCreationTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
+            session.storeSession();
+        }
         log.info("Incoming message received: " + ServerUtils.serialize(receiveMessage));
         //attach charges for incoming
         AdapterConfig config = AdapterConfig.findAdapterConfig(getAdapterType(), receiveMessage.getLocalAddress());
         DDRRecord ddrRecord = createDDRForIncoming(config, receiveMessage.getAddress(), receiveMessage.getBody());
+        //store the ddrRecord in the session
+        if(ddrRecord != null) {
+            session.setDdrRecordId(ddrRecord.getId());
+            session.storeSession();
+        }
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
         //attach cost to ddr is prepaid type
@@ -732,6 +761,12 @@ abstract public class TextServlet extends HttpServlet {
         HashMap<String, String> toAddressMap = new HashMap<String, String>();
         toAddressMap.put( address, "" );
         DDRRecord ddrRecord = createDDRForOutgoing( config, senderName, toAddressMap, message );
+        //store the ddrRecord in the session
+        if (ddrRecord != null) {
+            Session session = Session.getSession(getAdapterType(), config.getMyAddress(), address);
+            session.setDdrRecordId(ddrRecord.getId());
+            session.storeSession();
+        }
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
         //attach cost to ddr is prepaid type

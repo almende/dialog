@@ -625,7 +625,10 @@ public class DDRUtils
                         throw new Exception("Unknown CommunicationStatus seen: " + status.name());
                 }
                 ddrRecord.setQuantity(quantity);
-                ddrRecord.setStatus(status);
+                //add individual statuses
+                for (String address : addresses.keySet()) {
+                    ddrRecord.addStatusForAddress(address, status);
+                }
                 ddrRecord.setAccountType(config.getAccountType());
                 ddrRecord.addAdditionalInfo("message", message);
                 ddrRecord.createOrUpdate();

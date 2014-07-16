@@ -297,10 +297,10 @@ public class CMSmsServlet extends TextServlet {
                         DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), cmStatus.getAccountId());
                         if (ddrRecord != null) {
                             if (errorCode == null || errorCode.isEmpty()) {
-                                ddrRecord.setStatus(CommunicationStatus.DELIVERED);
+                                ddrRecord.addStatusForAddress(cmStatus.getRemoteAddress(), CommunicationStatus.DELIVERED);
                             }
                             else {
-                                ddrRecord.setStatus(CommunicationStatus.ERROR);
+                                ddrRecord.addStatusForAddress(cmStatus.getRemoteAddress(), CommunicationStatus.ERROR);
                                 ddrRecord.addAdditionalInfo("ERROR", cmStatus.getErrorDescription());
                             }
                             ddrRecord.createOrUpdate();
@@ -353,9 +353,7 @@ public class CMSmsServlet extends TextServlet {
             }
         }
         catch (Exception e) {
-            e.printStackTrace();
-            log.severe(String.format("Failed to send CM DLR status to host: %s. Message: %s", host,
-                                     e.getLocalizedMessage()));
+            log.severe(String.format("Failed to send CM DLR status to host: %s. Message: %s", host, e.getLocalizedMessage()));
         }
         return null;
     }

@@ -89,10 +89,13 @@ public class CMSmsServlet extends TextServlet {
                     //check the host in the CMStatus
                     if (reference != null) {
                         String hostFromReference = CMStatus.getHostFromReference(reference);
-                        //if sender 
-                        if (hostFromReference != null && !hostFromReference.contains((hostFromReference))) {
+                        log.info(String.format("Host from reference: %s and actual host: %s", hostFromReference + "?" +
+                                                               req.getQueryString(), Settings.HOST));
+                        if (hostFromReference != null && !hostFromReference.contains((Settings.HOST))) {
+                            hostFromReference += deliveryStatusPath;
                             log.info("CM delivery status is being redirect to: " + hostFromReference);
-                            hostFromReference += (req.getPathInfo() + req.getQueryString() != null ? req.getQueryString() : "");
+                            hostFromReference += (req.getPathInfo() + "?" + (req.getQueryString() != null ? req
+                                                            .getQueryString() : ""));
                             responseText = forwardToHost(hostFromReference, HTTPMethod.GET, null);
                         }
                         else {
@@ -201,8 +204,9 @@ public class CMSmsServlet extends TextServlet {
             //check the host in the CMStatus
             if (reference != null) {
                 String hostFromReference = CMStatus.getHostFromReference(reference);
-                //if sender 
+                log.info(String.format("Host from reference: %s and actual host: ", hostFromReference, Settings.HOST));
                 if (hostFromReference != null && !hostFromReference.contains((Settings.HOST))) {
+                    hostFromReference += deliveryStatusPath;
                     log.info("CM delivery status is being redirect to: " + hostFromReference);
                     hostFromReference += deliveryStatusPath;
                     return forwardToHost(hostFromReference, HTTPMethod.POST, payload);
@@ -289,7 +293,7 @@ public class CMSmsServlet extends TextServlet {
                 //fetch ddr corresponding to this
                 if (cmStatus.getSessionKey() != null) {
                     Session session = Session.getSession(cmStatus.getSessionKey());
-                    if (session != null && session.getDdrRecordId() != null) {
+                    if (session != null) {
                         DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), cmStatus.getAccountId());
                         if (ddrRecord != null) {
                             if (errorCode == null || errorCode.isEmpty()) {
@@ -304,12 +308,14 @@ public class CMSmsServlet extends TextServlet {
                         else {
                             log.warning(String.format("No ddr record found for id: %s", session.getDdrRecordId()));
                         }
+                        //check if session is killed. if so drop it :)
+                        if(session.isKilled()) {
+                            session.drop();
+                        }
                     }
                     else {
                         log.warning(String.format("No session found for id: %s", cmStatus.getSessionKey()));
                     }
-                    //drop the session when the callback is seen
-                    Session.drop(cmStatus.getSessionKey());
                 }
                 else {
                     log.warning(String.format("No session attached for cm status: %s", cmStatus.getReference()));

@@ -205,6 +205,7 @@ public class Session{
         session.setRemoteAddress(remoteAddress);
         session.setLocalAddress(config.getMyAddress());
         session.setType(config.getAdapterType());
+        session.setKeyword(config.getKeyword());
         session.key = key;
         session.creationTimestamp = String.valueOf(TimeUtils.getServerCurrentTimeInMillis());
         session.storeSession();
@@ -223,7 +224,7 @@ public class Session{
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         return datastore.load(Session.class, sessionKey);
     }
-	
+    
     @JsonIgnore
     public AdapterConfig getAdapterConfig() {
 
@@ -525,6 +526,19 @@ public class Session{
 
         String sessionKey = adapterType + "|" + localAddress + "|" + remoteAddress;
         return getSession(sessionKey);
+    }
+    
+    /**
+     * parses the sessionKey from the method parameters and tries to fetch it
+     * 
+     * @param adapterType
+     * @param localAddress
+     * @param remoteAddress
+     * @return
+     */
+    public static String getSessionKey(AdapterConfig config, String remoteAddress) {
+
+        return config.getAdapterType() + "|" + config.getMyAddress() + "|" + remoteAddress;
     }
 
     public String getLocalName() {

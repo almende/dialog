@@ -265,7 +265,8 @@ abstract public class TextServlet extends HttpServlet {
             Return res = null;
             if (loadAddress != null) {
 
-                Session session = Session.getOrCreateSession(config, loadAddress);
+                Session session = Session.getOrCreateSession(Session.getSessionKey(config, loadAddress),
+                                                             config.getKeyword());
                 session.setDirection("outbound");
                 session.setAccountId(config.getOwner());
                 session.setLocalName(senderName);
@@ -292,7 +293,8 @@ abstract public class TextServlet extends HttpServlet {
                 res = formQuestion(question, config.getConfigId(), null);
                 for (String address : fullAddressMap.keySet()) {
                     // store the session first
-                    Session session = Session.getOrCreateSession(config, address);
+                    Session session = Session.getOrCreateSession(Session.getSessionKey(config, address),
+                                                                 config.getKeyword());
                     session.setAccountId(config.getOwner());
                     session.setDirection("outbound");
                     session.setQuestion(question);
@@ -412,9 +414,10 @@ abstract public class TextServlet extends HttpServlet {
         // If session is null it means the adapter is not found.
         if (session == null) {
             log.info("No session so retrieving config");
-            config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress);
-            if (config.getAdapterType().equalsIgnoreCase("cm") ||
-                config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+            config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress, keyword);
+            if (config != null &&
+                (config.getAdapterType().equalsIgnoreCase("cm") || config.getAdapterType()
+                                                .equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS))) {
                 extras = CMStatus.storeSMSRelatedData(address, localaddress, config, null, getNoConfigMessage(),
                                                       getAdapterType() + "|" + localaddress + "|" + address, extras);
             }
@@ -422,6 +425,7 @@ abstract public class TextServlet extends HttpServlet {
                                                getSenderName(null, config, null), address, toName, extras, config);
             // Create new session to store the send in the ddr.
             session = Session.getOrCreateSession(config, address);
+            session.setKeyword(keyword);
             session.setDirection("inbound");
             session.setTrackingToken(UUID.randomUUID().toString());
             for (int i = 0; i < count; i++) {
@@ -466,9 +470,10 @@ abstract public class TextServlet extends HttpServlet {
         }
 
         //check if the keyword matches that of the adapter keyword
-        if (config.getKeyword() != null && config.getKeyword().equalsIgnoreCase(keyword)) {
+        if ("inbound".equalsIgnoreCase(session.getDirection()) && config.getKeyword() != null &&
+            config.getKeyword().equalsIgnoreCase(keyword)) {
             //perform a case insensitive replacement
-            body = body.replaceFirst( "(?i)" + keyword, "").trim();
+            body = body.replaceFirst("(?i)" + keyword, "").trim();
         }
         String preferred_language = session.getLanguage();
 
@@ -531,7 +536,15 @@ abstract public class TextServlet extends HttpServlet {
                                                extras, config);
             //flush the session is no more question is there
             if (session.getQuestion() == null) {
-                session.drop();
+                //dont flush the session yet if its an sms. the DLR callback needs a session.
+                //instead just mark the session that it can be killed 
+                if(AdapterAgent.ADAPTER_TYPE_SMS.equalsIgnoreCase(config.getAdapterType())) {
+                    session.setKilled(true);
+                    session.storeSession();
+                }
+                else {
+                    session.drop();
+                }
                 DDRWrapper.log(question, session, "Hangup", config);
             }
         }

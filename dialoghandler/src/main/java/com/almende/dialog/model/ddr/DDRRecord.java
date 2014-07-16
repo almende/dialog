@@ -106,7 +106,7 @@ public class DDRRecord
     public static DDRRecord getDDRRecord(String id, String accountId) throws Exception {
 
         JacksonDBCollection<DDRRecord, String> coll = getCollection();
-        DDRRecord ddrRecord = coll.findOneById(id);
+        DDRRecord ddrRecord = id != null ? coll.findOneById(id) : null;
         if (ddrRecord != null && ddrRecord.getAccountId() != null && !ddrRecord.getAccountId().equals(accountId)) {
             throw new Exception(String.format("DDR record: %s is not owned by account: %s", id, accountId));
         }

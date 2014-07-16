@@ -303,11 +303,11 @@ public class AdapterConfig {
 	}
 	
 	public static AdapterConfig findAdapterConfig(String adapterType,
-			String lookupKey, String keyword) {
+			String localAddress, String keyword) {
 		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
 		Iterator<AdapterConfig> config = datastore.find()
 				.type(AdapterConfig.class)
-				.addFilter("myAddress", FilterOperator.EQUAL, lookupKey)
+				.addFilter("myAddress", FilterOperator.EQUAL, localAddress)
 				.addFilter("adapterType", FilterOperator.EQUAL, adapterType)
 				.addFilter("keyword", FilterOperator.EQUAL, keyword)
 				.now();
@@ -315,7 +315,7 @@ public class AdapterConfig {
 			return config.next();
 		}
 		log.severe("AdapterConfig not found:'" + adapterType + "':'"
-				+ lookupKey + "':'"
+				+ localAddress + "':'"
 				+ keyword + "'");
 		return null;
 	}

@@ -55,8 +55,10 @@ public class MBSmsServlet extends TextServlet {
     }
 
     /**
-     * this function is extracted from the {@link #receiveMessage(javax.servlet.http.HttpServletRequest,
-     * javax.servlet.http.HttpServletResponse)} method so that it can be unit tested
+     * this function is extracted from the
+     * {@link #receiveMessage(javax.servlet.http.HttpServletRequest, javax.servlet.http.HttpServletResponse)}
+     * method so that it can be unit tested
+     * 
      * @param data
      * @return
      * @author Shravan
@@ -64,17 +66,15 @@ public class MBSmsServlet extends TextServlet {
      * @throws UnsupportedEncodingException
      */
     private TextMessage receiveMessage(HashMap<String, String> data) throws UnsupportedEncodingException {
-        TextMessage msg=null;
+
+        TextMessage msg = null;
 
         String localAddress = URLDecoder.decode(data.get("receiver"), "UTF-8").replaceFirst("31", "0");
         String address;
-        try
-        {
-            address = PhoneNumberUtils.formatNumber( URLDecoder.decode( data.get( "sender" ), "UTF-8" )
-                .replaceFirst( "31", "0" ), null );
+        try {
+            address = PhoneNumberUtils.formatNumber(URLDecoder.decode(data.get("sender"), "UTF-8").replaceFirst("31", "0"), null);
         }
-        catch ( Exception e )
-        {
+        catch (Exception e) {
             e.printStackTrace();
             return null;
         }
@@ -83,7 +83,8 @@ public class MBSmsServlet extends TextServlet {
         msg.setAddress(address);
         try {
             msg.setBody(URLDecoder.decode(data.get("message"), "UTF-8"));
-        } catch(Exception ex) {
+        }
+        catch (Exception ex) {
             log.warning("Failed to parse phone number");
         }
 

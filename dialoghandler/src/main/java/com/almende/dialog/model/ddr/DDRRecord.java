@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-import org.junit.Ignore;
 import org.mongojack.DBCursor;
 import org.mongojack.DBQuery;
 import org.mongojack.DBQuery.Query;
@@ -325,12 +324,15 @@ public class DDRRecord
     {
         this.duration = duration;
     }
-    @Ignore
+    /**
+     * kept for backward compatibility. Use {@link DDRRecord#getStatusForAddress(String)} to get status
+     * for an address or {@link DDRRecord#getStatusPerAddress()} for fetching all statuses
+     * @return
+     */
     public CommunicationStatus getStatus()
     {
         return status;
     }
-    @Ignore
     public void setStatus( CommunicationStatus status )
     {
         this.status = status;

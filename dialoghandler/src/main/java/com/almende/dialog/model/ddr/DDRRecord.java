@@ -63,6 +63,8 @@ public class DDRRecord
     Long start;
     Long duration;
     CommunicationStatus status;
+    Map<String, CommunicationStatus> statusPerAddress;
+    
     @JsonIgnore
     Boolean shouldGenerateCosts = false;
     @JsonIgnore
@@ -106,7 +108,7 @@ public class DDRRecord
     public static DDRRecord getDDRRecord(String id, String accountId) throws Exception {
 
         JacksonDBCollection<DDRRecord, String> coll = getCollection();
-        DDRRecord ddrRecord = coll.findOneById(id);
+        DDRRecord ddrRecord = id != null ? coll.findOneById(id) : null;
         if (ddrRecord != null && ddrRecord.getAccountId() != null && !ddrRecord.getAccountId().equals(accountId)) {
             throw new Exception(String.format("DDR record: %s is not owned by account: %s", id, accountId));
         }
@@ -322,6 +324,11 @@ public class DDRRecord
     {
         this.duration = duration;
     }
+    /**
+     * kept for backward compatibility. Use {@link DDRRecord#getStatusForAddress(String)} to get status
+     * for an address or {@link DDRRecord#getStatusPerAddress()} for fetching all statuses
+     * @return
+     */
     public CommunicationStatus getStatus()
     {
         return status;
@@ -468,5 +475,52 @@ public class DDRRecord
         DB db = ParallelInit.getDatastore();
         return JacksonDBCollection.wrap(db.getCollection(DDRRecord.class.getCanonicalName().toLowerCase() + "s"),
                                         DDRRecord.class, String.class);
+    }
+
+    
+    public Map<String, CommunicationStatus> getStatusPerAddress() {
+
+        statusPerAddress = statusPerAddress != null ? statusPerAddress : new HashMap<String, CommunicationStatus>();
+        //if status is there but statusPerAddress is empty, use status
+        if (statusPerAddress.isEmpty() && status != null) {
+            
+            try {
+                Map<String, String> toAddresses = ServerUtils.deserialize(toAddressString, false,
+                                                                          new TypeReference<Map<String, String>>() {});
+                if (toAddresses != null) {
+                    for (String address : toAddresses.keySet()) {
+                        statusPerAddress.put(address, status);
+                    }
+                }
+            }
+            catch (Exception e) {
+                log.severe(String.format("ToAddress map couldnt be deserialized: %s", toAddressString));
+            }
+        }
+        return statusPerAddress;
+    }
+
+    public void setStatusPerAddress(Map<String, CommunicationStatus> statusPerAddress) {
+    
+        this.statusPerAddress = statusPerAddress;
+    }
+    
+    /**
+     * add a status per address
+     * @param address
+     * @param status
+     */
+    public void addStatusForAddress(String address, CommunicationStatus status) {
+        address = address.contains(".") ? address.replaceAll(".", "-") : address;
+        getStatusPerAddress().put(address, status);
+    }
+    
+    /**
+     * return status based on address
+     * @param address
+     * @param status
+     */
+    public CommunicationStatus getStatusForAddress(String address) {
+        return getStatusPerAddress().get(address);
     }
 }

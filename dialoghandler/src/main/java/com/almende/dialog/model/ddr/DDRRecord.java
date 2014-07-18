@@ -270,16 +270,20 @@ public class DDRRecord
         this.fromAddress = fromAddress;
     }
     @JsonIgnore
-    public Map<String, String> getToAddress() throws Exception
-    {
-        if ( toAddress == null && toAddressString == null )
-        {
+    public Map<String, String> getToAddress() {
+
+        if (toAddress == null && toAddressString == null) {
             toAddress = new HashMap<String, String>();
         }
-        else if ( ( toAddress == null || toAddress.isEmpty() ) && toAddressString != null )
-        {
-            toAddress = ServerUtils.deserialize( toAddressString,
-                new TypeReference<HashMap<String, String>>(){} );
+        else if ((toAddress == null || toAddress.isEmpty()) && toAddressString != null) {
+            try {
+                toAddress = ServerUtils.deserialize(toAddressString, new TypeReference<HashMap<String, String>>() {
+                });
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(String.format("Exception while deserializing toAddress: %s", toAddress));
+            }
         }
         return toAddress;
     }
@@ -348,18 +352,23 @@ public class DDRRecord
 
     /**
      * only used by the mongo serializing/deserializing
+     * 
      * @return
      * @throws Exception
      */
-    public String getToAddressString() throws Exception
-    {
-        if ( ( toAddress == null || toAddress.isEmpty() ) && toAddressString != null )
-        {
+    public String getToAddressString() {
+
+        if ((toAddress == null || toAddress.isEmpty()) && toAddressString != null) {
             return toAddressString;
         }
-        else
-        {
-            toAddressString = ServerUtils.serialize( toAddress );
+        else {
+            try {
+                toAddressString = ServerUtils.serialize(toAddress);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(String.format("Exception while serializing toAddress: %s", toAddress));
+            }
             return toAddressString;
         }
     }

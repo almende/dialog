@@ -39,7 +39,7 @@ public class DDRRecord
      */
     public enum CommunicationStatus
     {
-        DELIVERED, RECEIEVED, SENT, FINISHED, ERROR, UNKNOWN;
+        DELIVERED, RECEIEVED, SENT, FINISHED, MISSED, ERROR, UNKNOWN;
         @JsonCreator
         public static CommunicationStatus fromJson( String name )
         {
@@ -325,6 +325,7 @@ public class DDRRecord
         this.duration = duration;
     }
     /**
+     * @deprecated
      * kept for backward compatibility. Use {@link DDRRecord#getStatusForAddress(String)} to get status
      * for an address or {@link DDRRecord#getStatusPerAddress()} for fetching all statuses
      * @return
@@ -333,6 +334,13 @@ public class DDRRecord
     {
         return status;
     }
+    /**
+     * @deprecated
+     * kept for backward compatibility. Use {@link DDRRecord#setStatusPerAddress(Map)} to set status
+     * for all addresses or {@link DDRRecord#addStatusForAddress(String, CommunicationStatus)} for 
+     * a single addres
+     * @return
+     */
     public void setStatus( CommunicationStatus status )
     {
         this.status = status;

@@ -7,14 +7,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.util.ParallelInit;
@@ -320,7 +317,7 @@ public class Broadsoft {
 			NodeList list = dom.getDocumentElement().getChildNodes();
 			for(int i=0;i<list.getLength();i++) {
 				Node call = list.item(i).getFirstChild();
-				ids.add(call.getNodeValue());
+				ids.add(call.getFirstChild().getNodeValue());
 			}
 		} catch(Exception ex){
 			ex.printStackTrace();

@@ -1,6 +1,10 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+18-7-2014, version 1.0.2
+- update: reject multiple calls to the same number from the same adapter, when one session is in palce.
+- fix: update DELIVERY status in all address fields 
+
 16-7-2014, version 1.0.1
 - fix: session fix issue on CM DLR callback
 

@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,6 +13,10 @@ import java.util.HashMap;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.hamcrest.Matchers;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.w3c.dom.Document;
@@ -245,6 +250,28 @@ public class VoiceXMLServletTest extends TestFramework {
         assertThat(form.getChildNodes().getLength(), not(4));
         assertEquals(record.getNodeName(), "record");
         assertEquals(subdialog.getNodeName(), "subdialog");
+    }
+    
+    @Test
+    public void initiatingMultipleCallsMustBeRejectedTest() throws Exception {
+
+        String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<Call xmlns=\"http://schema.broadsoft.com/xsi\" " +
+                     "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\">" +
+                     "<callId>callhalf-17239906917:0</callId><extTrackingId>597601:1</extTrackingId>" +
+                     "<personality>Originator</personality><state>Active</state><releaseCause>" +
+                     "<internalReleaseCause>Temporarily Unavailable</internalReleaseCause>" +
+                     "</releaseCause><remoteParty><address>sip:" + remoteAddressVoice + "@outbound</address>" +
+                     "<callType>Network</callType></remoteParty><endpoint xsi1:type=\"xsi:AccessEndpoint\" " +
+                     "xmlns:xsi=\"http://schema.broadsoft.com/xsi\"><addressOfRecord>0854881021@ask.ask.voipit.nl" +
+                     "</addressOfRecord></endpoint><appearance>1</appearance><diversionInhibited/><startTime>" +
+                     "1405610418786</startTime></Call>";
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = dbf.newDocumentBuilder();
+        Document dom = db.parse(new ByteArrayInputStream(xml.getBytes("UTF-8")));
+        Node callStateNode = dom.getElementsByTagName("state").item(0);
+        Node addressNode = dom.getElementsByTagName("address").item(0);
+        Assert.assertThat(callStateNode.getFirstChild().getNodeValue(), Matchers.is("Active"));
+        Assert.assertThat(addressNode.getFirstChild().getNodeValue(), Matchers.is(remoteAddressVoice));
     }
     
     /**

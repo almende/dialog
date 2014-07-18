@@ -39,7 +39,7 @@ public class DDRRecord
      */
     public enum CommunicationStatus
     {
-        DELIVERED, RECEIEVED, SENT, FINISHED, ERROR, UNKNOWN;
+        DELIVERED, RECEIEVED, SENT, FINISHED, MISSED, ERROR, UNKNOWN;
         @JsonCreator
         public static CommunicationStatus fromJson( String name )
         {
@@ -270,16 +270,20 @@ public class DDRRecord
         this.fromAddress = fromAddress;
     }
     @JsonIgnore
-    public Map<String, String> getToAddress() throws Exception
-    {
-        if ( toAddress == null && toAddressString == null )
-        {
+    public Map<String, String> getToAddress() {
+
+        if (toAddress == null && toAddressString == null) {
             toAddress = new HashMap<String, String>();
         }
-        else if ( ( toAddress == null || toAddress.isEmpty() ) && toAddressString != null )
-        {
-            toAddress = ServerUtils.deserialize( toAddressString,
-                new TypeReference<HashMap<String, String>>(){} );
+        else if ((toAddress == null || toAddress.isEmpty()) && toAddressString != null) {
+            try {
+                toAddress = ServerUtils.deserialize(toAddressString, new TypeReference<HashMap<String, String>>() {
+                });
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(String.format("Exception while deserializing toAddress: %s", toAddress));
+            }
         }
         return toAddress;
     }
@@ -325,6 +329,7 @@ public class DDRRecord
         this.duration = duration;
     }
     /**
+     * @deprecated
      * kept for backward compatibility. Use {@link DDRRecord#getStatusForAddress(String)} to get status
      * for an address or {@link DDRRecord#getStatusPerAddress()} for fetching all statuses
      * @return
@@ -333,6 +338,13 @@ public class DDRRecord
     {
         return status;
     }
+    /**
+     * @deprecated
+     * kept for backward compatibility. Use {@link DDRRecord#setStatusPerAddress(Map)} to set status
+     * for all addresses or {@link DDRRecord#addStatusForAddress(String, CommunicationStatus)} for 
+     * a single addres
+     * @return
+     */
     public void setStatus( CommunicationStatus status )
     {
         this.status = status;
@@ -340,18 +352,23 @@ public class DDRRecord
 
     /**
      * only used by the mongo serializing/deserializing
+     * 
      * @return
      * @throws Exception
      */
-    public String getToAddressString() throws Exception
-    {
-        if ( ( toAddress == null || toAddress.isEmpty() ) && toAddressString != null )
-        {
+    public String getToAddressString() {
+
+        if ((toAddress == null || toAddress.isEmpty()) && toAddressString != null) {
             return toAddressString;
         }
-        else
-        {
-            toAddressString = ServerUtils.serialize( toAddress );
+        else {
+            try {
+                toAddressString = ServerUtils.serialize(toAddress);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(String.format("Exception while serializing toAddress: %s", toAddress));
+            }
             return toAddressString;
         }
     }
@@ -482,7 +499,7 @@ public class DDRRecord
 
         statusPerAddress = statusPerAddress != null ? statusPerAddress : new HashMap<String, CommunicationStatus>();
         //if status is there but statusPerAddress is empty, use status
-        if (statusPerAddress.isEmpty() && status != null) {
+        if ( status != null) {
             
             try {
                 Map<String, String> toAddresses = ServerUtils.deserialize(toAddressString, false,
@@ -511,7 +528,7 @@ public class DDRRecord
      * @param status
      */
     public void addStatusForAddress(String address, CommunicationStatus status) {
-        address = address.contains(".") ? address.replaceAll(".", "-") : address;
+        address = address.contains("\\.") ? address.replaceAll("\\.", "-") : address;
         getStatusPerAddress().put(address, status);
     }
     

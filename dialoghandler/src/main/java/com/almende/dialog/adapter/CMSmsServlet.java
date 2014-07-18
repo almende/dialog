@@ -206,7 +206,6 @@ public class CMSmsServlet extends TextServlet {
                 String hostFromReference = CMStatus.getHostFromReference(reference);
                 log.info(String.format("Host from reference: %s and actual host: ", hostFromReference, Settings.HOST));
                 if (hostFromReference != null && !hostFromReference.contains((Settings.HOST))) {
-                    hostFromReference += deliveryStatusPath;
                     log.info("CM delivery status is being redirect to: " + hostFromReference);
                     hostFromReference += deliveryStatusPath;
                     return forwardToHost(hostFromReference, HTTPMethod.POST, payload);
@@ -309,7 +308,7 @@ public class CMSmsServlet extends TextServlet {
                             log.warning(String.format("No ddr record found for id: %s", session.getDdrRecordId()));
                         }
                         //check if session is killed. if so drop it :)
-                        if(session.isKilled()) {
+                        if(session.isKilled() && isSMSsDelivered(ddrRecord)) {
                             session.drop();
                         }
                     }
@@ -330,6 +329,30 @@ public class CMSmsServlet extends TextServlet {
         }
     }
     
+    /**
+     * check if all of the SMSs to toAddresses in the ddrRecord is {@link CommunicationStatus#DELIVERED}
+     * @param ddrRecord
+     * @return true if ddrRecord is null or all SMS are delivered
+     */
+    private boolean isSMSsDelivered(DDRRecord ddrRecord) {
+
+        if(ddrRecord == null) {
+            return true;
+        }
+        else if(ddrRecord.getStatusPerAddress() != null) {
+            int smsDeliveryCount = 0;
+            for (String toAddress : ddrRecord.getStatusPerAddress().keySet()) {
+                if(ddrRecord.getStatusForAddress(toAddress).equals(CommunicationStatus.DELIVERED)) {
+                    smsDeliveryCount++;
+                }
+            }
+            if(smsDeliveryCount == ddrRecord.getStatusPerAddress().size()){
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * forward the CM delivery status to a different host with a POST request based on the 
      * host attached in the reference

@@ -7,14 +7,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.util.ParallelInit;
@@ -50,50 +47,52 @@ public class Broadsoft {
 		
 		client = ParallelInit.getClient();
 	}
-	
-    public String startCall( String address )
-    {
-        WebResource webResource = client.resource( XSI_URL + XSI_ACTIONS + user + XSI_START_CALL );
-        webResource.addFilter( this.auth );
-		
-        if(retryCounter.get( webResource.toString() ) == null)
-        {
-            retryCounter.put( webResource.toString(), 0 );
-        }
+
+    /**
+     * start an outbound call to the given address.
+     * 
+     * @param address
+     * @return the callId related to this call
+     */
+    public String startCall(String address) {
+
+        WebResource webResource = null;
         HashMap<String, String> queryKeyValue = new HashMap<String, String>();
-        try
-        {
-            queryKeyValue.put( "address", URLEncoder.encode( address, "UTF-8" ) );
+        try {
+            webResource = client.resource(XSI_URL + XSI_ACTIONS + user + XSI_START_CALL);
+            webResource.addFilter(this.auth);
+
+            if (retryCounter.get(webResource.toString()) == null) {
+                retryCounter.put(webResource.toString(), 0);
+            }
+            queryKeyValue.put("address", URLEncoder.encode(address, "UTF-8"));
         }
-        catch ( UnsupportedEncodingException ex )
-        {
-            log.severe( "Problems dialing out:" + ex.getMessage() );
-            dialogLog.severe( config, "Failed to start call to: " + address + " Error: " + ex.getMessage() );
-		}
-		
-        while ( retryCounter.get( webResource.toString() ) != null && retryCounter.get( webResource.toString() ) < MAX_RETRY_COUNT )
-        {
-            try
-            {
-                String result = sendRequestWithRetry( webResource, queryKeyValue, HTTPMethod.POST, null );
-                log.info( "Result from BroadSoft: " + result );
-                dialogLog.info( config, "Start outbound call to: " + address );
+        catch (UnsupportedEncodingException ex) {
+            log.severe("Problems dialing out:" + ex.getMessage());
+            dialogLog.severe(config, "Failed to start call to: " + address + " Error: " + ex.getMessage());
+        }
+
+        while (retryCounter.get(webResource.toString()) != null &&
+               retryCounter.get(webResource.toString()) < MAX_RETRY_COUNT) {
+            try {
+                String result = sendRequestWithRetry(webResource, queryKeyValue, HTTPMethod.POST, null);
+                log.info("Result from BroadSoft: " + result);
+                dialogLog.info(config, "Start outbound call to: " + address);
                 //flush retryCount
-                retryCounter.remove( webResource.toString() );
-                return getCallId( result );
+
+                retryCounter.remove(webResource.toString());
+                return getCallId(result);
             }
-            catch ( Exception ex )
-            {
-                Integer retry = retryCounter.get( webResource.toString() );
-                log.severe( "Problems dialing out:" + ex.getMessage() );
-                dialogLog.severe( config,
-                    String.format( "Failed to start call to: %s Error: %s. Retrying! Count: %s", address,
-                        ex.getMessage(), retry ) );
-                retryCounter.put( webResource.toString(), ++retry );
+            catch (Exception ex) {
+                Integer retry = retryCounter.get(webResource.toString());
+                log.severe("Problems dialing out:" + ex.getMessage());
+                dialogLog.severe(config, String.format("Failed to start call to: %s Error: %s. Retrying! Count: %s",
+                                                       address, ex.getMessage(), retry));
+                retryCounter.put(webResource.toString(), ++retry);
             }
         }
-		return null;
-	}
+        return null;
+    }
 	
     public String startSubscription()
     {
@@ -320,7 +319,7 @@ public class Broadsoft {
 			NodeList list = dom.getDocumentElement().getChildNodes();
 			for(int i=0;i<list.getLength();i++) {
 				Node call = list.item(i).getFirstChild();
-				ids.add(call.getNodeValue());
+				ids.add(call.getFirstChild().getNodeValue());
 			}
 		} catch(Exception ex){
 			ex.printStackTrace();

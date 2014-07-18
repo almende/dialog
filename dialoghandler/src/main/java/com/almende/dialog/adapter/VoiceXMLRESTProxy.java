@@ -93,7 +93,21 @@ public class VoiceXMLRESTProxy {
             return "";
         }
 
-        Session session = Session.getOrCreateSession(config, address);
+        //avoid multiple calls to be made to the same number, from the same adapter. 
+        Session session = Session.getSession(Session.getSessionKey(config, address));
+        if(session != null) {
+            String responseMessage = checkIfCallAlreadyInSession(address, config, session);
+            if(responseMessage != null) {
+                return responseMessage;
+            }
+            else {
+                //create a session
+                session = Session.getOrCreateSession(config, address);
+            }
+        }
+        else {
+            session = Session.getOrCreateSession(config, address);
+        }
         session.killed = false;
         session.setStartUrl(url);
         session.setDirection("outbound");
@@ -140,7 +154,22 @@ public class VoiceXMLRESTProxy {
             try
             {
                 String formattedAddress = PhoneNumberUtils.formatNumber( address, PhoneNumberFormat.E164 );
-                Session session = Session.getOrCreateSession( config, formattedAddress );
+                //avoid multiple calls to be made to the same number, from the same adapter. 
+                Session session = Session.getSession(Session.getSessionKey(config, formattedAddress));
+                if(session != null) {
+                    String responseMessage = checkIfCallAlreadyInSession(formattedAddress, config, session);
+                    if(responseMessage != null) {
+                        resultSessionMap.put(formattedAddress, responseMessage);
+                        continue;
+                    }
+                    else {
+                        //create a session
+                        session = Session.getOrCreateSession(config, formattedAddress);
+                    }
+                }
+                else {
+                    session = Session.getOrCreateSession(config, formattedAddress);
+                }
                 session.killed=false;
                 session.setStartUrl(url);
                 session.setDirection("outbound");
@@ -155,7 +184,9 @@ public class VoiceXMLRESTProxy {
                 if ( !ServerUtils.isInUnitTestingEnvironment() )
                 {
                     Broadsoft bs = new Broadsoft( config );
-                    bs.startSubscription();
+                    String subscriptiion = bs.startSubscription();
+                    log.info(String.format("Calling subscription complete. Message: %s. Starting call.. ",
+                                           subscriptiion));
                     extSession = bs.startCall( formattedAddress + "@outbound" );
                 }
                 session.setExternalSession( extSession );
@@ -1398,5 +1429,41 @@ public class VoiceXMLRESTProxy {
             agentURL += "/en_trial_message.wav";
         }
         return agentURL;
+    }
+    
+    /**
+     * method checks with broadsoft if the session is already in place. If it is
+     * place, it returns at error message.
+     * 
+     * @param address
+     * @param config
+     * @param session
+     * @return error message is the call is already in place. else returns null
+     */
+    private static String checkIfCallAlreadyInSession(String address, AdapterConfig config, Session session) {
+
+        log.warning(String.format("Existing session %s. Will check with provider if its actually true",
+                                  session.getKey()));
+        if (config != null) {
+            Broadsoft broadsoft = new Broadsoft(config);
+            ArrayList<String> activeCallsXML = broadsoft.getActiveCallsInfo();
+            try {
+                DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+                DocumentBuilder db = dbf.newDocumentBuilder();
+                for (String activeCallXML : activeCallsXML) {
+                    Document dom;
+                    dom = db.parse(new ByteArrayInputStream(activeCallXML.getBytes("UTF-8")));
+                    Node addressNode = dom.getElementsByTagName("address").item(0);
+                    if (addressNode != null && addressNode.getFirstChild().getNodeValue().contains(address)) {
+                        return String.format("Session already active: %s. Cannot initiate new call!!", session.getKey());
+                    }
+                }
+            }
+            catch (Exception e) {
+                log.severe(String.format("Session: %s found in ASK-Fast, but error occured whle trying to check status at provider end. Message: %s",
+                                         session.getKey(), e.getMessage()));
+            }
+        }
+        return null;
     }
 }

@@ -206,7 +206,6 @@ public class CMSmsServlet extends TextServlet {
                 String hostFromReference = CMStatus.getHostFromReference(reference);
                 log.info(String.format("Host from reference: %s and actual host: ", hostFromReference, Settings.HOST));
                 if (hostFromReference != null && !hostFromReference.contains((Settings.HOST))) {
-                    hostFromReference += deliveryStatusPath;
                     log.info("CM delivery status is being redirect to: " + hostFromReference);
                     hostFromReference += deliveryStatusPath;
                     return forwardToHost(hostFromReference, HTTPMethod.POST, payload);

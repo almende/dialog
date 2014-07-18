@@ -184,7 +184,9 @@ public class VoiceXMLRESTProxy {
                 if ( !ServerUtils.isInUnitTestingEnvironment() )
                 {
                     Broadsoft bs = new Broadsoft( config );
-                    bs.startSubscription();
+                    String subscriptiion = bs.startSubscription();
+                    log.info(String.format("Calling subscription complete. Message: %s. Starting call.. ",
+                                           subscriptiion));
                     extSession = bs.startCall( formattedAddress + "@outbound" );
                 }
                 session.setExternalSession( extSession );

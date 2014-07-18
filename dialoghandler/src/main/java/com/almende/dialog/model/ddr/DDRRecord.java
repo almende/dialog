@@ -499,7 +499,7 @@ public class DDRRecord
 
         statusPerAddress = statusPerAddress != null ? statusPerAddress : new HashMap<String, CommunicationStatus>();
         //if status is there but statusPerAddress is empty, use status
-        if (statusPerAddress.isEmpty() && status != null) {
+        if ( status != null) {
             
             try {
                 Map<String, String> toAddresses = ServerUtils.deserialize(toAddressString, false,
@@ -528,7 +528,7 @@ public class DDRRecord
      * @param status
      */
     public void addStatusForAddress(String address, CommunicationStatus status) {
-        address = address.contains(".") ? address.replaceAll(".", "-") : address;
+        address = address.contains("\\.") ? address.replaceAll("\\.", "-") : address;
         getStatusPerAddress().put(address, status);
     }
     

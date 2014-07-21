@@ -94,8 +94,7 @@ public class CMSmsServlet extends TextServlet {
                         if (hostFromReference != null && !hostFromReference.contains((Settings.HOST))) {
                             hostFromReference += deliveryStatusPath;
                             log.info("CM delivery status is being redirect to: " + hostFromReference);
-                            hostFromReference += (req.getPathInfo() + "?" + (req.getQueryString() != null ? req
-                                                            .getQueryString() : ""));
+                            hostFromReference += ("?" + (req.getQueryString() != null ? req.getQueryString() : ""));
                             responseText = forwardToHost(hostFromReference, HTTPMethod.GET, null);
                         }
                         else {

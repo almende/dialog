@@ -528,7 +528,7 @@ public class DDRRecord
      * @param status
      */
     public void addStatusForAddress(String address, CommunicationStatus status) {
-        address = address.contains("\\.") ? address.replaceAll("\\.", "-") : address;
+        address = address.contains(".") ? address.replaceAll("\\.", "-") : address;
         getStatusPerAddress().put(address, status);
     }
     

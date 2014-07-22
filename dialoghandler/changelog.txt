@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+22-7-2014, version 1.0.3
+- hotfix: CM DLR notification infinitely proxies itself between live and api.ask-fast.com 
+
 18-7-2014, version 1.0.2
 - update: reject multiple calls to the same number from the same adapter, when one session is in palce.
 - fix: update DELIVERY status in all address fields 

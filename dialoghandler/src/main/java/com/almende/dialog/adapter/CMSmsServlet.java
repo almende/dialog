@@ -91,7 +91,7 @@ public class CMSmsServlet extends TextServlet {
                         String hostFromReference = CMStatus.getHostFromReference(reference);
                         log.info(String.format("Host from reference: %s and actual host: %s", hostFromReference + "?" +
                                                                req.getQueryString(), Settings.HOST));
-                        if (hostFromReference != null && !hostFromReference.contains((Settings.HOST))) {
+                        if (hostFromReference != null && !ifHostNamesMatch(hostFromReference)) {
                             hostFromReference += deliveryStatusPath;
                             log.info("CM delivery status is being redirect to: " + hostFromReference);
                             hostFromReference += ("?" + (req.getQueryString() != null ? req.getQueryString() : ""));
@@ -204,7 +204,7 @@ public class CMSmsServlet extends TextServlet {
             if (reference != null) {
                 String hostFromReference = CMStatus.getHostFromReference(reference);
                 log.info(String.format("Host from reference: %s and actual host: ", hostFromReference, Settings.HOST));
-                if (hostFromReference != null && !hostFromReference.contains((Settings.HOST))) {
+                if (hostFromReference != null && !ifHostNamesMatch(hostFromReference)) {
                     log.info("CM delivery status is being redirect to: " + hostFromReference);
                     hostFromReference += deliveryStatusPath;
                     return forwardToHost(hostFromReference, HTTPMethod.POST, payload);
@@ -378,6 +378,28 @@ public class CMSmsServlet extends TextServlet {
             log.severe(String.format("Failed to send CM DLR status to host: %s. Message: %s", host, e.getLocalizedMessage()));
         }
         return null;
+    }
+    
+    /**
+     * checks if the given hostName contains the one that this servlet is configured for any live 
+     * environement subdomains. this is to fix a repeated callback from CM where live.ask-fast.com would 
+     * call api.ask-fast.com and vice-versa infinitely. 
+     * @author Shravan
+     * {@link Settings#HOST}
+     * @param hostName
+     * @return
+     */
+    private boolean ifHostNamesMatch(String hostName) {
+        if(hostName.contains(Settings.HOST)) {
+            return true;
+        }
+        else if(hostName.contains("api.ask-fast.com") && Settings.HOST.contains("live.ask-fast.com")) {
+            return true;
+        }
+        else if(hostName.contains("live.ask-fast.com") && Settings.HOST.contains("api.ask-fast.com")) {
+            return true;
+        }
+        return false;
     }
     
     /**

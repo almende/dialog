@@ -1,9 +1,12 @@
 package com.almende.dialog.agent;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Logger;
+import javax.ws.rs.core.MediaType;
 import org.jivesoftware.smack.XMPPException;
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.MailServlet;
@@ -24,11 +27,16 @@ import com.almende.eve.rpc.jsonrpc.JSONRPCException;
 import com.almende.eve.rpc.jsonrpc.JSONRPCException.CODE;
 import com.almende.eve.rpc.jsonrpc.JSONRequest;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.util.ParallelInit;
+import com.almende.util.TypeUtil;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.uuid.UUID;
 import com.askfast.commons.agent.intf.AdapterAgentInterface;
 import com.askfast.commons.entity.Adapter;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.WebResource;
 
 @Access(AccessType.PUBLIC)
 public class AdapterAgent extends Agent implements AdapterAgentInterface {
@@ -582,6 +590,48 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
 	}
 	
+    /**
+     * logs into marketplace and performs a sync operation
+     * 
+     * @param username
+     * @param password
+     * @return
+     */
+    public boolean syncAdapterAtMarketplace(@Name("username") String username, @Name("password") String password) {
+
+        Client client = ParallelInit.getClient();
+        try {
+            WebResource resource = client.resource(Settings.ASK_FAST_MARKETPLACE_REGISTER_URL + "/login");
+            resource = resource.queryParam("username", username);
+            resource = resource.queryParam("password", password);
+            String askfastMarketLoginResponse = resource.type(MediaType.TEXT_PLAIN).get(String.class);
+            if (askfastMarketLoginResponse != null && askfastMarketLoginResponse.contains("X-SESSION_ID")) {
+                Object sessionKey = JOM.getInstance().readValue(askfastMarketLoginResponse,
+                                                                new TypeReference<HashMap<String, String>>() {
+                                                                });
+                TypeUtil<HashMap<String, String>> injector = new TypeUtil<HashMap<String, String>>() {
+                };
+                HashMap<String, String> sessionMap = injector.inject(sessionKey);
+                if (sessionMap.get("X-SESSION_ID") != null) {
+                    resource = client.resource(Settings.ASK_FAST_MARKETPLACE_REGISTER_URL +
+                                               "/accounts/adapterconfigs/syncAllAdapters");
+                    resource = resource.queryParam("flushExisting", "true");
+                    String syncedAdapters = resource.header("X-SESSION_ID", sessionMap.get("X-SESSION_ID"))
+                                                    .accept(MediaType.APPLICATION_JSON).type(MediaType.TEXT_PLAIN)
+                                                    .post(String.class);
+                    log.info("Adapters sync result: " + syncedAdapters);
+                    return true;
+                }
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            log.severe(String.format("Adapter sync failed for username: %. Message: %s", username,
+                                     e.getLocalizedMessage()));
+        }
+        return false;
+    }
+    
     /**
      * saves the AdapterConfig in the datastore
      * 

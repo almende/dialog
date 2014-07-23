@@ -675,11 +675,13 @@ public class AdapterConfig {
 		return accounts;
 	}
 	
-	public void addAccount(String accountId) {
-		if(accountId!=null && !accounts.contains( accountId )){
-			accounts.add(accountId);
-		}
-	}
+        public void addAccount(String accountId) {
+    
+            accounts = accounts != null ? accounts : new ArrayList<String>();
+            if (accountId != null && !accounts.contains(accountId)) {
+                accounts.add(accountId);
+            }
+        }
 	
 	public void removeAccount(String accountId) {
 		int idx = accounts.indexOf( accountId );

@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+24-7-2014, version 1.1.0
+- feature: auto sync adapters at Marketplace. option to set per account sync settings. 
+
 22-7-2014, version 1.0.3
 - hotfix: CM DLR notification infinitely proxies itself between live and api.ask-fast.com 
 

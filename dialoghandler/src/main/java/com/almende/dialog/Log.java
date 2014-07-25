@@ -2,7 +2,6 @@ package com.almende.dialog;
 
 import java.io.Serializable;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.annotations.Id;
 import com.almende.util.uuid.UUID;
 

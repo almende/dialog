@@ -123,12 +123,12 @@ public class ServerUtils
         return new String( sb );
     }
 
-    public static boolean isInLocalDevelopmentServerEnvironment()
+    public static boolean isInDevelopmentEnvironment()
     {
         return Settings.environment() == Settings.Development;
     }
 
-    public static boolean isInDeployedAppspotEnvironment()
+    public static boolean isInProductionEnvironment()
     {
         return Settings.environment() == Settings.Production;
     }

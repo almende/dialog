@@ -344,7 +344,7 @@ public class AdapterConfig {
 			cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType);
 
 		if (myAddress != null)
-			cmd.addFilter("myAddress", FilterOperator.EQUAL, myAddress);
+			cmd.addFilter("myAddress", FilterOperator.EQUAL, myAddress.toLowerCase());
 		
 		if (keyword != null) {
 			if(keyword.equals("null")) {
@@ -364,31 +364,29 @@ public class AdapterConfig {
 		return adapters;
 	}
 	
-	public static ArrayList<AdapterConfig> findAdapterByOwner(String owner,
-															String adapterType,
-															String address) {
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		
-		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
-				AdapterConfig.class);
-
-		cmd.addFilter("owner", FilterOperator.EQUAL, owner);
-		
-		if (adapterType != null)
-			cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
-
-		if (address != null)
-			cmd.addFilter("address", FilterOperator.EQUAL, address.toLowerCase());
-
-		Iterator<AdapterConfig> config = cmd.now();
-
-		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
-		while (config.hasNext()) {
-			adapters.add(config.next());
-		}
-
-		return adapters;
-	}
+        public static ArrayList<AdapterConfig> findAdapterByOwner(String owner, String adapterType, String address) {
+    
+            TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+    
+            RootFindCommand<AdapterConfig> cmd = datastore.find().type(AdapterConfig.class);
+    
+            cmd.addFilter("owner", FilterOperator.EQUAL, owner);
+    
+            if (adapterType != null)
+                cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
+    
+            if (address != null)
+                cmd.addFilter("address", FilterOperator.EQUAL, address.toLowerCase());
+    
+            Iterator<AdapterConfig> config = cmd.now();
+    
+            ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+            while (config.hasNext()) {
+                adapters.add(config.next());
+            }
+    
+            return adapters;
+        }
 	
 	/**
 	 * this returns the AdapterConfig if it is associated with the supplied ownerId.

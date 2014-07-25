@@ -35,7 +35,7 @@ import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AccountType;
 
-
+@SuppressWarnings("deprecation")
 public class DDRRecordAgentTest extends TestFramework
 {
     DDRRecordAgent ddrRecordAgent = new DDRRecordAgent();
@@ -74,7 +74,7 @@ public class DDRRecordAgentTest extends TestFramework
         assertThat( ddrType.getTypeId(), Matchers.notNullValue() );
         assertThat( ddrType.getName(), Matchers.is( "Test DDRType1" ) );
     }
-
+    
     /**
      * check if purchasing an adapter will charge the account
      * 

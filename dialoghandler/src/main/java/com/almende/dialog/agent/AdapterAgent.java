@@ -330,6 +330,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.getProperties().put( MailServlet.SENDING_PORT_KEY, sendingPort != null ? sendingPort : MailServlet.GMAIL_SENDING_PORT );
         config.getProperties().put( MailServlet.RECEIVING_PROTOCOL_KEY, receivingProtocol != null ? receivingProtocol : MailServlet.GMAIL_RECEIVING_PROTOCOL );
         config.getProperties().put( MailServlet.RECEIVING_HOST_KEY, receivingHost != null ? receivingHost : MailServlet.GMAIL_RECEIVING_HOST );
+        emailAddress = getEnvironmentSpecificEmailAddress(emailAddress);
         config.setMyAddress( emailAddress );
         config.setAddress( name );
         config.setXsiUser( emailAddress );
@@ -612,6 +613,14 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             if (adapter.getAccountType() != null) {
                 config.setAccountType(adapter.getAccountType());
             }
+            //allow my address to be changed only for email adapters
+            if(AdapterAgent.ADAPTER_TYPE_EMAIL.equalsIgnoreCase(adapter.getAdapterType())) {
+                config.setMyAddress(adapter.getMyAddress());
+            }
+            //allow keywords to be changed only for sms adapters
+            if(AdapterAgent.ADAPTER_TYPE_SMS.equalsIgnoreCase(adapter.getAdapterType())) {
+                config.setKeyword(adapter.getKeyword());
+            }
             config.update();
             return config;
         }
@@ -790,5 +799,25 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.setInitialAgentURL(initialAgentURL);
         AdapterConfig newConfig = createAdapter( config );
         return newConfig;
+    }
+    
+    /**
+     * appends "appspotmail.com" for the given address based on the current
+     * jetty environment.
+     * 
+     * @param address
+     * @return
+     */
+    private static String getEnvironmentSpecificEmailAddress(String address) {
+
+        if (ServerUtils.isInDevelopmentEnvironment()) {
+            address = (address.contains("appspotmail.com") || address.contains("@")) ? address
+                                                                                    : (address + "@char-a-lot.appspotmail.com");
+        }
+        else if (ServerUtils.isInProductionEnvironment()) {
+            address = (address.contains("appspotmail.com") || address.contains("@")) ? address
+                                                                                    : (address + "@ask-charlotte.appspotmail.com");
+        }
+        return address;
     }
 }

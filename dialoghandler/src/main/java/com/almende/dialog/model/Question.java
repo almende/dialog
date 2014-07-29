@@ -46,18 +46,19 @@ public class Question implements QuestionIntf {
 
     // Factory functions:
     @JsonIgnore
-    public static Question fromURL(String url, String adapterID) {
+    public static Question fromURL(String url, String adapterID, String ddrRecordId, String sessionKey) {
 
-        return fromURL(url, adapterID, "");
+        return fromURL(url, adapterID, "", ddrRecordId, sessionKey);
     }
 
     @JsonIgnore
-    public static Question fromURL(String url, String adapterID, String remoteID) {
+    public static Question fromURL(String url, String adapterID, String remoteID, String ddrRecordId, String sessionKey) {
 
-        return fromURL(url, adapterID, remoteID, "");
+        return fromURL(url, adapterID, remoteID, "", ddrRecordId, sessionKey);
     }
 
-    public static String getJSONFromURL(String url, String adapterID, String remoteID, String fromID) {
+    public static String getJSONFromURL(String url, String adapterID, String remoteID, String fromID,
+                                        String ddrRecordId, String sessionKey) {
 
         Client client = ParallelInit.getClient();
         WebResource webResource;
@@ -68,13 +69,14 @@ public class Question implements QuestionIntf {
         }
         catch (UnsupportedEncodingException e) {
             log.severe(e.toString());
-            dialogLog.severe(adapterID, "ERROR loading question: " + e.toString());
+            dialogLog.severe(adapterID, "ERROR loading question: " + e.toString(), ddrRecordId, sessionKey);
         }
         return null;
     }
 
     @JsonIgnore
-    public static Question fromURL(String url, String adapterID, String remoteID, String fromID) {
+    public static Question fromURL(String url, String adapterID, String remoteID, String fromID, 
+                                   String ddrRecordId, String sessionKey) {
 
         log.info(String.format("Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID,
                                fromID));
@@ -87,13 +89,13 @@ public class Question implements QuestionIntf {
             try {
                 webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8"))
                                                 .queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
-                dialogLog.info(adapterID, "Loading new question from: " + webResource.toString());
+                dialogLog.info(adapterID, "Loading new question from: " + webResource.toString(), ddrRecordId, sessionKey);
                 json = webResource.type("text/plain").get(String.class);
-                dialogLog.info(adapterID, "Received new question: " + json);
+                dialogLog.info(adapterID, "Received new question: " + json, ddrRecordId, sessionKey);
             }
             catch (Exception e) {
                 log.severe(e.toString());
-                dialogLog.severe(adapterID, "ERROR loading question: " + e.toString());
+                dialogLog.severe(adapterID, "ERROR loading question: " + e.toString(), ddrRecordId, sessionKey);
                 if (questionReloadCounter.get(url) == null) {
                     questionReloadCounter.put(url, 0);
                 }
@@ -102,9 +104,9 @@ public class Question implements QuestionIntf {
                     try {
                         dialogLog.info(adapterID,
                                        String.format("Fetch question from URL: %s failed. Trying again (Count: %s) ",
-                                                     webResource.toString(), questionReloadCounter.get(url)));
+                                                     webResource.toString(), questionReloadCounter.get(url)), ddrRecordId, sessionKey);
                         json = webResource.type("text/plain").get(String.class);
-                        dialogLog.info(adapterID, "Received new question: " + json);
+                        dialogLog.info(adapterID, "Received new question: " + json, ddrRecordId, sessionKey);
                         break;
                     }
                     catch (Exception ex) {
@@ -114,7 +116,7 @@ public class Question implements QuestionIntf {
                 }
             }
             questionReloadCounter.remove(url);
-            return fromJSON(json, adapterID);
+            return fromJSON(json, adapterID, ddrRecordId, sessionKey);
         }
         else {
             return null;
@@ -122,7 +124,7 @@ public class Question implements QuestionIntf {
     }
 
     @JsonIgnore
-    public static Question fromJSON(String json, String adapterID) {
+    public static Question fromJSON(String json, String adapterID, String ddrRecordId, String sessionKey) {
 
         Question question = null;
         if (json != null) {
@@ -133,7 +135,7 @@ public class Question implements QuestionIntf {
             }
             catch (Exception e) {
                 log.severe(e.toString());
-                dialogLog.severe(adapterID, "ERROR parsing question: " + e.getLocalizedMessage());
+                dialogLog.severe(adapterID, "ERROR parsing question: " + e.getLocalizedMessage(), ddrRecordId, sessionKey);
             }
         }
         return question;
@@ -296,19 +298,19 @@ public class Question implements QuestionIntf {
             newQuestionJSON = webResource.type("application/json").post(String.class, post);
 
             log.info("Received new question (answer): " + newQuestionJSON);
-            dialogLog.info(adapterID, "Received new question (answer): " + newQuestionJSON);
+            dialogLog.info(adapterID, "Received new question (answer): " + newQuestionJSON, null, sessionKey);
 
             newQ = om.readValue(newQuestionJSON, Question.class);
             newQ.setPreferred_language(preferred_language);
         }
         catch (ClientHandlerException ioe) {
-            dialogLog.severe(adapterID, "Unable to load question: " + ioe.getMessage());
+            dialogLog.severe(adapterID, "Unable to load question: " + ioe.getMessage(), null, sessionKey);
             log.severe(ioe.toString());
             ioe.printStackTrace();
             newQ = this.event("exception", "Unable to load question", null, responder);
         }
         catch (Exception e) {
-            dialogLog.severe(adapterID, "Unable to parse question json: " + e.getMessage());
+            dialogLog.severe(adapterID, "Unable to parse question json: " + e.getMessage(), null, sessionKey);
             log.severe(e.toString());
             newQ = this.event("exception", "Unable to parse question json", null, responder);
         }
@@ -343,7 +345,7 @@ public class Question implements QuestionIntf {
                 TypeUtil<HashMap<String, String>> injector = new TypeUtil<HashMap<String, String>>() {
                 };
                 HashMap<String, String> extrasMap = injector.inject(extras);
-                return retryLoadingQuestion(null, null, extrasMap.get("sessionKey"));
+                return retryLoadingQuestion(null, null, extrasMap.get(Session.SESSION_KEY));
             }
             else {
                 log.warning("Unguardedly repeating question!");
@@ -693,7 +695,7 @@ public class Question implements QuestionIntf {
                 dialogLog.warning(adapterID, String
                                                 .format("Repeating question %s (count: %s) due to invalid answer: %s",
                                                         ServerUtils.serializeWithoutException(this), retryCount,
-                                                        answer_input));
+                                                        answer_input), null, sessionKey);
             }
             return this;
         } 
@@ -704,7 +706,7 @@ public class Question implements QuestionIntf {
             if (adapterID != null && answer_input != null) {
                 dialogLog.warning(adapterID,
                                   String.format("Return empty/null question as retryCount %s equals DEFAULT_MAX: %s or LOAD_LIMIT: %s, due to invalid answer: %s",
-                                                retryCount, DEFAULT_MAX_QUESTION_LOAD, retryLoadLimit, answer_input));
+                                                retryCount, DEFAULT_MAX_QUESTION_LOAD, retryLoadLimit, answer_input), null, sessionKey);
             }
             return null;
         }
@@ -712,7 +714,8 @@ public class Question implements QuestionIntf {
             log.info("returning the same question as its TextServlet request??");
             dialogLog.warning(adapterID,
                               String.format("Repeating question %s due to invalid answer: %s in the TextServlet",
-                                            ServerUtils.serializeWithoutException(this), answer_input));
+                                            ServerUtils.serializeWithoutException(this), answer_input), null,
+                              sessionKey);
             return this;
         }
     }

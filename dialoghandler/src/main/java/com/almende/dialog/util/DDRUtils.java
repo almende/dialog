@@ -687,7 +687,7 @@ public class DDRUtils
                             String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
                                                                 session.getKey());
                             log.severe(errorMessage);
-                            dialogLog.severe(adapterConfig, errorMessage);
+                            dialogLog.severe(adapterConfig, errorMessage, session);
                             candidateToBePushedToQueue = true;
                         }
                         else if (ddrRecord != null && session.getAnswerTimestamp() == null) {
@@ -716,7 +716,7 @@ public class DDRUtils
                         String errorMessage = String.format("No costs added to communication currently for session: %s, as no answerTimestamp or releaseTimestamp is found",
                                                             session.getKey());
                         log.severe(errorMessage);
-                        dialogLog.severe(adapterConfig, errorMessage);
+                        dialogLog.severe(adapterConfig, errorMessage, session);
                         if (pushToQueue) { //push the session details to queue
                             session.pushSessionToQueue();
                         }
@@ -734,7 +734,7 @@ public class DDRUtils
                                                     adapterConfig.getMyAddress(), session.getRemoteAddress(),
                                                     session.getLocalAddress(), e.getLocalizedMessage());
                 log.severe(errorMessage);
-                dialogLog.severe(session.getAdapterConfig().getConfigId(), errorMessage);
+                dialogLog.severe(session.getAdapterConfig(), errorMessage, session);
                 if (pushToQueue) { //push the session details to queue
                     session.pushSessionToQueue();
                 }

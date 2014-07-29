@@ -24,6 +24,7 @@ import com.almende.dialog.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 
@@ -53,9 +54,10 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
             if( !xmppRooster.contains( to ))
             {
                 xmppRooster.createEntry( to, toName, null );
-                dialogLog.warning( config, String.format(
-                        "Sending xmpp chat: %s to: %s might be incomplete. Contact just added in AddressBook", message,
-                        to ) );
+                String sessionKey = extras.containsKey(Session.SESSION_KEY) ? extras.get(Session.SESSION_KEY).toString() : null;
+                String ddrRecordId =  extras.containsKey(DDRRecord.DDR_RECORD_KEY) ? extras.get(DDRRecord.DDR_RECORD_KEY).toString() : null; 
+                dialogLog.warning(config, String.format("Sending xmpp chat: %s to: %s might be incomplete. Contact just added in AddressBook",
+                                                        message, to), ddrRecordId, sessionKey);
             }
             if ( fromName != null && !fromName.isEmpty() )
             {

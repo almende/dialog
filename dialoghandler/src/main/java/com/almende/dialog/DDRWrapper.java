@@ -2,7 +2,6 @@ package com.almende.dialog;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
@@ -34,7 +33,7 @@ public class DDRWrapper {
                     node.put( "pubKey", config.getPublicKey() );
 		}
 		try {
-			ddr.ddr(config,om.writeValueAsString(node));
+			ddr.ddr(config,om.writeValueAsString(node), null, session.getKey());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

@@ -1,10 +1,8 @@
 package com.almende.dialog.test;
 
 import javax.ws.rs.HttpMethod;
-
 import org.junit.Assert;
 import org.junit.Test;
-
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
@@ -20,7 +18,7 @@ public class TestServletTest extends TestFramework
             QuestionInRequest.APPOINTMENT.name() );
         url = ServerUtils.getURLWithQueryParams( url, "question", "start" );
         String response = fetchResponse( HttpMethod.GET, url, null );
-        Question questionFromJson = Question.fromJSON( response, null );
+        Question questionFromJson = Question.fromJSON( response, null, null, null );
         Assert.assertEquals( 2, questionFromJson.getAnswers().size() );
         Assert.assertEquals( "text://Are you available today?", questionFromJson.getQuestion_text() );
     }

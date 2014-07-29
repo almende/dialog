@@ -1,8 +1,9 @@
 package com.almende.dialog;
 
 import java.io.Serializable;
+import org.jongo.marshall.jackson.oid.Id;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.util.twigmongo.annotations.Id;
+import com.almende.dialog.model.Session;
 import com.almende.util.uuid.UUID;
 
 public class Log implements Serializable {
@@ -16,12 +17,25 @@ public class Log implements Serializable {
     private String adapterType = null;
     private String message = null;
     private long timestamp = 0;
+    private String ddrRecordId = null;
+    private String sessionKey = null;
+    private String trackingToken = null;
 
     public Log() {
 
     }
-
-    public Log(LogLevel level, String adapterID, String adapterType, String message) {
+    
+    /**
+     * detailed constructor
+     * @param level
+     * @param adapterID
+     * @param adapterType
+     * @param message
+     * @param ddrRecordId if null, will try to fetch the current ddrRecord from {@link Session#getDdrRecordId()}
+     * @param sessionKey
+     */
+    public Log(LogLevel level, String adapterID, String adapterType, String message, String ddrRecordId,
+               String sessionKey) {
 
         this.logId = new UUID().toString();
         this.level = level;
@@ -34,11 +48,55 @@ public class Log implements Serializable {
         this.adapterType = adapterType;
         this.message = message;
         this.timestamp = System.currentTimeMillis();
+        this.sessionKey = sessionKey;
+        if(sessionKey != null) {
+            Session session = Session.getSession(sessionKey);
+            if (session != null) {
+                this.trackingToken = session.getTrackingToken();
+                this.ddrRecordId = ddrRecordId != null ? ddrRecordId : session.getDdrRecordId();
+            }
+        }
+    }
+    
+    /**
+     * detailed constructor
+     * @param level
+     * @param adapterID
+     * @param adapterType
+     * @param message
+     * @param ddrRecordId
+     *            if null, will try to fetch the current ddrRecord from
+     *            {@link Session#getDdrRecordId()}
+     * @param sessionKey
+     */
+    public Log(LogLevel level, String adapterID, String adapterType, String message, String ddrRecordId, Session session) {
+
+        this.logId = new UUID().toString();
+        this.level = level;
+        this.adapterID = adapterID;
+        //fetch the adapter type if empty
+        if ((adapterType == null || adapterType.isEmpty()) && adapterID != null) {
+            AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
+            adapterType = adapterConfig != null ? adapterConfig.getAdapterType() : null;
+        }
+        this.adapterType = adapterType;
+        this.message = message;
+        this.timestamp = System.currentTimeMillis();
+        if (session != null) {
+            this.sessionKey = session.getKey();
+            this.trackingToken = session.getTrackingToken();
+            this.ddrRecordId = ddrRecordId != null ? ddrRecordId : session.getDdrRecordId();
+        }
     }
 	
-    public Log( LogLevel level, AdapterConfig adapter, String message )
-    {
-        this( level, adapter.getConfigId(), adapter.getAdapterType(), message );
+    public Log(LogLevel level, AdapterConfig adapter, String message, String ddrRecordId, String sessionKey) {
+
+        this(level, adapter.getConfigId(), adapter.getAdapterType(), message, ddrRecordId, sessionKey);
+    }
+    
+    public Log(LogLevel level, AdapterConfig adapter, String message, Session session) {
+
+        this(level, adapter.getConfigId(), adapter.getAdapterType(), message, null, session);
     }
 	
     public LogLevel getLevel() {
@@ -89,5 +147,32 @@ public class Log implements Serializable {
     public void setLogId(String logId) {
         this.logId = logId;
     }
-	
+    
+    public String getDdrRecordId() {
+    
+        return ddrRecordId;
+    }
+    
+    public void setDdrRecordId(String ddrRecordId) {
+    
+        this.ddrRecordId = ddrRecordId;
+    }
+    
+    public String getSessionKey() {
+    
+        return sessionKey;
+    }
+    
+    public void setSessionKey(String sessionKey) {
+    
+        this.sessionKey = sessionKey;
+    }
+    public String getTrackingToken() {
+    
+        return trackingToken;
+    }
+    public void setTrackingToken(String trackingToken) {
+    
+        this.trackingToken = trackingToken;
+    }
 }

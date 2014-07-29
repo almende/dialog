@@ -7,7 +7,6 @@ import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.logging.Logger;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -107,7 +106,7 @@ abstract public class TextServlet extends HttpServlet {
 		}
 	}
 	
-	public Return formQuestion(Question question, String adapterID,	String address) {
+	public Return formQuestion(Question question, String adapterID,	String address, String ddrRecordId, String sessionKey) {
     
             String reply = "";
     
@@ -140,7 +139,7 @@ abstract public class TextServlet extends HttpServlet {
                     question = question.answer(null, adapterID, null, null, null);
                 }
                 else if (question.getType().equalsIgnoreCase("referral")) {
-                    question = Question.fromURL(question.getUrl(), adapterID, address);
+                    question = Question.fromURL(question.getUrl(), adapterID, address, ddrRecordId, sessionKey);
                 }
                 else {
                     break; // Jump from forloop (open questions, etc.)
@@ -170,17 +169,16 @@ abstract public class TextServlet extends HttpServlet {
         }
         session.setAccountId(config.getOwner());
         session.setDirection("outbound");
-        session.setTrackingToken(UUID.randomUUID().toString());
         String preferred_language = session.getLanguage();
         if (preferred_language == null) {
             preferred_language = config.getPreferred_language();
             session.setLanguage(preferred_language);
         }
         url = encodeURLParams(url);
-        Question question = Question.fromURL(url, config.getConfigId(), address);
+        Question question = Question.fromURL(url, config.getConfigId(), address, null, sessionKey);
 
         question.setPreferred_language(preferred_language);
-        Return res = formQuestion(question, config.getConfigId(), address);
+        Return res = formQuestion(question, config.getConfigId(), address, null, sessionKey);
         //store the question in the session
         session.setQuestion(res.question);
         session.setLocalName(getSenderName(question, config, null));
@@ -245,7 +243,8 @@ abstract public class TextServlet extends HttpServlet {
             loadAddress = formattedAddressNameToMap.keySet().iterator().next();
 
         // fetch question
-        Question question = Question.fromURL(url, config.getConfigId(), loadAddress);
+        Question question = Question.fromURL(url, config.getConfigId(), loadAddress, null,
+                                             Session.getSessionKey(config, loadAddress));
         if (question != null) {
             //fetch the senderName
             senderName = getSenderName(question, config, senderName);
@@ -277,7 +276,7 @@ abstract public class TextServlet extends HttpServlet {
                 }
                 question.setPreferred_language(preferred_language);
                 session.setQuestion(question);
-                res = formQuestion(question, config.getConfigId(), loadAddress);
+                res = formQuestion(question, config.getConfigId(), loadAddress, null, session.getKey());
 
                 if (config.getAdapterType().equalsIgnoreCase("cm") ||
                     config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
@@ -295,7 +294,7 @@ abstract public class TextServlet extends HttpServlet {
             }
             else {
                 // Form the question without the responders address, because we don't know which one.
-                res = formQuestion(question, config.getConfigId(), null);
+                res = formQuestion(question, config.getConfigId(), null, null, null);
                 for (String address : fullAddressMap.keySet()) {
                     // store the session first
                     Session session = Session.getOrCreateSession(Session.getSessionKey(config, address),
@@ -436,7 +435,6 @@ abstract public class TextServlet extends HttpServlet {
             session = Session.getOrCreateSession(config, address);
             session.setKeyword(keyword);
             session.setDirection("inbound");
-            session.setTrackingToken(UUID.randomUUID().toString());
             for (int i = 0; i < count; i++) {
                 DDRWrapper.log(null, null, session, "Send", config);
             }
@@ -524,7 +522,8 @@ abstract public class TextServlet extends HttpServlet {
                                                 .equalsIgnoreCase("referral")))) {
                     question = question.answer(address, config.getConfigId(), null, escapeInput.body, null);
                 }
-                Return replystr = formQuestion(question, config.getConfigId(), address);
+                Return replystr = formQuestion(question, config.getConfigId(), address, null,
+                                               session != null ? session.getKey() : null);
                 // fix for bug: #15 https://github.com/almende/dialog/issues/15
                 escapeInput.reply = URLDecoder.decode(replystr.reply, "UTF-8");
                 question = replystr.question;
@@ -682,8 +681,18 @@ abstract public class TextServlet extends HttpServlet {
             if (session != null) {
                 session.setDdrRecordId(ddrRecord.getId());
                 session.storeSession();
+                //put sessionKey and tracking token to extras
+                extras.put(Session.SESSION_KEY, session.getKey());
+                extras.put(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
             }
+            //save all the properties stored in the extras
+            for (String extraPropertyKey : extras.keySet()) {
+                ddrRecord.addAdditionalInfo(extraPropertyKey, extras.get(extraPropertyKey).toString());
+            }
+            ddrRecord.createOrUpdate();
+            extras.put(DDRRecord.DDR_RECORD_KEY, ddrRecord.getId());
         }
+        
         //send the message
         int count = sendMessage( message, subject, from, fromName, to, toName, extras, config );
         //push the cost to hte queue
@@ -725,13 +734,24 @@ abstract public class TextServlet extends HttpServlet {
         DDRRecord ddrRecord = createDDRForOutgoing(config, senderName, copyOfAddressNameMap, message);
         //store the ddrRecord in the session
         if (ddrRecord != null) {
+            int addressCount = 0;
             for (String address : copyOfAddressNameMap.keySet()) {
                 Session session = Session.getSession(getAdapterType(), config.getMyAddress(), address);
                 if (session != null) {
                     session.setDdrRecordId(ddrRecord.getId());
                     session.storeSession();
+                    //put sessionKey and tracking token to extras
+                    extras.put(Session.SESSION_KEY + "_" + addressCount, session.getKey());
+                    extras.put(Session.TRACKING_TOKEN_KEY + "_" + addressCount, session.getTrackingToken());
                 }
+                addressCount++;
             }
+            //save all the properties stored in the extras
+            for (String extraPropertyKey : extras.keySet()) {
+                ddrRecord.addAdditionalInfo(extraPropertyKey, extras.get(extraPropertyKey).toString());
+            }
+            ddrRecord.createOrUpdate();
+            extras.put(DDRRecord.DDR_RECORD_KEY, ddrRecord.getId());
         }
         //broadcast the message
         int count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config);

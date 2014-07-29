@@ -276,9 +276,9 @@ public class CMSmsServlet extends TextServlet {
                             TestServlet.logForTest(cmStatus);
                         }
                         webResource.type("text/plain").post(String.class, callbackPayload);
-                        dialogLog.info(cmStatus.getAdapterID(), String
-                                                        .format("POST request with payload %s sent to: %s",
-                                                                callbackPayload, cmStatus.getCallback()));
+                        dialogLog.info(cmStatus.getAdapterConfig(), String.format("POST request with payload %s sent to: %s",
+                                                                callbackPayload, cmStatus.getCallback()), cmStatus
+                                                        .getSession());
                     }
                     catch (Exception ex) {
                         log.severe("Callback failed. Message: " + ex.getLocalizedMessage());
@@ -286,7 +286,8 @@ public class CMSmsServlet extends TextServlet {
                 }
                 else {
                     log.info("Reference: " + reference + ". No delivered callback found.");
-                    dialogLog.info(cmStatus.getAdapterID(), "No delivered callback found for reference: " + reference);
+                    dialogLog.info(cmStatus.getAdapterConfig(), "No delivered callback found for reference: " +
+                                                                reference, cmStatus.getSession());
                 }
                 //fetch ddr corresponding to this
                 if (cmStatus.getSessionKey() != null) {

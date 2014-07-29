@@ -256,7 +256,7 @@ public class CMServletTest extends TestFramework
                                                        QuestionInRequest.APPOINTMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", "start");
         session.setStartUrl(url);
-        Question question = Question.fromURL(url, smsAdapter.getConfigId());
+        Question question = Question.fromURL(url, smsAdapter.getConfigId(), null, null);
         session.setQuestion(question);
         session.storeSession();
         

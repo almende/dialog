@@ -231,7 +231,7 @@ public class Logger {
         }
         
         //update the aggregate query with groupQuery next. This includes all the fields to fetch
-        String groupQuery = "{$group:{_id: {logId:\"$logId\", level: \"$level\", "
+        String groupQuery = "{$group:{_id: {trackingToken:\"$trackingToken\",logId:\"$logId\", level: \"$level\", "
                             + "adapterID: \"$adapterID\", adapterType: \"$adapterType\", message:\"$message\", "
                             + "timestamp: \"$timestamp\", ddrRecordId: \"$ddrRecordId\", sessionKey: \"$sessionKey\"}}}";
         if(aggregate != null) {

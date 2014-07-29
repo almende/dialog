@@ -10,10 +10,12 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.Question;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.annotations.Id;
 import com.askfast.commons.utils.TimeUtils;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 
 public class CMStatus implements Serializable
@@ -35,6 +37,10 @@ public class CMStatus implements Serializable
     private String errorDescription = "";
     private String sessionKey = null;
     private String accountId = null;
+    @JsonIgnore
+    private Session session = null;
+    @JsonIgnore
+    private AdapterConfig adapterConfig = null;
     
     public void store()
     {
@@ -244,5 +250,22 @@ public class CMStatus implements Serializable
             }
         }
         return null;
+    }
+
+    @JsonIgnore
+    public Session getSession() {
+    
+        if(session == null && sessionKey != null) {
+            session = Session.getSession(sessionKey);
+        }
+        return session;
+    }
+    @JsonIgnore
+    public AdapterConfig getAdapterConfig() {
+    
+        if(adapterConfig == null && adapterID != null) {
+            adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
+        }
+        return adapterConfig;
     }
 }

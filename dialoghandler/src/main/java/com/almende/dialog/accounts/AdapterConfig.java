@@ -218,10 +218,14 @@ public class AdapterConfig {
         }
 	}
 	
-	public static AdapterConfig getAdapterConfig(String adapterID) {
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		return datastore.load(AdapterConfig.class, adapterID);
-	}
+    public static AdapterConfig getAdapterConfig(String adapterID) {
+
+        if (adapterID != null) {
+            TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+            return datastore.load(AdapterConfig.class, adapterID);
+        }
+        return null;
+    }
 	
 	public static AdapterConfig findAdapterConfigFromList(String adapterID, String type, ArrayNode adapters) {
 		

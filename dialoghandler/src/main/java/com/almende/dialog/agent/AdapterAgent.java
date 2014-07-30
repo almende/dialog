@@ -36,6 +36,7 @@ import com.almende.util.uuid.UUID;
 import com.askfast.commons.agent.intf.AdapterAgentInterface;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
+import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.sun.jersey.api.client.Client;
@@ -44,14 +45,14 @@ import com.sun.jersey.api.client.WebResource;
 @Access(AccessType.PUBLIC)
 public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	
-	public static final String ADAPTER_TYPE_BROADSOFT = "broadsoft";
-	public static final String ADAPTER_TYPE_SMS = "sms";
-	public static final String ADAPTER_TYPE_FACEBOOK = "facebook";
-	public static final String ADAPTER_TYPE_EMAIL = "email";
-	public static final String ADAPTER_TYPE_XMPP = "xmpp";
-	public static final String ADAPTER_TYPE_TWITTER = "twitter";	
-	public static final String ADAPTER_TYPE_USSD = "ussd";
-	public static final String ADAPTER_TYPE_PUSH = "push";
+	public static final String ADAPTER_TYPE_BROADSOFT = AdapterType.CALL.getName();
+	public static final String ADAPTER_TYPE_SMS = AdapterType.SMS.getName();
+	public static final String ADAPTER_TYPE_FACEBOOK = AdapterType.FACEBOOK.getName();
+	public static final String ADAPTER_TYPE_EMAIL = AdapterType.EMAIL.getName();
+	public static final String ADAPTER_TYPE_XMPP = AdapterType.XMPP.getName();
+	public static final String ADAPTER_TYPE_TWITTER = AdapterType.TWITTER.getName();	
+	public static final String ADAPTER_TYPE_USSD = AdapterType.USSD.getName();
+	public static final String ADAPTER_TYPE_PUSH = AdapterType.NOTIFICARE.getName();
 	public static final String PERFORM_SYNC_KEY = "performSync";
 	public static final String EXCLUDE_SYNC_FOR_ACCOUNT_KEY = "performSyncByAccount";
 	public static final int EMAIL_SCHEDULER_INTERVAL = 30 * 1000; //30seconds
@@ -626,15 +627,16 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             }
             //allow keywords to be changed only for sms adapters
             if (adapter.getAdapterType() != null) {
-                switch (adapter.getAdapterType()) {
-                    case ADAPTER_TYPE_EMAIL:
-                    case ADAPTER_TYPE_PUSH:
-                    case ADAPTER_TYPE_USSD:
+                AdapterType adapterType = AdapterType.fromJson(adapter.getAdapterType());
+                switch (adapterType) {
+                    case EMAIL:
+                    case NOTIFICARE:
+                    case USSD:
                         if (adapter.getMyAddress() != null) {
                             config.setMyAddress(adapter.getMyAddress());
                         }
                         break;
-                    case ADAPTER_TYPE_SMS:
+                    case SMS:
                         if (adapter.getKeyword() != null) {
                             config.setKeyword(adapter.getKeyword());
                         }

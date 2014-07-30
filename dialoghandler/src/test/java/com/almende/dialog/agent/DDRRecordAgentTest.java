@@ -23,7 +23,6 @@ import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
-import com.almende.dialog.model.ddr.DDRPrice.AdapterType;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
@@ -34,6 +33,7 @@ import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.entity.AdapterType;
 
 @SuppressWarnings("deprecation")
 public class DDRRecordAgentTest extends TestFramework

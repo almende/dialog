@@ -208,15 +208,15 @@ public class AdapterConfig {
 		return Response.status(Status.BAD_REQUEST).build();
 	}
 	
-	public void update() {
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		datastore.update(this);
-        if ( this.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_BROADSOFT ) )
-        {
-            Broadsoft bs = new Broadsoft( this );
-            bs.hideCallerId( this.isAnonymous() );
+    public void update() {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        datastore.update(this);
+        if (this.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
+            Broadsoft bs = new Broadsoft(this);
+            bs.hideCallerId(this.isAnonymous());
         }
-	}
+    }
 	
     public static AdapterConfig getAdapterConfig(String adapterID) {
 
@@ -726,7 +726,9 @@ public class AdapterConfig {
     {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         AdapterConfig config = datastore.load( AdapterConfig.class, configId );
-        datastore.delete( config );
+        if (config != null) {
+            datastore.delete(config);
+        }
     }
 
     @JsonIgnore

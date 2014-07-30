@@ -114,7 +114,7 @@ public class TestFramework
         String receivingProtocol, String accountId, String initialAgentURL ) throws Exception
     {
         String emailAdapterId = new AdapterAgent().createEmailAdapter( emailAddress, password, name, preferredLanguage,
-            sendingPort, sendingHost, protocol, receivingProtocol, receivingHost, accountId, initialAgentURL );
+            sendingPort, sendingHost, protocol, receivingProtocol, receivingHost, accountId, initialAgentURL, null );
         return AdapterConfig.getAdapterConfig( emailAdapterId );
     }
     

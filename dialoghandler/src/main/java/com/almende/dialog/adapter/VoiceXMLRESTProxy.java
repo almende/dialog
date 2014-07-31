@@ -366,12 +366,26 @@ public class VoiceXMLRESTProxy {
                     return Response.status( Response.Status.BAD_REQUEST ).build();
                 }
                 DDRWrapper.log( question, session, "Answer" );
+                String answerForQuestion = question.getQuestion_expandedtext();
                 question = question.answer( responder, session.getAdapterConfig().getConfigId(), answer_id,
                     answer_input, sessionKey );
                 //reload the session
                 session = Session.getSession( sessionKey );
                 session.setQuestion( question );
                 session.storeSession();
+                //check if ddr is in session. save the answer in the ddr
+                if(session.getDdrRecordId() != null) {
+                    try {
+                        DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+                        if(ddrRecord != null) {
+                            ddrRecord.addAdditionalInfo(DDRRecord.ANSWER_INPUT_KEY + ":" + answerForQuestion,
+                                                        answer_input);
+                            ddrRecord.createOrUpdateWithLog();
+                        }
+                    }
+                    catch (Exception e) {
+                    }
+                }
                 return handleQuestion( question, session.getAdapterConfig(), responder, sessionKey );
             } else {
                 log.warning( "No question found in session!" );
@@ -380,6 +394,7 @@ public class VoiceXMLRESTProxy {
         else
         {
             log.warning( "No session found for: " + sessionKey );
+            dialogLog.severe(null, "No session found!", session);
         }
         return Response.ok( reply ).build();
     }

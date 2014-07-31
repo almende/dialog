@@ -35,6 +35,7 @@ public class DDRRecord
     public static final String DDR_TOTALCOST_KEY = "totalCost";
     public static final String DDR_RECORD_KEY = "DDR_RECORD_ID";
     public static final String DDR_RECORD = "DDR_RECORD";
+    public static final String ANSWER_INPUT_KEY = "ANSWER_INPUT";
     
     /**
      * status of the communication

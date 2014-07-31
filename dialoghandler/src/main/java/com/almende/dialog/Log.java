@@ -69,17 +69,15 @@ public class Log implements Serializable {
      *            {@link Session#getDdrRecordId()}
      * @param sessionKey
      */
-    public Log(LogLevel level, String adapterID, String adapterType, String message, String ddrRecordId, Session session) {
-
+    public Log(LogLevel level, AdapterConfig adapter, String message, Session session) {
+        
         this.logId = new UUID().toString();
         this.level = level;
-        this.adapterID = adapterID;
         //fetch the adapter type if empty
-        if ((adapterType == null || adapterType.isEmpty()) && adapterID != null) {
-            AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
-            adapterType = adapterConfig != null ? adapterConfig.getAdapterType() : null;
+        if (adapter != null) {
+            this.adapterID = adapter.getConfigId();
+            this.adapterType = adapter.getAdapterType();
         }
-        this.adapterType = adapterType;
         this.message = message;
         this.timestamp = System.currentTimeMillis();
         if (session != null) {
@@ -87,16 +85,6 @@ public class Log implements Serializable {
             this.trackingToken = session.getTrackingToken();
             this.ddrRecordId = ddrRecordId != null ? ddrRecordId : session.getDdrRecordId();
         }
-    }
-	
-    public Log(LogLevel level, AdapterConfig adapter, String message, String ddrRecordId, String sessionKey) {
-
-        this(level, adapter.getConfigId(), adapter.getAdapterType(), message, ddrRecordId, sessionKey);
-    }
-    
-    public Log(LogLevel level, AdapterConfig adapter, String message, Session session) {
-
-        this(level, adapter.getConfigId(), adapter.getAdapterType(), message, null, session);
     }
 	
     public LogLevel getLevel() {

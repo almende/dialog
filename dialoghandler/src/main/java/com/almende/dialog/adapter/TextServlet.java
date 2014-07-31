@@ -11,7 +11,6 @@ import java.util.logging.Logger;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import com.almende.dialog.DDRWrapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CMStatus;
 import com.almende.dialog.agent.AdapterAgent;
@@ -33,8 +32,10 @@ import com.askfast.commons.utils.TimeUtils;
 abstract public class TextServlet extends HttpServlet {
 
     protected static final Logger log = Logger.getLogger(TextServlet.class.getSimpleName());
+    protected static final com.almende.dialog.Logger logger = new com.almende.dialog.Logger();
     protected static final int LOOP_DETECTION = 10;
     protected static final String DEMODIALOG = "/charlotte/";
+    
 	
 	/**
 	 * @deprecated use
@@ -192,13 +193,7 @@ abstract public class TextServlet extends HttpServlet {
         if (question != null) {
             extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, res.reply, sessionKey, extras);
         }
-
-        DDRWrapper.log(question, session, "Start", config);
-        int count = sendMessageAndAttachCharge(res.reply, "Message from DH", localaddress, fromName, address, "",
-                                               extras, config);
-        for (int i = 0; i < count; i++) {
-            DDRWrapper.log(question, session, "Send", config);
-        }
+        sendMessageAndAttachCharge(res.reply, "Message from DH", localaddress, fromName, address, "", extras, config);
         return sessionKey;
     }
 	
@@ -319,7 +314,6 @@ abstract public class TextServlet extends HttpServlet {
                     // Add key to the map (for the return)
                     sessionKeyMap.put(address, session.getKey());
                     sessions.add(session);
-                    DDRWrapper.log(question, session, "Start", config);
                 }
             }
             
@@ -339,12 +333,6 @@ abstract public class TextServlet extends HttpServlet {
             res.reply = URLDecoder.decode(res.reply, "UTF-8");
             int count = broadcastMessageAndAttachCharge(res.reply, subject, localaddress, senderName,
                                                         formattedAddressNameToMap, extras, config);
-
-            for (Session session1 : sessions) {
-                for (int i = 0; i < count; i++) {
-                    DDRWrapper.log(question, session1, "Send", config);
-                }
-            }
             if (count < 1) {
                 log.severe("Error generating XML");
             }
@@ -389,8 +377,6 @@ abstract public class TextServlet extends HttpServlet {
         }
 
         try {
-            log.info(String.format("Inbound text: %s seen from: %s to: %s", msg.getBody(), msg.getAddress(),
-                                   msg.getLocalAddress()));
             processMessage(msg);
             //set status 200 in hte response
             res.setStatus(HttpServletResponse.SC_OK);
@@ -437,9 +423,6 @@ abstract public class TextServlet extends HttpServlet {
             session = Session.getOrCreateSession(config, address);
             session.setKeyword(keyword);
             session.setDirection("inbound");
-            for (int i = 0; i < count; i++) {
-                DDRWrapper.log(null, null, session, "Send", config);
-            }
             session.storeSession();
             return count;
         }
@@ -468,9 +451,6 @@ abstract public class TextServlet extends HttpServlet {
                 }
                 catch (Exception ex) {
                     log.severe(ex.getLocalizedMessage());
-                }
-                for (int i = 0; i < count; i++) {
-                    DDRWrapper.log(null, null, session, "Send", config);
                 }
                 return count;
             }
@@ -512,7 +492,6 @@ abstract public class TextServlet extends HttpServlet {
                                                 localaddress);
                 }
                 session.setDirection("inbound");
-                DDRWrapper.log(question, session, "Start", config);
                 start = true;
             }
 
@@ -557,15 +536,11 @@ abstract public class TextServlet extends HttpServlet {
                 else {
                     session.drop();
                 }
-                DDRWrapper.log(question, session, "Hangup", config);
             }
         }
         catch (Exception ex) {
             ex.printStackTrace();
             log.severe("Message sending failed. Message: " + ex.getLocalizedMessage());
-        }
-        for (int i = 0; i < count; i++) {
-            DDRWrapper.log(null, null, session, "Send", config);
         }
         return count;
     }
@@ -689,7 +664,9 @@ abstract public class TextServlet extends HttpServlet {
             }
             //save all the properties stored in the extras
             for (String extraPropertyKey : extras.keySet()) {
-                ddrRecord.addAdditionalInfo(extraPropertyKey, extras.get(extraPropertyKey).toString());
+                if (extras.get(extraPropertyKey) != null) {
+                    ddrRecord.addAdditionalInfo(extraPropertyKey, extras.get(extraPropertyKey).toString());
+                }
             }
             ddrRecord.createOrUpdate();
             extras.put(DDRRecord.DDR_RECORD_KEY, ddrRecord.getId());
@@ -750,7 +727,9 @@ abstract public class TextServlet extends HttpServlet {
             }
             //save all the properties stored in the extras
             for (String extraPropertyKey : extras.keySet()) {
-                ddrRecord.addAdditionalInfo(extraPropertyKey, extras.get(extraPropertyKey).toString());
+                if (extras.get(extraPropertyKey) != null) {
+                    ddrRecord.addAdditionalInfo(extraPropertyKey, extras.get(extraPropertyKey).toString());
+                }
             }
             ddrRecord.createOrUpdate();
             extras.put(DDRRecord.DDR_RECORD_KEY, ddrRecord.getId());
@@ -776,17 +755,28 @@ abstract public class TextServlet extends HttpServlet {
         //update the current timestamp
         if (session != null) {
             session.setCreationTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
+            logger.info(session.getAdapterConfig(), ServerUtils.serialize(receiveMessage), session);
             session.storeSession();
         }
-        log.info("Incoming message received: " + ServerUtils.serialize(receiveMessage));
         //attach charges for incoming
         AdapterConfig config = AdapterConfig.findAdapterConfig(getAdapterType(), receiveMessage.getLocalAddress());
         DDRRecord ddrRecord = createDDRForIncoming(config, receiveMessage.getAddress(), receiveMessage.getBody());
-        //store the ddrRecord in the session
-        if(ddrRecord != null) {
-            session.setDdrRecordId(ddrRecord.getId());
-            session.storeSession();
+
+        if (session != null) {
+            receiveMessage.getExtras().put(Session.SESSION_KEY, session.getKey());
+            receiveMessage.getExtras().put(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+            if (ddrRecord != null) {
+                ddrRecord.addAdditionalInfo(Session.SESSION_KEY, session.getKey());
+                ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+                receiveMessage.getExtras().put(DDRRecord.DDR_RECORD, ddrRecord);
+                ddrRecord.createOrUpdate();
+
+                //store the ddrRecord in the session
+                session.setDdrRecordId(ddrRecord.getId());
+                session.storeSession();
+            }
         }
+        
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
         //attach cost to ddr is prepaid type

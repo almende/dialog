@@ -196,7 +196,7 @@ public class DDRUtils
                 }
             }
             ddrRecord.setDuration( duration > 0L ? duration : 0 );
-            ddrRecord.createOrUpdate();
+            ddrRecord.createOrUpdateWithLog();
         }
         return ddrRecord;
     }
@@ -281,7 +281,7 @@ public class DDRUtils
                                                 adapterConfig.getOwner(), 1);
                 newestDDRRecord.setAccountType(adapterConfig.getAccountType());
                 newestDDRRecord.setStart(serverCurrentTime.getMillis());
-                newestDDRRecord.createOrUpdate();
+                newestDDRRecord.createOrUpdateWithLog();
                 //publish charges if needed
                 if(publishCharges) {
                     Double ddrCost = calculateDDRCost(newestDDRRecord);
@@ -640,7 +640,10 @@ public class DDRUtils
                 }
                 ddrRecord.setAccountType(config.getAccountType());
                 ddrRecord.addAdditionalInfo("message", message);
-                ddrRecord.createOrUpdate();
+                ddrRecord.createOrUpdateWithLog();
+                //log this ddr record
+                new com.almende.dialog.Logger().ddr(ddrRecord.getAdapter(), ddrRecord, session);
+                
                 return DDRRecord.getDDRRecord(ddrRecord.getId(), ddrRecord.getAccountId());
             }
         }
@@ -654,7 +657,7 @@ public class DDRUtils
      * @param sessionKey
      * @param pushToQueue pushes the sessionKey to the rabbitMQ queue for postprocessing if a corresponding ddr is not
      * processed successfully
-     * @return
+     * @return true if the session can be dropped on hangup
      */
     public static boolean stopDDRCosts( String sessionKey, boolean pushToQueue )
     {
@@ -706,7 +709,7 @@ public class DDRUtils
                         //attach cost to ddr is prepaid type
                         if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
                             ddrRecord.setTotalCost(totalCost);
-                            ddrRecord.createOrUpdate();
+                            ddrRecord.createOrUpdateWithLog();
                         }
                         publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
                         result = true;

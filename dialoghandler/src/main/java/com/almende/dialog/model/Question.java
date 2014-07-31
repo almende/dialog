@@ -45,13 +45,11 @@ public class Question implements QuestionIntf {
     }
 
     // Factory functions:
-    @JsonIgnore
     public static Question fromURL(String url, String adapterID, String ddrRecordId, String sessionKey) {
 
         return fromURL(url, adapterID, "", ddrRecordId, sessionKey);
     }
 
-    @JsonIgnore
     public static Question fromURL(String url, String adapterID, String remoteID, String ddrRecordId, String sessionKey) {
 
         return fromURL(url, adapterID, remoteID, "", ddrRecordId, sessionKey);
@@ -74,7 +72,6 @@ public class Question implements QuestionIntf {
         return null;
     }
 
-    @JsonIgnore
     public static Question fromURL(String url, String adapterID, String remoteID, String fromID, 
                                    String ddrRecordId, String sessionKey) {
 
@@ -123,15 +120,12 @@ public class Question implements QuestionIntf {
         }
     }
 
-    @JsonIgnore
     public static Question fromJSON(String json, String adapterID, String ddrRecordId, String sessionKey) {
 
         Question question = null;
         if (json != null) {
             try {
                 question = om.readValue(json, Question.class);
-                // question.setQuestion_text( URLDecoder.decode(
-                // question.getQuestion_text(), "UTF-8" ) );
             }
             catch (Exception e) {
                 log.severe(e.toString());

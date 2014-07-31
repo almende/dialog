@@ -9,6 +9,7 @@ import org.jongo.MongoCollection;
 import org.jongo.marshall.jackson.JacksonMapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.ParallelInit;
@@ -40,11 +41,6 @@ public class Logger {
 
         this.log(LogLevel.SEVERE, adapter, message, session);
     }
-    
-    public void severe(AdapterConfig adapter, String message, String ddrRecordId, String sessionKey) {
-
-        this.log(LogLevel.SEVERE, adapter, message, ddrRecordId, sessionKey);
-    }
 
     public void warning(String adapterID, String message, String ddrRecordId, String sessionKey) {
 
@@ -54,11 +50,6 @@ public class Logger {
     public void warning(String adapterID, String adapterType, String message, String ddrRecordId, String sessionKey) {
 
         this.log(LogLevel.WARNING, adapterID, adapterType, message, ddrRecordId, sessionKey);
-    }
-
-    public void warning(AdapterConfig adapter, String message, String ddrRecordId, String sessionKey) {
-
-        this.log(LogLevel.WARNING, adapter, message, ddrRecordId, sessionKey);
     }
     
     public void warning(AdapterConfig adapter, String message, Session session) {
@@ -76,14 +67,14 @@ public class Logger {
         this.log(LogLevel.INFO, adapterID, adapterType, message, ddrRecordId, sessionKey);
     }
 
-    public void info(AdapterConfig adapter, String message, String ddrRecordId, String sessionKey) {
-
-        this.log(LogLevel.INFO, adapter, message, ddrRecordId, sessionKey);
-    }
-    
     public void info(AdapterConfig adapter, String message, Session session) {
 
         this.log(LogLevel.INFO, adapter, message, session);
+    }
+    
+    public void ddr(AdapterConfig adapter, DDRRecord ddrRecord, Session session) {
+
+        this.log(LogLevel.DDR, adapter, ServerUtils.serializeWithoutException(ddrRecord), session);
     }
 
     public void debug(String adapterID, String message, String ddrRecordId, String sessionKey) {
@@ -96,19 +87,9 @@ public class Logger {
         this.log(LogLevel.DEBUG, adapterID, adapterType, message, ddrRecordId, sessionKey);
     }
 
-    public void debug(AdapterConfig adapter, String message, String ddrRecordId, String sessionKey) {
-
-        this.log(LogLevel.DEBUG, adapter, message, ddrRecordId, sessionKey);
-    }
-    
     public void debug(AdapterConfig adapter, String message, Session session) {
 
         this.log(LogLevel.DEBUG, adapter, message, session);
-    }
-
-    public void ddr(AdapterConfig adapter, String message, String ddrRecordId, String sessionKey) {
-
-        this.log(LogLevel.DDR, adapter, message, ddrRecordId, sessionKey);
     }
 
     public void log(LogLevel level, String adapterId, String adapterType, String message, String ddrRecordId,
@@ -118,16 +99,19 @@ public class Logger {
         collection.insert(new Log(level, adapterId, adapterType, message, ddrRecordId, sessionKey));
     }
 
-    public void log(LogLevel level, AdapterConfig adapter, String message, String ddrRecordId, String sessionKey) {
-
-        MongoCollection collection = getCollection();
-        collection.insert(new Log(level, adapter, message, ddrRecordId, sessionKey));
-    }
-    
+    /**
+     * logs something only if a session and a trackingToken is found in the session
+     * @param level
+     * @param adapter
+     * @param message
+     * @param session
+     */
     public void log(LogLevel level, AdapterConfig adapter, String message, Session session) {
 
-        MongoCollection collection = getCollection();
-        collection.insert(new Log(level, adapter, message, session));
+        if (session != null && session.getTrackingToken() != null) {
+            MongoCollection collection = getCollection();
+            collection.insert(new Log(level, adapter, message, session));
+        }
     }
 
     public List<Log> find(Collection<String> adapters, Collection<LogLevel> levels, String adapterType, Long endTime,

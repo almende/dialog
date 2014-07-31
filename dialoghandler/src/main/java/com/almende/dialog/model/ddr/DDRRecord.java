@@ -11,6 +11,7 @@ import org.mongojack.DBQuery.Query;
 import org.mongojack.DBSort;
 import org.mongojack.Id;
 import org.mongojack.JacksonDBCollection;
+import com.almende.dialog.LogLevel;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -32,7 +33,8 @@ public class DDRRecord
 {
     protected static final Logger log = Logger.getLogger(DDRRecord.class.getName());
     public static final String DDR_TOTALCOST_KEY = "totalCost";
-    public static final String DDR_RECORD_KEY = "DDR_RECORD";
+    public static final String DDR_RECORD_KEY = "DDR_RECORD_ID";
+    public static final String DDR_RECORD = "DDR_RECORD";
     
     /**
      * status of the communication
@@ -102,6 +104,25 @@ public class DDRRecord
         }
         else { //create one if missing
             collection.insert(this);
+        }
+    }
+    
+    /**
+     * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
+     * if a session id is found in {@link DDRRecord#getAdditionalInfo()}
+     */
+    public void createOrUpdateWithLog() {
+        createOrUpdate();
+        //create a log
+        if(additionalInfo != null && additionalInfo.get(Session.SESSION_KEY) != null) {
+            Session session = Session.getSession(additionalInfo.get(Session.SESSION_KEY));
+            new com.almende.dialog.Logger().ddr(getAdapter(), this, session);
+        }
+        else {
+            for (String toAddress : this.toAddress.keySet()) {
+                Session session = Session.getSession(Session.getSessionKey(getAdapter(), toAddress));
+                new com.almende.dialog.Logger().ddr(getAdapter(), this, session);
+            }
         }
     }
     

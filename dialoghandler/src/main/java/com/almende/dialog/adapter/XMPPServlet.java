@@ -56,7 +56,7 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
                 xmppRooster.createEntry( to, toName, null );
                 String sessionKey = extras.containsKey(Session.SESSION_KEY) ? extras.get(Session.SESSION_KEY).toString() : null;
                 String ddrRecordId =  extras.containsKey(DDRRecord.DDR_RECORD_KEY) ? extras.get(DDRRecord.DDR_RECORD_KEY).toString() : null; 
-                dialogLog.warning(config, String.format("Sending xmpp chat: %s to: %s might be incomplete. Contact just added in AddressBook",
+                dialogLog.warning(config.getConfigId(), config.getAdapterType(), String.format("Sending xmpp chat: %s to: %s might be incomplete. Contact just added in AddressBook",
                                                         message, to), ddrRecordId, sessionKey);
             }
             if ( fromName != null && !fromName.isEmpty() )

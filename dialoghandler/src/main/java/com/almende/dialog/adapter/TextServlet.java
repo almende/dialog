@@ -250,7 +250,9 @@ abstract public class TextServlet extends HttpServlet {
             senderName = getSenderName(question, config, senderName);
             // store the extra information
             Map<String, Object> extras = new HashMap<String, Object>();
-            extras.put(Question.MEDIA_PROPERTIES, question.getMedia_properties());
+            if (question.getMedia_properties() != null) {
+                extras.put(Question.MEDIA_PROPERTIES, question.getMedia_properties());
+            }
             // add addresses in cc and bcc map
             HashMap<String, String> fullAddressMap = new HashMap<String, String>(formattedAddressNameToMap);
             if (addressCcNameMap != null) {

@@ -54,13 +54,12 @@ public class VoiceXMLRESTProxy {
 	protected static final com.almende.dialog.Logger dialogLog =  new com.almende.dialog.Logger();
 	private static final int LOOP_DETECTION=10;
 	private static final String DTMFGRAMMAR="dtmf2hash";
+	private static final String PLAY_TRIAL_AUDIO_KEY = "playTrialAccountAudio";
 	
 	private static final int MAX_RETRIES=1;
 	
 	protected String TIMEOUT_URL="timeout";
 	protected String EXCEPTION_URL="exception";
-	private boolean playTrialAccountAudio = false;
-	
 	private String host = "";
 	
 	public static void killSession(Session session){
@@ -307,7 +306,7 @@ public class VoiceXMLRESTProxy {
         if (session.getQuestion() != null) {
             //play trial account audio if the account is trial
             if(config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)){
-                playTrialAccountAudio = true;
+                session.getExtras().put(PLAY_TRIAL_AUDIO_KEY, "true");
             }
             //create ddr record
             DDRRecord ddrRecord = null;
@@ -1311,19 +1310,19 @@ public class VoiceXMLRESTProxy {
         Return res = formQuestion(question, adapterConfig.getConfigId(), remoteID, null, sessionKey);
         if (question != null && !question.getType().equalsIgnoreCase("comment"))
             question = res.question;
+        Session session = Session.getSession(sessionKey);
         //if the adapter is a trial adapter, add a introductory node
-        if (playTrialAccountAudio) {
+        if (session != null && "true".equals(session.getExtras().get(PLAY_TRIAL_AUDIO_KEY))) {
             res.prompts = res.prompts != null ? res.prompts : new ArrayList<String>();
             String trialAudioURL = getTrialAudioURL(question.getPreferred_language());
             res.prompts.add(0, trialAudioURL);
-            playTrialAccountAudio = false;
+            session.getExtras().put(PLAY_TRIAL_AUDIO_KEY, "false");
         }
         log.info("question formed at handleQuestion is: " + ServerUtils.serializeWithoutException(question));
         log.info("prompts formed at handleQuestion is: " + res.prompts);
 
         if (question != null) {
             question.generateIds();
-            Session session = Session.getSession(sessionKey);
             session.setQuestion(question);
             session.setRemoteAddress(remoteID);
             session.storeSession();

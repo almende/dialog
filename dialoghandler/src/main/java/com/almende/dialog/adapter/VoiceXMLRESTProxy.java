@@ -1456,7 +1456,7 @@ public class VoiceXMLRESTProxy {
      */
     private String getTrialAudioURL(String language) {
 
-        String agentURL = Settings.HOST + "dialoghandler";
+        String agentURL = Settings.HOST + "/dialoghandler";
         if (language != null && (language.equals("nl") || language.equals("nl-nl"))) {
             agentURL += "/nl_trial_message.wav";
         }

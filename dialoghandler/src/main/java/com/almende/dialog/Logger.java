@@ -95,8 +95,10 @@ public class Logger {
     public void log(LogLevel level, String adapterId, String adapterType, String message, String ddrRecordId,
                     String sessionKey) {
 
-        MongoCollection collection = getCollection();
-        collection.insert(new Log(level, adapterId, adapterType, message, ddrRecordId, sessionKey));
+        if (sessionKey != null) {
+            MongoCollection collection = getCollection();
+            collection.insert(new Log(level, adapterId, adapterType, message, ddrRecordId, sessionKey));
+        }
     }
 
     /**

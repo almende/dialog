@@ -37,21 +37,21 @@ public class Log implements Serializable {
     public Log(LogLevel level, String adapterID, String adapterType, String message, String ddrRecordId,
                String sessionKey) {
 
-        this.logId = new UUID().toString();
-        this.level = level;
-        this.adapterID = adapterID;
-        //fetch the adapter type if empty
-        if ((adapterType == null || adapterType.isEmpty()) && adapterID != null) {
-            AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
-            adapterType = adapterConfig != null ? adapterConfig.getAdapterType() : null;
-        }
-        this.adapterType = adapterType;
-        this.message = message;
-        this.timestamp = System.currentTimeMillis();
-        this.sessionKey = sessionKey;
-        if(sessionKey != null) {
+        if (sessionKey != null) {
             Session session = Session.getSession(sessionKey);
-            if (session != null) {
+            if (session != null && session.getTrackingToken() != null) {
+                this.logId = new UUID().toString();
+                this.level = level;
+                this.adapterID = adapterID;
+                //fetch the adapter type if empty
+                if ((adapterType == null || adapterType.isEmpty()) && adapterID != null) {
+                    AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
+                    adapterType = adapterConfig != null ? adapterConfig.getAdapterType() : null;
+                }
+                this.adapterType = adapterType;
+                this.message = message;
+                this.timestamp = System.currentTimeMillis();
+                this.sessionKey = sessionKey;
                 this.trackingToken = session.getTrackingToken();
                 this.ddrRecordId = ddrRecordId != null ? ddrRecordId : session.getDdrRecordId();
             }
@@ -70,17 +70,17 @@ public class Log implements Serializable {
      * @param sessionKey
      */
     public Log(LogLevel level, AdapterConfig adapter, String message, Session session) {
-        
-        this.logId = new UUID().toString();
-        this.level = level;
-        //fetch the adapter type if empty
-        if (adapter != null) {
-            this.adapterID = adapter.getConfigId();
-            this.adapterType = adapter.getAdapterType();
-        }
-        this.message = message;
-        this.timestamp = System.currentTimeMillis();
+
         if (session != null) {
+            this.logId = new UUID().toString();
+            this.level = level;
+            //fetch the adapter type if empty
+            if (adapter != null) {
+                this.adapterID = adapter.getConfigId();
+                this.adapterType = adapter.getAdapterType();
+            }
+            this.message = message;
+            this.timestamp = System.currentTimeMillis();
             this.sessionKey = session.getKey();
             this.trackingToken = session.getTrackingToken();
             this.ddrRecordId = ddrRecordId != null ? ddrRecordId : session.getDdrRecordId();

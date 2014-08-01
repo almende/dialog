@@ -27,6 +27,7 @@ import com.almende.util.ParallelInit;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.utils.TimeUtils;
+import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
@@ -168,6 +169,18 @@ abstract public class TextServlet extends HttpServlet {
             log.severe("XMPPServlet couldn't start new outbound Dialog, adapterConfig not found? " + sessionKey);
             return "";
         }
+        else {
+            if (config.getAdapterType().equalsIgnoreCase("CM") ||
+                config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(address);
+                if (!PhoneNumberType.MOBILE.equals(numberType)) {
+                    String errorMessage = String.format("Ignoring SMS request to: %s from: %s, as it is not of type MOBILE",
+                                                        address, config.getMyAddress());
+                    logger.warning(config, errorMessage, session);
+                    return errorMessage;
+                }
+            }
+        }
         session.setAccountId(config.getOwner());
         session.setDirection("outbound");
         String preferred_language = session.getLanguage();
@@ -208,23 +221,6 @@ abstract public class TextServlet extends HttpServlet {
                                                String subject, AdapterConfig config) throws Exception {
 
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
-        Map<String, String> formattedAddressNameToMap = new HashMap<String, String>();
-        if (config.getAdapterType().equals("CM") ||
-            config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-            for (String address : addressNameMap.keySet()) {
-                try {
-                    String formattedAddress = PhoneNumberUtils.formatNumber(address, null);
-                    formattedAddressNameToMap.put(formattedAddress, addressNameMap.get(address));
-                }
-                catch (Exception e) {
-                    log.warning(String.format("Address: %s is invalid for mode: %s. Ignoring it", address,
-                                              config.getAdapterType()));
-                }
-            }
-        }
-        else {
-            formattedAddressNameToMap = addressNameMap != null && !addressNameMap.isEmpty() ? addressNameMap : formattedAddressNameToMap;
-        }
         String localaddress = config.getMyAddress();
         url = encodeURLParams(url);
 
@@ -234,12 +230,20 @@ abstract public class TextServlet extends HttpServlet {
         // If it is a broadcast don't provide the remote address because it is
         // deceiving.
         String loadAddress = null;
-        if (formattedAddressNameToMap.size() == 1)
-            loadAddress = formattedAddressNameToMap.keySet().iterator().next();
+        Session session = null;
+        if (addressNameMap.size() == 1) {
+            loadAddress = addressNameMap.keySet().iterator().next();
+            if (config.getAdapterType().equals("CM") ||
+                                            config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                loadAddress = PhoneNumberUtils.formatNumber(loadAddress, null);
+            }
+            //create a session if its only for one number
+            session = Session.getOrCreateSession(Session.getSessionKey(config, loadAddress), config.getKeyword());
+        }
 
         // fetch question
         Question question = Question.fromURL(url, config.getConfigId(), loadAddress, null,
-                                             Session.getSessionKey(config, loadAddress));
+                                             session != null ? session.getKey() : null);
         if (question != null) {
             //fetch the senderName
             senderName = getSenderName(question, config, senderName);
@@ -249,7 +253,7 @@ abstract public class TextServlet extends HttpServlet {
                 extras.put(Question.MEDIA_PROPERTIES, question.getMedia_properties());
             }
             // add addresses in cc and bcc map
-            HashMap<String, String> fullAddressMap = new HashMap<String, String>(formattedAddressNameToMap);
+            HashMap<String, String> fullAddressMap = new HashMap<String, String>(addressNameMap);
             if (addressCcNameMap != null) {
                 fullAddressMap.putAll(addressCcNameMap);
                 extras.put(MailServlet.CC_ADDRESS_LIST_KEY, addressCcNameMap);
@@ -260,10 +264,9 @@ abstract public class TextServlet extends HttpServlet {
             }
 
             Return res = null;
-            if (loadAddress != null) {
+            Map<String, String> formattedAddressNameToMap = new HashMap<String, String>();
+            if (loadAddress != null && session != null) {
 
-                Session session = Session.getOrCreateSession(Session.getSessionKey(config, loadAddress),
-                                                             config.getKeyword());
                 session.setDirection("outbound");
                 session.setAccountId(config.getOwner());
                 session.setLocalName(senderName);
@@ -275,16 +278,30 @@ abstract public class TextServlet extends HttpServlet {
                 session.setQuestion(question);
                 res = formQuestion(question, config.getConfigId(), loadAddress, null, session.getKey());
 
-                if (config.getAdapterType().equalsIgnoreCase("cm") ||
-                    config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                    extras = CMStatus.storeSMSRelatedData(loadAddress, localaddress, config, question, res.reply,
-                                                          session.getKey(), extras);
-                }
                 //check if session can be killed??
                 if(res == null || res.question == null) {
                     session.setKilled(true);
                 }
+                //check if sms type, if yes check if its a mobile number, if no ignore, log, drop session and return
+                if (config.getAdapterType().equalsIgnoreCase("cm") ||
+                    config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                    PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(loadAddress);
+                    if (!PhoneNumberType.MOBILE.equals(numberType)) {
+                        String errorMessage = String.format("Ignoring SMS request to: %s from: %s, as it is not of type MOBILE",
+                                                            loadAddress, config.getMyAddress());
+                        logger.warning(config, errorMessage, session);
+                        session.drop();
+                        sessionKeyMap.put(loadAddress, errorMessage);
+                        return sessionKeyMap;
+                    }
+                    else {
+                        extras = CMStatus.storeSMSRelatedData(loadAddress, localaddress, config, question, res.reply,
+                                                              session.getKey(), extras);
+                    }
+                }
                 session.storeSession();
+                //put the formatted address to that a text can be broadcasted to it
+                formattedAddressNameToMap.put(loadAddress, addressNameMap.values().iterator().next());
                 // Add key to the map (for the return)
                 sessionKeyMap.put(loadAddress, session.getKey());
                 sessions.add(session);
@@ -293,26 +310,44 @@ abstract public class TextServlet extends HttpServlet {
                 // Form the question without the responders address, because we don't know which one.
                 res = formQuestion(question, config.getConfigId(), null, null, null);
                 for (String address : fullAddressMap.keySet()) {
+                    String formattedAddress = address; //initialize formatted address to be the original one
+                    if (config.getAdapterType().equals("CM") ||
+                                                    config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                        formattedAddress = PhoneNumberUtils.formatNumber(address, null);
+                    }
                     // store the session first
-                    Session session = Session.getOrCreateSession(Session.getSessionKey(config, address),
-                                                                 config.getKeyword());
+                    session = Session.getOrCreateSession(Session.getSessionKey(config, formattedAddress), config.getKeyword());
+                    //check if sms type, if yes check if its a mobile number, if no ignore, log, drop session and continue
+                    if (config.getAdapterType().equalsIgnoreCase("cm") ||
+                        config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                        PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(loadAddress);
+                        if (!PhoneNumberType.MOBILE.equals(numberType)) {
+                            String errorMessage = String.format("Ignoring SMS request to: %s from: %s, as it is not of type MOBILE",
+                                                                loadAddress, config.getMyAddress());
+                            logger.warning(config, errorMessage, session);
+                            session.drop();
+                            sessionKeyMap.put(loadAddress, errorMessage);
+                            continue;
+                        }
+                        else {
+                            extras = CMStatus.storeSMSRelatedData(loadAddress, localaddress, config, question,
+                                                                  res.reply, session.getKey(), extras);
+                        }
+                    }
                     session.setAccountId(config.getOwner());
                     session.setDirection("outbound");
                     session.setQuestion(question);
                     session.setLocalName(senderName);
-                    if (config.getAdapterType().equalsIgnoreCase("cm") ||
-                        config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                        extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, res.reply,
-                                                              session.getKey(), extras);
-                    }
                     //check if session can be killed??
                     if(res == null || res.question == null) {
                         session.setKilled(true);
                     }
                     //save this session
                     session.storeSession();
+                    //put the formatted address to that a text can be broadcasted to it
+                    formattedAddressNameToMap.put(formattedAddress, addressNameMap.get(address));
                     // Add key to the map (for the return)
-                    sessionKeyMap.put(address, session.getKey());
+                    sessionKeyMap.put(formattedAddress, session.getKey());
                     sessions.add(session);
                 }
             }

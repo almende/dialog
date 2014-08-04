@@ -12,7 +12,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.adapter.tools.CMStatus;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
@@ -203,9 +202,6 @@ abstract public class TextServlet extends HttpServlet {
         if (res.question != null) {
             Session.storeString("question_" + address + "_" + localaddress, res.question.toJSON());
         }
-        if (question != null) {
-            extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, res.reply, sessionKey, extras);
-        }
         sendMessageAndAttachCharge(res.reply, "Message from DH", localaddress, fromName, address, "", extras, config);
         return sessionKey;
     }
@@ -282,23 +278,6 @@ abstract public class TextServlet extends HttpServlet {
                 if(res == null || res.question == null) {
                     session.setKilled(true);
                 }
-                //check if sms type, if yes check if its a mobile number, if no ignore, log, drop session and return
-                if (config.getAdapterType().equalsIgnoreCase("cm") ||
-                    config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                    PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(loadAddress);
-                    if (!PhoneNumberType.MOBILE.equals(numberType)) {
-                        String errorMessage = String.format("Ignoring SMS request to: %s from: %s, as it is not of type MOBILE",
-                                                            loadAddress, config.getMyAddress());
-                        logger.warning(config, errorMessage, session);
-                        session.drop();
-                        sessionKeyMap.put(loadAddress, errorMessage);
-                        return sessionKeyMap;
-                    }
-                    else {
-                        extras = CMStatus.storeSMSRelatedData(loadAddress, localaddress, config, question, res.reply,
-                                                              session.getKey(), extras);
-                    }
-                }
                 session.storeSession();
                 //put the formatted address to that a text can be broadcasted to it
                 formattedAddressNameToMap.put(loadAddress, addressNameMap.values().iterator().next());
@@ -317,23 +296,6 @@ abstract public class TextServlet extends HttpServlet {
                     }
                     // store the session first
                     session = Session.getOrCreateSession(Session.getSessionKey(config, formattedAddress), config.getKeyword());
-                    //check if sms type, if yes check if its a mobile number, if no ignore, log, drop session and continue
-                    if (config.getAdapterType().equalsIgnoreCase("cm") ||
-                        config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                        PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(loadAddress);
-                        if (!PhoneNumberType.MOBILE.equals(numberType)) {
-                            String errorMessage = String.format("Ignoring SMS request to: %s from: %s, as it is not of type MOBILE",
-                                                                loadAddress, config.getMyAddress());
-                            logger.warning(config, errorMessage, session);
-                            session.drop();
-                            sessionKeyMap.put(loadAddress, errorMessage);
-                            continue;
-                        }
-                        else {
-                            extras = CMStatus.storeSMSRelatedData(loadAddress, localaddress, config, question,
-                                                                  res.reply, session.getKey(), extras);
-                        }
-                    }
                     session.setAccountId(config.getOwner());
                     session.setDirection("outbound");
                     session.setQuestion(question);
@@ -446,12 +408,6 @@ abstract public class TextServlet extends HttpServlet {
         if (session == null) {
             log.info("No session so retrieving config");
             config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress, keyword);
-            if (config != null &&
-                (config.getAdapterType().equalsIgnoreCase("cm") || config.getAdapterType()
-                                                .equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS))) {
-                extras = CMStatus.storeSMSRelatedData(address, localaddress, config, null, getNoConfigMessage(),
-                                                      getAdapterType() + "|" + localaddress + "|" + address, extras);
-            }
             count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress,
                                                getSenderName(null, config, null), address, toName, extras, config);
             // Create new session to store the send in the ddr.
@@ -474,11 +430,6 @@ abstract public class TextServlet extends HttpServlet {
             if (config == null) {
                 config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress);
                 try {
-                    if (config.getAdapterType().equalsIgnoreCase("cm") ||
-                        config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                        extras = CMStatus.storeSMSRelatedData(address, localaddress, config, null,
-                                                              getNoConfigMessage(), session.getKey(), extras);
-                    }
                     fromName = session.getLocalName() != null && !session.getLocalName().isEmpty() ? session
                                                     .getLocalName() : getSenderName(null, config, null);
                     count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress, fromName, address,
@@ -543,9 +494,6 @@ abstract public class TextServlet extends HttpServlet {
                 // fix for bug: #15 https://github.com/almende/dialog/issues/15
                 escapeInput.reply = URLDecoder.decode(replystr.reply, "UTF-8");
                 question = replystr.question;
-
-                extras = CMStatus.storeSMSRelatedData(address, localaddress, config, question, escapeInput.reply,
-                                                      session.getKey(), extras);
             }
             else {
                 log.severe(String.format("Question is null. Couldnt fetch Question from session, nor initialAgentURL: %s nor from demoDialog",
@@ -604,10 +552,8 @@ abstract public class TextServlet extends HttpServlet {
 
             HashMap<String, String> addressNameMap = new HashMap<String, String>(1);
             addressNameMap.put(msg.getAddress(), msg.getRecipientName());
-            Map<String, Object> extras = CMStatus.storeSMSRelatedData(msg.getAddress(), msg.getLocalAddress(), config,
-                                                                      null, session.getKey(), escapeInput.reply, null);
             result = broadcastMessageAndAttachCharge(escapeInput.reply, msg.getSubject(), msg.getLocalAddress(),
-                                                     fromName, addressNameMap, extras, config);
+                                                     fromName, addressNameMap, null, config);
         }
         else if (cmd.startsWith("reset")) {
             session.drop();
@@ -742,9 +688,8 @@ abstract public class TextServlet extends HttpServlet {
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
         HashMap<String, String> copyOfAddressNameMap = new HashMap<String, String>(addressNameMap);
         //attach costs for all members (even in cc and bcc if any)
-        if (extras != null) {
-            copyOfAddressNameMap.putAll(addRecipientsInCCAndBCCToAddressMap(extras));
-        }
+        extras = extras != null ? extras : new HashMap<String, Object>();
+        copyOfAddressNameMap.putAll(addRecipientsInCCAndBCCToAddressMap(extras));
         DDRRecord ddrRecord = createDDRForOutgoing(config, senderName, copyOfAddressNameMap, message);
         //store the ddrRecord in the session
         if (ddrRecord != null) {

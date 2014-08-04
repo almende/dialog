@@ -11,7 +11,7 @@ public class Log implements Serializable {
     private static final long serialVersionUID = -8797389516750753990L;
 
     @Id
-    public String logId = null;
+    private String logId = null;
     private LogLevel level = null;
     private String adapterID = null;
     private String adapterType = null;
@@ -131,7 +131,7 @@ public class Log implements Serializable {
     public String getLogId() {
         return logId;
     }
-
+    
     public void setLogId(String logId) {
         this.logId = logId;
     }

@@ -5,13 +5,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
-
 import com.almende.dialog.Log;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Logger;
@@ -114,30 +112,30 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
         }
     }
 	
-	private Collection<LogLevel> getMinSeverityLogLevelFor(LogLevel logLevel) {
-		Collection<LogLevel> result = null;
-		if (logLevel != null) {
-			result = new ArrayList<LogLevel>();
-			switch (logLevel) {
-				case DEBUG:
-					result = Arrays.asList(LogLevel.DEBUG, LogLevel.DDR, LogLevel.INFO,
-							LogLevel.WARNING, LogLevel.SEVERE);
-					break;
-				case INFO:
-					result = Arrays.asList(LogLevel.INFO, LogLevel.DDR, LogLevel.WARNING,
-							LogLevel.SEVERE);
-					break;
-				case WARNING:
-					result = Arrays.asList(LogLevel.WARNING, LogLevel.SEVERE);
-					break;
-				case SEVERE:
-					result = Arrays.asList(LogLevel.SEVERE);
-					break;
-				case DDR:
-					result = Arrays.asList(LogLevel.DDR);
-					break;
-			}
-		}
-		return result;
-	}
+    private Collection<LogLevel> getMinSeverityLogLevelFor(LogLevel logLevel) {
+
+        Collection<LogLevel> result = null;
+        if (logLevel != null) {
+            result = new ArrayList<LogLevel>();
+            switch (logLevel) {
+                case DEBUG:
+                    result = Arrays.asList(LogLevel.DEBUG, LogLevel.DDR, LogLevel.INFO, LogLevel.WARNING,
+                                           LogLevel.SEVERE);
+                    break;
+                case INFO:
+                    result = Arrays.asList(LogLevel.INFO, LogLevel.DDR, LogLevel.WARNING, LogLevel.SEVERE);
+                    break;
+                case WARNING:
+                    result = Arrays.asList(LogLevel.WARNING, LogLevel.SEVERE);
+                    break;
+                case SEVERE:
+                    result = Arrays.asList(LogLevel.SEVERE);
+                    break;
+                case DDR:
+                    result = Arrays.asList(LogLevel.DDR);
+                    break;
+            }
+        }
+        return result;
+    }
 }

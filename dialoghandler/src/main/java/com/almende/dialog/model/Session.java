@@ -391,8 +391,8 @@ public class Session{
     }
     
     
-    public void setTrackingToken(String token) {
-        this.trackingToken = token;     
+    public void setTrackingToken(String trackingToken) {
+        this.trackingToken = trackingToken;     
     }
 
     public String getStartTimestamp()

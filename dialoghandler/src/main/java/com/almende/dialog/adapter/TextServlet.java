@@ -471,11 +471,12 @@ abstract public class TextServlet extends HttpServlet {
             boolean start = false;
             if (question == null) {
                 if (config.getURLForInboundScenario() != null && config.getURLForInboundScenario().equals("")) {
-                    question = Question.fromURL(this.host + DEMODIALOG, config.getConfigId(), address, localaddress);
+                    question = Question.fromURL(this.host + DEMODIALOG, config.getConfigId(), address, localaddress,
+                                                session.getDdrRecordId(), session.getKey());
                 }
                 else {
                     question = Question.fromURL(config.getURLForInboundScenario(), config.getConfigId(), address,
-                                                localaddress);
+                                                localaddress, session.getDdrRecordId(), session.getKey());
                 }
                 session.setDirection("inbound");
                 start = true;

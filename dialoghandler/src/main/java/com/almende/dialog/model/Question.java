@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.impl.Q_fields;
@@ -52,7 +53,10 @@ public class Question implements QuestionIntf {
 
     public static Question fromURL(String url, String adapterID, String remoteID, String ddrRecordId, String sessionKey) {
 
-        return fromURL(url, adapterID, remoteID, "", ddrRecordId, sessionKey);
+        AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
+        String fromID = adapterConfig != null && adapterConfig.getMyAddress() != null ? adapterConfig.getMyAddress()
+                                                                                     : null;
+        return fromURL(url, adapterID, remoteID, fromID, ddrRecordId, sessionKey);
     }
 
     public static String getJSONFromURL(String url, String adapterID, String remoteID, String fromID,

@@ -113,7 +113,8 @@ public class VoiceXMLRESTProxy {
         session.setRemoteAddress(address);
         session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
         
-        Question question = Question.fromURL(url, config.getConfigId(), address, config.getMyAddress());
+        Question question = Question.fromURL(url, config.getConfigId(), address, config.getMyAddress(),
+                                             session.getDdrRecordId(), session.getKey());
         session.setQuestion(question);
         session.storeSession();
 
@@ -145,8 +146,7 @@ public class VoiceXMLRESTProxy {
             loadAddress = addressNameMap.keySet().iterator().next();
 
         //fetch the question
-        Question question = Question.fromURL( url, config.getConfigId(), loadAddress, config.getMyAddress() );
-
+        Question question = Question.fromURL( url, config.getConfigId(), loadAddress, config.getMyAddress(), null, null );
         for ( String address : addressNameMap.keySet() )
         {
             try
@@ -297,7 +297,8 @@ public class VoiceXMLRESTProxy {
         
         Question question = session.getQuestion();
         if(question == null) {
-            question = Question.fromURL(url,session.getAdapterConfig().getConfigId(),remoteID,localID);
+            question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), remoteID, localID,
+                                        session.getDdrRecordId(), session.getKey());
         }
         session.setQuestion(question);
         dialogLog.log(LogLevel.INFO, config,
@@ -494,7 +495,8 @@ public class VoiceXMLRESTProxy {
                      session.getLocalAddress());
             if (session.getQuestion() == null) {
                 Question question = Question.fromURL(session.getStartUrl(), session.getAdapterConfig().getConfigId(),
-                                                     session.getRemoteAddress(), session.getLocalAddress());
+                                                     session.getRemoteAddress(), session.getLocalAddress(),
+                                                     session.getDdrRecordId(), session.getKey());
                 session.setQuestion(question);
             }
             if (session.getQuestion() != null) {

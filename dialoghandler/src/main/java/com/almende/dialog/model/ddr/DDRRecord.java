@@ -34,7 +34,6 @@ public class DDRRecord
     protected static final Logger log = Logger.getLogger(DDRRecord.class.getName());
     public static final String DDR_TOTALCOST_KEY = "totalCost";
     public static final String DDR_RECORD_KEY = "DDR_RECORD_ID";
-    public static final String DDR_RECORD = "DDR_RECORD";
     public static final String ANSWER_INPUT_KEY = "ANSWER_INPUT";
     
     /**
@@ -497,7 +496,9 @@ public class DDRRecord
     public void addAdditionalInfo(String key, String value) {
         
         additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, String>();
-        additionalInfo.put(key, value);
+        if (DDR_RECORD_KEY.equals(key)) {
+            additionalInfo.put(key, value);
+        }
     }
     
     public AccountType getAccountType() {

@@ -214,13 +214,11 @@ public class Session{
         session.setTrackingToken(UUID.randomUUID().toString());
         session.storeSession();
         log.info("new session created with id: " + session.key);
-        
         return session;
     }
     
-    
     /**
-     * retusn teh session without creating a new default one
+     * returns the session without creating a new default one
      * @param sessionKey
      * @return
      */

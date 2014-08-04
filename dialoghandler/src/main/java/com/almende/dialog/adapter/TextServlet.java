@@ -748,7 +748,7 @@ abstract public class TextServlet extends HttpServlet {
             if (ddrRecord != null) {
                 ddrRecord.addAdditionalInfo(Session.SESSION_KEY, session.getKey());
                 ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
-                receiveMessage.getExtras().put(DDRRecord.DDR_RECORD, ddrRecord);
+                receiveMessage.getExtras().put(DDRRecord.DDR_RECORD_KEY, ddrRecord.getId());
                 ddrRecord.createOrUpdate();
 
                 //store the ddrRecord in the session

@@ -696,7 +696,7 @@ public class DDRUtils
             //dont apply service charge if its a missed call or call ignroed (call duration is 0)
             if (ddrRecord.getAdapter() != null &&
                 AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(ddrRecord.getAdapter().getAdapterType()) &&
-                ddrRecord.getDuration() == null || ddrRecord.getDuration() <= 0) {
+                (ddrRecord.getDuration() == null || ddrRecord.getDuration() <= 0)) {
                 applyServiceCharge = false;
             }
             //get the max of the service cost and the communication cost

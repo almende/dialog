@@ -82,6 +82,11 @@ public class DDRRecord
      * total cost is not sent for any ddr generally
      */
     Double totalCost = 0.0;
+    /**
+     * cache the adapter linked with this ddrRecord
+     */
+    @JsonIgnore
+    private AdapterConfig config;
     
     public DDRRecord(){}
     
@@ -417,11 +422,11 @@ public class DDRRecord
     @JsonIgnore
     public AdapterConfig getAdapter()
     {
-        if(adapterId != null && !adapterId.isEmpty())
+        if(adapterId != null && !adapterId.isEmpty() && config == null)
         {
-            return AdapterConfig.getAdapterConfig( adapterId );
+            config = AdapterConfig.getAdapterConfig( adapterId );
         }
-        return null;
+        return config;
     }
 
     @JsonIgnore
@@ -562,5 +567,15 @@ public class DDRRecord
      */
     public CommunicationStatus getStatusForAddress(String address) {
         return getStatusPerAddress().get(address);
+    }
+    
+    @JsonIgnore
+    public String getDirection() {
+        
+        //if the from address is not equal to the adapter address, its an incoming communication
+        if (fromAddress != null && getAdapter() != null) {
+            return !fromAddress.equalsIgnoreCase(getAdapter().getMyAddress()) ? "inbound" : "outbound";
+        }
+        return null;
     }
 }

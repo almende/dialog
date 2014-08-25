@@ -6,12 +6,12 @@ import java.util.List;
 import org.jongo.Aggregate;
 import org.jongo.Jongo;
 import org.jongo.MongoCollection;
+import org.jongo.MongoCursor;
 import org.jongo.marshall.jackson.JacksonMapper;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -217,9 +217,7 @@ public class Logger {
         }
         
         //update the aggregate query with groupQuery next. This includes all the fields to fetch
-        String groupQuery = "{$group:{_id: {trackingToken:\"$trackingToken\",logId:\"$logId\", level: \"$level\", "
-                            + "adapterID: \"$adapterID\", adapterType: \"$adapterType\", message:\"$message\", "
-                            + "timestamp: \"$timestamp\", ddrRecordId: \"$ddrRecordId\", sessionKey: \"$sessionKey\"}}}";
+        String groupQuery = "{$group:{_id: \"$trackingToken\", timestamp:{$max: \"$timestamp\"}}}";
         if(aggregate != null) {
             aggregate = aggregate.and(groupQuery);
         }
@@ -229,18 +227,25 @@ public class Logger {
         if (offset == null) {
             offset = 0;
         }
-        if (limit == null) {
-            limit = 50;
-        }
         //update the aggregate query with sort (on timestamp), offset and limit
-        aggregate = aggregate.and("{$sort : {timestamp: -1}}").and(String.format("{$skip :%s}", offset))
-                                        .and(String.format("{$limit :%s}", limit));
-        List<ObjectNode> resultLogMap = aggregate.as(ObjectNode.class);
+        aggregate = aggregate.and(String.format("{$skip :%s}", offset)).and(String.format("{$limit :%s}", limit));
+        
+        log.info(String.format("Mongo query for log: db.%s.aggregate({$match: {%s}}, %s,  %s)",
+                               collection.getName(), matchQuery, groupQuery,
+                               "{$sort : {timestamp: -1}}," + String.format("{$skip :%s},", offset) +
+                                                               String.format("{$limit :%s}", limit)));
+        List<ObjectNode> logsByTrackingToken = aggregate.as(ObjectNode.class);
         ArrayList<Log> resultLogs = new ArrayList<Log>();
-        for (ObjectNode resultLog : resultLogMap) {
-            JsonNode jsonNode = resultLog.get("_id");
-            Log convertValue = JOM.getInstance().convertValue(jsonNode, Log.class);
-            resultLogs.add(convertValue);
+        for (ObjectNode logByTrackingToken : logsByTrackingToken) {
+            JsonNode trackingToken = logByTrackingToken.get("_id");
+            MongoCursor<Log> logsCursor = collection
+                                            .find(String.format("{trackingToken: \"%s\"}", trackingToken.asText()))
+                                            .sort("{timestamp: -1}").as(Log.class);
+            if (logsCursor != null) {
+                while (logsCursor.hasNext()) {
+                    resultLogs.add(logsCursor.next());
+                }
+            }
         }
         return resultLogs;
     }

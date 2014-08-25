@@ -422,32 +422,12 @@ public class DDRUtils
                 }
                 result = calculateDDRCost( ddrRecord, selectedDDRPrice );
             }
-            //always include start-up costs if the adapter is broadsoft
-            if(config != null && AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(config.getAdapterType()) && result > 0.0) {
-                DDRPrice startUpPrice = fetchDDRPrice(DDRTypeCategory.START_UP_COST,
-                                                      AdapterType.getByValue(config.getAdapterType()),
-                                                      config.getConfigId(), UnitType.PART, null);
-                Double startUpCost = startUpPrice != null ? startUpPrice.getPrice() : 0.0;
-                result += startUpCost;
-            }
-        }
-        //check if service costs are to be included, only include it if there is any communication costs
-        if(includeServiceCosts != null && includeServiceCosts && result > 0.0)
-        {
-            String adapterId = config != null ? config.getConfigId() : null;
-            DDRPrice ddrPriceForDialogService = fetchDDRPrice(DDRTypeCategory.SERVICE_COST,
-                                                              AdapterType.getByValue(config.getAdapterType()),
-                                                              adapterId, UnitType.PART, null);
-            Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
-            //add the service cost if the communication cost is lesser than the service cost
-            if ( result < serviceCost )
-            {
-                result += serviceCost;
-            }
+            result = applyStartUpCost(result, config);
+            result = applyServiceCharges(ddrRecord, includeServiceCosts, result, config);
         }
         return getCeilingAtPrecision(result, 3);
     }
-    
+
     /**
      * calculates the cost associated with this DDRRecord bsaed on the linked DDRPrice. This does not 
      * add the servicecosts. Use the {@link DDRUtils#calculateCommunicationDDRCost(DDRRecord, Boolean)} for it. <br>
@@ -583,76 +563,6 @@ public class DDRUtils
     }
     
     /**
-     * creates a ddr record based on the input parameters
-     * 
-     * @param config
-     *            picks the adpaterId, owner and myAddress from this
-     * @param category
-     * @param senderName
-     *            will be used as the DDRRecord's fromAddress (if not null and
-     *            outbound). Use null if {@link AdapterConfig#getMyAddress()} is
-     *            to be used.
-     * @param unitType
-     * @param addresses
-     * @param status
-     * @param quantity
-     * @throws Exception
-     */
-    private static DDRRecord createDDRRecordOnCommunication(AdapterConfig config, DDRTypeCategory category, String senderName,
-                                       Map<String, String> addresses, CommunicationStatus status, int quantity,
-                                       String message) throws Exception {
-
-        DDRType communicationCostDDRType = DDRType.getDDRType(category);
-        if (communicationCostDDRType != null && config != null) {
-            log.info(String.format("Applying charges for account: %s and adapter: %s with address: %s",
-                                   config.getOwner(), config.getConfigId(), config.getMyAddress()));
-            if (config.getConfigId() != null && config.getOwner() != null) {
-                DDRRecord ddrRecord = new DDRRecord(communicationCostDDRType.getTypeId(), config.getConfigId(),
-                                                    config.getOwner(), 1);
-                //default the start to the sessionCreationTime. This is expected to be updated with the actual
-                //timestamp for voice communication
-                //set the ddrRecord time with session creationTime.
-                Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), addresses.keySet()
-                                                .iterator().next());
-                if (session != null) {
-                    ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
-                }
-                switch (status) {
-                    case SENT:
-                        String fromAddress = senderName != null && !senderName.isEmpty() ? senderName : config
-                                                        .getMyAddress();
-                        ddrRecord.setFromAddress(fromAddress);
-                        ddrRecord.setToAddress(addresses);
-                        break;
-                    case RECEIEVED:
-                        ddrRecord.setFromAddress(addresses.keySet().iterator().next());
-                        Map<String, String> toAddresses = new HashMap<String, String>();
-                        toAddresses.put(config.getMyAddress(), "");
-                        ddrRecord.setToAddress(toAddresses);
-                        break;
-                    default:
-                        throw new Exception("Unknown CommunicationStatus seen: " + status.name());
-                }
-                ddrRecord.setQuantity(quantity);
-                //add individual statuses
-                for (String address : addresses.keySet()) {
-                    ddrRecord.addStatusForAddress(address, status);
-                }
-                ddrRecord.setAccountType(config.getAccountType());
-                ddrRecord.addAdditionalInfo("message", message);
-                ddrRecord.createOrUpdateWithLog();
-                //log this ddr record
-                new com.almende.dialog.Logger().ddr(ddrRecord.getAdapter(), ddrRecord, session);
-                
-                return DDRRecord.getDDRRecord(ddrRecord.getId(), ddrRecord.getAccountId());
-            }
-        }
-        log.warning(String.format("Not charging this communication from: %s adapterid: %s anything!!",
-                                  config.getMyAddress(), config.getConfigId()));
-        return null;
-    }
-    
-    /**
      * Returns true if a ddr is processed successfully for the given session. else false.
      * @param sessionKey
      * @param pushToQueue pushes the sessionKey to the rabbitMQ queue for postprocessing if a corresponding ddr is not
@@ -746,9 +656,136 @@ public class DDRUtils
         return result;
     }
     
+    /** always include start-up costs if the adapter is broadsoft
+     * @param result
+     * @param config
+     * @return the ddrCost added to the already calculated communication costs
+     * @throws Exception
+     */
+    protected static double applyStartUpCost(double result, AdapterConfig config) throws Exception {
+
+        if(config != null && AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(config.getAdapterType()) && result > 0.0) {
+            DDRPrice startUpPrice = fetchDDRPrice(DDRTypeCategory.START_UP_COST,
+                                                  AdapterType.getByValue(config.getAdapterType()),
+                                                  config.getConfigId(), UnitType.PART, null);
+            Double startUpCost = startUpPrice != null ? startUpPrice.getPrice() : 0.0;
+            result += startUpCost;
+        }
+        return result;
+    }
+    
+    /**
+     * check if service costs are to be included, only include it if there is
+     * any communication costs
+     * 
+     * @param ddrRecord
+     * @param includeServiceCosts
+     * @param result
+     * @param config
+     * @return the service charge applied to the commnication cost.
+     * @throws Exception
+     */
+    protected static double applyServiceCharges(DDRRecord ddrRecord, Boolean includeServiceCosts, double result,
+        AdapterConfig config) throws Exception {
+
+        if (Boolean.TRUE.equals(includeServiceCosts)) {
+
+            //by default always apply service charge
+            boolean applyServiceCharge = true;
+
+            //dont apply service charge if its a missed call or call ignroed (call duration is 0)
+            if (ddrRecord.getAdapter() != null &&
+                AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(ddrRecord.getAdapter().getAdapterType()) &&
+                ddrRecord.getDuration() == null || ddrRecord.getDuration() <= 0) {
+                applyServiceCharge = false;
+            }
+            //get the max of the service cost and the communication cost
+            if (applyServiceCharge) {
+
+                String adapterId = config != null ? config.getConfigId() : null;
+                DDRPrice ddrPriceForDialogService = fetchDDRPrice(DDRTypeCategory.SERVICE_COST,
+                                                                  AdapterType.getByValue(config.getAdapterType()),
+                                                                  adapterId, UnitType.PART, null);
+                Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
+                //get the max of the service cost and the communication cost
+                result = Math.max(result, serviceCost);
+            }
+        }
+        return result;
+    }
+    
+    /**
+     * creates a ddr record based on the input parameters
+     * 
+     * @param config
+     *            picks the adpaterId, owner and myAddress from this
+     * @param category
+     * @param senderName
+     *            will be used as the DDRRecord's fromAddress (if not null and
+     *            outbound). Use null if {@link AdapterConfig#getMyAddress()} is
+     *            to be used.
+     * @param unitType
+     * @param addresses
+     * @param status
+     * @param quantity
+     * @throws Exception
+     */
+    private static DDRRecord createDDRRecordOnCommunication(AdapterConfig config, DDRTypeCategory category, String senderName,
+                                       Map<String, String> addresses, CommunicationStatus status, int quantity,
+                                       String message) throws Exception {
+
+        DDRType communicationCostDDRType = DDRType.getDDRType(category);
+        if (communicationCostDDRType != null && config != null) {
+            log.info(String.format("Applying charges for account: %s and adapter: %s with address: %s",
+                                   config.getOwner(), config.getConfigId(), config.getMyAddress()));
+            if (config.getConfigId() != null && config.getOwner() != null) {
+                DDRRecord ddrRecord = new DDRRecord(communicationCostDDRType.getTypeId(), config.getConfigId(),
+                                                    config.getOwner(), 1);
+                //default the start to the sessionCreationTime. This is expected to be updated with the actual
+                //timestamp for voice communication
+                //set the ddrRecord time with session creationTime.
+                Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), addresses.keySet()
+                                                .iterator().next());
+                if (session != null) {
+                    ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
+                }
+                switch (status) {
+                    case SENT:
+                        String fromAddress = senderName != null && !senderName.isEmpty() ? senderName : config
+                                                        .getMyAddress();
+                        ddrRecord.setFromAddress(fromAddress);
+                        ddrRecord.setToAddress(addresses);
+                        break;
+                    case RECEIEVED:
+                        ddrRecord.setFromAddress(addresses.keySet().iterator().next());
+                        Map<String, String> toAddresses = new HashMap<String, String>();
+                        toAddresses.put(config.getMyAddress(), "");
+                        ddrRecord.setToAddress(toAddresses);
+                        break;
+                    default:
+                        throw new Exception("Unknown CommunicationStatus seen: " + status.name());
+                }
+                ddrRecord.setQuantity(quantity);
+                //add individual statuses
+                for (String address : addresses.keySet()) {
+                    ddrRecord.addStatusForAddress(address, status);
+                }
+                ddrRecord.setAccountType(config.getAccountType());
+                ddrRecord.addAdditionalInfo("message", message);
+                ddrRecord.createOrUpdateWithLog();
+                //log this ddr record
+                new com.almende.dialog.Logger().ddr(ddrRecord.getAdapter(), ddrRecord, session);
+                
+                return DDRRecord.getDDRRecord(ddrRecord.getId(), ddrRecord.getAccountId());
+            }
+        }
+        log.warning(String.format("Not charging this communication from: %s adapterid: %s anything!!",
+                                  config.getMyAddress(), config.getConfigId()));
+        return null;
+    }
+    
     private static Double getCeilingAtPrecision(double value, int precision) {
 
-//        return value;
         return Math.round(value * Math.pow(10, precision)) / Math.pow(10, precision);
     }
     

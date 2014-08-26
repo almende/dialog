@@ -1,6 +1,12 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+26-8-2014, version 1.2.0
+- feature: grouped developer logs
+- feature: improved ddr records
+- fix: check if MOBILE number when sending SMS
+- feature: registration process changes 
+
 24-7-2014, version 1.1.0
 - feature: auto sync adapters at Marketplace. option to set per account sync settings. 
 

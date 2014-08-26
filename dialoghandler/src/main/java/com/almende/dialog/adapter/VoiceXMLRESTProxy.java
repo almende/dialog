@@ -542,18 +542,17 @@ public class VoiceXMLRESTProxy {
         String answerTime) throws Exception
     {
         log.info( "call answered with:" + direction + "_" + remoteID + "_" + localID );
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID.split( "@" )[0]; //ignore the @outbound suffix
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID.split( "@outbound" )[0]; //ignore the @outbound suffix
         Session session = Session.getSession(sessionKey);
         //for direction = transfer (redirect event), json should not be null        
         //make sure that the answered call is not triggered twice
         if (session != null && session.getQuestion() != null && !isEventTriggered("answered", session)) {
-            Question question = session.getQuestion();
             String responder = session.getRemoteAddress();
             String referredCalledId = session.getExtras().get("referredCalledId");
             HashMap<String, Object> timeMap = getTimeMap(startTime, answerTime, null);
             timeMap.put("referredCalledId", referredCalledId);
             timeMap.put("sessionKey", sessionKey);
-            question.event("answered", "Answered", timeMap, responder);
+            session.getQuestion().event("answered", "Answered", timeMap, responder);
             dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
                           String.format("Call from: %s answered by: %s", session.getLocalAddress(), responder), session);
         }
@@ -1401,7 +1400,7 @@ public class VoiceXMLRESTProxy {
                             referralSession.setDdrRecordId(ddrRecord.getId());
                             referralSession.setDirection(session.getDirection());
                         }
-//                        referralSession.setQuestion(session.getQuestion());
+                        referralSession.setQuestion(session.getQuestion());
                         referralSession.storeSession();
                         session.storeSession();
                     }

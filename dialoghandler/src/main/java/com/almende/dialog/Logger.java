@@ -227,13 +227,12 @@ public class Logger {
         if (offset == null) {
             offset = 0;
         }
+        if(limit == null) {
+            limit = 20;
+        }
         //update the aggregate query with sort (on timestamp), offset and limit
         aggregate = aggregate.and(String.format("{$skip :%s}", offset)).and(String.format("{$limit :%s}", limit));
         
-        log.info(String.format("Mongo query for log: db.%s.aggregate({$match: {%s}}, %s,  %s)",
-                               collection.getName(), matchQuery, groupQuery,
-                               "{$sort : {timestamp: -1}}," + String.format("{$skip :%s},", offset) +
-                                                               String.format("{$limit :%s}", limit)));
         List<ObjectNode> logsByTrackingToken = aggregate.as(ObjectNode.class);
         ArrayList<Log> resultLogs = new ArrayList<Log>();
         for (ObjectNode logByTrackingToken : logsByTrackingToken) {

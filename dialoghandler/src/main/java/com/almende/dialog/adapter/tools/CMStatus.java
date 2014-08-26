@@ -1,8 +1,8 @@
 package com.almende.dialog.adapter.tools;
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Logger;
 import org.bson.types.ObjectId;
 import com.almende.dialog.Settings;
@@ -10,10 +10,12 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.Question;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.annotations.Id;
 import com.askfast.commons.utils.TimeUtils;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 
 public class CMStatus implements Serializable
@@ -26,15 +28,18 @@ public class CMStatus implements Serializable
     private String sms = "";
     private String adapterID = "";
     private String callback = "";
-    private String remoteAddress = "";
+    private HashSet<String> remoteAddresses = null;
     private String localAddress = "";
     private String sentTimeStamp = "";
     private String deliveredTimeStamp = "";
     private String code = "";
     private String errorCode = "";
     private String errorDescription = "";
-    private String sessionKey = null;
     private String accountId = null;
+    @JsonIgnore
+    private Session session = null;
+    @JsonIgnore
+    private AdapterConfig adapterConfig = null;
     
     public void store()
     {
@@ -61,31 +66,28 @@ public class CMStatus implements Serializable
      * @param extras
      * @throws Exception
      */
-    public static Map<String, Object> storeSMSRelatedData(String address, String localaddress, AdapterConfig config,
-                                                          Question question, String smsText, String sessionKey,
-                                                          Map<String, Object> extras) throws Exception {
+    public static String storeSMSRelatedData(Set<String> addresses, AdapterConfig config, String smsText,
+                                             Question question) throws Exception {
 
-        extras = extras != null ? extras : new HashMap<String, Object>();
+        String smsStatusKey = null;
         // check if SMS delivery notification is requested
         if (config.getAdapterType().equalsIgnoreCase("cm") ||
             config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-            String smsStatusKey = generateSMSReferenceKey(config.getConfigId(), localaddress, address);
-            EventCallback deliveryEventCallback = question != null ? question.getEventCallback("delivered") : null;
+            smsStatusKey = generateSMSReferenceKey(config.getConfigId(), config.getMyAddress());
             CMStatus cmStatus = new CMStatus();
             cmStatus.setAdapterID(config.getConfigId());
-            cmStatus.setLocalAddress(localaddress);
-            cmStatus.setRemoteAddress(address);
+            cmStatus.setLocalAddress(config.getMyAddress());
+            cmStatus.setRemoteAddresses(addresses);
             cmStatus.setReference(smsStatusKey);
             cmStatus.setAccountId(config.getOwner());
-            cmStatus.setSessionKey(sessionKey);
             cmStatus.setSms(smsText);
-            extras.put(CM.SMS_DELIVERY_STATUS_KEY, smsStatusKey);
+            EventCallback deliveryEventCallback = question != null ? question.getEventCallback("delivered") : null;
             if (deliveryEventCallback != null) {
                 cmStatus.setCallback(deliveryEventCallback.getCallback());
             }
             cmStatus.store();
         }
-        return extras;
+        return smsStatusKey;
     }
     
     /**
@@ -95,10 +97,9 @@ public class CMStatus implements Serializable
      * @param address
      * @return
      */
-    public static String generateSMSReferenceKey(String adapterId, String localaddress, String address) {
+    public static String generateSMSReferenceKey(String adapterId, String localaddress) {
 
-        return ObjectId.get().toStringMongod() + "_" + adapterId + "_" + localaddress + "_" + address + "_" +
-               "http://" + Settings.HOST;
+        return ObjectId.get().toStringMongod() + "_" + adapterId + "_" + localaddress + "_" + "http://" + Settings.HOST;
     }
     
     public String getReference()
@@ -191,14 +192,16 @@ public class CMStatus implements Serializable
         this.callback = callback;
     }
 
-    public String getRemoteAddress()
+    public HashSet<String> getRemoteAddresses()
     {
-        return remoteAddress;
+        return remoteAddresses;
     }
 
-    public void setRemoteAddress( String remoteAddress )
-    {
-        this.remoteAddress = remoteAddress;
+    public void setRemoteAddresses(Set<String> remoteAddresses) {
+
+        if (remoteAddresses != null) {
+            this.remoteAddresses = new HashSet<String>(remoteAddresses);
+        }
     }
 
     public String getLocalAddress()
@@ -209,16 +212,6 @@ public class CMStatus implements Serializable
     public void setLocalAddress( String localAddress )
     {
         this.localAddress = localAddress;
-    }
-    
-    public String getSessionKey() {
-    
-        return sessionKey;
-    }
-    
-    public void setSessionKey(String sessionKey) {
-    
-        this.sessionKey = sessionKey;
     }
     
     public void setAccountId(String accountId) {
@@ -244,5 +237,24 @@ public class CMStatus implements Serializable
             }
         }
         return null;
+    }
+
+    @JsonIgnore
+    public AdapterConfig getAdapterConfig() {
+    
+        if(adapterConfig == null && adapterID != null) {
+            adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
+        }
+        return adapterConfig;
+    }
+
+    /**
+     * just adds the given address to the list of addresses
+     * @param address
+     */
+    public void addRemoteAddress(String address) {
+
+        remoteAddresses = remoteAddresses != null ? remoteAddresses : new HashSet<String>();
+        remoteAddresses.add(address);
     }
 }

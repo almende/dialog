@@ -14,6 +14,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.model.Session;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -54,7 +55,7 @@ public class Broadsoft {
      * @param address
      * @return the callId related to this call
      */
-    public String startCall(String address) {
+    public String startCall(String address, Session session) {
 
         WebResource webResource = null;
         HashMap<String, String> queryKeyValue = new HashMap<String, String>();
@@ -69,7 +70,7 @@ public class Broadsoft {
         }
         catch (UnsupportedEncodingException ex) {
             log.severe("Problems dialing out:" + ex.getMessage());
-            dialogLog.severe(config, "Failed to start call to: " + address + " Error: " + ex.getMessage());
+            dialogLog.severe(config, "Failed to start call to: " + address + " Error: " + ex.getMessage(), session);
         }
 
         while (retryCounter.get(webResource.toString()) != null &&
@@ -77,7 +78,7 @@ public class Broadsoft {
             try {
                 String result = sendRequestWithRetry(webResource, queryKeyValue, HTTPMethod.POST, null);
                 log.info("Result from BroadSoft: " + result);
-                dialogLog.info(config, "Start outbound call to: " + address);
+                dialogLog.info(config, "Start outbound call to: " + address, session);
                 //flush retryCount
 
                 retryCounter.remove(webResource.toString());
@@ -87,7 +88,7 @@ public class Broadsoft {
                 Integer retry = retryCounter.get(webResource.toString());
                 log.severe("Problems dialing out:" + ex.getMessage());
                 dialogLog.severe(config, String.format("Failed to start call to: %s Error: %s. Retrying! Count: %s",
-                                                       address, ex.getMessage(), retry));
+                                                       address, ex.getMessage(), retry), session);
                 retryCounter.put(webResource.toString(), ++retry);
             }
         }

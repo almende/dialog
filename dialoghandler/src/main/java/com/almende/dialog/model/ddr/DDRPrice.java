@@ -2,15 +2,13 @@ package com.almende.dialog.model.ddr;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.bson.types.ObjectId;
-
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.agent.AdapterAgent;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
+import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.annotation.JsonCreator;
 
 /**
@@ -28,53 +26,6 @@ public class DDRPrice
         PART, SECOND, MINUTE, HOUR, DAY, MONTH, YEAR;
         @JsonCreator
         public static UnitType fromJson( String name )
-        {
-            return valueOf( name.toUpperCase() );
-        }
-    }
-    
-    public enum AdapterType
-    {
-        XMPP( AdapterAgent.ADAPTER_TYPE_XMPP ),
-        SMS( AdapterAgent.ADAPTER_TYPE_SMS ),
-        CALL( AdapterAgent.ADAPTER_TYPE_BROADSOFT ),
-        EMAIL( AdapterAgent.ADAPTER_TYPE_EMAIL ),
-        FACEBOOK( AdapterAgent.ADAPTER_TYPE_FACEBOOK ),
-        USSD( AdapterAgent.ADAPTER_TYPE_USSD ),
-        PUSH( AdapterAgent.ADAPTER_TYPE_PUSH ),
-        TWITTER( AdapterAgent.ADAPTER_TYPE_TWITTER );
-
-        private String value;
-
-        private AdapterType( String value )
-        {
-            this.value = value;
-        }
-        
-        public String getName()
-        {
-            return value;
-        }
-
-        /**
-         * returns the enum based on the name or the value
-         * @param value
-         * @return
-         */
-        public static AdapterType getByValue( String value )
-        {
-            for ( AdapterType type : values() )
-            {
-                if ( type.getName().equalsIgnoreCase( value ) || type.name().equalsIgnoreCase( value ) )
-                {
-                    return type;
-                }
-            }
-            return null;
-        }
-        
-        @JsonCreator
-        public static AdapterType fromJson( String name )
         {
             return valueOf( name.toUpperCase() );
         }

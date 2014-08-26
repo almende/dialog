@@ -71,7 +71,8 @@ public class TimeUtils
      */
     public static String getStringFormatFromDateTime( long pDateTime, String format )
     {
-        SimpleDateFormat dateFormat = new SimpleDateFormat();
+        format = format != null ? format : "dd-MM-yyyy HH:mm:ss Z";
+        SimpleDateFormat dateFormat = new SimpleDateFormat( format, Locale.ENGLISH );
         dateFormat.setTimeZone(getServerTimeZone());
         return dateFormat.format( new Date( pDateTime ) );
     }

@@ -155,21 +155,23 @@ public class VoiceXMLServletTest extends TestFramework {
     }
     
     private String renderQuestion(Question question, AdapterConfig adapter, String sessionKey) throws Exception {
-        
+
         VoiceXMLRESTProxy servlet = new VoiceXMLRESTProxy();
-        Return res = servlet.formQuestion(question, adapter.getConfigId(),
-                remoteAddressVoice);
-        
-        if(question.getType().equalsIgnoreCase("comment")) {
-            return servlet.renderComment(res.question, res.prompts, sessionKey);            
-        } else if(question.getType().equalsIgnoreCase("referral")) {
-            
-        } else if(question.getType().equalsIgnoreCase("open")) {
-            return servlet.renderOpenQuestion(res.question, res.prompts, sessionKey);
-        } else if(question.getType().equalsIgnoreCase("closed")) {
-            
+        Return res = servlet.formQuestion(question, adapter.getConfigId(), remoteAddressVoice, null, sessionKey);
+
+        if (question.getType().equalsIgnoreCase("comment")) {
+            return servlet.renderComment(res.question, res.prompts, sessionKey);
         }
-        
+        else if (question.getType().equalsIgnoreCase("referral")) {
+
+        }
+        else if (question.getType().equalsIgnoreCase("open")) {
+            return servlet.renderOpenQuestion(res.question, res.prompts, sessionKey);
+        }
+        else if (question.getType().equalsIgnoreCase("closed")) {
+
+        }
+
         return null;
     }
 

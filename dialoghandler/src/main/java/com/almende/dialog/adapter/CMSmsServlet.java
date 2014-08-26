@@ -22,6 +22,7 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
+import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
@@ -242,7 +243,9 @@ public class CMSmsServlet extends TextServlet {
                                reference, sent, received, to, code, errorCode, errorDescription));
         if (reference != null && !reference.isEmpty()) {
             CMStatus cmStatus = CMStatus.fetch(reference);
+            to = PhoneNumberUtils.formatNumber(to, null);
             if (cmStatus != null) {
+                Session session = Session.getSession(Session.getSessionKey(cmStatus.getAdapterConfig(), to));
                 if (sent != null) {
                     cmStatus.setSentTimeStamp(sent);
                 }
@@ -250,10 +253,10 @@ public class CMSmsServlet extends TextServlet {
                     cmStatus.setDeliveredTimeStamp(received);
                 }
                 if (to != null) {
-                    if (!to.equals(cmStatus.getRemoteAddress())) {
+                    if (!cmStatus.getRemoteAddresses().contains(to)) {
                         log.warning("To address dont match between entity and status callback from CM !!");
                     }
-                    cmStatus.setRemoteAddress(to);
+                    cmStatus.addRemoteAddress(to);
                 }
                 if (code != null) {
                     cmStatus.setCode(code);
@@ -276,9 +279,9 @@ public class CMSmsServlet extends TextServlet {
                             TestServlet.logForTest(cmStatus);
                         }
                         webResource.type("text/plain").post(String.class, callbackPayload);
-                        dialogLog.info(cmStatus.getAdapterID(), String
+                        dialogLog.info(cmStatus.getAdapterConfig(), String
                                                         .format("POST request with payload %s sent to: %s",
-                                                                callbackPayload, cmStatus.getCallback()));
+                                                                callbackPayload, cmStatus.getCallback()), session);
                     }
                     catch (Exception ex) {
                         log.severe("Callback failed. Message: " + ex.getLocalizedMessage());
@@ -286,33 +289,28 @@ public class CMSmsServlet extends TextServlet {
                 }
                 else {
                     log.info("Reference: " + reference + ". No delivered callback found.");
-                    dialogLog.info(cmStatus.getAdapterID(), "No delivered callback found for reference: " + reference);
+                    dialogLog.info(cmStatus.getAdapterConfig(), "No delivered callback found for reference: " +
+                                                                reference, session);
                 }
                 //fetch ddr corresponding to this
-                if (cmStatus.getSessionKey() != null) {
-                    Session session = Session.getSession(cmStatus.getSessionKey());
-                    if (session != null) {
-                        DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), cmStatus.getAccountId());
-                        if (ddrRecord != null) {
-                            if (errorCode == null || errorCode.isEmpty()) {
-                                ddrRecord.addStatusForAddress(cmStatus.getRemoteAddress(), CommunicationStatus.DELIVERED);
-                            }
-                            else {
-                                ddrRecord.addStatusForAddress(cmStatus.getRemoteAddress(), CommunicationStatus.ERROR);
-                                ddrRecord.addAdditionalInfo("ERROR", cmStatus.getErrorDescription());
-                            }
-                            ddrRecord.createOrUpdate();
+                if (session != null) {
+                    DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), cmStatus.getAccountId());
+                    if (ddrRecord != null) {
+                        if (errorCode == null || errorCode.isEmpty()) {
+                            ddrRecord.addStatusForAddress(to, CommunicationStatus.DELIVERED);
                         }
                         else {
-                            log.warning(String.format("No ddr record found for id: %s", session.getDdrRecordId()));
+                            ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
+                            ddrRecord.addAdditionalInfo("ERROR", cmStatus.getErrorDescription());
                         }
-                        //check if session is killed. if so drop it :)
-                        if(session.isKilled() && isSMSsDelivered(ddrRecord)) {
-                            session.drop();
-                        }
+                        ddrRecord.createOrUpdate();
                     }
                     else {
-                        log.warning(String.format("No session found for id: %s", cmStatus.getSessionKey()));
+                        log.warning(String.format("No ddr record found for id: %s", session.getDdrRecordId()));
+                    }
+                    //check if session is killed. if so drop it :)
+                    if (session.isKilled() && isSMSsDelivered(ddrRecord)) {
+                        session.drop();
                     }
                 }
                 else {

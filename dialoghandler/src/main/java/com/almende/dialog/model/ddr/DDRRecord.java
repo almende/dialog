@@ -11,6 +11,7 @@ import org.mongojack.DBQuery.Query;
 import org.mongojack.DBSort;
 import org.mongojack.Id;
 import org.mongojack.JacksonDBCollection;
+import com.almende.dialog.LogLevel;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -32,7 +33,8 @@ public class DDRRecord
 {
     protected static final Logger log = Logger.getLogger(DDRRecord.class.getName());
     public static final String DDR_TOTALCOST_KEY = "totalCost";
-    public static final String DDR_RECORD_KEY = "DDR_RECORD";
+    public static final String DDR_RECORD_KEY = "DDR_RECORD_ID";
+    public static final String ANSWER_INPUT_KEY = "ANSWER_INPUT";
     
     /**
      * status of the communication
@@ -80,6 +82,11 @@ public class DDRRecord
      * total cost is not sent for any ddr generally
      */
     Double totalCost = 0.0;
+    /**
+     * cache the adapter linked with this ddrRecord
+     */
+    @JsonIgnore
+    private AdapterConfig config;
     
     public DDRRecord(){}
     
@@ -102,6 +109,25 @@ public class DDRRecord
         }
         else { //create one if missing
             collection.insert(this);
+        }
+    }
+    
+    /**
+     * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
+     * if a session id is found in {@link DDRRecord#getAdditionalInfo()}
+     */
+    public void createOrUpdateWithLog() {
+        createOrUpdate();
+        //create a log
+        if(additionalInfo != null && additionalInfo.get(Session.SESSION_KEY) != null) {
+            Session session = Session.getSession(additionalInfo.get(Session.SESSION_KEY));
+            new com.almende.dialog.Logger().ddr(getAdapter(), this, session);
+        }
+        else {
+            for (String toAddress : this.toAddress.keySet()) {
+                Session session = Session.getSession(Session.getSessionKey(getAdapter(), toAddress));
+                new com.almende.dialog.Logger().ddr(getAdapter(), this, session);
+            }
         }
     }
     
@@ -396,11 +422,11 @@ public class DDRRecord
     @JsonIgnore
     public AdapterConfig getAdapter()
     {
-        if(adapterId != null && !adapterId.isEmpty())
+        if(adapterId != null && !adapterId.isEmpty() && config == null)
         {
-            return AdapterConfig.getAdapterConfig( adapterId );
+            config = AdapterConfig.getAdapterConfig( adapterId );
         }
-        return null;
+        return config;
     }
 
     @JsonIgnore
@@ -475,7 +501,9 @@ public class DDRRecord
     public void addAdditionalInfo(String key, String value) {
         
         additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, String>();
-        additionalInfo.put(key, value);
+        if (DDR_RECORD_KEY.equals(key)) {
+            additionalInfo.put(key, value);
+        }
     }
     
     public AccountType getAccountType() {
@@ -539,5 +567,15 @@ public class DDRRecord
      */
     public CommunicationStatus getStatusForAddress(String address) {
         return getStatusPerAddress().get(address);
+    }
+    
+    @JsonIgnore
+    public String getDirection() {
+        
+        //if the from address is not equal to the adapter address, its an incoming communication
+        if (fromAddress != null && getAdapter() != null) {
+            return !fromAddress.equalsIgnoreCase(getAdapter().getMyAddress()) ? "inbound" : "outbound";
+        }
+        return null;
     }
 }

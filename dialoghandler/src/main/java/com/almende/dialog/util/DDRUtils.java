@@ -646,6 +646,7 @@ public class DDRUtils
                                                     session.getDirection(), session.getAdapterID(),
                                                     adapterConfig.getMyAddress(), session.getRemoteAddress(),
                                                     session.getLocalAddress(), e.getLocalizedMessage());
+                e.printStackTrace();
                 log.severe(errorMessage);
                 dialogLog.severe(session.getAdapterConfig(), errorMessage, session);
                 if (pushToQueue) { //push the session details to queue

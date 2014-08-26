@@ -11,13 +11,13 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
-import com.almende.dialog.model.ddr.DDRPrice.AdapterType;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.entity.AdapterType;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import com.rabbitmq.client.Channel;
@@ -196,7 +196,7 @@ public class DDRUtils
                 }
             }
             ddrRecord.setDuration( duration > 0L ? duration : 0 );
-            ddrRecord.createOrUpdate();
+            ddrRecord.createOrUpdateWithLog();
         }
         return ddrRecord;
     }
@@ -281,7 +281,7 @@ public class DDRUtils
                                                 adapterConfig.getOwner(), 1);
                 newestDDRRecord.setAccountType(adapterConfig.getAccountType());
                 newestDDRRecord.setStart(serverCurrentTime.getMillis());
-                newestDDRRecord.createOrUpdate();
+                newestDDRRecord.createOrUpdateWithLog();
                 //publish charges if needed
                 if(publishCharges) {
                     Double ddrCost = calculateDDRCost(newestDDRRecord);
@@ -422,32 +422,12 @@ public class DDRUtils
                 }
                 result = calculateDDRCost( ddrRecord, selectedDDRPrice );
             }
-            //always include start-up costs if the adapter is broadsoft
-            if(config != null && AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(config.getAdapterType()) && result > 0.0) {
-                DDRPrice startUpPrice = fetchDDRPrice(DDRTypeCategory.START_UP_COST,
-                                                      AdapterType.getByValue(config.getAdapterType()),
-                                                      config.getConfigId(), UnitType.PART, null);
-                Double startUpCost = startUpPrice != null ? startUpPrice.getPrice() : 0.0;
-                result += startUpCost;
-            }
-        }
-        //check if service costs are to be included, only include it if there is any communication costs
-        if(includeServiceCosts != null && includeServiceCosts && result > 0.0)
-        {
-            String adapterId = config != null ? config.getConfigId() : null;
-            DDRPrice ddrPriceForDialogService = fetchDDRPrice(DDRTypeCategory.SERVICE_COST,
-                                                              AdapterType.getByValue(config.getAdapterType()),
-                                                              adapterId, UnitType.PART, null);
-            Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
-            //add the service cost if the communication cost is lesser than the service cost
-            if ( result < serviceCost )
-            {
-                result += serviceCost;
-            }
+            result = applyStartUpCost(result, config);
+            result = applyServiceCharges(ddrRecord, includeServiceCosts, result, config);
         }
         return getCeilingAtPrecision(result, 3);
     }
-    
+
     /**
      * calculates the cost associated with this DDRRecord bsaed on the linked DDRPrice. This does not 
      * add the servicecosts. Use the {@link DDRUtils#calculateCommunicationDDRCost(DDRRecord, Boolean)} for it. <br>
@@ -583,6 +563,159 @@ public class DDRUtils
     }
     
     /**
+     * Returns true if a ddr is processed successfully for the given session. else false.
+     * @param sessionKey
+     * @param pushToQueue pushes the sessionKey to the rabbitMQ queue for postprocessing if a corresponding ddr is not
+     * processed successfully
+     * @return true if the session can be dropped on hangup
+     */
+    public static boolean stopDDRCosts( String sessionKey, boolean pushToQueue )
+    {
+        Session session = Session.getSession(sessionKey);
+        boolean result = false;
+        if (session != null) {
+            AdapterConfig adapterConfig = session.getAdapterConfig();
+            //stop costs
+            try {
+                log.info(String.format("stopping charges for session: %s", ServerUtils.serialize(session)));
+                DDRRecord ddrRecord = null;
+                //if no ddr is seen for this session. try to fetch it based on the timestamps
+                if (session.getDdrRecordId() == null) {
+                    ddrRecord = DDRRecord.getDDRRecord(sessionKey);
+                    session.setDdrRecordId(ddrRecord.getId());
+                }
+                if (AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(adapterConfig.getAdapterType())) {
+                    if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
+                        session.getDirection() != null) {
+                        ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
+                                                               adapterConfig,
+                                                               Long.parseLong(session.getStartTimestamp()),
+                                                               session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
+                                                                                                   : null,
+                                                               Long.parseLong(session.getReleaseTimestamp()));
+                        //push session to queue when the call is picked up but no costs are attached or
+                        //when the ddrRecord is found but no answerTimestamp is seen. (Try to process it again later: when the answer ccxml comes in later on)
+                        boolean candidateToBePushedToQueue = false;
+                        if (ddrRecord == null && session.getAnswerTimestamp() != null) {
+                            String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
+                                                                session.getKey());
+                            log.severe(errorMessage);
+                            dialogLog.severe(adapterConfig, errorMessage, session);
+                            candidateToBePushedToQueue = true;
+                        }
+                        else if (ddrRecord != null && session.getAnswerTimestamp() == null) {
+                            String warningMessage = String.format("No costs added. Looks like a hangup! for session: %s",
+                                                                  session.getKey());
+                            log.warning(warningMessage);
+                            candidateToBePushedToQueue = true;
+                        }
+                        if (candidateToBePushedToQueue && pushToQueue) { //push the session details to queue
+                            session.pushSessionToQueue();
+                            return result;
+                        }
+
+                        //publish charges
+                        Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
+                        //attach cost to ddr is prepaid type
+                        if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+                            ddrRecord.setTotalCost(totalCost);
+                            ddrRecord.createOrUpdateWithLog();
+                        }
+                        publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
+                        result = true;
+                    }
+                    //if answerTimestamp and releastTimestamp is not found, add it to the queue
+                    else {
+                        String errorMessage = String.format("No costs added to communication currently for session: %s, as no answerTimestamp or releaseTimestamp is found",
+                                                            session.getKey());
+                        log.severe(errorMessage);
+                        dialogLog.severe(adapterConfig, errorMessage, session);
+                        if (pushToQueue) { //push the session details to queue
+                            session.pushSessionToQueue();
+                        }
+                    }
+                }
+                //text adapter. delete the session if question is null
+                else if(session.getQuestion() == null){
+                    session.drop();
+                    result = true;
+                }
+            }
+            catch (Exception e) {
+                String errorMessage = String.format("Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s \n Error: %s. Pushing to queue",
+                                                    session.getDirection(), session.getAdapterID(),
+                                                    adapterConfig.getMyAddress(), session.getRemoteAddress(),
+                                                    session.getLocalAddress(), e.getLocalizedMessage());
+                e.printStackTrace();
+                log.severe(errorMessage);
+                dialogLog.severe(session.getAdapterConfig(), errorMessage, session);
+                if (pushToQueue) { //push the session details to queue
+                    session.pushSessionToQueue();
+                }
+            }
+        }
+        return result;
+    }
+    
+    /** always include start-up costs if the adapter is broadsoft
+     * @param result
+     * @param config
+     * @return the ddrCost added to the already calculated communication costs
+     * @throws Exception
+     */
+    protected static double applyStartUpCost(double result, AdapterConfig config) throws Exception {
+
+        if(config != null && AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(config.getAdapterType()) && result > 0.0) {
+            DDRPrice startUpPrice = fetchDDRPrice(DDRTypeCategory.START_UP_COST,
+                                                  AdapterType.getByValue(config.getAdapterType()),
+                                                  config.getConfigId(), UnitType.PART, null);
+            Double startUpCost = startUpPrice != null ? startUpPrice.getPrice() : 0.0;
+            result += startUpCost;
+        }
+        return result;
+    }
+    
+    /**
+     * check if service costs are to be included, only include it if there is
+     * any communication costs
+     * 
+     * @param ddrRecord
+     * @param includeServiceCosts
+     * @param result
+     * @param config
+     * @return the service charge applied to the commnication cost.
+     * @throws Exception
+     */
+    protected static double applyServiceCharges(DDRRecord ddrRecord, Boolean includeServiceCosts, double result,
+        AdapterConfig config) throws Exception {
+
+        if (Boolean.TRUE.equals(includeServiceCosts)) {
+
+            //by default always apply service charge
+            boolean applyServiceCharge = true;
+
+            //dont apply service charge if its a missed call or call ignroed (call duration is 0)
+            if (ddrRecord.getAdapter() != null &&
+                AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(ddrRecord.getAdapter().getAdapterType()) &&
+                (ddrRecord.getDuration() == null || ddrRecord.getDuration() <= 0)) {
+                applyServiceCharge = false;
+            }
+            //get the max of the service cost and the communication cost
+            if (applyServiceCharge) {
+
+                String adapterId = config != null ? config.getConfigId() : null;
+                DDRPrice ddrPriceForDialogService = fetchDDRPrice(DDRTypeCategory.SERVICE_COST,
+                                                                  AdapterType.getByValue(config.getAdapterType()),
+                                                                  adapterId, UnitType.PART, null);
+                Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
+                //get the max of the service cost and the communication cost
+                result = Math.max(result, serviceCost);
+            }
+        }
+        return result;
+    }
+    
+    /**
      * creates a ddr record based on the input parameters
      * 
      * @param config
@@ -640,7 +773,10 @@ public class DDRUtils
                 }
                 ddrRecord.setAccountType(config.getAccountType());
                 ddrRecord.addAdditionalInfo("message", message);
-                ddrRecord.createOrUpdate();
+                ddrRecord.createOrUpdateWithLog();
+                //log this ddr record
+                new com.almende.dialog.Logger().ddr(ddrRecord.getAdapter(), ddrRecord, session);
+                
                 return DDRRecord.getDDRRecord(ddrRecord.getId(), ddrRecord.getAccountId());
             }
         }
@@ -649,103 +785,8 @@ public class DDRUtils
         return null;
     }
     
-    /**
-     * Returns true if a ddr is processed successfully for the given session. else false.
-     * @param sessionKey
-     * @param pushToQueue pushes the sessionKey to the rabbitMQ queue for postprocessing if a corresponding ddr is not
-     * processed successfully
-     * @return
-     */
-    public static boolean stopDDRCosts( String sessionKey, boolean pushToQueue )
-    {
-        Session session = Session.getSession(sessionKey);
-        boolean result = false;
-        if (session != null) {
-            AdapterConfig adapterConfig = session.getAdapterConfig();
-            //stop costs
-            try {
-                log.info(String.format("stopping charges for session: %s", ServerUtils.serialize(session)));
-                DDRRecord ddrRecord = null;
-                //if no ddr is seen for this session. try to fetch it based on the timestamps
-                if (session.getDdrRecordId() == null) {
-                    ddrRecord = DDRRecord.getDDRRecord(sessionKey);
-                    session.setDdrRecordId(ddrRecord.getId());
-                }
-                if (AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(adapterConfig.getAdapterType())) {
-                    if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
-                        session.getDirection() != null) {
-                        ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
-                                                               adapterConfig,
-                                                               Long.parseLong(session.getStartTimestamp()),
-                                                               session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
-                                                                                                   : null,
-                                                               Long.parseLong(session.getReleaseTimestamp()));
-                        //push session to queue when the call is picked up but no costs are attached or
-                        //when the ddrRecord is found but no answerTimestamp is seen. (Try to process it again later: when the answer ccxml comes in later on)
-                        boolean candidateToBePushedToQueue = false;
-                        if (ddrRecord == null && session.getAnswerTimestamp() != null) {
-                            String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
-                                                                session.getKey());
-                            log.severe(errorMessage);
-                            dialogLog.severe(adapterConfig, errorMessage);
-                            candidateToBePushedToQueue = true;
-                        }
-                        else if (ddrRecord != null && session.getAnswerTimestamp() == null) {
-                            String warningMessage = String.format("No costs added. Looks like a hangup! for session: %s",
-                                                                  session.getKey());
-                            log.warning(warningMessage);
-                            candidateToBePushedToQueue = true;
-                        }
-                        if (candidateToBePushedToQueue && pushToQueue) { //push the session details to queue
-                            session.pushSessionToQueue();
-                            return result;
-                        }
-
-                        //publish charges
-                        Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
-                        //attach cost to ddr is prepaid type
-                        if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
-                            ddrRecord.setTotalCost(totalCost);
-                            ddrRecord.createOrUpdate();
-                        }
-                        publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
-                        result = true;
-                    }
-                    //if answerTimestamp and releastTimestamp is not found, add it to the queue
-                    else {
-                        String errorMessage = String.format("No costs added to communication currently for session: %s, as no answerTimestamp or releaseTimestamp is found",
-                                                            session.getKey());
-                        log.severe(errorMessage);
-                        dialogLog.severe(adapterConfig, errorMessage);
-                        if (pushToQueue) { //push the session details to queue
-                            session.pushSessionToQueue();
-                        }
-                    }
-                }
-                //text adapter. delete the session if question is null
-                else if(session.getQuestion() == null){
-                    session.drop();
-                    result = true;
-                }
-            }
-            catch (Exception e) {
-                String errorMessage = String.format("Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s \n Error: %s. Pushing to queue",
-                                                    session.getDirection(), session.getAdapterID(),
-                                                    adapterConfig.getMyAddress(), session.getRemoteAddress(),
-                                                    session.getLocalAddress(), e.getLocalizedMessage());
-                log.severe(errorMessage);
-                dialogLog.severe(session.getAdapterConfig().getConfigId(), errorMessage);
-                if (pushToQueue) { //push the session details to queue
-                    session.pushSessionToQueue();
-                }
-            }
-        }
-        return result;
-    }
-    
     private static Double getCeilingAtPrecision(double value, int precision) {
 
-//        return value;
         return Math.round(value * Math.pow(10, precision)) / Math.pow(10, precision);
     }
     

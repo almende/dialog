@@ -57,11 +57,9 @@ public class CLXUSSDServlet extends TextServlet {
 	}
 
     @Override
-    protected
-        int
-        broadcastMessage(String message, String subject, String from, String senderName,
+    protected int broadcastMessage(String message, String subject, String from, String senderName,
                          Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config)
-                                                                                                              throws Exception {
+    throws Exception {
 
         int count = 0;
         for (String address : addressNameMap.keySet()) {

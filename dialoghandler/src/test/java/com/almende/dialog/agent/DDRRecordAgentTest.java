@@ -23,7 +23,6 @@ import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
-import com.almende.dialog.model.ddr.DDRPrice.AdapterType;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
@@ -34,6 +33,7 @@ import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.entity.AdapterType;
 
 @SuppressWarnings("deprecation")
 public class DDRRecordAgentTest extends TestFramework
@@ -87,7 +87,7 @@ public class DDRRecordAgentTest extends TestFramework
             AdapterType.EMAIL, null );
         assertThat( ddrPrice.getDdrTypeId(), Matchers.notNullValue() );
         String createAdapter = adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null,
-            null, null, TEST_ACCOUNTID, null );
+            null, null, TEST_ACCOUNTID, null, null );
         //check if a ddr record is created
         Object ddrRecords = ddrRecordAgent.getDDRRecords( null, TEST_ACCOUNTID, null, null, null, null, null, null, null, null, null );
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
@@ -113,7 +113,7 @@ public class DDRRecordAgentTest extends TestFramework
         DDRPrice ddrPrice = getTestDDRPrice( DDRTypeCategory.ADAPTER_PURCHASE, 10.0, "Test", UnitType.PART,
             AdapterType.EMAIL, null );
         assertThat( ddrPrice.getDdrTypeId(), Matchers.notNullValue() );
-        adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null, null, null, null, null );
+        adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null, null, null, null, null, null );
         //check if a ddr record is created
         Object ddrRecords = ddrRecordAgent.getDDRRecords( null, null, null, null, null, null, null, null, null, null, null );
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
@@ -487,7 +487,7 @@ public class DDRRecordAgentTest extends TestFramework
         DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
         //create an adapter
         getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 0.5, "Test", UnitType.PART, null, null);
-        String adapterId = adapterAgent.createMBAdapter( "TEST", null, "", "", null, TEST_ACCOUNTID );
+        String adapterId = adapterAgent.createMBAdapter( "TEST", null, "", "", null, TEST_ACCOUNTID, null );
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
         //create a new price
         getTestDDRPrice(DDRTypeCategory.SUBSCRIPTION_COST, 0.5, "Test", UnitType.HOUR,
@@ -512,7 +512,7 @@ public class DDRRecordAgentTest extends TestFramework
         DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
         //create an adapter
         getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 0.5, "Test", UnitType.PART, null, null);
-        String adapterId = adapterAgent.createMBAdapter("TEST", null, "", "", null, TEST_ACCOUNTID);
+        String adapterId = adapterAgent.createMBAdapter("TEST", null, "", "", null, TEST_ACCOUNTID, null);
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
         //create a new price
         getTestDDRPrice(DDRTypeCategory.SUBSCRIPTION_COST, 0.5, "Test", UnitType.SECOND,
@@ -548,7 +548,7 @@ public class DDRRecordAgentTest extends TestFramework
         switch ( adapterType )
         {
             case SMS:
-                adapterId = adapterAgent.createMBAdapter("TEST", "TEST", "1111|TEST", "test", null, TEST_ACCOUNTID);
+                adapterId = adapterAgent.createMBAdapter("TEST", "TEST", "1111|TEST", "test", null, TEST_ACCOUNTID, null);
                 updateAdapterAsTrial(adapterId);
                 //check if a ddr record is created by sending an outbound email
                 new MBSmsServlet().startDialog( addressNameMap, null, null, message, "Test Customer", "Test subject",
@@ -557,21 +557,21 @@ public class DDRRecordAgentTest extends TestFramework
             case EMAIL:
                 adapterId = adapterAgent.createEmailAdapter( MailServlet.DEFAULT_SENDER_EMAIL,
                     MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "Test", null, null, null, null, null, null,
-                    TEST_ACCOUNTID, null );
+                    TEST_ACCOUNTID, null, null );
                 updateAdapterAsTrial(adapterId);
                 new MailServlet().startDialog( addressNameMap, null, null, message, "Test Customer", "Test subject",
                     AdapterConfig.getAdapterConfig( adapterId ) );
                 break;
             case XMPP:
                 adapterId = adapterAgent.createXMPPAdapter( MailServlet.DEFAULT_SENDER_EMAIL,
-                    MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "test", null, null, null, null, TEST_ACCOUNTID, null );
+                    MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "test", null, null, null, null, TEST_ACCOUNTID, null, null );
                 updateAdapterAsTrial(adapterId);
                 new XMPPServlet().startDialog( addressNameMap, null, null, message, "Test Customer", "Test subject",
                     AdapterConfig.getAdapterConfig( adapterId ) );
                 break;
             case CALL:
                 adapterId = adapterAgent.createBroadSoftAdapter( localAddressBroadsoft, null, "askask", null, TEST_ACCOUNTID,
-                    false );
+                    false, null );
                 updateAdapterAsTrial(adapterId);
                 VoiceXMLRESTProxy.dial( addressNameMap, message, "Test Customer",
                     AdapterConfig.getAdapterConfig( adapterId ) );

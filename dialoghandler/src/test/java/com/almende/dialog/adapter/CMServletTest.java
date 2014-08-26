@@ -218,7 +218,7 @@ public class CMServletTest extends TestFramework
         assertTrue( reportReply instanceof String );
         CMStatus cmStatus = ServerUtils.deserialize(reportReply.toString(), false, CMStatus.class);
         assertEquals( "2009-06-15T13:45:30", cmStatus.getSentTimeStamp() );
-        assertEquals(remoteNumber, cmStatus.getRemoteAddress());
+        assertTrue(cmStatus.getRemoteAddresses().contains(remoteNumber));
         assertEquals( "2009-06-15T13:45:30", cmStatus.getDeliveredTimeStamp() );
         assertEquals( "200", cmStatus.getCode() );
         assertEquals( "0", cmStatus.getErrorCode() );
@@ -229,7 +229,7 @@ public class CMServletTest extends TestFramework
     public void hostInSMSReferenceIsParsedTest() throws Exception {
 
         String remoteNumber = PhoneNumberUtils.formatNumber(remoteAddressVoice, null);
-        String reference = CMStatus.generateSMSReferenceKey(UUID.randomUUID().toString(), "0031636465236", remoteNumber);
+        String reference = CMStatus.generateSMSReferenceKey(UUID.randomUUID().toString(), "0031636465236");
         Assert.assertThat(CMStatus.getHostFromReference(reference), Matchers.is("http://" + Settings.HOST));
         String testXml = getTestSMSStatusXML(remoteNumber, reference);
         Method handleStatusReport = fetchMethodByReflection("handleDeliveryStatusReport", CMSmsServlet.class,
@@ -256,7 +256,7 @@ public class CMServletTest extends TestFramework
                                                        QuestionInRequest.APPOINTMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", "start");
         session.setStartUrl(url);
-        Question question = Question.fromURL(url, smsAdapter.getConfigId());
+        Question question = Question.fromURL(url, smsAdapter.getConfigId(), null, null, null, null);
         session.setQuestion(question);
         session.storeSession();
         
@@ -319,7 +319,7 @@ public class CMServletTest extends TestFramework
         assertEquals("Are you available today?\n[ Yup | Nope  ]", smsPayload.getSms());
         assertEquals("2009-06-15T13:45:30", smsPayload.getSentTimeStamp());
         assertEquals("2009-06-15T13:45:30", smsPayload.getDeliveredTimeStamp());
-        assertEquals(PhoneNumberUtils.formatNumber(remoteAddressVoice, null), smsPayload.getRemoteAddress());
+        assertTrue(cmStatus.getRemoteAddresses().contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
         assertEquals("200", smsPayload.getCode());
         assertEquals("0", smsPayload.getErrorCode());
         assertEquals("No Error", smsPayload.getErrorDescription());

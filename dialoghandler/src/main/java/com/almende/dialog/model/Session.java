@@ -3,6 +3,7 @@ package com.almende.dialog.model;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.TextServlet;
@@ -26,6 +27,8 @@ public class Session{
     private static final Logger log = Logger.getLogger("DialogHandler");
     private static ConnectionFactory rabbitMQConnectionFactory;
     private static final String SESSION_QUEUE_NAME = "SESSION_POST_PROCESS_QUEUE";
+    public static final String SESSION_KEY = "sessionKey";
+    public static final String TRACKING_TOKEN_KEY = "trackingToken";
     
     @Id
     public String key = "";
@@ -208,14 +211,14 @@ public class Session{
         session.setKeyword(config.getKeyword());
         session.key = key;
         session.creationTimestamp = String.valueOf(TimeUtils.getServerCurrentTimeInMillis());
+        session.setTrackingToken(UUID.randomUUID().toString());
         session.storeSession();
         log.info("new session created with id: " + session.key);
-        
         return session;
     }
     
     /**
-     * retusn teh session without creating a new default one
+     * returns the session without creating a new default one
      * @param sessionKey
      * @return
      */
@@ -228,8 +231,10 @@ public class Session{
     @JsonIgnore
     public AdapterConfig getAdapterConfig() {
 
-        return adapterConfig != null ? adapterConfig : (adapterID != null ? AdapterConfig.getAdapterConfig(adapterID)
-                                                                         : null);
+        if(adapterConfig == null && adapterID != null) {
+            adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
+        }
+        return adapterConfig;
     }
 	
     public Map<String, String> getExtras()
@@ -386,8 +391,8 @@ public class Session{
     }
     
     
-    public void setTrackingToken(String token) {
-        this.trackingToken = token;     
+    public void setTrackingToken(String trackingToken) {
+        this.trackingToken = trackingToken;     
     }
 
     public String getStartTimestamp()
@@ -538,7 +543,12 @@ public class Session{
      */
     public static String getSessionKey(AdapterConfig config, String remoteAddress) {
 
-        return config.getAdapterType() + "|" + config.getMyAddress() + "|" + remoteAddress;
+        if (config != null && remoteAddress != null) {
+            return config.getAdapterType() + "|" + config.getMyAddress() + "|" + remoteAddress;
+        }
+        else {
+            return null;
+        }
     }
 
     public String getLocalName() {

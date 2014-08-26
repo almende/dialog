@@ -7,15 +7,19 @@ import java.util.logging.Logger;
 import org.znerd.xmlenc.XMLOutputter;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.model.Session;
+import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
+import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 
 public class CM {
 
     public static final String SMS_DELIVERY_STATUS_KEY = "CM-SMS_Status";
-	private static final Logger log = Logger.getLogger(CM.class.getName()); 
+    private static final Logger log = Logger.getLogger(CM.class.getName());
+    protected static final com.almende.dialog.Logger logger = new com.almende.dialog.Logger();
 	
 	private static final String MIN_MESSAGE_PARTS="1";
 	private static final String MAX_MESSAGE_PARTS="6";
@@ -58,13 +62,7 @@ public class CM {
         // TODO: Check message for special chars, if so change dcs.		
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( to, toName );
-        String reference = null;
-        if(extras != null)
-        {
-            reference = extras.get( SMS_DELIVERY_STATUS_KEY ) != null ? extras.get( SMS_DELIVERY_STATUS_KEY )
-                .toString() : null;
-        }
-        StringWriter sw = createXMLRequest( message, from, fromName, reference, addressNameMap, dcs );
+        StringWriter sw = createXMLRequest( message, from, fromName, addressNameMap, dcs, config, extras );
 
         if ( !ServerUtils.isInUnitTestingEnvironment() && sw != null )
         {
@@ -96,13 +94,7 @@ public class CM {
             dcs = MESSAGE_TYPE_GSM7;
         }
         //create an CM XML request based on the parameters
-        String reference = null;
-        if(extras != null)
-        {
-            reference = extras.get( SMS_DELIVERY_STATUS_KEY ) != null ? extras.get( SMS_DELIVERY_STATUS_KEY )
-                .toString() : null;
-        }
-        StringWriter sw = createXMLRequest( message, from, fromName, reference, addressNameMap, dcs );
+        StringWriter sw = createXMLRequest( message, from, fromName, addressNameMap, dcs, config, extras );
 
         //add an interceptor so that send Messages is not enabled for unit tests
         if ( !ServerUtils.isInUnitTestingEnvironment() && sw != null )
@@ -124,8 +116,7 @@ public class CM {
      * @since 9/9/2013 for v0.4.0
      * @return
      */
-    private StringWriter createXMLRequest( String message, String from, String fromName, String reference,
-        Map<String, String> addressNameMap, String dcs )
+    private StringWriter createXMLRequest( String message, String from, String fromName, Map<String, String> addressNameMap, String dcs, AdapterConfig config, Map<String, Object> extras )
     {
         String type = "TEXT";
         // TODO: Check message for special chars, if so change dcs.             
@@ -144,16 +135,34 @@ public class CM {
             outputter.attribute( "PASSWORD", password );
             outputter.endTag();
             
+            String reference = null;
+            //fetch the question from the session 
+            Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), addressNameMap
+                                            .keySet().iterator().next());
+            if (session != null) {
+                reference = CMStatus.storeSMSRelatedData(addressNameMap.keySet(), config, message, session.getQuestion());
+            }
             if(reference != null)
             {
                 outputter.startTag( "REFERENCE" );
                 outputter.cdata( reference );
                 outputter.endTag();
             }
-
             String senderId = fromName != null && !fromName.isEmpty() ? fromName : from;
             for ( String to : addressNameMap.keySet() )
             {
+                //check if its a mobile number, if no ignore, log, drop session and continue
+                PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(to);
+                if (!PhoneNumberType.MOBILE.equals(numberType)) {
+                    session = Session.getSession(config.getAdapterType(), config.getMyAddress(), to);
+                    String errorMessage = String.format("Ignoring SMS request to: %s from: %s, as it is not of type MOBILE",
+                                                        to, config.getMyAddress());
+                    logger.warning(config, errorMessage, session);
+                    if (session != null) {
+                        session.drop();
+                    }
+                    continue;
+                }
                 outputter.startTag( "MSG" );
                 outputter.startTag( "CONCATENATIONTYPE" );
                 outputter.cdata( type );

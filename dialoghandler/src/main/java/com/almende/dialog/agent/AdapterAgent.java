@@ -6,7 +6,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.logging.Logger;
 import javax.ws.rs.core.MediaType;
+import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
+import org.jivesoftware.smack.XMPPException.XMPPErrorException;
+import org.jivesoftware.smack.packet.XMPPError;
+import org.jivesoftware.smack.packet.XMPPError.Type;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -448,8 +452,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             XMPPServlet xmppServlet = new XMPPServlet();
             xmppServlet.listenForIncomingChats(newConfig);
         }
-        catch (XMPPException e) {
-            if (e.getXMPPError().getCode() == 409) //just listen to incoming chats if account already exists.
+        catch (XMPPException.XMPPErrorException e) {
+            if (e.getXMPPError().getCondition() == "conflict") //just listen to incoming chats if account already exists.
             {
                 XMPPServlet xmppServlet = new XMPPServlet();
                 xmppServlet.listenForIncomingChats(newConfig);

@@ -315,7 +315,7 @@
 			<activation>
 				<property>
 					<name>skipTests</name>
-					<value>false</value>
+					<value>true</value>
 				</property>
 			</activation>
 			<build>

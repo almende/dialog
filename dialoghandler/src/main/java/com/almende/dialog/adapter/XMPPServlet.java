@@ -7,12 +7,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.jivesoftware.smack.AccountManager;
 import org.jivesoftware.smack.Chat;
+import org.jivesoftware.smack.ChatManager;
 import org.jivesoftware.smack.ChatManagerListener;
 import org.jivesoftware.smack.ConnectionConfiguration;
 import org.jivesoftware.smack.MessageListener;
 import org.jivesoftware.smack.Roster;
 import org.jivesoftware.smack.Roster.SubscriptionMode;
 import org.jivesoftware.smack.SASLAuthentication;
+import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.packet.Message;
@@ -20,6 +22,7 @@ import org.jivesoftware.smack.packet.Message.Body;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Presence.Mode;
 import org.jivesoftware.smack.packet.Presence.Type;
+import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import com.almende.dialog.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
@@ -67,7 +70,7 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
                 xmppConnection.sendPacket( presence );
                 message = "*" + fromName + ":* "+message;
             }
-            Chat chat = xmppConnection.getChatManager().createChat( to, this );
+            Chat chat = ChatManager.getInstanceFor(xmppConnection).createChat( to, this );
             chat.sendMessage( message );
             return 1;
         }
@@ -115,12 +118,14 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
     /**
      * listens on any incoming messages to this adapterConfig
      * @throws XMPPException 
+     * @throws IOException 
+     * @throws SmackException 
      */
-    public void listenForIncomingChats(AdapterConfig adapterConfig) throws XMPPException
+    public void listenForIncomingChats(AdapterConfig adapterConfig) throws XMPPException, SmackException, IOException
     {
         XMPPConnection xmppConnection = getXMPPConnection( adapterConfig, true );
         Roster.setDefaultSubscriptionMode( SubscriptionMode.accept_all );
-        xmppConnection.getChatManager().addChatListener( this );
+        ChatManager.getInstanceFor(xmppConnection).addChatListener( this );
     }
 
     @Override
@@ -145,7 +150,7 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
         }
     }
     
-    public static XMPPConnection getXMPPConnection(AdapterConfig adapterConfig, boolean performLogin) throws XMPPException
+    public static XMPPConnection getXMPPConnection(AdapterConfig adapterConfig, boolean performLogin) throws XMPPException, SmackException, IOException
     {
         final String host = adapterConfig.getProperties().get( XMPP_HOST_KEY ) != null ? adapterConfig.getProperties()
             .get( XMPP_HOST_KEY ).toString() : GTALK_XMPP_HOST;
@@ -167,8 +172,8 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
             {
                 connectionConfiguration = new ConnectionConfiguration(host);
             }
-            connectionConfiguration.setSASLAuthenticationEnabled(false);
-            XMPPConnection connection = new XMPPConnection( connectionConfiguration );
+            //connectionConfiguration.setSASLAuthenticationEnabled(false);
+            XMPPConnection connection = new XMPPTCPConnection( connectionConfiguration );
             xmppConnection.set( connection );
         }
         if ( performLogin )
@@ -224,9 +229,9 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
         {
             try
             {
-                XMPPConnection xmppConnection = new XMPPConnection( "xmpp.ask-fast.com" );
+                XMPPConnection xmppConnection = new XMPPTCPConnection( "xmpp.ask-fast.com" );
                 xmppConnection.connect();
-                AccountManager accountManager = new AccountManager( xmppConnection );
+                AccountManager accountManager = AccountManager.getInstance(xmppConnection);
                 Map<String, String> attributes = new HashMap<String, String>();
                 attributes.put("username", username.replace( "@xmpp.ask-fast.com", "" ));
                 attributes.put("password", password);
@@ -254,7 +259,7 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
             try
             {
                 XMPPConnection xmppConnection = getXMPPConnection( adapterConfig, true );
-                AccountManager accountManager = xmppConnection.getAccountManager();
+                AccountManager accountManager = AccountManager.getInstance(xmppConnection);
                 accountManager.deleteAccount();
             }
             catch ( XMPPException e )

@@ -834,7 +834,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         AdapterConfig config = new AdapterConfig();
         config.setAdapterType(ADAPTER_TYPE_XMPP);
         //by default create gmail xmpp adapter
-        config.getProperties().put(XMPPServlet.XMPP_HOST_KEY, host != null ? host : XMPPServlet.GTALK_XMPP_HOST);
+        config.getProperties().put(XMPPServlet.XMPP_HOST_KEY, host != null ? host : XMPPServlet.DEFAULT_XMPP_HOST);
         config.getProperties().put(XMPPServlet.XMPP_PORT_KEY, port != null ? port : XMPPServlet.DEFAULT_XMPP_PORT);
         if (service != null) {
             config.getProperties().put(XMPPServlet.XMPP_SERVICE_KEY, service);

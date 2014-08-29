@@ -3,8 +3,10 @@ package com.almende.dialog.adapter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import org.jivesoftware.smack.AccountManager;
 import org.jivesoftware.smack.Chat;
 import org.jivesoftware.smack.ChatManager;
@@ -12,6 +14,7 @@ import org.jivesoftware.smack.ChatManagerListener;
 import org.jivesoftware.smack.ConnectionConfiguration;
 import org.jivesoftware.smack.MessageListener;
 import org.jivesoftware.smack.Roster;
+import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
 import org.jivesoftware.smack.Roster.SubscriptionMode;
 import org.jivesoftware.smack.SASLAuthentication;
 import org.jivesoftware.smack.SmackException;
@@ -23,6 +26,7 @@ import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Presence.Mode;
 import org.jivesoftware.smack.packet.Presence.Type;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
+
 import com.almende.dialog.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
@@ -153,11 +157,12 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
     public static XMPPConnection getXMPPConnection(AdapterConfig adapterConfig, boolean performLogin) throws XMPPException, SmackException, IOException
     {
         final String host = adapterConfig.getProperties().get( XMPP_HOST_KEY ) != null ? adapterConfig.getProperties()
-            .get( XMPP_HOST_KEY ).toString() : GTALK_XMPP_HOST;
+            .get( XMPP_HOST_KEY ).toString() : DEFAULT_XMPP_HOST;
         final int port = adapterConfig.getProperties().get( XMPP_PORT_KEY ) != null ? Integer.parseInt( adapterConfig
             .getProperties().get( XMPP_PORT_KEY ).toString() ) : DEFAULT_XMPP_PORT;
         final String service = adapterConfig.getProperties().get( XMPP_SERVICE_KEY ) != null ? adapterConfig.getProperties()
-            .get( XMPP_SERVICE_KEY ).toString() : null; 
+            .get( XMPP_SERVICE_KEY ).toString() : null;
+            
         //create new xmppConnection
         xmppConnection = xmppConnection != null ? xmppConnection : new ThreadLocal<XMPPConnection>();
         if ( xmppConnection.get() == null || !xmppConnection.get().getHost().equals( host )
@@ -172,6 +177,7 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
             {
                 connectionConfiguration = new ConnectionConfiguration(host);
             }
+            connectionConfiguration.setSecurityMode(SecurityMode.enabled);
             //connectionConfiguration.setSASLAuthenticationEnabled(false);
             XMPPConnection connection = new XMPPTCPConnection( connectionConfiguration );
             xmppConnection.set( connection );

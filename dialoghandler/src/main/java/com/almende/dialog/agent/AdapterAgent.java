@@ -5,8 +5,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.logging.Logger;
+
 import javax.ws.rs.core.MediaType;
+
 import org.jivesoftware.smack.XMPPException;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -834,7 +837,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         AdapterConfig config = new AdapterConfig();
         config.setAdapterType(ADAPTER_TYPE_XMPP);
         //by default create gmail xmpp adapter
-        config.getProperties().put(XMPPServlet.XMPP_HOST_KEY, host != null ? host : XMPPServlet.GTALK_XMPP_HOST);
+        config.getProperties().put(XMPPServlet.XMPP_HOST_KEY, host != null ? host : XMPPServlet.DEFAULT_XMPP_HOST);
         config.getProperties().put(XMPPServlet.XMPP_PORT_KEY, port != null ? port : XMPPServlet.DEFAULT_XMPP_PORT);
         if (service != null) {
             config.getProperties().put(XMPPServlet.XMPP_SERVICE_KEY, service);

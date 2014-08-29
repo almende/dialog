@@ -503,7 +503,7 @@ public class DDRRecord
     public void addAdditionalInfo(String key, String value) {
         
         additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, String>();
-        if (DDR_RECORD_KEY.equals(key)) {
+        if (!DDR_RECORD_KEY.equals(key)) {
             additionalInfo.put(key, value);
         }
     }

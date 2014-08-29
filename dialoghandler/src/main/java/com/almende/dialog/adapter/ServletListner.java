@@ -1,13 +1,14 @@
 package com.almende.dialog.adapter;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.logging.Logger;
+
 import javax.mail.MessagingException;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
-import org.jivesoftware.smack.SmackException;
+
 import org.jivesoftware.smack.XMPPException;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 
@@ -31,7 +32,7 @@ public class ServletListner implements ServletContextListener
             {
                 xmppServlet.listenForIncomingChats( adapterConfig );
             }
-            catch ( XMPPException | SmackException | IOException e )
+            catch ( XMPPException e )
             {
                 log.severe( "Exception thrown while trying to register inbound XMPP service for: "
                     + adapterConfig.getMyAddress() );

@@ -50,6 +50,7 @@ public class NotificareServeletTest extends TestFramework {
 	
 	}
 	
+	@SuppressWarnings("unused")
 	private void outBoundPushTest( Map<String, String> addressNameMap, AdapterConfig adapterConfig,
 	        String simpleQuestion, QuestionInRequest questionInRequest, String senderName, String subject )
 	    throws Exception

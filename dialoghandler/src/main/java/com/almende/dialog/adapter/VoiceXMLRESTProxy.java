@@ -292,7 +292,7 @@ public class VoiceXMLRESTProxy {
         if(session != null) {
             session.setStartUrl( url );
             session.setDirection( direction );
-            session.setRemoteAddress( remoteID );
+            session.setRemoteAddress( formattedRemoteId );
             session.setType( AdapterAgent.ADAPTER_TYPE_BROADSOFT );
             session.setAccountId( config.getOwner() );
             session.setAdapterID( config.getConfigId() );
@@ -304,7 +304,7 @@ public class VoiceXMLRESTProxy {
         
         Question question = session.getQuestion();
         if(question == null) {
-            question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), remoteID, localID,
+            question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), formattedRemoteId, localID,
                                         session.getDdrRecordId(), session.getKey());
         }
         session.setQuestion(question);
@@ -318,25 +318,27 @@ public class VoiceXMLRESTProxy {
             DDRRecord ddrRecord = null;
             try {
                 if (direction.equalsIgnoreCase("outbound")) {
-                    ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, remoteID, 1, url);
+                    ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedRemoteId, 1, url);
                 }
                 else {
-                    ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, remoteID, 1, url);
+                    ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, formattedRemoteId, 1, url);
                 }
                 session.setDdrRecordId( ddrRecord != null ? ddrRecord.getId() : null);
+                ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
             }
             catch (Exception e) {
                 String errorMessage = String.format("Creating DDR records failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
-                                                    direction, config.getConfigId(), config.getMyAddress(), remoteID,
+                                                    direction, config.getConfigId(), config.getMyAddress(), formattedRemoteId,
                                                     localID);
                 log.severe(errorMessage);
                 dialogLog.severe(config.getConfigId(), errorMessage, ddrRecord != null ? ddrRecord.getId() : null,
                                  sessionKey);
             }
             finally {
+            	ddrRecord.createOrUpdate();
                 session.storeSession();
             }
-            return handleQuestion( question, config, remoteID, sessionKey );
+            return handleQuestion( question, config, formattedRemoteId, sessionKey );
         }
         else {
             return Response.ok().build();
@@ -1397,8 +1399,12 @@ public class VoiceXMLRESTProxy {
                             DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
                                                                                                   redirectedId, 1,
                                                                                                   question.getUrl());
+                            ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+                            ddrRecord.createOrUpdate();
+                            
                             referralSession.setDdrRecordId(ddrRecord.getId());
                             referralSession.setDirection(session.getDirection());
+                            referralSession.setTrackingToken(session.getTrackingToken());
                         }
                         referralSession.setQuestion(session.getQuestion());
                         referralSession.storeSession();

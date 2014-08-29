@@ -124,9 +124,11 @@ public class DDRRecord
             new com.almende.dialog.Logger().ddr(getAdapter(), this, session);
         }
         else {
-            for (String toAddress : this.toAddress.keySet()) {
-                Session session = Session.getSession(Session.getSessionKey(getAdapter(), toAddress));
-                new com.almende.dialog.Logger().ddr(getAdapter(), this, session);
+            if (this.toAddress != null) {
+                for (String toAddress : this.toAddress.keySet()) {
+                    Session session = Session.getSession(Session.getSessionKey(getAdapter(), toAddress));
+                    new com.almende.dialog.Logger().ddr(getAdapter(), this, session);
+                }
             }
         }
     }

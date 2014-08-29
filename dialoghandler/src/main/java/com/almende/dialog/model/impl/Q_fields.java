@@ -3,7 +3,6 @@ package com.almende.dialog.model.impl;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Logger;
-
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.intf.QuestionIntf;
@@ -114,28 +113,36 @@ public class Q_fields implements QuestionIntf {
 		this.requester = requester;
 	}
 
-	@Override
-	public String getQuestion_expandedtext(String language) {
-		Client client = ParallelInit.getClient();
-		String url = this.getQuestion_text();
-		if (url == null || url.equals("")) return "";
-		if (url.startsWith("text://")) return url.replace("text://", "");
-		if (language != null && !language.equals("")){
-			url+=url.indexOf("?")>0?"&":"?";
-			url+="preferred_language="+language;
-		}
-		String text = "";
-        try
-        {
-            WebResource webResource = client.resource( url );
-            text = webResource.type( "text/plain" ).get( String.class );
+    @Override
+    public String getQuestion_expandedtext(String language) {
+
+        Client client = ParallelInit.getClient();
+        String url = this.getQuestion_text();
+        if (url == null || url.equals("")) {
+            return "";
         }
-        catch ( Exception e )
-        {
-            log.severe( e.toString() );
+        if (url.startsWith("text://")) {
+            return url.replace("text://", "");
         }
-		return text;
-	}
+        else if(url.startsWith("http") && url.endsWith(".wav")) {
+            return url;
+        }
+        
+        if (language != null && !language.equals("")) {
+            url += url.indexOf("?") > 0 ? "&" : "?";
+            url += "preferred_language=" + language;
+        }
+        String text = "";
+        try {
+            WebResource webResource = client.resource(url);
+            text = webResource.type("text/plain").get(String.class);
+        }
+        catch (Exception e) {
+            log.severe(e.toString());
+        }
+        return text;
+    }
+	
 	@Override
 	public String getQuestion_expandedtext() {
 		return getQuestion_expandedtext(null);

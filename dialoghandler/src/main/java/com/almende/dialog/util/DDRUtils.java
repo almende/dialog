@@ -582,7 +582,9 @@ public class DDRUtils
                 //if no ddr is seen for this session. try to fetch it based on the timestamps
                 if (session.getDdrRecordId() == null) {
                     ddrRecord = DDRRecord.getDDRRecord(sessionKey);
-                    session.setDdrRecordId(ddrRecord.getId());
+                    if (ddrRecord != null) {
+                        session.setDdrRecordId(ddrRecord.getId());
+                    }
                 }
                 if (AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(adapterConfig.getAdapterType())) {
                     if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&

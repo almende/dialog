@@ -985,18 +985,18 @@ public class VoiceXMLRESTProxy {
 									outputter.startTag("if");
 										outputter.attribute("cond", "thisCall=='noanswer'");
 										outputter.startTag("goto");
-											outputter.attribute("next", handleTimeoutURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+											outputter.attribute("next", handleTimeoutURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
 										outputter.endTag();
 									outputter.startTag("elseif");
 										outputter.attribute("cond", "thisCall=='busy' || thisCall=='network_busy'");
 									outputter.endTag();
 										outputter.startTag("goto");
-											outputter.attribute("next", handleExceptionURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+											outputter.attribute("next", handleExceptionURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
 										outputter.endTag();	
 									outputter.startTag("else");
 									outputter.endTag();
 										outputter.startTag("goto");
-											outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+											outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
 										outputter.endTag();	
 									outputter.endTag();
 								outputter.endTag();
@@ -1012,7 +1012,7 @@ public class VoiceXMLRESTProxy {
 								}
 								if(question!=null) {
 									outputter.startTag("goto");
-										outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+										outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
 									outputter.endTag();
 								}
 							outputter.endTag();
@@ -1098,19 +1098,20 @@ public class VoiceXMLRESTProxy {
                                     getAnswerUrl() + "?questionId=" + question.getQuestion_id() + "&answerId=" +
                                                                     answers.get(cnt).getAnswer_id() + "&answerInput=" +
                                                                     URLEncoder.encode(dtmfValue, "UTF-8") +
-                                                                    "&sessionKey=" + sessionKey);
+                                                                    "&sessionKey=" +
+                                                                    URLEncoder.encode(sessionKey, "UTF-8"));
                 outputter.endTag();
             }
             outputter.startTag("noinput");
             outputter.startTag("goto");
             outputter.attribute("next", handleTimeoutURL + "?questionId=" + question.getQuestion_id() + "&sessionKey=" +
-                                        sessionKey);
+                                        URLEncoder.encode(sessionKey, "UTF-8"));
             outputter.endTag();
             outputter.endTag();
             outputter.startTag("nomatch");
             outputter.startTag("goto");
             outputter.attribute("next", getAnswerUrl() + "?questionId=" + question.getQuestion_id() +
-                                        "&answerId=-1&sessionKey=" + sessionKey);
+                                        "&answerId=-1&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8"));
             outputter.endTag();
             outputter.endTag();
             outputter.endTag();
@@ -1194,7 +1195,7 @@ public class VoiceXMLRESTProxy {
                                 {
                 
                                     outputter.attribute( "next", handleTimeoutURL + 
-                                        "?questionId=" + question.getQuestion_id() + "&sessionKey=" + sessionKey );
+                                        "?questionId=" + question.getQuestion_id() + "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8") );
                                 }
                                 else
                                 {
@@ -1202,7 +1203,7 @@ public class VoiceXMLRESTProxy {
                                     if ( retryCount < Integer.parseInt( retryLimit ) )
                                     {
                                         outputter.attribute( "next", "/retry" + "?questionId=" + question.getQuestion_id()
-                                            + "&sessionKey=" + sessionKey );
+                                            + "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8") );
                                         Question.updateRetryCount( sessionKey );
                                     }
                                     else
@@ -1311,7 +1312,10 @@ public class VoiceXMLRESTProxy {
                             outputter.startTag("if");
                                     outputter.attribute("cond", "saveWav.response='SUCCESS'");
                                     outputter.startTag("goto");
-                                            outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answerInput="+URLEncoder.encode(storedAudiofile, "UTF-8"));
+                                    outputter.attribute("next",
+                                                        getAnswerUrl() + "?questionId=" + question.getQuestion_id() + "&sessionKey=" +
+                                                                                        URLEncoder.encode(sessionKey, "UTF-8") + "&answerInput=" +
+                                                                                        URLEncoder.encode(storedAudiofile, "UTF-8"));
                                     outputter.endTag();
                             outputter.startTag("else");
                             outputter.endTag();

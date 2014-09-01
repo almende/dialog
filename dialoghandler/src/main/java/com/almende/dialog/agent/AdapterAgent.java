@@ -44,8 +44,6 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	public static final String ADAPTER_TYPE_TWITTER = AdapterType.TWITTER.getName();	
 	public static final String ADAPTER_TYPE_USSD = AdapterType.USSD.getName();
 	public static final String ADAPTER_TYPE_PUSH = AdapterType.NOTIFICARE.getName();
-//	public static final String PERFORM_SYNC_KEY = "performSync";
-//	public static final String EXCLUDE_SYNC_FOR_ACCOUNT_KEY = "performSyncByAccount";
 	public static final int EMAIL_SCHEDULER_INTERVAL = 30 * 1000; //30seconds
 	public static final int TWITTER_SCHEDULER_INTERVAL = 61 * 1000; //61seconds
 	private static final Logger log = Logger.getLogger( AdapterAgent.class.getSimpleName() );
@@ -55,11 +53,6 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
     {
         //start inbound schedulers for email and xmpp
         startAllInboundSceduler();
-//        //if no performSync status is found in the state, set true by default
-//        Boolean performSync = getState().get(PERFORM_SYNC_KEY, Boolean.class);
-//        if(performSync == null) {
-//            setSyncAdapterStatusInMarketplace(true);
-//        }
     }
     
     /**
@@ -107,58 +100,6 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         }
         return id;
     }
-    
-//    /**
-//     * method to set permission to sync adapters in the Marketplace. If set to
-//     * false, adapters wont be synced.
-//     * 
-//     * @param performSync
-//     */
-//    public void setSyncAdapterStatusInMarketplace(@Name("performSync") Boolean performSync) {
-//
-//        getState().put(PERFORM_SYNC_KEY, performSync);
-//    }
-//    
-//    /**
-//     * method to get permission set to sync adapters in the Marketplace.
-//     */
-//    public Boolean getSyncAdapterStatusInMarketplace() {
-//
-//        return getState().get(PERFORM_SYNC_KEY, Boolean.class);
-//    }
-    
-//    /**
-//     * method to set permission to sync adapters based on username in the Marketplace. If set to
-//     * false, adapters wont be synced.
-//     * 
-//     * @param performSync
-//     */
-//    public void setSyncAdapterStatusByUserNameInMarketplace(@Name("username") String username, @Name("excludeFromSync") Boolean excludeFromSync) {
-//
-//        HashSet<String> excludedAccountForSync = getState().get(EXCLUDE_SYNC_FOR_ACCOUNT_KEY,
-//                                                                   new TypeReference<HashSet<String>>() {}.getType());
-//        if(excludedAccountForSync == null ) {
-//            excludedAccountForSync = new HashSet<String>();
-//        }
-//        if(excludeFromSync) {
-//            excludedAccountForSync.add(username);
-//        }
-//        else {
-//            excludedAccountForSync.remove(username);
-//        }
-//        getState().put(EXCLUDE_SYNC_FOR_ACCOUNT_KEY, excludedAccountForSync);
-//    }
-    
-//    /**
-//     * method to get permission that is set to sync adapters based on username in the
-//     * Marketplace.
-//     * 
-//     * @param performSync
-//     */
-//    public HashSet<String> getSyncAdapterStatusByUserNameInMarketplace() {
-//
-//        return getState().get(EXCLUDE_SYNC_FOR_ACCOUNT_KEY, new TypeReference<HashSet<String>>() {}.getType());
-//    }
     
     /**
      * stops the scheduler which checks for inbound emails
@@ -698,62 +639,6 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
 	}
 	
-//    /**
-//     * logs into marketplace and performs a sync operation if a
-//     * {@link AdapterAgent#getSyncAdapterStatusInMarketplace()} returns TRUE.
-//     * 
-//     * @param username
-//     * @param password
-//     * @return true or false based on if the adapters are synced
-//     */
-//    public boolean syncAdapterAtMarketplace(@Name("username") String username, @Name("password") String password) {
-//
-//        Boolean syncStatus = getSyncAdapterStatusInMarketplace();
-//        if (Boolean.TRUE.equals(syncStatus)) {
-//            HashSet<String> syncStatusByUsername = getSyncAdapterStatusByUserNameInMarketplace();
-//            //either no syncStatusByUsername should be found or syncStatusByUsername must return true for the user
-//            if (syncStatusByUsername == null || !syncStatusByUsername.contains(username)) {
-//                Client client = ParallelInit.getClient();
-//                try {
-//                    WebResource resource = client.resource(Settings.ASK_FAST_MARKETPLACE_REGISTER_URL + "/login");
-//                    resource = resource.queryParam("username", username);
-//                    resource = resource.queryParam("password", password);
-//                    String askfastMarketLoginResponse = resource.type(MediaType.TEXT_PLAIN).get(String.class);
-//                    if (askfastMarketLoginResponse != null && askfastMarketLoginResponse.contains("X-SESSION_ID")) {
-//                        Object sessionKey = JOM.getInstance().readValue(askfastMarketLoginResponse,
-//                                                                        new TypeReference<HashMap<String, String>>() {
-//                                                                        });
-//                        TypeUtil<HashMap<String, String>> injector = new TypeUtil<HashMap<String, String>>() {
-//                        };
-//                        HashMap<String, String> sessionMap = injector.inject(sessionKey);
-//                        if (sessionMap.get("X-SESSION_ID") != null) {
-//                            resource = client.resource(Settings.ASK_FAST_MARKETPLACE_REGISTER_URL +
-//                                                       "/accounts/adapterconfigs/syncAllAdapters");
-//                            resource = resource.queryParam("flushExisting", "true");
-//                            String syncedAdapters = resource.header("X-SESSION_ID", sessionMap.get("X-SESSION_ID"))
-//                                                            .accept(MediaType.APPLICATION_JSON)
-//                                                            .type(MediaType.TEXT_PLAIN).post(String.class);
-//                            log.info("Adapters sync result: " + syncedAdapters);
-//                            return true;
-//                        }
-//                    }
-//                }
-//                catch (Exception e) {
-//                    e.printStackTrace();
-//                    log.severe(String.format("Adapter sync failed for username: %. Message: %s", username,
-//                                             e.getLocalizedMessage()));
-//                }
-//            }
-//            else {
-//                log.severe(String.format("Marketplace sync status is excluded for this user: %s", username));
-//            }
-//        }
-//        else {
-//            log.severe(String.format("Marketplace sync status is not set to TRUE!. Actual: %s", syncStatus));
-//        }
-//        return false;
-//    }
-    
     /**
      * saves the AdapterConfig in the datastore
      * 

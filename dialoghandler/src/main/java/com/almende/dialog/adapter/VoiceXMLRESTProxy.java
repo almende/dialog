@@ -1465,7 +1465,7 @@ public class VoiceXMLRESTProxy {
         format = (format != null && !format.isEmpty()) ? format : "8khz_8bit_mono";
         try
         {
-            textForSpeech = URLEncoder.encode( textForSpeech.replace( "text://", "" ), "UTF-8").replace( "\\+", "%20" );
+            textForSpeech = URLEncoder.encode( textForSpeech.replace( "text://", "" ), "UTF-8").replace( "+", "%20" );
         }
         catch ( UnsupportedEncodingException e )
         {

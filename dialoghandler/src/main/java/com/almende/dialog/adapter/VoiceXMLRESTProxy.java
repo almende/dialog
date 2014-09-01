@@ -42,11 +42,11 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
-import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.myBlobstore.MyBlobStore;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 
 @Path("/vxml/")
@@ -1465,7 +1465,7 @@ public class VoiceXMLRESTProxy {
         format = (format != null && !format.isEmpty()) ? format : "8khz_8bit_mono";
         try
         {
-            textForSpeech = URLEncoder.encode( textForSpeech.replace( "text://", "" ), "UTF-8").replace( "+", "%20" );
+            textForSpeech = URLEncoder.encode( textForSpeech.replace( "text://", "" ), "UTF-8").replace( "\\+", "%20" );
         }
         catch ( UnsupportedEncodingException e )
         {

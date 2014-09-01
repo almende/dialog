@@ -29,11 +29,11 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
-import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.utils.PhoneNumberUtils;
 
 @SuppressWarnings("deprecation")
 public class DDRRecordAgentTest extends TestFramework

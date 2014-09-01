@@ -10,7 +10,7 @@ import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
-import com.almende.dialog.util.PhoneNumberUtils;
+import com.askfast.commons.utils.PhoneNumberUtils;
 
 public class NexmoSmsServlet extends TextServlet {
 

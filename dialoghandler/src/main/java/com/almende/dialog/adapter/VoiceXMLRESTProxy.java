@@ -653,13 +653,18 @@ public class VoiceXMLRESTProxy {
                             address = address.replace("tel:", "").replace("sip:", "");
                             
                             log.info("Going to format phone number: "+address);
-                            
-                            if(address.startsWith("+")) 
-                            {
-                                address = PhoneNumberUtils.formatNumber(address, null);
+                            String[] addressArray = address.split("@");
+                            try {
+                                address = PhoneNumberUtils.formatNumber(addressArray[0], null);
+                                if(addressArray.length > 1) {
+                                    address += "@" + addressArray[1];
+                                }
+                            }
+                            catch (Exception e) {
+                                log.severe(String.format("Could not format phonenumber: %s", addressArray[0]));
                             }
                             
-                            String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+config.getMyAddress()+"|"+address.split( "@" )[0];
+                            String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+config.getMyAddress()+"|"+ addressArray[0];
                             Session session = Session.getSession(sessionKey);
                             if (session != null) {
 

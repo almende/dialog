@@ -728,42 +728,50 @@ abstract public class TextServlet extends HttpServlet {
         return count;
     }
     
-    private TextMessage receiveMessageAndAttachCharge(HttpServletRequest req, HttpServletResponse resp) throws Exception {
+    private TextMessage receiveMessageAndAttachCharge(HttpServletRequest req, HttpServletResponse resp)
+        throws Exception {
 
         TextMessage receiveMessage = receiveMessage(req, resp);
-        //create a session
-        Session session = Session.getOrCreateSession(getAdapterType(), receiveMessage.getLocalAddress(), receiveMessage.getAddress());
-        //update the current timestamp
-        if (session != null) {
-            session.setCreationTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
-            logger.info(session.getAdapterConfig(), ServerUtils.serialize(receiveMessage), session);
-            session.storeSession();
-        }
-        //attach charges for incoming
-        AdapterConfig config = AdapterConfig.findAdapterConfig(getAdapterType(), receiveMessage.getLocalAddress());
-        DDRRecord ddrRecord = createDDRForIncoming(config, receiveMessage.getAddress(), receiveMessage.getBody());
-
-        if (session != null) {
-            receiveMessage.getExtras().put(Session.SESSION_KEY, session.getKey());
-            receiveMessage.getExtras().put(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
-            if (ddrRecord != null) {
-                ddrRecord.addAdditionalInfo(Session.SESSION_KEY, session.getKey());
-                ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
-                receiveMessage.getExtras().put(DDRRecord.DDR_RECORD_KEY, ddrRecord.getId());
-                ddrRecord.createOrUpdate();
-
-                //store the ddrRecord in the session
-                session.setDdrRecordId(ddrRecord.getId());
+        try {
+            //create a session
+            Session session = Session.getOrCreateSession(getAdapterType(), receiveMessage.getLocalAddress(),
+                                                         receiveMessage.getAddress());
+            //update the current timestamp
+            if (session != null) {
+                session.setCreationTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
+                logger.info(session.getAdapterConfig(), ServerUtils.serialize(receiveMessage), session);
                 session.storeSession();
             }
+            //attach charges for incoming
+            AdapterConfig config = AdapterConfig.findAdapterConfig(getAdapterType(), receiveMessage.getLocalAddress());
+            DDRRecord ddrRecord = createDDRForIncoming(config, receiveMessage.getAddress(), receiveMessage.getBody());
+
+            if (session != null) {
+                receiveMessage.getExtras().put(Session.SESSION_KEY, session.getKey());
+                receiveMessage.getExtras().put(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+                if (ddrRecord != null) {
+                    ddrRecord.addAdditionalInfo(Session.SESSION_KEY, session.getKey());
+                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+                    receiveMessage.getExtras().put(DDRRecord.DDR_RECORD_KEY, ddrRecord.getId());
+                    ddrRecord.createOrUpdate();
+
+                    //store the ddrRecord in the session
+                    session.setDdrRecordId(ddrRecord.getId());
+                    session.storeSession();
+                }
+            }
+
+            //push the cost to hte queue
+            Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
+            //attach cost to ddr is prepaid type
+            if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+                ddrRecord.setTotalCost(totalCost);
+                ddrRecord.createOrUpdate();
+            }
         }
-        
-        //push the cost to hte queue
-        Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
-        //attach cost to ddr is prepaid type
-        if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
-            ddrRecord.setTotalCost(totalCost);
-            ddrRecord.createOrUpdate();
+        catch (Exception e) {
+            e.printStackTrace();
+            log.severe("DDR processing failed for this incoming message. Message: "+ e.toString());
         }
         return receiveMessage;
     }

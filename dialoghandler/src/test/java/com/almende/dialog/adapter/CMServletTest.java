@@ -37,8 +37,8 @@ import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.utils.PhoneNumberUtils;
 
 
 @SuppressWarnings("deprecation")

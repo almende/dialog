@@ -160,8 +160,7 @@ public class DDRRecord
      * @return
      */
     public static List<DDRRecord> getDDRRecords(String adapterId, String accountId, String fromAddress,
-                                                String ddrTypeId, CommunicationStatus status, Long startTime,
-                                                Long endTime, Integer offset, Integer limit) {
+        String ddrTypeId, CommunicationStatus status, Long startTime, Long endTime, Integer offset, Integer limit) {
 
         limit = limit != null && limit <= 1000 ? limit : 1000;
         offset = offset != null ? offset : 0;
@@ -178,17 +177,32 @@ public class DDRRecord
         if (ddrTypeId != null) {
             queryList.add(DBQuery.is("ddrTypeId", ddrTypeId));
         }
-        if (status != null) {
-            queryList.add(DBQuery.is("status", status.name()));
-        }
         if (startTime != null) {
             queryList.add(DBQuery.greaterThanEquals("start", startTime));
         }
         if (endTime != null) {
             queryList.add(DBQuery.lessThanEquals("start", endTime));
         }
-        return collection.find(DBQuery.and(queryList.toArray(new Query[queryList.size()]))).skip(offset).limit(limit)
+        Query[] dbQueries = new Query[queryList.size()];
+        for (int queryCounter = 0; queryCounter < queryList.size(); queryCounter++) {
+            dbQueries[queryCounter] = queryList.get(queryCounter);
+        }
+        List<DDRRecord> result = collection.find(DBQuery.and(dbQueries)).skip(offset).limit(limit)
                                         .sort(DBSort.desc("start")).toArray();
+        if (result != null && !result.isEmpty() && status != null) {
+            ArrayList<DDRRecord> resultByStatus = new ArrayList<DDRRecord>();
+            for (DDRRecord ddrRecord : result) {
+                if (status.equals(ddrRecord.getStatus()) ||
+                    (ddrRecord.getStatusPerAddress() != null && ddrRecord.getStatusPerAddress().values()
+                                                    .contains(status))) {
+                    resultByStatus.add(ddrRecord);
+                }
+            }
+            return resultByStatus;
+        }
+        else {
+            return result;
+        }
     }
     
     /**

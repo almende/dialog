@@ -42,11 +42,11 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
-import com.almende.dialog.util.PhoneNumberUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.myBlobstore.MyBlobStore;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 
 @Path("/vxml/")
@@ -653,13 +653,18 @@ public class VoiceXMLRESTProxy {
                             address = address.replace("tel:", "").replace("sip:", "");
                             
                             log.info("Going to format phone number: "+address);
-                            
-                            if(address.startsWith("+")) 
-                            {
-                                address = PhoneNumberUtils.formatNumber(address, null);
+                            String[] addressArray = address.split("@");
+                            try {
+                                address = PhoneNumberUtils.formatNumber(addressArray[0], null);
+                                if(addressArray.length > 1) {
+                                    address += "@" + addressArray[1];
+                                }
+                            }
+                            catch (Exception e) {
+                                log.severe(String.format("Could not format phonenumber: %s", addressArray[0]));
                             }
                             
-                            String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+config.getMyAddress()+"|"+address.split( "@" )[0];
+                            String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+config.getMyAddress()+"|"+ addressArray[0];
                             Session session = Session.getSession(sessionKey);
                             if (session != null) {
 
@@ -985,18 +990,18 @@ public class VoiceXMLRESTProxy {
 									outputter.startTag("if");
 										outputter.attribute("cond", "thisCall=='noanswer'");
 										outputter.startTag("goto");
-											outputter.attribute("next", handleTimeoutURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+											outputter.attribute("next", handleTimeoutURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
 										outputter.endTag();
 									outputter.startTag("elseif");
 										outputter.attribute("cond", "thisCall=='busy' || thisCall=='network_busy'");
 									outputter.endTag();
 										outputter.startTag("goto");
-											outputter.attribute("next", handleExceptionURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+											outputter.attribute("next", handleExceptionURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
 										outputter.endTag();	
 									outputter.startTag("else");
 									outputter.endTag();
 										outputter.startTag("goto");
-											outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+											outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
 										outputter.endTag();	
 									outputter.endTag();
 								outputter.endTag();
@@ -1012,7 +1017,7 @@ public class VoiceXMLRESTProxy {
 								}
 								if(question!=null) {
 									outputter.startTag("goto");
-										outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey);
+										outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
 									outputter.endTag();
 								}
 							outputter.endTag();
@@ -1098,19 +1103,20 @@ public class VoiceXMLRESTProxy {
                                     getAnswerUrl() + "?questionId=" + question.getQuestion_id() + "&answerId=" +
                                                                     answers.get(cnt).getAnswer_id() + "&answerInput=" +
                                                                     URLEncoder.encode(dtmfValue, "UTF-8") +
-                                                                    "&sessionKey=" + sessionKey);
+                                                                    "&sessionKey=" +
+                                                                    URLEncoder.encode(sessionKey, "UTF-8"));
                 outputter.endTag();
             }
             outputter.startTag("noinput");
             outputter.startTag("goto");
             outputter.attribute("next", handleTimeoutURL + "?questionId=" + question.getQuestion_id() + "&sessionKey=" +
-                                        sessionKey);
+                                        URLEncoder.encode(sessionKey, "UTF-8"));
             outputter.endTag();
             outputter.endTag();
             outputter.startTag("nomatch");
             outputter.startTag("goto");
             outputter.attribute("next", getAnswerUrl() + "?questionId=" + question.getQuestion_id() +
-                                        "&answerId=-1&sessionKey=" + sessionKey);
+                                        "&answerId=-1&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8"));
             outputter.endTag();
             outputter.endTag();
             outputter.endTag();
@@ -1194,7 +1200,7 @@ public class VoiceXMLRESTProxy {
                                 {
                 
                                     outputter.attribute( "next", handleTimeoutURL + 
-                                        "?questionId=" + question.getQuestion_id() + "&sessionKey=" + sessionKey );
+                                        "?questionId=" + question.getQuestion_id() + "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8") );
                                 }
                                 else
                                 {
@@ -1202,7 +1208,7 @@ public class VoiceXMLRESTProxy {
                                     if ( retryCount < Integer.parseInt( retryLimit ) )
                                     {
                                         outputter.attribute( "next", "/retry" + "?questionId=" + question.getQuestion_id()
-                                            + "&sessionKey=" + sessionKey );
+                                            + "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8") );
                                         Question.updateRetryCount( sessionKey );
                                     }
                                     else
@@ -1311,7 +1317,10 @@ public class VoiceXMLRESTProxy {
                             outputter.startTag("if");
                                     outputter.attribute("cond", "saveWav.response='SUCCESS'");
                                     outputter.startTag("goto");
-                                            outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+sessionKey+"&answerInput="+URLEncoder.encode(storedAudiofile, "UTF-8"));
+                                    outputter.attribute("next",
+                                                        getAnswerUrl() + "?questionId=" + question.getQuestion_id() + "&sessionKey=" +
+                                                                                        URLEncoder.encode(sessionKey, "UTF-8") + "&answerInput=" +
+                                                                                        URLEncoder.encode(storedAudiofile, "UTF-8"));
                                     outputter.endTag();
                             outputter.startTag("else");
                             outputter.endTag();
@@ -1483,7 +1492,7 @@ public class VoiceXMLRESTProxy {
      */
     private String getTrialAudioURL(String language) {
 
-        String agentURL = Settings.HOST + "/dialoghandler";
+        String agentURL = "http://" + Settings.HOST + "/dialoghandler";
         if (language != null && (language.equals("nl") || language.equals("nl-nl"))) {
             agentURL += "/nl_trial_message.wav";
         }

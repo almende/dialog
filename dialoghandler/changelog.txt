@@ -1,6 +1,15 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+2-9-2014, version 1.2.2
+- hotfix: changed phonenumber format from 0031 to +31
+- hotfix: fixed issue with trial account audio url
+- update: removed account and adapter sync from askfast to marketplace
+
+29-8-2014, version 1.2.1
+- hotfix: reverted smack library to old
+- feature: added tracking token to ddrs to link them
+
 26-8-2014, version 1.2.0
 - feature: grouped developer logs
 - feature: improved ddr records

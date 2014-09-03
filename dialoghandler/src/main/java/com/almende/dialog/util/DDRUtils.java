@@ -106,7 +106,7 @@ public class DDRUtils
         HashMap<String, String> fromAddressMap = new HashMap<String, String>();
         fromAddressMap.put(fromAddress, "");
         return createDDRRecordOnCommunication(config, DDRTypeCategory.INCOMING_COMMUNICATION_COST, null,
-                                              fromAddressMap, CommunicationStatus.RECEIEVED, quantity, message);
+                                              fromAddressMap, CommunicationStatus.RECEIVED, quantity, message);
     }
     
     
@@ -155,7 +155,7 @@ public class DDRUtils
         Map<String, String> fromAddresses = new HashMap<String, String>();
         fromAddresses.put(fromAddress, "");
         return createDDRRecordOnCommunication(config, DDRTypeCategory.INCOMING_COMMUNICATION_COST, fromAddresses,
-                                              CommunicationStatus.RECEIEVED, message);
+                                              CommunicationStatus.RECEIVED, message);
     }
     
     /**
@@ -180,6 +180,15 @@ public class DDRUtils
             if(ddrRecord.getStart()!= null) {
                 duration = ( releaseTime != null ? releaseTime : TimeUtils.getServerCurrentTimeInMillis() )
                                                 - ddrRecord.getStart();
+                //add default serialized info to begin with
+                String toAddress = ddrRecord.getToAddressString();
+                if(ddrRecord.getToAddress() != null && !ddrRecord.getToAddress().isEmpty()) {
+                    toAddress = ddrRecord.getToAddress().keySet().iterator().next();
+                }
+                //if there is an address found, add status
+                if(toAddress != null) {
+                    ddrRecord.addStatusForAddress(toAddress, CommunicationStatus.FINISHED);
+                }
             }
             else {
                 ddrRecord.setStart( startTime); //if no answerTime i.e call not picked up, set to startTime
@@ -198,6 +207,9 @@ public class DDRUtils
             }
             ddrRecord.setDuration( duration > 0L ? duration : 0 );
             ddrRecord.createOrUpdateWithLog();
+        }
+        else {
+            log.warning(String.format("No ddr record found for id: %s", ddrRecord));
         }
         return ddrRecord;
     }
@@ -760,7 +772,7 @@ public class DDRUtils
                         ddrRecord.setFromAddress(fromAddress);
                         ddrRecord.setToAddress(addresses);
                         break;
-                    case RECEIEVED:
+                    case RECEIVED:
                         ddrRecord.setFromAddress(addresses.keySet().iterator().next());
                         Map<String, String> toAddresses = new HashMap<String, String>();
                         toAddresses.put(config.getMyAddress(), "");

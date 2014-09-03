@@ -39,13 +39,31 @@ public class DDRRecord
     /**
      * status of the communication
      */
-    public enum CommunicationStatus
-    {
-        DELIVERED, RECEIEVED, SENT, FINISHED, MISSED, ERROR, UNKNOWN;
+    public enum CommunicationStatus {
+        DELIVERED, RECEIVED("RECEIEVED"), SENT, FINISHED, MISSED, ERROR, UNKNOWN;
+
+        /**
+         * use to collect alternate name. there was a typo in the enum back in
+         * days :) But we want to fetch both RECEIVED as well as RECEIEVED
+         * 
+         * @param name
+         */
+        private String alternateName;
+
+        private CommunicationStatus(String name) {
+
+            this.alternateName = name;
+        }
+
+        private CommunicationStatus() {
+
+        }
+
         @JsonCreator
-        public static CommunicationStatus fromJson( String name )
-        {
-            return valueOf( name.toUpperCase() );
+        public static CommunicationStatus fromJson(String name) {
+
+                name = name != null && name.equals(RECEIVED.alternateName) ? RECEIVED.toString() : name; 
+                return valueOf(name.toUpperCase());
         }
     }
     
@@ -227,7 +245,7 @@ public class DDRRecord
             if (session.getDirection().equalsIgnoreCase("incoming")) {
                 queryList.add(DBQuery.is("fromAddress", session.getRemoteAddress()));
                 addressMap.put(session.getLocalAddress(), "");
-                queryList.add(DBQuery.is("status", CommunicationStatus.RECEIEVED));
+                queryList.add(DBQuery.is("status", CommunicationStatus.RECEIVED));
             }
             else {
                 queryList.add(DBQuery.is("fromAddress", session.getLocalAddress()));
@@ -242,16 +260,20 @@ public class DDRRecord
                 log.severe("Error while serializing. Message: "+ e.toString());
             }
         }
-        DBCursor<DDRRecord> cursor = collection.find(DBQuery.and(queryList.toArray(new Query[queryList.size()])));
-        ArrayList<DDRRecord> ddrRecordsForSession = new ArrayList<DDRRecord>();
-        while (cursor.hasNext()) {
-            ddrRecordsForSession.add(cursor.next());
+        Query[] dbQueries = new Query[queryList.size()];
+        for (int queryCounter = 0; queryCounter < queryList.size(); queryCounter++) {
+            dbQueries[queryCounter] = queryList.get(queryCounter);
         }
-        for (DDRRecord ddrRecord : ddrRecordsForSession) {
-            //return the ddrRecord whose startTime matches the creationTime or answerTime of the session
-            if(ddrRecord.getStart() != null && (ddrRecord.getStart().toString().equals(session.getCreationTimestamp()) ||
-                                            ddrRecord.getStart().toString().equals(session.getAnswerTimestamp()))){
-                return ddrRecord;
+        DBCursor<DDRRecord> ddrCursor = collection.find(DBQuery.and(dbQueries));
+        if (ddrCursor != null) {
+            while (ddrCursor.hasNext()) {
+                DDRRecord ddrRecord = ddrCursor.next();
+                //return the ddrRecord whose startTime matches the creationTime or answerTime of the session
+                if (ddrRecord.getStart() != null &&
+                    (ddrRecord.getStart().toString().equals(session.getCreationTimestamp()) || ddrRecord.getStart()
+                                                    .toString().equals(session.getAnswerTimestamp()))) {
+                    return ddrRecord;
+                }
             }
         }
         return null; 

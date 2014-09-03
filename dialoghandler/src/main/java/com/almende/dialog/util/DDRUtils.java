@@ -106,7 +106,7 @@ public class DDRUtils
         HashMap<String, String> fromAddressMap = new HashMap<String, String>();
         fromAddressMap.put(fromAddress, "");
         return createDDRRecordOnCommunication(config, DDRTypeCategory.INCOMING_COMMUNICATION_COST, null,
-                                              fromAddressMap, CommunicationStatus.RECEIEVED, quantity, message);
+                                              fromAddressMap, CommunicationStatus.RECEIVED, quantity, message);
     }
     
     
@@ -155,7 +155,7 @@ public class DDRUtils
         Map<String, String> fromAddresses = new HashMap<String, String>();
         fromAddresses.put(fromAddress, "");
         return createDDRRecordOnCommunication(config, DDRTypeCategory.INCOMING_COMMUNICATION_COST, fromAddresses,
-                                              CommunicationStatus.RECEIEVED, message);
+                                              CommunicationStatus.RECEIVED, message);
     }
     
     /**
@@ -772,7 +772,7 @@ public class DDRUtils
                         ddrRecord.setFromAddress(fromAddress);
                         ddrRecord.setToAddress(addresses);
                         break;
-                    case RECEIEVED:
+                    case RECEIVED:
                         ddrRecord.setFromAddress(addresses.keySet().iterator().next());
                         Map<String, String> toAddresses = new HashMap<String, String>();
                         toAddresses.put(config.getMyAddress(), "");

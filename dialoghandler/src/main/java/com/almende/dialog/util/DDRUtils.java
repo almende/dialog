@@ -180,6 +180,15 @@ public class DDRUtils
             if(ddrRecord.getStart()!= null) {
                 duration = ( releaseTime != null ? releaseTime : TimeUtils.getServerCurrentTimeInMillis() )
                                                 - ddrRecord.getStart();
+                //add default serialized info to begin with
+                String toAddress = ddrRecord.getToAddressString();
+                if(ddrRecord.getToAddress() != null && !ddrRecord.getToAddress().isEmpty()) {
+                    toAddress = ddrRecord.getToAddress().keySet().iterator().next();
+                }
+                //if there is an address found, add status
+                if(toAddress != null) {
+                    ddrRecord.addStatusForAddress(toAddress, CommunicationStatus.FINISHED);
+                }
             }
             else {
                 ddrRecord.setStart( startTime); //if no answerTime i.e call not picked up, set to startTime
@@ -198,6 +207,9 @@ public class DDRUtils
             }
             ddrRecord.setDuration( duration > 0L ? duration : 0 );
             ddrRecord.createOrUpdateWithLog();
+        }
+        else {
+            log.warning(String.format("No ddr record found for id: %s", ddrRecord));
         }
         return ddrRecord;
     }

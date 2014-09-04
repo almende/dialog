@@ -101,7 +101,8 @@ public class VoiceXMLRESTProxy {
                 return responseMessage;
             }
             else {
-                //create a session
+                //recreate a fresh session
+                session.drop();
                 session = Session.getOrCreateSession(config, address);
             }
         }
@@ -162,7 +163,8 @@ public class VoiceXMLRESTProxy {
                         continue;
                     }
                     else {
-                        //create a session
+                        //recreate a fresh session
+                        session.drop();
                         session = Session.getOrCreateSession(config, formattedAddress);
                     }
                 }

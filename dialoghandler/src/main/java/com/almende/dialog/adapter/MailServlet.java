@@ -1,15 +1,18 @@
 package com.almende.dialog.adapter;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
+
 import javax.mail.Address;
 import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
+import javax.mail.Part;
 import javax.mail.Store;
 import javax.mail.Transport;
 import javax.mail.event.ConnectionEvent;
@@ -29,7 +32,9 @@ import javax.mail.search.ComparisonTerm;
 import javax.mail.search.ReceivedDateTerm;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import org.joda.time.DateTime;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -139,7 +144,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
 		}
 		if ( mp.getCount() > 0 )
 		{
-			msg.setBody( mp.getBodyPart( 0 ).getContent().toString() );
+			msg.setBody(  getText((Part)mp.getBodyPart( 0 )));
 			Session ses =  Session.getSession(AdapterAgent.ADAPTER_TYPE_EMAIL, msg.getLocalAddress(), msg.getAddress());    
 			if(ses != null && ses.getQuestion().getType().equals("closed")){
 				msg.setBody(getFristLineOfEmail(msg, mp.getBodyPart( 0 ).getContentType()));
@@ -149,6 +154,43 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
 			}
 		}
 		return msg;
+	}
+	
+	private String getText(Part p) throws MessagingException, IOException {
+		if (p.isMimeType("text/*")) {
+			String s = (String) p.getContent();
+			p.isMimeType("text/html");
+			return s;
+		}
+		if (p.isMimeType("multipart/alternative")) {
+			// prefer plain text over html
+			Multipart mp = (Multipart) p.getContent();
+			String text = null;
+			for (int i = 0; i < mp.getCount(); i++) {
+				Part bp = mp.getBodyPart(i);
+				if (bp.isMimeType("text/plain")) {
+					if (text == null)
+						text = getText(bp);
+					return text;
+				} else if (bp.isMimeType("text/html")) {
+					String s = getText(bp);
+					if (s != null)
+						return s;
+				} else {
+					return getText(bp);
+				}
+			}
+			return text;
+		} else if (p.isMimeType("multipart/*")) {
+			Multipart mp = (Multipart) p.getContent();
+			for (int i = 0; i < mp.getCount(); i++) {
+				String s = getText(mp.getBodyPart(i));
+				if (s != null)
+					return s;
+			}
+		}
+
+		return null;
 	}
 	
 	protected String getFristLineOfEmail(TextMessage message, String contentType)throws Exception{

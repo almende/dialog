@@ -56,9 +56,7 @@ public class VoiceXMLRESTProxy {
 	private static final int LOOP_DETECTION=10;
 	private static final String DTMFGRAMMAR="dtmf2hash";
 	private static final String PLAY_TRIAL_AUDIO_KEY = "playTrialAccountAudio";
-	
 	private static final int MAX_RETRIES=1;
-	
 	protected String TIMEOUT_URL="timeout";
 	protected String EXCEPTION_URL="exception";
 	private String host = "";
@@ -870,16 +868,16 @@ public class VoiceXMLRESTProxy {
      * @throws Exception 
      */
     @GET
-    @Path( "retry" )
-    public Response retryQuestion( @QueryParam( "sessionKey" ) String sessionKey ) throws Exception
-    {
-        Session session = Session.getSession( sessionKey );
-        if(session.getQuestion() != null)
-        {
+    @Path("retry")
+    public Response retryQuestion(@QueryParam("sessionKey") String sessionKey) throws Exception {
+
+        Session session = Session.getSession(sessionKey);
+        if (session != null && session.getQuestion() != null) {
             return handleQuestion(session.getQuestion(), session.getAdapterConfig(), session.getRemoteAddress(),
                                   sessionKey);
         }
-        return Response.ok( "" ).build();
+        return Response.ok("<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>")
+                                        .build();
     }
 
 	public class Return {
@@ -943,10 +941,7 @@ public class VoiceXMLRESTProxy {
 	
 	protected String renderComment(Question question,ArrayList<String> prompts, String sessionKey){
 
-		String handleTimeoutURL = "timeout";
-		String handleExceptionURL = "exception";
-		
-		String redirectTimeoutProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
+	String redirectTimeoutProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
         //assign a default timeout if one is not specified
         String redirectTimeout = redirectTimeoutProperty != null ? redirectTimeoutProperty : "40s";
         if(!redirectTimeout.endsWith("s"))
@@ -992,13 +987,13 @@ public class VoiceXMLRESTProxy {
 									outputter.startTag("if");
 										outputter.attribute("cond", "thisCall=='noanswer'");
 										outputter.startTag("goto");
-											outputter.attribute("next", handleTimeoutURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
+											outputter.attribute("next", TIMEOUT_URL+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
 										outputter.endTag();
 									outputter.startTag("elseif");
 										outputter.attribute("cond", "thisCall=='busy' || thisCall=='network_busy'");
 									outputter.endTag();
 										outputter.startTag("goto");
-											outputter.attribute("next", handleExceptionURL+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
+											outputter.attribute("next", EXCEPTION_URL+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
 										outputter.endTag();	
 									outputter.startTag("else");
 									outputter.endTag();
@@ -1037,8 +1032,6 @@ public class VoiceXMLRESTProxy {
     private String renderClosedQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
 
         ArrayList<Answer> answers = question.getAnswers();
-
-        String handleTimeoutURL = "timeout";
 
         StringWriter sw = new StringWriter();
         try {
@@ -1111,7 +1104,7 @@ public class VoiceXMLRESTProxy {
             }
             outputter.startTag("noinput");
             outputter.startTag("goto");
-            outputter.attribute("next", handleTimeoutURL + "?questionId=" + question.getQuestion_id() + "&sessionKey=" +
+            outputter.attribute("next", TIMEOUT_URL + "?questionId=" + question.getQuestion_id() + "&sessionKey=" +
                                         URLEncoder.encode(sessionKey, "UTF-8"));
             outputter.endTag();
             outputter.endTag();
@@ -1133,7 +1126,6 @@ public class VoiceXMLRESTProxy {
 	
 	protected String renderOpenQuestion(Question question,ArrayList<String> prompts,String sessionKey)
 	{
-	    String handleTimeoutURL = "/vxml/timeout";
 		StringWriter sw = new StringWriter();
 		try {
 			XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
@@ -1158,6 +1150,7 @@ public class VoiceXMLRESTProxy {
                     dtmfMaxLength = dtmfMaxLength != null ? dtmfMaxLength : "";
                     String noAnswerTimeout = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
                     String retryLimit = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT );
+                    retryLimit = retryLimit != null ? retryLimit : String.valueOf(Question.DEFAULT_MAX_QUESTION_LOAD);
                     //assign a default timeout if one is not specified
                     noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "5s";
                     if(!noAnswerTimeout.endsWith("s"))
@@ -1196,46 +1189,45 @@ public class VoiceXMLRESTProxy {
     								outputter.endTag();
     							outputter.endTag();
     						}
-    						outputter.startTag( "noinput" );
-                                outputter.startTag( "goto" );
-                                if ( retryLimit == null )
+				outputter.startTag( "noinput" );
+				    outputter.startTag( "goto" );
+                                if ( question.getEventCallback("timeout") != null)
                                 {
-                
-                                    outputter.attribute( "next", handleTimeoutURL + 
-                                        "?questionId=" + question.getQuestion_id() + "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8") );
+                                    outputter.attribute("next", "timeout?questionId=" + question.getQuestion_id() +
+                                                                "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8"));
                                 }
                                 else
                                 {
                                     Integer retryCount = Question.getRetryCount( sessionKey );
                                     if ( retryCount < Integer.parseInt( retryLimit ) )
                                     {
-                                        outputter.attribute( "next", "/retry" + "?questionId=" + question.getQuestion_id()
+                                        outputter.attribute( "next", "retry?questionId=" + question.getQuestion_id()
                                             + "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8") );
                                         Question.updateRetryCount( sessionKey );
                                     }
                                     else
                                     {
+                                        outputter.attribute("next", "retry?questionId=" + question.getQuestion_id());
                                         Question.flushRetryCount( sessionKey );
                                     }
                                 }
+                                    outputter.endTag();
                                 outputter.endTag();
-                            outputter.endTag();
-    					
-    						outputter.startTag("filled");
-    							outputter.startTag("assign");
-    								outputter.attribute("name", "answerInput");
-    								outputter.attribute("expr", "answer$.utterance.replace(' ','','g')");
-    							outputter.endTag();
-    							outputter.startTag("submit");
-    								outputter.attribute("next", getAnswerUrl());
-    								outputter.attribute("namelist","answerInput questionId sessionKey");
-    							outputter.endTag();
-    							outputter.startTag("clear");
-    								outputter.attribute("namelist", "answerInput answer");
-    							outputter.endTag();
-    						outputter.endTag();
-    					outputter.endTag();
-    					outputter.endTag();
+						outputter.startTag("filled");
+							outputter.startTag("assign");
+								outputter.attribute("name", "answerInput");
+								outputter.attribute("expr", "answer$.utterance.replace(' ','','g')");
+							outputter.endTag();
+							outputter.startTag("submit");
+								outputter.attribute("next", getAnswerUrl());
+								outputter.attribute("namelist","answerInput questionId sessionKey");
+							outputter.endTag();
+							outputter.startTag("clear");
+								outputter.attribute("namelist", "answerInput answer");
+							outputter.endTag();
+						outputter.endTag();
+					outputter.endTag();
+					outputter.endTag();
 				}
 			outputter.endTag();
 			outputter.endDocument();	

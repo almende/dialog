@@ -156,11 +156,10 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
 		return msg;
 	}
 	
-	private boolean textIsHtml = false;
 	private String getText(Part p) throws MessagingException, IOException {
 		if (p.isMimeType("text/*")) {
 			String s = (String) p.getContent();
-			textIsHtml = p.isMimeType("text/html");
+			p.isMimeType("text/html");
 			return s;
 		}
 		if (p.isMimeType("multipart/alternative")) {

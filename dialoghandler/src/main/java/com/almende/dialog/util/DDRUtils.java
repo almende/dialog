@@ -760,8 +760,11 @@ public class DDRUtils
                 //default the start to the sessionCreationTime. This is expected to be updated with the actual
                 //timestamp for voice communication
                 //set the ddrRecord time with session creationTime.
-                Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), addresses.keySet()
-                                                .iterator().next());
+                String remoteAddress = "";
+                if(addresses != null && !addresses.isEmpty()) {
+                    remoteAddress = addresses.keySet().iterator().next();
+                }
+                Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), remoteAddress);
                 if (session != null) {
                     ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
                 }

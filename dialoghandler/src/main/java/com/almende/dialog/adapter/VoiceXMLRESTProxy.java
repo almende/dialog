@@ -1399,13 +1399,21 @@ public class VoiceXMLRESTProxy {
                         //create a new ddr record and session to catch the redirect
                         Session referralSession = Session.getOrCreateSession(adapterConfig, redirectedId);
                         if (session.getDirection() != null) {
-                            DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
-                                                                                                  redirectedId, 1,
-                                                                                                  question.getUrl());
-                            ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
-                            ddrRecord.createOrUpdate();
-                            
-                            referralSession.setDdrRecordId(ddrRecord.getId());
+                            DDRRecord ddrRecord = null;
+                            try {
+                                ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
+                                                                                                      redirectedId, 1,
+                                                                                                      question.getUrl());
+                                if (ddrRecord != null) {
+                                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+                                    ddrRecord.createOrUpdate();
+                                    referralSession.setDdrRecordId(ddrRecord.getId());
+                                }
+                            }
+                            catch (Exception e) {
+                                e.printStackTrace();
+                                log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
+                            }
                             referralSession.setDirection(session.getDirection());
                             referralSession.setTrackingToken(session.getTrackingToken());
                         }

@@ -633,7 +633,14 @@ abstract public class TextServlet extends HttpServlet {
         //attach costs
         HashMap<String, String> toAddressMap = new HashMap<String, String>();
         toAddressMap.put( to, toName );
-        DDRRecord ddrRecord = createDDRForOutgoing( config, fromName, toAddressMap, message );
+        DDRRecord ddrRecord = null;
+        try {
+            ddrRecord = createDDRForOutgoing( config, fromName, toAddressMap, message );
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
+        }
         //store the ddrRecord in the session
         if (ddrRecord != null) {
             Session session = Session.getSession(getAdapterType(), config.getMyAddress(), to);
@@ -691,7 +698,15 @@ abstract public class TextServlet extends HttpServlet {
         //attach costs for all members (even in cc and bcc if any)
         extras = extras != null ? extras : new HashMap<String, Object>();
         copyOfAddressNameMap.putAll(addRecipientsInCCAndBCCToAddressMap(extras));
-        DDRRecord ddrRecord = createDDRForOutgoing(config, senderName, copyOfAddressNameMap, message);
+        
+        DDRRecord ddrRecord = null;
+        try {
+            ddrRecord = createDDRForOutgoing(config, senderName, copyOfAddressNameMap, message);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
+        }
         //store the ddrRecord in the session
         if (ddrRecord != null) {
             int addressCount = 0;
@@ -744,7 +759,14 @@ abstract public class TextServlet extends HttpServlet {
             }
             //attach charges for incoming
             AdapterConfig config = AdapterConfig.findAdapterConfig(getAdapterType(), receiveMessage.getLocalAddress());
-            DDRRecord ddrRecord = createDDRForIncoming(config, receiveMessage.getAddress(), receiveMessage.getBody());
+            DDRRecord ddrRecord = null;
+            try {
+                ddrRecord = createDDRForIncoming(config, receiveMessage.getAddress(), receiveMessage.getBody());createDDRForIncoming(config, receiveMessage.getAddress(), receiveMessage.getBody());
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
+            }
 
             if (session != null) {
                 receiveMessage.getExtras().put(Session.SESSION_KEY, session.getKey());

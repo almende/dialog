@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -146,12 +145,16 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 			@Name("accountID") String accountId,
 			@Name("bearerToken") String bearerToken) throws JSONRPCException {
     
-            HashMap<String, String> resultSessionMap;
+            HashMap<String, String> resultSessionMap = new HashMap<String, String>();
             if (adapterType != null && !adapterType.equals("") && adapterID != null && !adapterID.equals("")) {
                 throw new JSONRPCException("Choose adapterType or adapterID not both");
             }
-            log.setLevel(Level.INFO);
-            log.info(String.format("pub: %s pri %s adapterType %s", accountId, bearerToken, adapterType));
+            //return if no address is fileed
+            if(isNullOrEmpty(addressMap) && isNullOrEmpty(addressCcMap) && isNullOrEmpty(addressBccMap)) {
+                resultSessionMap.put("Error", "No addresses given to communicate");
+                return resultSessionMap;
+            }
+            log.info(String.format("accountId: %s bearer %s adapterType %s", accountId, bearerToken, adapterType));
             // Check accountID/bearer Token against OAuth KeyServer
             if (Settings.KEYSERVER != null) {
                 if (!KeyServerLib.checkAccount(accountId, bearerToken)) {
@@ -183,6 +186,11 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                                        config.getAdapterType(), config.getMyAddress()));
                 adapterType = config.getAdapterType();
                 try {
+                    //log all addresses 
+                    log.info(String.format("recepients of question at: %s are: %s", url, ServerUtils.serialize(addressMap)));
+                    log.info(String.format("cc recepients are: %s", ServerUtils.serialize(addressCcMap)));
+                    log.info(String.format("bcc recepients are: %s", ServerUtils.serialize(addressBccMap)));
+                    
                     if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_XMPP)) {
                         resultSessionMap = new XMPPServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
                                                                          senderName, subject, config);
@@ -375,4 +383,14 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 	public String getVersion() {
 		return "2.1.0";
 	}
+	
+    /**
+     * basic check to see if a map is empty or null
+     * 
+     * @param mapObject
+     * @return
+     */
+    private boolean isNullOrEmpty(Map<String, String> mapObject) {
+        return mapObject == null || mapObject.isEmpty() ? true : false;
+    }
 }

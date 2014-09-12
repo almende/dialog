@@ -572,7 +572,7 @@ public class DDRUtils
                     throw new Exception( "DDR not implemented for this category: " + ddrType.getCategory() );
             }
         }
-        return getCeilingAtPrecision(totalCost, 3);
+        return totalCost;
     }
     
     /**
@@ -804,7 +804,7 @@ public class DDRUtils
         return null;
     }
     
-    private static Double getCeilingAtPrecision(double value, int precision) {
+    public static Double getCeilingAtPrecision(double value, int precision) {
 
         return Math.round(value * Math.pow(10, precision)) / Math.pow(10, precision);
     }

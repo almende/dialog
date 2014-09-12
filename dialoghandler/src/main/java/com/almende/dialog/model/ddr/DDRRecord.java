@@ -510,7 +510,7 @@ public class DDRRecord
                     break;
             }
         }
-        return totalCost;
+        return DDRUtils.getCeilingAtPrecision(totalCost, 3);
     }
     
     /**
@@ -607,11 +607,11 @@ public class DDRRecord
         return getStatusPerAddress().get(address);
     }
     
-    @JsonIgnore
     /**
      * gets the direction of this ddrRecord based on the fromAddress and the adapter address
      * @return either "inbound" or "outbound"
      */
+    @JsonProperty("direction")
     public String getDirection() {
         
         //if the from address is not equal to the adapter address, its an incoming communication

@@ -224,15 +224,38 @@ public class Logger {
         else {
             aggregate = collection.aggregate(groupQuery);
         }
-        if (offset == null) {
-            offset = 0;
-        }
-        if(limit == null) {
-            limit = 20;
-        }
-        //update the aggregate query with sort (on timestamp), offset and limit
-        aggregate = aggregate.and(String.format("{$skip :%s}", offset)).and(String.format("{$limit :%s}", limit));
+        offset = offset == null ? 0 : offset;
+        limit = limit == null ? 50 : limit;
         
+        ArrayList<Log> resultLogs = new ArrayList<Log>();
+        //fetch in batches of 5
+        for (; resultLogs.size() <= limit; ) {
+            ArrayList<Log> logs = fetchLogs(collection, aggregate, offset, 5, limit - resultLogs.size());
+            if(logs != null && !logs.isEmpty()) {
+                resultLogs.addAll(logs);
+            }
+            else {
+                break;
+            }
+            offset += 5;
+        }
+        return resultLogs;
+    }
+
+    /**
+     * @param offset
+     * @param trackingTokenFetchlimit
+     * @param collection
+     * @param aggregate
+     * @return
+     */
+    private ArrayList<Log> fetchLogs(MongoCollection collection, Aggregate aggregate, Integer offset,
+        Integer trackingTokenFetchlimit, Integer logLimit) {
+
+        //update the aggregate query with sort (on timestamp), offset and limit
+        aggregate = aggregate.and(String.format("{$skip :%s}", offset)).and(String.format("{$limit :%s}",
+                                                                                          trackingTokenFetchlimit));
+
         List<ObjectNode> logsByTrackingToken = aggregate.as(ObjectNode.class);
         ArrayList<Log> resultLogs = new ArrayList<Log>();
         for (ObjectNode logByTrackingToken : logsByTrackingToken) {
@@ -241,7 +264,7 @@ public class Logger {
                                             .find(String.format("{trackingToken: \"%s\"}", trackingToken.asText()))
                                             .sort("{timestamp: -1}").as(Log.class);
             if (logsCursor != null) {
-                while (logsCursor.hasNext()) {
+                while (logsCursor.hasNext() && resultLogs.size() < logLimit) {
                     resultLogs.add(logsCursor.next());
                 }
             }

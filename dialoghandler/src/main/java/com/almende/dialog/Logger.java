@@ -185,7 +185,6 @@ public class Logger {
     private List<Log> getLogsWithLimit(Collection<String> adapters, Collection<LogLevel> levels, String adapterType,
                                        Long endTime, Integer offset, Integer limit) throws Exception {
 
-        MongoCollection collection = getCollection();
         //initially collect all the match queries
         String matchQuery = null;
         if (adapters != null) {
@@ -210,27 +209,13 @@ public class Logger {
             matchQuery = matchQuery != null ? ( matchQuery + "," ) : "";
             matchQuery += "level:{$in:" + ServerUtils.serialize(levels) + "}";
         }
-        Aggregate aggregate = null;
-        //create an aggregate query with the matchQuery first
-        if(matchQuery != null) {
-            aggregate = collection.aggregate(String.format("{$match: {%s}}", matchQuery));
-        }
-        
-        //update the aggregate query with groupQuery next. This includes all the fields to fetch
-        String groupQuery = "{$group:{_id: \"$trackingToken\", timestamp:{$max: \"$timestamp\"}}}";
-        if(aggregate != null) {
-            aggregate = aggregate.and(groupQuery);
-        }
-        else {
-            aggregate = collection.aggregate(groupQuery);
-        }
         offset = offset == null ? 0 : offset;
         limit = limit == null ? 50 : limit;
         
         ArrayList<Log> resultLogs = new ArrayList<Log>();
         //fetch in batches of 5
         for (; resultLogs.size() <= limit; ) {
-            ArrayList<Log> logs = fetchLogs(collection, aggregate, offset, 5, limit - resultLogs.size());
+            ArrayList<Log> logs = fetchLogs(matchQuery, offset, 5, limit - resultLogs.size());
             if(logs != null && !logs.isEmpty()) {
                 resultLogs.addAll(logs);
             }
@@ -249,9 +234,24 @@ public class Logger {
      * @param aggregate
      * @return
      */
-    private ArrayList<Log> fetchLogs(MongoCollection collection, Aggregate aggregate, Integer offset,
-        Integer trackingTokenFetchlimit, Integer logLimit) {
+    private ArrayList<Log> fetchLogs(String matchQuery, Integer offset, Integer trackingTokenFetchlimit,
+        Integer logLimit) {
 
+        MongoCollection collection = getCollection();
+        Aggregate aggregate = null;
+        //create an aggregate query with the matchQuery first
+        if (matchQuery != null) {
+            aggregate = collection.aggregate(String.format("{$match: {%s}}", matchQuery));
+        }
+
+        //update the aggregate query with groupQuery next. This includes all the fields to fetch
+        String groupQuery = "{$group:{_id: \"$trackingToken\", timestamp:{$max: \"$timestamp\"}}}";
+        if (aggregate != null) {
+            aggregate = aggregate.and(groupQuery);
+        }
+        else {
+            aggregate = collection.aggregate(groupQuery);
+        }
         //update the aggregate query with sort (on timestamp), offset and limit
         aggregate = aggregate.and(String.format("{$skip :%s}", offset)).and(String.format("{$limit :%s}",
                                                                                           trackingTokenFetchlimit));

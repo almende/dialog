@@ -611,7 +611,7 @@ public class DDRRecord
      * gets the direction of this ddrRecord based on the toAddress and the adapter address
      * @return either "inbound" or "outbound"
      */
-    @JsonProperty("direction")
+    @JsonIgnore
     public String getDirection() {
 
         //if the from address is not equal to the adapter address, its an incoming communication
@@ -620,5 +620,9 @@ public class DDRRecord
                                                                                                         : "outbound";
         }
         return null;
+    }
+    
+    @JsonIgnore
+    public void setDirection() {
     }
 }

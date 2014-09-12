@@ -571,6 +571,8 @@ public class DDRUtils
                 default:
                     throw new Exception( "DDR not implemented for this category: " + ddrType.getCategory() );
             }
+            //add the selected ddrPrice into the additionalInfo for tracking purposes
+            ddrRecord.addAdditionalInfo("ddrPriceId", ddrPrice.getId());
         }
         return totalCost;
     }

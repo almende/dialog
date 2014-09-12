@@ -527,6 +527,7 @@ public class DDRRecord
 
     public Map<String, String> getAdditionalInfo() {
     
+        additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, String>();
         return additionalInfo;
     }
 

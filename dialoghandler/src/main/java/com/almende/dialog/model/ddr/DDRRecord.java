@@ -22,6 +22,7 @@ import com.askfast.commons.entity.AccountType;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.mongodb.DB;
 
@@ -29,6 +30,7 @@ import com.mongodb.DB;
  * The actual price charged as part of the service and/or communication cost
  * @author Shravan
  */
+@JsonPropertyOrder({"totalCost"})
 public class DDRRecord
 {
     protected static final Logger log = Logger.getLogger(DDRRecord.class.getName());

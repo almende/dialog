@@ -608,11 +608,15 @@ public class DDRRecord
     }
     
     @JsonIgnore
+    /**
+     * gets the direction of this ddrRecord based on the fromAddress and the adapter address
+     * @return either "inbound" or "outbound"
+     */
     public String getDirection() {
         
         //if the from address is not equal to the adapter address, its an incoming communication
         if (fromAddress != null && getAdapter() != null) {
-            return !fromAddress.equalsIgnoreCase(getAdapter().getMyAddress()) ? "inbound" : "outbound";
+            return fromAddress.equalsIgnoreCase(getAdapter().getMyAddress()) ? "outbound" : "inbound";
         }
         return null;
     }

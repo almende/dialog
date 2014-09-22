@@ -244,7 +244,7 @@ public class CMSmsServlet extends TextServlet {
         if (reference != null && !reference.isEmpty()) {
             CMStatus cmStatus = CMStatus.fetch(reference);
             to = PhoneNumberUtils.formatNumber(to, null);
-            if (cmStatus != null) {
+            if (cmStatus != null && to != null) {
                 Session session = Session.getSession(Session.getSessionKey(cmStatus.getAdapterConfig(), to));
                 if (sent != null) {
                     cmStatus.setSentTimeStamp(sent);
@@ -317,6 +317,9 @@ public class CMSmsServlet extends TextServlet {
                     log.warning(String.format("No session attached for cm status: %s", cmStatus.getReference()));
                 }
                 cmStatus.store();
+            }
+            else {
+                log.severe(cmStatus != null ? "Invalid to address" : "No CM status found" );
             }
             return cmStatus;
         }

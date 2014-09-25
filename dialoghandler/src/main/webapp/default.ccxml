@@ -84,6 +84,7 @@
 	  </transition>
 	
 	  <transition state="originatingcall" event="connection.connected">
+	    <unjoin id1="inConn" id2="holdDialogID" />
 	    <join id1="inConn" id2="outConn" duplex="'full'"/>
 	    <send name="'dialog.transfer.connected'"
 	            target="dialogID"
@@ -101,6 +102,7 @@
 	                targettype="'dialog'"
 	                namelist="results" />
 	        <else />
+	          <disconnect connectionid="outConn"/>
 	          <exit/>
 	        </if>
 	  </transition>
@@ -118,6 +120,7 @@
     </transition>
 
     <transition state="connestablished" event="dialog.exit">
+      <disconnect connectionid="inConn"/>
       <exit/>
     </transition>
 

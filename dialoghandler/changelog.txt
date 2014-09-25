@@ -1,6 +1,12 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+25-9-2014, version 1.3.1
+- fix: catch all exceptions while ddr creations
+- fix: skip if returned formatted phonenumber is null
+- update: skip when no address are given to communicate
+- fix: other minor fixes
+
 4-9-2014, version 1.3.0
 - fix: clear session when starting out a call
 - fix: update FINISHED status of calls and typo in RECEIVED enum of status  

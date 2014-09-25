@@ -76,39 +76,36 @@ public class AskSmsServlet extends TextServlet {
         return 1;
     }
 
-	@Override
-	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp)
-			throws Exception {
-		
-		HashMap<String, String> data = getPostData(req);
-		
-		boolean success=false;
-		TextMessage msg=null;
-		if(data.get("secret").equals("askask")) {
-			
-            String address = PhoneNumberUtils.formatNumber( URLDecoder.decode( data.get( "from" ), "UTF-8" )
-                .replaceFirst( "\\+31", "0" ), null );
-			msg = new TextMessage();
-			msg.setLocalAddress("0615004624");
-			msg.setAddress(address);
-			try {
-				msg.setBody(URLDecoder.decode(data.get("message"), "UTF-8"));
-			} catch(Exception ex) {
-				log.warning("Failed to parse phone number");
-			}
-			
-			success=true;
-		}
-		
-		ObjectNode response = om.createObjectNode();
-		response.put("success", success);
-		ObjectNode payload = om.createObjectNode();
-		payload.put("payload", response);
-		
-		resp.getWriter().println(om.writeValueAsString(payload));
-		
-		return msg;
-	}
+    @Override
+    protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception {
+
+        HashMap<String, String> data = getPostData(req);
+
+        boolean success = false;
+        TextMessage msg = null;
+        if (data.get("secret").equals("askask")) {
+
+            String address = PhoneNumberUtils.formatNumber(URLDecoder.decode(data.get("from"), "UTF-8").replaceFirst("\\+31", "0"),
+                                                           null);
+            if (address != null) {
+                msg = new TextMessage();
+                msg.setLocalAddress("0615004624");
+                msg.setAddress(address);
+                msg.setBody(URLDecoder.decode(data.get("message"), "UTF-8"));
+                success = true;
+                ObjectNode response = om.createObjectNode();
+                response.put("success", success);
+                ObjectNode payload = om.createObjectNode();
+                payload.put("payload", response);
+                resp.getWriter().println(om.writeValueAsString(payload));
+                return msg;
+            }
+            else {
+                log.severe("Ignoring incoming text as incoming number was invalid: " + data.get("from"));
+            }
+        }
+        return null;
+    }
 
 	@Override
 	protected String getServletPath() {

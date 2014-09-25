@@ -435,7 +435,7 @@ public class DDRUtils
                 }
                 result = calculateDDRCost( ddrRecord, selectedDDRPrice );
             }
-            result = applyStartUpCost(result, config);
+            result = applyStartUpCost(result, config, ddrRecord.getDirection());
             result = applyServiceCharges(ddrRecord, includeServiceCosts, result, config);
         }
         return getCeilingAtPrecision(result, 3);
@@ -571,8 +571,10 @@ public class DDRUtils
                 default:
                     throw new Exception( "DDR not implemented for this category: " + ddrType.getCategory() );
             }
+            //add the selected ddrPrice into the additionalInfo for tracking purposes
+            ddrRecord.addAdditionalInfo("ddrPriceId", ddrPrice.getId());
         }
-        return getCeilingAtPrecision(totalCost, 3);
+        return totalCost;
     }
     
     /**
@@ -672,15 +674,17 @@ public class DDRUtils
         return result;
     }
     
-    /** always include start-up costs if the adapter is broadsoft
+    /** always include start-up costs if the adapter is broadsoft and there is some communication costs involved.
+     * Only applies to incoming phonecalls
      * @param result
      * @param config
      * @return the ddrCost added to the already calculated communication costs
      * @throws Exception
      */
-    protected static double applyStartUpCost(double result, AdapterConfig config) throws Exception {
+    protected static double applyStartUpCost(double result, AdapterConfig config, String direction) throws Exception {
 
-        if(config != null && AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(config.getAdapterType()) && result > 0.0) {
+        if (config != null && AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(config.getAdapterType()) && result > 0.0 &&
+            "outbound".equalsIgnoreCase(direction)) {
             DDRPrice startUpPrice = fetchDDRPrice(DDRTypeCategory.START_UP_COST,
                                                   AdapterType.getByValue(config.getAdapterType()),
                                                   config.getConfigId(), UnitType.PART, null);
@@ -692,8 +696,7 @@ public class DDRUtils
     
     /**
      * check if service costs are to be included, only include it if there is
-     * any communication costs
-     * 
+     * any communication costs and waive it off it is greater than the service costs 
      * @param ddrRecord
      * @param includeServiceCosts
      * @param result
@@ -760,8 +763,11 @@ public class DDRUtils
                 //default the start to the sessionCreationTime. This is expected to be updated with the actual
                 //timestamp for voice communication
                 //set the ddrRecord time with session creationTime.
-                Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), addresses.keySet()
-                                                .iterator().next());
+                String remoteAddress = "";
+                if(addresses != null && !addresses.isEmpty()) {
+                    remoteAddress = addresses.keySet().iterator().next();
+                }
+                Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), remoteAddress);
                 if (session != null) {
                     ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
                 }
@@ -800,7 +806,7 @@ public class DDRUtils
         return null;
     }
     
-    private static Double getCeilingAtPrecision(double value, int precision) {
+    public static Double getCeilingAtPrecision(double value, int precision) {
 
         return Math.round(value * Math.pow(10, precision)) / Math.pow(10, precision);
     }

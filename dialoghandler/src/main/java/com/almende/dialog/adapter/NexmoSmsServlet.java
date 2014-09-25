@@ -42,24 +42,24 @@ public class NexmoSmsServlet extends TextServlet {
         return cm.broadcastMessage( message, subject, from, senderName, addressNameMap, extras, config );
     }
 
-	@Override
-	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp)
-			throws Exception {
-		TextMessage msg=null;
-			
-		String localAddress = req.getParameter("to").replaceFirst("31", "0");
-		String address = PhoneNumberUtils.formatNumber( req.getParameter("msisdn").replaceFirst("31", "0"), null);
-		msg = new TextMessage(USE_KEYWORDS);
-		msg.setLocalAddress(localAddress);
-		msg.setAddress(address);
-		try {
-			msg.setBody(req.getParameter("text"));
-		} catch(Exception ex) {
-			log.warning("Failed to parse phone number");
-		}
-		
-		return msg;
-	}
+    @Override
+    protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception {
+
+        TextMessage msg = null;
+
+        String localAddress = req.getParameter("to").replaceFirst("31", "0");
+        String address = PhoneNumberUtils.formatNumber(req.getParameter("msisdn").replaceFirst("31", "0"), null);
+        if (address != null) {
+            msg = new TextMessage(USE_KEYWORDS);
+            msg.setLocalAddress(localAddress);
+            msg.setAddress(address);
+            msg.setBody(req.getParameter("text"));
+        }
+        else {
+            log.severe("Sender address is invalid: " + req.getParameter("msisdn"));
+        }
+        return msg;
+    }
 
 	@Override
 	protected String getServletPath() {

@@ -590,31 +590,38 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
      * detach an adapter from this account. if adapter is: <br> 
      * 1. XMPP: then this also deregisters him (if its an ask-fast account) <br>
      * 2. CALL: unlinks it from the account only. makes it free <br>
-     * 3. rest: deletes the adapter.  <br>
+     * 3. CALL: unlinks it from the account only. makes it free <br>
+     * 4. rest: deletes the adapter.  <br>
+     * @param adapterId
+     * @param accountId If this is same as the adapter owner, it frees the adapter. If it is 
+     * same as the accoundId, it just unlinks the accountId from the adapter
+     * @throws Exception
      */
     public void removeAdapter(@Name("adapterId") String adapterId, @Name("accountId") String accountId)
-    throws Exception {
+        throws Exception {
 
         AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
-        if (config == null || !config.getOwner().equals(accountId))
+        if (config == null) {
             throw new Exception("No adapter with this id owned by you");
-
-        AdapterType adapterType = AdapterType.fromJson(config.getAdapterType());
-        //perform a default operation (this is what is needed for broadsoft adapter)
-        config.setOwner(null);
-        config.removeAccount(accountId);
-        switch (adapterType) {
-            case XMPP:
-                //deregister if its an askfast xmpp account
-                if(config.getMyAddress().contains("xmpp.ask-fast.com")) {
-                    deregisterASKFastXMPPAdapter(config.getMyAddress(), accountId, adapterId);
-                }
-                break;
-            case CALL:
-                config.update();
-                break;
-            default:
-                config.delete();
+        }
+        else {
+            AdapterType adapterType = AdapterType.fromJson(config.getAdapterType());
+            //perform a default operation (this is what is needed for broadsoft adapter)
+            config.removeAccount(accountId);
+            switch (adapterType) {
+                case XMPP:
+                    //deregister if its an askfast xmpp account
+                    if (config.getMyAddress().contains("xmpp.ask-fast.com")) {
+                        deregisterASKFastXMPPAdapter(config.getMyAddress(), accountId, adapterId);
+                    }
+                    break;
+                case CALL:
+                case SMS:
+                    config.update();
+                    break;
+                default:
+                    config.delete();
+            }
         }
     }
 	
@@ -622,7 +629,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 								@Name("adapterType") @Optional String adapterType,
 								@Name("address") @Optional String address) {
 		
-		List<AdapterConfig> adapters = AdapterConfig.findAdapterByOwner(accountId, adapterType, address);
+		List<AdapterConfig> adapters = AdapterConfig.findAdapterByAccount(accountId, adapterType, address);
 		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
 	}
 	
@@ -635,7 +642,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	
 	public ArrayNode findFreeAdapters(@Name("adapterType") @Optional String adapterType,
 			@Name("address") @Optional String address) {
-		ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapterByOwner(null, adapterType, address);
+		ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapterByAccount(null, adapterType, address);
 		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
 	}
 	

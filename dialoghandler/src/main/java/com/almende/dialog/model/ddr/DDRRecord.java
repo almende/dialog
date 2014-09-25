@@ -22,6 +22,7 @@ import com.askfast.commons.entity.AccountType;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.mongodb.DB;
 
@@ -29,6 +30,7 @@ import com.mongodb.DB;
  * The actual price charged as part of the service and/or communication cost
  * @author Shravan
  */
+@JsonPropertyOrder({"totalCost"})
 public class DDRRecord
 {
     protected static final Logger log = Logger.getLogger(DDRRecord.class.getName());
@@ -510,7 +512,7 @@ public class DDRRecord
                     break;
             }
         }
-        return totalCost;
+        return DDRUtils.getCeilingAtPrecision(totalCost, 3);
     }
     
     /**
@@ -527,6 +529,7 @@ public class DDRRecord
 
     public Map<String, String> getAdditionalInfo() {
     
+        additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, String>();
         return additionalInfo;
     }
 
@@ -607,13 +610,22 @@ public class DDRRecord
         return getStatusPerAddress().get(address);
     }
     
+    /**
+     * gets the direction of this ddrRecord based on the toAddress and the adapter address
+     * @return either "inbound" or "outbound"
+     */
     @JsonIgnore
     public String getDirection() {
-        
+
         //if the from address is not equal to the adapter address, its an incoming communication
-        if (fromAddress != null && getAdapter() != null) {
-            return !fromAddress.equalsIgnoreCase(getAdapter().getMyAddress()) ? "inbound" : "outbound";
+        if (getToAddress() != null && getAdapter() != null) {
+            return getToAddress().containsKey(getAdapter().getMyAddress()) && getToAddress().size() == 1 ? "inbound"
+                                                                                                        : "outbound";
         }
         return null;
+    }
+    
+    @JsonIgnore
+    public void setDirection() {
     }
 }

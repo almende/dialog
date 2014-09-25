@@ -75,7 +75,7 @@ public class VoiceXMLRESTProxy {
      *              {@link VoiceXMLRESTProxy#dial(Map, String, String, AdapterConfig)
      *              dial} method
      * 
-     * @param address
+     * @param formattedAddress
      * @param url
      * @param config
      * @return
@@ -83,52 +83,53 @@ public class VoiceXMLRESTProxy {
     @Deprecated
     public static String dial(String address, String url, AdapterConfig config) {
 
-        try {
-            address = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
-        }
-        catch (Exception e) {
-            log.severe(String.format("Phonenumber: %s is not valid", address));
-            return "";
-        }
+        String formattedAddress = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
 
-        //avoid multiple calls to be made to the same number, from the same adapter. 
-        Session session = Session.getSession(Session.getSessionKey(config, address));
-        if(session != null) {
-            String responseMessage = checkIfCallAlreadyInSession(address, config, session);
-            if(responseMessage != null) {
-                return responseMessage;
+        if (formattedAddress != null) {
+            //avoid multiple calls to be made to the same number, from the same adapter. 
+            Session session = Session.getSession(Session.getSessionKey(config, formattedAddress));
+            if (session != null) {
+                String responseMessage = checkIfCallAlreadyInSession(formattedAddress, config, session);
+                if (responseMessage != null) {
+                    return responseMessage;
+                }
+                else {
+                    //recreate a fresh session
+                    session.drop();
+                    session = Session.getOrCreateSession(config, formattedAddress);
+                }
             }
             else {
-                //recreate a fresh session
-                session.drop();
-                session = Session.getOrCreateSession(config, address);
+                session = Session.getOrCreateSession(config, formattedAddress);
             }
+            session.killed = false;
+            session.setStartUrl(url);
+            session.setDirection("outbound");
+            session.setRemoteAddress(formattedAddress);
+            session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
+
+            Question question = Question.fromURL(url, config.getConfigId(), formattedAddress, config.getMyAddress(),
+                                                 session.getDdrRecordId(), session.getKey());
+            session.setQuestion(question);
+            session.storeSession();
+
+            dialogLog.log(LogLevel.INFO, config,
+                          String.format("Call started from: %s to: %s", config.getMyAddress(), formattedAddress),
+                          session);
+            Broadsoft bs = new Broadsoft(config);
+            bs.startSubscription();
+
+            String extSession = bs.startCall(formattedAddress + "@outbound", session);
+
+            session.setExternalSession(extSession);
+            session.storeSession();
+
+            return session.getKey();
         }
         else {
-            session = Session.getOrCreateSession(config, address);
+            log.severe(String.format("To address is invalid: %s. Ignoring.. ", formattedAddress));
+            return address + ": Invalid address";
         }
-        session.killed = false;
-        session.setStartUrl(url);
-        session.setDirection("outbound");
-        session.setRemoteAddress(address);
-        session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
-        
-        Question question = Question.fromURL(url, config.getConfigId(), address, config.getMyAddress(),
-                                             session.getDdrRecordId(), session.getKey());
-        session.setQuestion(question);
-        session.storeSession();
-
-        dialogLog.log(LogLevel.INFO, config,
-                      String.format("Call started from: %s to: %s", config.getMyAddress(), address), session);
-        Broadsoft bs = new Broadsoft(config);
-        bs.startSubscription();
-
-        String extSession = bs.startCall(address + "@outbound", session);
-
-        session.setExternalSession(extSession);
-        session.storeSession();
-
-        return session.getKey();
     }
 
     /**
@@ -136,27 +137,25 @@ public class VoiceXMLRESTProxy {
      * Map of <adress, SessionKey>
      * @return
      */
-    public static HashMap<String, String> dial( Map<String, String> addressNameMap, String url, String senderName, AdapterConfig config )
-    throws Exception
-    {
+    public static HashMap<String, String> dial(Map<String, String> addressNameMap, String url, String senderName,
+        AdapterConfig config) throws Exception {
+
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
         // If it is a broadcast don't provide the remote address because it is deceiving.
         String loadAddress = "";
-        if(addressNameMap.size()==1)
+        if (addressNameMap.size() == 1)
             loadAddress = addressNameMap.keySet().iterator().next();
 
         //fetch the question
-        Question question = Question.fromURL( url, config.getConfigId(), loadAddress, config.getMyAddress(), null, null );
-        for ( String address : addressNameMap.keySet() )
-        {
-            try
-            {
-                String formattedAddress = PhoneNumberUtils.formatNumber( address, PhoneNumberFormat.E164 );
+        Question question = Question.fromURL(url, config.getConfigId(), loadAddress, config.getMyAddress(), null, null);
+        for (String address : addressNameMap.keySet()) {
+            String formattedAddress = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
+            if (formattedAddress != null) {
                 //avoid multiple calls to be made to the same number, from the same adapter. 
                 Session session = Session.getSession(Session.getSessionKey(config, formattedAddress));
-                if(session != null) {
+                if (session != null) {
                     String responseMessage = checkIfCallAlreadyInSession(formattedAddress, config, session);
-                    if(responseMessage != null) {
+                    if (responseMessage != null) {
                         resultSessionMap.put(formattedAddress, responseMessage);
                         continue;
                     }
@@ -169,32 +168,31 @@ public class VoiceXMLRESTProxy {
                 else {
                     session = Session.getOrCreateSession(config, formattedAddress);
                 }
-                session.killed=false;
+                session.killed = false;
                 session.setStartUrl(url);
                 session.setDirection("outbound");
                 session.setRemoteAddress(formattedAddress);
                 session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
                 session.setAdapterID(config.getConfigId());
-                session.setQuestion( question );
+                session.setQuestion(question);
                 dialogLog.log(LogLevel.INFO, session.getAdapterConfig(), String.format("Outgoing call from: %s to: %s",
                                                                                        session.getLocalAddress(),
                                                                                        formattedAddress), session);
                 String extSession = "";
-                if ( !ServerUtils.isInUnitTestingEnvironment() )
-                {
-                    Broadsoft bs = new Broadsoft( config );
+                if (!ServerUtils.isInUnitTestingEnvironment()) {
+                    Broadsoft bs = new Broadsoft(config);
                     String subscriptiion = bs.startSubscription();
                     log.info(String.format("Calling subscription complete. Message: %s. Starting call.. ",
                                            subscriptiion));
-                    extSession = bs.startCall( formattedAddress + "@outbound", session );
+                    extSession = bs.startCall(formattedAddress + "@outbound", session);
                 }
-                session.setExternalSession( extSession );
+                session.setExternalSession(extSession);
                 session.storeSession();
-                resultSessionMap.put( formattedAddress, session.getKey() );
+                resultSessionMap.put(formattedAddress, session.getKey());
             }
-            catch ( Exception e )
-            {
-                log.severe( String.format( "Phonenumber: %s is not valid", address ) );
+            else {
+                resultSessionMap.put(address, "Invalid address");
+                log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
             }
         }
         return resultSessionMap;
@@ -260,14 +258,13 @@ public class VoiceXMLRESTProxy {
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localID);
         String formattedRemoteId = remoteID;
         //format the remote number
-        try
-        {
-            formattedRemoteId = PhoneNumberUtils.formatNumber( remoteID.split( "@" )[0], PhoneNumberFormat.E164 );
+        formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID.split("@")[0], PhoneNumberFormat.E164);
+
+        if (formattedRemoteId == null) {
+            log.severe(String.format("RemoveId address is invalid: %s. Ignoring.. ", remoteID));
+            return Response.ok().build();
         }
-        catch ( Exception e1 )
-        {
-            log.severe( "Remote number formatting failed: "+ remoteID.split( "@" )[0] );
-        }
+            
         String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+ formattedRemoteId;
         Session session = Session.getSession(sessionKey);
         
@@ -564,20 +561,20 @@ public class VoiceXMLRESTProxy {
     @Path("cc")
     @POST
     public Response receiveCCMessage(String xml) {
-        
-        log.info("Received cc: "+xml);
+
+        log.info("Received cc: " + xml);
         try {
             DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
             DocumentBuilder db = dbf.newDocumentBuilder();
-            
+
             Document dom = db.parse(new ByteArrayInputStream(xml.getBytes("UTF-8")));
             Node subscriberId = dom.getElementsByTagName("subscriberId").item(0);
-            
+
             AdapterConfig config = AdapterConfig.findAdapterConfigByUsername(subscriberId.getTextContent());
-            
+
             Node eventData = dom.getElementsByTagName("eventData").item(0);
             // check if incall event
-            if(eventData.getChildNodes().getLength()>1) {
+            if (eventData.getChildNodes().getLength() > 1) {
                 Node call = eventData.getChildNodes().item(1);
                 Node personality = null;
                 Node callState = null;
@@ -586,251 +583,242 @@ public class VoiceXMLRESTProxy {
                 Node answerTime = null;
                 Node releaseTime = null;
                 Node startTime = null;
-                
-                for ( int i = 0; i < call.getChildNodes().getLength(); i++ )
-                {
-                    Node node = call.getChildNodes().item( i );
-                    if ( node.getNodeName().equals( "personality" ) )
-                    {
+
+                for (int i = 0; i < call.getChildNodes().getLength(); i++) {
+                    Node node = call.getChildNodes().item(i);
+                    if (node.getNodeName().equals("personality")) {
                         personality = node;
                     }
-                    else if ( node.getNodeName().equals( "callState" ) )
-                    {
+                    else if (node.getNodeName().equals("callState")) {
                         callState = node;
                     }
-                    else if ( node.getNodeName().equals( "remoteParty" ) )
-                    {
+                    else if (node.getNodeName().equals("remoteParty")) {
                         remoteParty = node;
                     }
-                    else if ( node.getNodeName().equals( "releaseCause" ) )
-                    {
+                    else if (node.getNodeName().equals("releaseCause")) {
                         releaseCause = node;
                     }
-                    else if ( node.getNodeName().equals( "startTime" ) )
-                    {
+                    else if (node.getNodeName().equals("startTime")) {
                         startTime = node;
                     }
-                    else if ( node.getNodeName().equals( "answerTime" ) )
-                    {
+                    else if (node.getNodeName().equals("answerTime")) {
                         answerTime = node;
                     }
-                    else if ( node.getNodeName().equals( "releaseTime" ) )
-                    {
+                    else if (node.getNodeName().equals("releaseTime")) {
                         releaseTime = node;
                     }
-                }              
-                
-                if(callState!=null && callState.getNodeName().equals("callState")) {
+                }
+
+                if (callState != null && callState.getNodeName().equals("callState")) {
 
                     // Check if call
-                    if ( callState.getTextContent().equals( "Released" )
-                        || callState.getTextContent().equals( "Active" ) )
-                    {
-                        String startTimeString = startTime != null ? startTime.getTextContent()
-                                                                  : null;
-                        String answerTimeString = answerTime != null ? answerTime.getTextContent()
-                                                                    : null;
-                        String releaseTimeString = releaseTime != null ? releaseTime.getTextContent()
-                                                                      : null;
+                    if (callState.getTextContent().equals("Released") || callState.getTextContent().equals("Active")) {
+                        String startTimeString = startTime != null ? startTime.getTextContent() : null;
+                        String answerTimeString = answerTime != null ? answerTime.getTextContent() : null;
+                        String releaseTimeString = releaseTime != null ? releaseTime.getTextContent() : null;
 
                         // Check if a sip or network call
-                        String type="";
-                        String address="";
+                        String type = "";
+                        String address = "";
                         String fullAddress = "";
-                        for(int i=0; i<remoteParty.getChildNodes().getLength();i++) {
+                        for (int i = 0; i < remoteParty.getChildNodes().getLength(); i++) {
                             Node rpChild = remoteParty.getChildNodes().item(i);
-                            if(rpChild.getNodeName().equals("address")) {
-                                address=rpChild.getTextContent();
-                            }else if(rpChild.getNodeName().equals("callType")) {
-                                type=rpChild.getTextContent();
+                            if (rpChild.getNodeName().equals("address")) {
+                                address = rpChild.getTextContent();
+                            }
+                            else if (rpChild.getNodeName().equals("callType")) {
+                                type = rpChild.getTextContent();
                             }
                         }
-                        
+
                         fullAddress = new String(address);
                         // Check if session can be matched to call
-                        if(type.equals("Network") || type.equals("Group") || type.equals("Unknown")) {
-                            
+                        if (type.equals("Network") || type.equals("Group") || type.equals("Unknown")) {
+
                             address = address.replace("tel:", "").replace("sip:", "");
-                            
-                            log.info("Going to format phone number: "+address);
+
+                            log.info("Going to format phone number: " + address);
                             String[] addressArray = address.split("@");
-                            try {
-                                address = PhoneNumberUtils.formatNumber(addressArray[0], null);
-                                if(addressArray.length > 1) {
+                            address = PhoneNumberUtils.formatNumber(addressArray[0], null);
+                            if (address != null) {
+                                if (addressArray.length > 1) {
                                     address += "@" + addressArray[1];
                                 }
-                            }
-                            catch (Exception e) {
-                                log.severe(String.format("Could not format phonenumber: %s", addressArray[0]));
-                            }
-                            
-                            String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+config.getMyAddress()+"|"+ addressArray[0];
-                            Session session = Session.getSession(sessionKey);
-                            if (session != null) {
 
-                                log.info("Session key: " + sessionKey);
-                                String direction = "inbound";
-                                if (personality.getTextContent().equals("Originator") && !address.contains("outbound")) {
-                                    //address += "@outbound";
-                                    direction = "transfer";
-                                    log.info("Transfer detected????");
+                                String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT + "|" + config.getMyAddress() +
+                                                    "|" + addressArray[0];
+                                Session session = Session.getSession(sessionKey);
+                                if (session != null) {
 
-                                    //when the receiver hangs up, an active callstate is also triggered. 
-                                    // but the releaseCause is also set to Temporarily Unavailable
-                                    if (callState.getTextContent().equals("Active")) {
-                                        if (releaseCause == null ||
-                                            (releaseCause != null &&
-                                             !releaseCause.getTextContent().equalsIgnoreCase("Temporarily Unavailable") && !releaseCause
-                                                                            .getTextContent()
-                                                                            .equalsIgnoreCase("User Not Found"))) {
-                                            session.setDirection(direction);
-                                            session.setAnswerTimestamp(answerTimeString);
-                                            session.setStartTimestamp(startTimeString);
-                                            if (session.getQuestion() == null) {
-                                                Question questionFromIncomingCall = Session
-                                                                                .getQuestionFromDifferentSession(config.getConfigId(),
-                                                                                                                 "inbound",
-                                                                                                                 "referredCalledId",
-                                                                                                                 session.getRemoteAddress());
-                                                if (questionFromIncomingCall != null) {
-                                                    session.setQuestion(questionFromIncomingCall);
-                                                    session.storeSession();
+                                    log.info("Session key: " + sessionKey);
+                                    String direction = "inbound";
+                                    if (personality.getTextContent().equals("Originator") &&
+                                        !address.contains("outbound")) {
+                                        //address += "@outbound";
+                                        direction = "transfer";
+                                        log.info("Transfer detected????");
+
+                                        //when the receiver hangs up, an active callstate is also triggered. 
+                                        // but the releaseCause is also set to Temporarily Unavailable
+                                        if (callState.getTextContent().equals("Active")) {
+                                            if (releaseCause == null ||
+                                                (releaseCause != null &&
+                                                 !releaseCause.getTextContent()
+                                                                                 .equalsIgnoreCase("Temporarily Unavailable") && !releaseCause
+                                                                                .getTextContent()
+                                                                                .equalsIgnoreCase("User Not Found"))) {
+                                                session.setDirection(direction);
+                                                session.setAnswerTimestamp(answerTimeString);
+                                                session.setStartTimestamp(startTimeString);
+                                                if (session.getQuestion() == null) {
+                                                    Question questionFromIncomingCall = Session
+                                                                                    .getQuestionFromDifferentSession(config.getConfigId(),
+                                                                                                                     "inbound",
+                                                                                                                     "referredCalledId",
+                                                                                                                     session.getRemoteAddress());
+                                                    if (questionFromIncomingCall != null) {
+                                                        session.setQuestion(questionFromIncomingCall);
+                                                        session.storeSession();
+                                                    }
                                                 }
+                                                session.storeSession();
+                                                answered(direction, address, config.getMyAddress(), startTimeString,
+                                                         answerTimeString);
                                             }
-                                            session.storeSession();
-                                            answered(direction, address, config.getMyAddress(), startTimeString,
-                                                     answerTimeString);
+                                            //a reject from the remote user. initiate a hangup event
+                                            //                                        else{
+                                            //                                            //drop the session first and then call hangup
+                                            //                                            return hangup(session);
+                                            //                                        }
                                         }
-                                        //a reject from the remote user. initiate a hangup event
-//                                        else{
-//                                            //drop the session first and then call hangup
-//                                            return hangup(session);
-//                                        }
                                     }
-                                }
-                                else if (personality.getTextContent().equals("Originator")) {
-                                    log.info("Outbound detected?????");
-                                    direction = "outbound";
-                                }
-                                else if (personality.getTextContent().equals("Click-to-Dial")) {
-                                    log.info("CTD hangup detected?????");
-                                    direction = "outbound";
+                                    else if (personality.getTextContent().equals("Originator")) {
+                                        log.info("Outbound detected?????");
+                                        direction = "outbound";
+                                    }
+                                    else if (personality.getTextContent().equals("Click-to-Dial")) {
+                                        log.info("CTD hangup detected?????");
+                                        direction = "outbound";
 
-                                    //TODO: move this to internal mechanism to check if call is started!
-                                    if (releaseCause.getTextContent().equals("Server Failure")) {
-                                        log.severe("Need to restart the call!!!! ReleaseCause: " +
-                                                   releaseCause.getTextContent());
+                                        //TODO: move this to internal mechanism to check if call is started!
+                                        if (releaseCause.getTextContent().equals("Server Failure")) {
+                                            log.severe("Need to restart the call!!!! ReleaseCause: " +
+                                                       releaseCause.getTextContent());
 
-                                        int retry = session.getRetryCount() != null ? session.getRetryCount() : 0;
-                                        if (retry < MAX_RETRIES) {
+                                            int retry = session.getRetryCount() != null ? session.getRetryCount() : 0;
+                                            if (retry < MAX_RETRIES) {
 
-                                            Broadsoft bs = new Broadsoft(config);
-                                            String extSession = bs.startCall(address, session);
-                                            log.info("Restarted call extSession: " + extSession);
-                                            retry++;
-                                            session.setRetryCount(retry);
+                                                Broadsoft bs = new Broadsoft(config);
+                                                String extSession = bs.startCall(address, session);
+                                                log.info("Restarted call extSession: " + extSession);
+                                                retry++;
+                                                session.setRetryCount(retry);
+                                            }
+                                            else {
+                                                // TODO: Send mail to support!!!
+                                                log.severe("Retries failed!!!");
+                                            }
+                                        }
+                                        else if (releaseCause.getTextContent().equals("Request Failure")) {
+                                            log.severe("Restart call?? ReleaseCause: " + releaseCause.getTextContent());
+                                            int retry = session.getRetryCount() != null ? session.getRetryCount() : 0;
+                                            if (retry < MAX_RETRIES) {
+                                                Broadsoft bs = new Broadsoft(config);
+                                                String extSession = bs.startCall(address, session);
+                                                log.info("Restarted call extSession: " + extSession);
+                                                retry++;
+                                                session.setRetryCount(retry);
+                                            }
+                                            else {
+                                                // TODO: Send mail to support!!!
+                                                log.severe("Retries failed!!!");
+                                            }
+                                        }
+                                    }
+                                    //store or update the session
+                                    session.storeSession();
+
+                                    if (callState.getTextContent().equals("Released")) {
+                                        boolean callReleased = false;
+
+                                        if (session != null && direction != "transfer" &&
+                                            !personality.getTextContent().equals("Terminator") &&
+                                            fullAddress.startsWith("tel:")) {
+                                            log.info("SESSSION FOUND!! SEND HANGUP!!!");
+                                            callReleased = true;
                                         }
                                         else {
-                                            // TODO: Send mail to support!!!
-                                            log.severe("Retries failed!!!");
-                                        }
-                                    }
-                                    else if (releaseCause.getTextContent().equals("Request Failure")) {
-                                        log.severe("Restart call?? ReleaseCause: " + releaseCause.getTextContent());
-                                        int retry = session.getRetryCount() != null ? session.getRetryCount() : 0;
-                                        if (retry < MAX_RETRIES) {
-                                            Broadsoft bs = new Broadsoft(config);
-                                            String extSession = bs.startCall(address, session);
-                                            log.info("Restarted call extSession: " + extSession);
-                                            retry++;
-                                            session.setRetryCount(retry);
-                                        }
-                                        else {
-                                            // TODO: Send mail to support!!!
-                                            log.severe("Retries failed!!!");
-                                        }
-                                    }
-                                }
-                                //store or update the session
-                                session.storeSession();
-
-                                if (callState.getTextContent().equals("Released")) {
-                                    boolean callReleased = false;
-                                    
-                                    if (session != null && direction != "transfer" &&
-                                        !personality.getTextContent().equals("Terminator") &&
-                                        fullAddress.startsWith("tel:")) {
-                                        log.info("SESSSION FOUND!! SEND HANGUP!!!");
-                                        callReleased = true;
-                                    }
-                                    else {
-                                        if (personality.getTextContent().equals("Originator") &&
-                                            fullAddress.startsWith("sip:")) {
-                                            if (session.getAnswerTimestamp() == null &&
-                                                session.getStartTimestamp() != null &&
-                                                session.getReleaseTimestamp() != null) {
+                                            if (personality.getTextContent().equals("Originator") &&
+                                                fullAddress.startsWith("sip:")) {
+                                                if (session.getAnswerTimestamp() == null &&
+                                                    session.getStartTimestamp() != null &&
+                                                    session.getReleaseTimestamp() != null) {
+                                                    callReleased = true;
+                                                }
+                                                log.info(String.format("Probably a disconnect of a sip. %s hangup event",
+                                                                       callReleased ? "calling" : "not calling"));
+                                            }
+                                            else if (personality.getTextContent().equals("Originator") &&
+                                                     fullAddress.startsWith("tel:")) {
+                                                log.info("Probably a disconnect of a redirect. call hangup event");
                                                 callReleased = true;
                                             }
-                                            log.info(String.format("Probably a disconnect of a sip. %s hangup event",
-                                                                   callReleased ? "calling" : "not calling"));
+                                            else if (personality.getTextContent().equals("Terminator")) {
+                                                log.info("No session for this inbound?????");
+                                                callReleased = true;
+                                            }
+                                            else {
+                                                log.info("What the hell was this?????");
+                                                log.info("Session already ended?");
+                                            }
                                         }
-                                        else if (personality.getTextContent().equals("Originator") &&
-                                                 fullAddress.startsWith("tel:")) {
-                                            log.info("Probably a disconnect of a redirect. call hangup event");
-                                            callReleased = true;
+                                        //update session with call timings
+                                        if (callReleased) {
+                                            //sometimes answerTimeStamp is only given in the ACTIVE ccxml
+                                            String answerTimestamp = session.getAnswerTimestamp();
+                                            answerTimeString = (answerTimestamp != null && answerTimeString == null) ? answerTimestamp
+                                                                                                                    : answerTimeString;
+                                            session.setAnswerTimestamp(answerTimeString);
+                                            session.setStartTimestamp(startTimeString);
+                                            session.setReleaseTimestamp(releaseTimeString);
+                                            session.setDirection(direction);
+                                            session.setRemoteAddress(address);
+                                            session.setLocalAddress(config.getMyAddress());
+                                            session.storeSession();
+                                            log.info(String.format("Call ended. session updated: %s",
+                                                                   ServerUtils.serialize(session)));
+                                            //flush the keys if ddrProcessing was successful
+                                            if (DDRUtils.stopDDRCosts(session.getKey(), true)) {
+                                                session.drop();
+                                            }
+                                            hangup(session);
                                         }
-                                        else if (personality.getTextContent().equals("Terminator")) {
-                                            log.info("No session for this inbound?????");
-                                            callReleased = true;
-                                        }
-                                        else {
-                                            log.info("What the hell was this?????");
-                                            log.info("Session already ended?");
-                                        }
-                                    }
-                                    //update session with call timings
-                                    if (callReleased) {
-                                        //sometimes answerTimeStamp is only given in the ACTIVE ccxml
-                                        String answerTimestamp = session.getAnswerTimestamp();
-                                        answerTimeString = (answerTimestamp != null && answerTimeString == null) ? answerTimestamp
-                                                                                                                : answerTimeString; 
-                                        session.setAnswerTimestamp(answerTimeString);
-                                        session.setStartTimestamp(startTimeString);
-                                        session.setReleaseTimestamp(releaseTimeString);
-                                        session.setDirection(direction);
-                                        session.setRemoteAddress(address);
-                                        session.setLocalAddress(config.getMyAddress());
-                                        session.storeSession();
-                                        log.info(String.format("Call ended. session updated: %s",
-                                                               ServerUtils.serialize(session)));
-                                        //flush the keys if ddrProcessing was successful
-                                        if (DDRUtils.stopDDRCosts(session.getKey(), true)) {
-                                            session.drop();
-                                        }
-                                        hangup(session);
                                     }
                                 }
                             }
-                            
-                        } else {
-                            log.warning("Can't handle hangup of type: "+type+" (yet)");
+                            else {
+                                log.severe(String.format("Address is invalid: %s. Ignoring.. ", addressArray[0]));
+                            }
+                        }
+                        else {
+                            log.warning("Can't handle hangup of type: " + type + " (yet)");
                         }
                     }
                 }
-            } else {
+            }
+            else {
                 Node eventName = dom.getElementsByTagName("eventName").item(0);
-                if(eventName!=null && eventName.getTextContent().equals("SubscriptionTerminatedEvent")) {
-                    
+                if (eventName != null && eventName.getTextContent().equals("SubscriptionTerminatedEvent")) {
+
                     Broadsoft bs = new Broadsoft(config);
                     bs.startSubscription();
                     log.info("Start a new dialog");
                 }
-                
                 log.info("Received a subscription update!");
             }
-            
-        } catch (Exception e) {
-            log.severe("Something failed: "+ e.getMessage());
+        }
+        catch (Exception e) {
+            log.severe("Something failed: " + e.getMessage());
             e.printStackTrace();
         }
         return Response.ok("").build();
@@ -1385,9 +1373,8 @@ public class VoiceXMLRESTProxy {
                     //for triggering an answered event
                     log.info(String.format("current session key before referral is: %s and remoteId %s", sessionKey,
                                            remoteID));
-                    try {
-                        String redirectedId = PhoneNumberUtils
-                                                        .formatNumber(question.getUrl().replace("tel:", ""), null);
+                    String redirectedId = PhoneNumberUtils.formatNumber(question.getUrl().replace("tel:", ""), null);
+                    if (redirectedId != null) {
                         //update url with formatted redirecteId. RFC3966 returns format tel:<blabla> as expected
                         question.setUrl(PhoneNumberUtils.formatNumber(redirectedId, PhoneNumberFormat.RFC3966));
                         //store the remoteId as its lost while trying to trigger the answered event
@@ -1399,13 +1386,21 @@ public class VoiceXMLRESTProxy {
                         //create a new ddr record and session to catch the redirect
                         Session referralSession = Session.getOrCreateSession(adapterConfig, redirectedId);
                         if (session.getDirection() != null) {
-                            DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
-                                                                                                  redirectedId, 1,
-                                                                                                  question.getUrl());
-                            ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
-                            ddrRecord.createOrUpdate();
-                            
-                            referralSession.setDdrRecordId(ddrRecord.getId());
+                            DDRRecord ddrRecord = null;
+                            try {
+                                ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
+                                                                                            redirectedId, 1,
+                                                                                            question.getUrl());
+                                if (ddrRecord != null) {
+                                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+                                    ddrRecord.createOrUpdate();
+                                    referralSession.setDdrRecordId(ddrRecord.getId());
+                                }
+                            }
+                            catch (Exception e) {
+                                e.printStackTrace();
+                                log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
+                            }
                             referralSession.setDirection(session.getDirection());
                             referralSession.setTrackingToken(session.getTrackingToken());
                         }
@@ -1413,8 +1408,9 @@ public class VoiceXMLRESTProxy {
                         referralSession.storeSession();
                         session.storeSession();
                     }
-                    catch (Exception e) {
-                        log.severe(String.format("Phonenumber: %s is not valid", question.getUrl().replace("tel:", "")));
+                    else {
+                        log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ", question.getUrl()
+                                                        .replace("tel:", "")));
                     }
                     result = renderComment(question, res.prompts, sessionKey);
                 }

@@ -70,24 +70,16 @@ public class MBSmsServlet extends TextServlet {
         TextMessage msg = null;
 
         String localAddress = URLDecoder.decode(data.get("receiver"), "UTF-8").replaceFirst("31", "0");
-        String address;
-        try {
-            address = PhoneNumberUtils.formatNumber(URLDecoder.decode(data.get("sender"), "UTF-8").replaceFirst("31", "0"), null);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
+        String address = PhoneNumberUtils.formatNumber(URLDecoder.decode(data.get("sender"), "UTF-8").replaceFirst("31", "0"), null);
+        if(address != null) {
         msg = new TextMessage(USE_KEYWORDS);
         msg.setLocalAddress(localAddress);
         msg.setAddress(address);
-        try {
             msg.setBody(URLDecoder.decode(data.get("message"), "UTF-8"));
         }
-        catch (Exception ex) {
-            log.warning("Failed to parse phone number");
+        else {
+            log.severe("Sender address is invalid: "+ data.get("sender"));
         }
-
         return msg;
     }
     

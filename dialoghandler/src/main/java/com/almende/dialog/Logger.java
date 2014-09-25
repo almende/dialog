@@ -185,7 +185,6 @@ public class Logger {
     private List<Log> getLogsWithLimit(Collection<String> adapters, Collection<LogLevel> levels, String adapterType,
                                        Long endTime, Integer offset, Integer limit) throws Exception {
 
-        MongoCollection collection = getCollection();
         //initially collect all the match queries
         String matchQuery = null;
         if (adapters != null) {
@@ -210,29 +209,53 @@ public class Logger {
             matchQuery = matchQuery != null ? ( matchQuery + "," ) : "";
             matchQuery += "level:{$in:" + ServerUtils.serialize(levels) + "}";
         }
+        offset = offset == null ? 0 : offset;
+        limit = limit == null ? 50 : limit;
+        
+        ArrayList<Log> resultLogs = new ArrayList<Log>();
+        //fetch in batches of 5
+        for (; resultLogs.size() <= limit; ) {
+            ArrayList<Log> logs = fetchLogs(matchQuery, offset, 5, limit - resultLogs.size());
+            if(logs != null && !logs.isEmpty()) {
+                resultLogs.addAll(logs);
+            }
+            else {
+                break;
+            }
+            offset += 5;
+        }
+        return resultLogs;
+    }
+
+    /**
+     * @param offset
+     * @param trackingTokenFetchlimit
+     * @param collection
+     * @param aggregate
+     * @return
+     */
+    private ArrayList<Log> fetchLogs(String matchQuery, Integer offset, Integer trackingTokenFetchlimit,
+        Integer logLimit) {
+
+        MongoCollection collection = getCollection();
         Aggregate aggregate = null;
         //create an aggregate query with the matchQuery first
-        if(matchQuery != null) {
+        if (matchQuery != null) {
             aggregate = collection.aggregate(String.format("{$match: {%s}}", matchQuery));
         }
-        
+
         //update the aggregate query with groupQuery next. This includes all the fields to fetch
         String groupQuery = "{$group:{_id: \"$trackingToken\", timestamp:{$max: \"$timestamp\"}}}";
-        if(aggregate != null) {
+        if (aggregate != null) {
             aggregate = aggregate.and(groupQuery);
         }
         else {
             aggregate = collection.aggregate(groupQuery);
         }
-        if (offset == null) {
-            offset = 0;
-        }
-        if(limit == null) {
-            limit = 20;
-        }
         //update the aggregate query with sort (on timestamp), offset and limit
-        aggregate = aggregate.and(String.format("{$skip :%s}", offset)).and(String.format("{$limit :%s}", limit));
-        
+        aggregate = aggregate.and(String.format("{$skip :%s}", offset)).and(String.format("{$limit :%s}",
+                                                                                          trackingTokenFetchlimit));
+
         List<ObjectNode> logsByTrackingToken = aggregate.as(ObjectNode.class);
         ArrayList<Log> resultLogs = new ArrayList<Log>();
         for (ObjectNode logByTrackingToken : logsByTrackingToken) {
@@ -241,7 +264,7 @@ public class Logger {
                                             .find(String.format("{trackingToken: \"%s\"}", trackingToken.asText()))
                                             .sort("{timestamp: -1}").as(Log.class);
             if (logsCursor != null) {
-                while (logsCursor.hasNext()) {
+                while (logsCursor.hasNext() && resultLogs.size() < logLimit) {
                     resultLogs.add(logsCursor.next());
                 }
             }

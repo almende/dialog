@@ -136,9 +136,12 @@ public class CM {
             outputter.endTag();
             
             String reference = null;
-            //fetch the question from the session 
-            Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), addressNameMap
-                                            .keySet().iterator().next());
+            //fetch the question from the session
+            String firstAddress = null;
+            if(addressNameMap != null && !addressNameMap.isEmpty()) {
+                firstAddress = addressNameMap.keySet().iterator().next();
+            }
+            Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), firstAddress);
             if (session != null) {
                 reference = CMStatus.storeSMSRelatedData(addressNameMap.keySet(), config, message, session.getQuestion());
             }

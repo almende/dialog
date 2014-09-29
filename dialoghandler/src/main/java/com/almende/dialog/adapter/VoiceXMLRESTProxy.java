@@ -1471,7 +1471,7 @@ public class VoiceXMLRESTProxy {
             e.printStackTrace();
             log.severe( e.getLocalizedMessage() );
         }
-        return "http://tts.ask-fast.com/api/parse?text=" + textForSpeech + "&lang=" + language
+        return "https://tts.ask-fast.com/api/parse?text=" + textForSpeech + "&lang=" + language
             + "&codec=" + contentType + "&speed=" + speed + "&format=" + format + "&type=.wav";
     }
     

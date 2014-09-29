@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+29-9-2014, version 1.3.2
+- fix: change tts host protocol from http to https
+
 25-9-2014, version 1.3.1
 - fix: catch all exceptions while ddr creations
 - fix: skip if returned formatted phonenumber is null

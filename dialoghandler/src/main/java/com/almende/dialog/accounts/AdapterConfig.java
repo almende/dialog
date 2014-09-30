@@ -782,26 +782,6 @@ public class AdapterConfig {
     }
     
     /**
-     * Simple helper method to fetch all adapters based on the accountIds
-     * 
-     * @param accountId
-     * @param config
-     * @return
-     */
-    private static ArrayList<AdapterConfig> fetchAllAdaptersForAccount(Collection<String> accountIds,
-        Iterator<AdapterConfig> config, boolean checkOwnerOnly) {
-
-        ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
-        while (config.hasNext()) {
-            AdapterConfig adapterConfig = checkIfAdapterMatchesForAccountId(accountIds, config.next(), checkOwnerOnly);
-            if (adapterConfig != null) {
-                adapters.add(adapterConfig);
-            }
-        }
-        return adapters;
-    }
-
-    /**
      * Simple helper method to check if the specified adapter is linked to the
      * given accountIds. The accoutnIds must be either an owner or must overlap
      * with any accounts linked to this account.
@@ -810,7 +790,7 @@ public class AdapterConfig {
      * @param adapters
      * @param adapterConfig
      */
-    private static AdapterConfig checkIfAdapterMatchesForAccountId(Collection<String> accountIds,
+    public static AdapterConfig checkIfAdapterMatchesForAccountId(Collection<String> accountIds,
         AdapterConfig adapterConfig, boolean checkOwnerOnly) {
 
         //if accountId is null, the adapter owner and accounts must also be null or empty
@@ -833,5 +813,25 @@ public class AdapterConfig {
             }
         }
         return null;
+    }
+    
+    /**
+     * Simple helper method to fetch all adapters based on the accountIds
+     * 
+     * @param accountId
+     * @param config
+     * @return
+     */
+    private static ArrayList<AdapterConfig> fetchAllAdaptersForAccount(Collection<String> accountIds,
+        Iterator<AdapterConfig> config, boolean checkOwnerOnly) {
+
+        ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+        while (config.hasNext()) {
+            AdapterConfig adapterConfig = checkIfAdapterMatchesForAccountId(accountIds, config.next(), checkOwnerOnly);
+            if (adapterConfig != null) {
+                adapters.add(adapterConfig);
+            }
+        }
+        return adapters;
     }
 }

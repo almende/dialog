@@ -178,7 +178,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                 }
             }
             if (config != null) {
-                if (config.getOwner() != null && !config.getOwner().equals(accountId)) {
+                if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, false) == null) {
                     throw new JSONRPCException("You are not allowed to use this adapter!");
                 }
     
@@ -354,11 +354,22 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         return oldDialog;
     }
     
+    /**
+     * Removes a specific dialog attached to this accountId
+     * @param accountId
+     * @param dialogId
+     * @throws Exception
+     */
     public void deleteDialog( @Name( "accountId" ) String accountId, @Name( "id" ) String id ) throws Exception
     {
         Dialog.deleteDialog( id, accountId );
     }
     
+    /**
+     * Removes all the dialogs attached to this accountId
+     * @param accountId
+     * @throws Exception
+     */
     public void deleteAllDialogs( @Name( "accountId" ) String accountId ) throws Exception
     {
         ArrayNode dialogs = getDialogs( accountId );
@@ -373,7 +384,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         List<Dialog> dialogs = Dialog.getDialogs( accountId );
         return JOM.getInstance().convertValue( dialogs, ArrayNode.class );
     }
-	
+    
 	@Override
 	public String getDescription() {
 		return "Dialog handling agent";

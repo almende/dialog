@@ -1,6 +1,7 @@
 package com.almende.dialog.agent;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.XMPPException;
@@ -528,17 +529,17 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		config.update();
 	}
 	
-	public Object getAdapter(@Name("accoutId") String accountId, @Name("adapterId") String adapterId) throws Exception {
-		
-		AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
-		if(config==null)
-			throw new Exception("No adapter linked to this account or with this id");
-		
-		if(config.getOwner()==null || !config.getOwner().equals(accountId))
-			throw new Exception("No adapter linked to this account or with this id");
-		
-		return config;
-	}
+    public Object getAdapter(@Name("accoutId") String accountId, @Name("adapterId") String adapterId) throws Exception {
+
+        AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
+        if (config == null)
+            throw new Exception("No adapter linked to this account or with this id");
+
+        if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, false) == null) {
+            throw new Exception("No adapter linked to this account or with this id");
+        }
+        return config;
+    }
 	
     public Object updateAdapter(@Name("accoutId") String accountId, @Name("adapterId") String adapterId,
                                 @Name("adapter") Adapter adapter) throws Exception {
@@ -552,7 +553,15 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
                 config.setAnonymous(adapter.isAnonymous());
             }
             if (adapter.getDialogId() != null) {
-                config.setDialogId(adapter.getDialogId());
+                //check if the accoundId is the owner of this adapter. Incoming scenarios only work if 
+                //one owns the adapter
+                if(accountId.equals(config.getOwner())) {
+                    config.setDialogId(adapter.getDialogId());
+                }
+                else {
+                    throw new Exception(String.format("Account: %s does not own adapter: %s with address: %s",
+                                                      accountId, config.getConfigId(), config.getAddress()));
+                }
             }
             if (adapter.getAccountType() != null) {
                 config.setAccountType(adapter.getAccountType());
@@ -639,6 +648,21 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters(type, address, keyword);
 		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
 	}
+
+    /**
+     * Gets all the adapters owned by the given accountId
+     * 
+     * @param type
+     * @param address
+     * @param keyword
+     * @return
+     */
+    public ArrayNode findOwnedAdapters(@Name("ownerId") String ownerId, @Name("adapterType") @Optional String type,
+        @Name("address") @Optional String address) {
+
+        ArrayList<AdapterConfig> ownedAdapters = AdapterConfig.findAdapterByOwner(ownerId, type, address);
+        return JOM.getInstance().convertValue(ownedAdapters, ArrayNode.class);
+    }
 	
 	public ArrayNode findFreeAdapters(@Name("adapterType") @Optional String adapterType,
 			@Name("address") @Optional String address) {

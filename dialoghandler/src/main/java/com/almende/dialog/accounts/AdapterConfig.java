@@ -707,7 +707,7 @@ public class AdapterConfig {
             if (accounts != null) {
                 accounts.remove(accountId);
             }
-            //if owner is same as this accountId, remove it. make the next shared account as owner
+            //if owner is same as this accountId, free the adapter
             if (accountId.equals(owner)) {
                 owner = null;
                 accounts = null;

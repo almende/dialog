@@ -615,21 +615,18 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         }
         else {
             AdapterType adapterType = AdapterType.fromJson(config.getAdapterType());
-            //perform a default operation (this is what is needed for broadsoft adapter)
-            config.removeAccount(accountId);
-            switch (adapterType) {
-                case XMPP:
-                    //deregister if its an askfast xmpp account
-                    if (config.getMyAddress().contains("xmpp.ask-fast.com")) {
-                        deregisterASKFastXMPPAdapter(config.getMyAddress(), accountId, adapterId);
-                    }
-                    break;
-                case CALL:
-                case SMS:
-                    config.update();
-                    break;
-                default:
-                    config.delete();
+            if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, false) != null) {
+                config.removeAccount(accountId);
+                switch (adapterType) {
+                    case XMPP:
+                        //deregister if its an askfast xmpp account
+                        if (config.getMyAddress().contains("xmpp.ask-fast.com")) {
+                            deregisterASKFastXMPPAdapter(config.getMyAddress(), accountId, adapterId);
+                        }
+                    default:
+                        config.update();
+                        break;
+                }
             }
         }
     }

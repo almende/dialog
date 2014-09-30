@@ -109,6 +109,20 @@ public class TestFramework
         return ServerUtils.deserialize( adapterConfigString, AdapterConfig.class );
     }
     
+    public static AdapterConfig createAdapterConfig(String adapterType, String owner,
+        Collection<String> linkedAccounts, String myAddress, String initiatAgentURL) throws Exception {
+
+        AdapterConfig adapterConfig = new AdapterConfig();
+        adapterConfig.setAdapterType(adapterType);
+        adapterConfig.setMyAddress(myAddress);
+        adapterConfig.setOwner(owner);
+        adapterConfig.setAccounts(linkedAccounts);
+        adapterConfig.setInitialAgentURL(initiatAgentURL);
+        String adapterConfigString = adapterConfig.createConfig(ServerUtils.serialize(adapterConfig)).getEntity()
+                                        .toString();
+        return ServerUtils.deserialize(adapterConfigString, AdapterConfig.class);
+    }
+    
     public static AdapterConfig createEmailAdapter( String emailAddress, String password, String name,
         String preferredLanguage, String sendingPort, String sendingHost, String protocol, String receivingHost,
         String receivingProtocol, String accountId, String initialAgentURL ) throws Exception

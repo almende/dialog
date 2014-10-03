@@ -90,7 +90,7 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
         }
         else
         {
-            ownerAdapters = AdapterConfig.findAdapterByOwner( accountId, adapterType, null );
+            ownerAdapters = AdapterConfig.findAdapterByAccount( accountId, adapterType, null );
         }
         Collection<String> adapterIDs = new HashSet<String>();
         for ( AdapterConfig config : ownerAdapters )

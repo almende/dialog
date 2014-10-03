@@ -69,7 +69,7 @@ public class AdapterConfig {
 	String owner=null;
 	//reducdant information to avoid linking to the accountServer to fetch the Account again
 	AccountType accountType = null;
-	List<String> accounts=null;
+	Collection<String> accounts=null;
 	//store adapter specific data
 	Map<String, Object> properties = null;
 
@@ -368,101 +368,106 @@ public class AdapterConfig {
 		return adapters;
 	}
 	
-        public static ArrayList<AdapterConfig> findAdapterByOwner(String owner, String adapterType, String address) {
-    
-            TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-    
-            RootFindCommand<AdapterConfig> cmd = datastore.find().type(AdapterConfig.class);
-    
-            cmd.addFilter("owner", FilterOperator.EQUAL, owner);
-    
-            if (adapterType != null)
-                cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
-    
-            if (address != null)
-                cmd.addFilter("address", FilterOperator.EQUAL, address.toLowerCase());
-    
-            Iterator<AdapterConfig> config = cmd.now();
-    
-            ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
-            while (config.hasNext()) {
-                adapters.add(config.next());
-            }
-    
-            return adapters;
-        }
-	
 	/**
-	 * this returns the AdapterConfig if it is associated with the supplied ownerId.
-	 * Else returns null
-	 * @param adapterId
-	 * @param ownerId
+	 * Fetches all the adapters where the accountId only matches that of the owner of the adapter. Doesnt 
+	 * return if the accountId is in the shared accounts list
+	 * @param accountId
+	 * @param adapterType
+	 * @param address
 	 * @return
 	 */
-	public static AdapterConfig getAdapterForOwner(String adapterId, String ownerId)
-	{
-	    AdapterConfig adapterConfig = getAdapterConfig( adapterId );
-	    if(adapterConfig != null && adapterConfig.getOwner().equalsIgnoreCase( ownerId ))
-	    {
-	        return adapterConfig;
-	    }
-	    return null;
-	}
+    public static ArrayList<AdapterConfig> findAdapterByOwner(String accountId, String adapterType, String address) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        RootFindCommand<AdapterConfig> cmd = datastore.find().type(AdapterConfig.class);
+        if (adapterType != null)
+            cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
+        if (address != null)
+            cmd.addFilter("address", FilterOperator.EQUAL, address.toLowerCase());
+        return fetchAllAdaptersForAccount(Arrays.asList(accountId), cmd.now(), true);
+    }
+    
+    /**
+     * Fetches all the adapters where the accountId matches that of the owner of the adapter or the 
+     * linked accounts in the shared accounts list. 
+     * @param accountId
+     * @param adapterType
+     * @param address
+     * @return
+     */
+    public static ArrayList<AdapterConfig> findAdapterByAccount(String accountId, String adapterType, String address) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        RootFindCommand<AdapterConfig> cmd = datastore.find().type(AdapterConfig.class);
+
+        if (adapterType != null)
+            cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
+
+        if (address != null)
+            cmd.addFilter("address", FilterOperator.EQUAL, address.toLowerCase());
+
+        return fetchAllAdaptersForAccount(Arrays.asList(accountId), cmd.now(), false);
+    }
+
+    /**
+     * this returns the AdapterConfig if it is associated with the supplied
+     * accountId. Else returns null
+     * 
+     * @param adapterId
+     * @param accountId
+     * @return
+     */
+    public static AdapterConfig getAdapterForOwner(String adapterId, String accountId) {
+
+        AdapterConfig adapterConfig = getAdapterConfig(adapterId);
+        //check if the accountId given is either the owner or in the list of allowed users
+        if (adapterConfig != null &&
+            (adapterConfig.getOwner().equalsIgnoreCase(accountId) || adapterConfig.getAccounts().contains(accountId))) {
+            return adapterConfig;
+        }
+        return null;
+    }
 	
-	public static ArrayList<AdapterConfig> findAdapterByOwnerList(List<String> owners) {
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		
-		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
-				AdapterConfig.class);
+    /**
+     * Fetches all the adapters whose ownerId is IN the specified adapterIds
+     * adapterIds
+     * @param adapterIds
+     * @return A list of adapters matching the given adapterIds
+     */
+    public static List<AdapterConfig> findAdapterByOwnerList(List<String> adapterIds) {
 
-		cmd.addFilter("owner", FilterOperator.IN, owners);
-
-		Iterator<AdapterConfig> config = cmd.now();
-
-		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
-		while (config.hasNext()) {
-			adapters.add(config.next());
-		}
-
-		return adapters;
-	}
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        RootFindCommand<AdapterConfig> cmd = datastore.find().type(AdapterConfig.class);
+        cmd.addFilter("owner", FilterOperator.IN, adapterIds);
+        return cmd.now().toArray();
+    }
 	
-	public static ArrayList<AdapterConfig> findAdaptersByList(Collection<String> adapterIDs)
-	{
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		Map<String, AdapterConfig> adaptersFromDS = datastore.loadAll(AdapterConfig.class, adapterIDs);
-	    Iterator<AdapterConfig> config = adaptersFromDS.values().iterator();
+    public static ArrayList<AdapterConfig> findAdaptersByList(Collection<String> adapterIDs) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        Map<String, AdapterConfig> adaptersFromDS = datastore.loadAll(AdapterConfig.class, adapterIDs);
+        Iterator<AdapterConfig> config = adaptersFromDS.values().iterator();
         ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
-        while (config.hasNext()) 
-        {
+        while (config.hasNext()) {
             AdapterConfig nextConfig = config.next();
-            if(nextConfig != null)
-            {
+            if (nextConfig != null) {
                 adapters.add(nextConfig);
             }
         }
         return adapters;
-	}
+    }
 	
-	public static ArrayList<AdapterConfig> findAdapterByAccount(String accountId) {
-		
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
-				AdapterConfig.class);
+    /**
+     * Fetches all the adapters that has the given accountId as either the owner
+     * or one of the shared accounts in the {@link AdapterConfig#getAccounts()}
+     * @param accountId If null, only fetches the adapters that are not linked to any 
+     * accounts (free adapters). Does not fetch all the adapters.
+     * @return
+     */
+    public static ArrayList<AdapterConfig> findAdapterByAccount(String accountId) {
 
-		if (accountId != null) {
-			cmd.addFilter("accounts", FilterOperator.IN, Arrays.asList(accountId));
-		}
-
-		Iterator<AdapterConfig> config = cmd.now();
-
-		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
-		while (config.hasNext()) {
-			adapters.add(config.next());
-		}
-
-		return adapters;
-	}
+        return findAdapterByAccount(accountId, null, null);
+    }
 
 	public static boolean adapterExists(String adapterType, String myAddress, String keyword) {
 		ArrayList<AdapterConfig> adapters = findAdapters(adapterType,
@@ -673,7 +678,7 @@ public class AdapterConfig {
 		this.owner = owner != null && !owner.trim().isEmpty() ? owner : null ;
 	}
 	
-	public List<String> getAccounts() {
+	public Collection<String> getAccounts() {
 		return accounts;
 	}
 	
@@ -683,18 +688,41 @@ public class AdapterConfig {
             if (accountId != null && !accounts.contains(accountId)) {
                 accounts.add(accountId);
             }
+            //make the first shared account as the owner (if its missing)
+            if (accounts != null && !accounts.isEmpty() && (owner == null || owner.trim().isEmpty())) {
+                owner = accounts.iterator().next();
+            }
         }
 	
-	public void removeAccount(String accountId) {
-		int idx = accounts.indexOf( accountId );
-		if(accountId!=null && idx!=-1) {
-			accounts.remove(idx);
-		}
-	}
+    /**
+     * Removes the accountId from the shared accounts list. If this accountId
+     * matches the ownerId, makes the next shared account in the list as the
+     * owner. If no accounts are found. Makes this adapter free.
+     * 
+     * @param accountId
+     */
+    public void removeAccount(String accountId) {
+
+        if (accountId != null) {
+            if (accounts != null) {
+                accounts.remove(accountId);
+            }
+            //if owner is same as this accountId, free the adapter
+            if (accountId.equals(owner)) {
+                owner = null;
+                accounts = null;
+            }
+        }
+    }
 	
-	public void setAccounts(List<String> accounts) {
-		this.accounts = accounts;
-	}
+    public void setAccounts(Collection<String> accounts) {
+
+        this.accounts = accounts;
+        //make the first shared account as the owner (if its missing)
+        if (accounts != null && !accounts.isEmpty() && (owner == null || owner.trim().isEmpty())) {
+            owner = accounts.iterator().next();
+        }
+    }
 	
 	public Boolean isAnonymous() {
 		return anonymous;
@@ -751,5 +779,59 @@ public class AdapterConfig {
     public void setAccountType(AccountType accountType) {
     
         this.accountType = accountType;
+    }
+    
+    /**
+     * Simple helper method to check if the specified adapter is linked to the
+     * given accountIds. The accoutnIds must be either an owner or must overlap
+     * with any accounts linked to this account.
+     * 
+     * @param accountIds
+     * @param adapters
+     * @param adapterConfig
+     */
+    public static AdapterConfig checkIfAdapterMatchesForAccountId(Collection<String> accountIds,
+        AdapterConfig adapterConfig, boolean checkOwnerOnly) {
+
+        //if accountId is null, the adapter owner and accounts must also be null or empty
+        if (accountIds == null && adapterConfig.getOwner() == null &&
+            (adapterConfig.getAccounts() == null || adapterConfig.getAccounts().isEmpty())) {
+            return adapterConfig;
+        }
+        //check if the accountId given is either the owner or in the list of allowed users
+        else if (accountIds != null) {
+            if (accountIds.contains(adapterConfig.getOwner())) {
+                return adapterConfig;
+            }
+            else if (!checkOwnerOnly && adapterConfig.getAccounts() != null) {
+                ArrayList<String> accountsLinked = new ArrayList<String>(adapterConfig.getAccounts());
+                accountsLinked.retainAll(accountIds);
+                //check if the accountId given is either the owner or in the list of allowed users
+                if (accountsLinked.size() > 0) {
+                    return adapterConfig;
+                }
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Simple helper method to fetch all adapters based on the accountIds
+     * 
+     * @param accountId
+     * @param config
+     * @return
+     */
+    private static ArrayList<AdapterConfig> fetchAllAdaptersForAccount(Collection<String> accountIds,
+        Iterator<AdapterConfig> config, boolean checkOwnerOnly) {
+
+        ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+        while (config.hasNext()) {
+            AdapterConfig adapterConfig = checkIfAdapterMatchesForAccountId(accountIds, config.next(), checkOwnerOnly);
+            if (adapterConfig != null) {
+                adapters.add(adapterConfig);
+            }
+        }
+        return adapters;
     }
 }

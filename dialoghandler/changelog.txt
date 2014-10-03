@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+3-10-2014, version 1.4.0
+- feature: support multiple account sharing an adapter
+ 
 29-9-2014, version 1.3.2
 - fix: change tts host protocol from http to https
 

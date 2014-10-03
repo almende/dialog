@@ -89,7 +89,8 @@ public class Question implements QuestionIntf {
             WebResource webResource = client.resource(url);
             try {
                 webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8"))
-                                                .queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
+                                                .queryParam("requester", URLEncoder.encode(fromID, "UTF-8"))
+                                                .queryParam("sessionKey", URLEncoder.encode(sessionKey, "UTF-8"));
                 dialogLog.info(adapterID, "Loading new question from: " + webResource.toString(), ddrRecordId, sessionKey);
                 json = webResource.type("text/plain").get(String.class);
                 dialogLog.info(adapterID, "Received new question: " + json, ddrRecordId, sessionKey);

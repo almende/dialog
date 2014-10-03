@@ -142,12 +142,15 @@ public class VoiceXMLRESTProxy {
 
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
         // If it is a broadcast don't provide the remote address because it is deceiving.
-        String loadAddress = "";
-        if (addressNameMap.size() == 1)
-            loadAddress = addressNameMap.keySet().iterator().next();
+        String loadAddress = null;
+        String sessionKey = null;
+        if (addressNameMap.size() == 1) {
+            loadAddress = PhoneNumberUtils.formatNumber(addressNameMap.keySet().iterator().next(), PhoneNumberFormat.E164);
+            sessionKey = Session.getSessionKey(config, loadAddress);
+        }
 
         //fetch the question
-        Question question = Question.fromURL(url, config.getConfigId(), loadAddress, config.getMyAddress(), null, null);
+        Question question = Question.fromURL(url, config.getConfigId(), loadAddress, config.getMyAddress(), null, sessionKey);
         for (String address : addressNameMap.keySet()) {
             String formattedAddress = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
             if (formattedAddress != null) {
@@ -1333,7 +1336,7 @@ public class VoiceXMLRESTProxy {
         }
         log.info("question formed at handleQuestion is: " + ServerUtils.serializeWithoutException(question));
         log.info("prompts formed at handleQuestion is: " + res.prompts);
-
+        
         if (question != null) {
             question.generateIds();
             session.setQuestion(question);
@@ -1354,6 +1357,14 @@ public class VoiceXMLRESTProxy {
                             promptsCopy.add(getTTSURL(prompt, language, "wav", ttsSpeedProperty, null));
                         }
                         else {
+                            try {
+                                prompt = ServerUtils.getURLWithQueryParams(prompt, "sessionKey",
+                                                                           URLEncoder.encode(sessionKey, "UTF-8"));
+                                prompt = ServerUtils.getURLWithQueryParams(prompt, "type", ".wav");
+                            }
+                            catch (UnsupportedEncodingException e) {
+                                e.printStackTrace();
+                            }
                             promptsCopy.add(prompt);
                         }
                     }

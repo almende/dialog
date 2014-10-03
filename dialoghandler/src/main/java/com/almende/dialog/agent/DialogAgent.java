@@ -127,6 +127,28 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 	}
 	
 	/**
+         * Triggers seperate call for each member in the address map. 
+         * @throws Exception
+         */
+    public HashMap<String, String> outboundSeperateCallWithMap(@Name("addressMap") Map<String, String> addressMap,
+        @Name("addressCcMap") @Optional Map<String, String> addressCcMap,
+        @Name("addressBccMap") @Optional Map<String, String> addressBccMap,
+        @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
+        @Name("url") String url, @Name("adapterType") @Optional String adapterType,
+        @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
+        @Name("bearerToken") String bearerToken) throws JSONRPCException {
+
+        HashMap<String, String> result = new HashMap<String, String>();
+        for (String address : addressMap.keySet()) {
+            Map<String, String> addreses = new HashMap<String, String>();
+            addreses.put(address, addressMap.get(address));
+            result.putAll(outboundCallWithMap(addreses, addressCcMap, addressBccMap, senderName, subject, url,
+                                              adapterType, adapterID, accountId, bearerToken));
+        }
+        return result;
+    }
+	
+	/**
 	 * updated the outboundCall functionality to support broadcast
 	 * functionality.
 	 * 

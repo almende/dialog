@@ -169,7 +169,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("bearerToken") String bearerToken, @Name("callProperties") @Optional Map<String, String> callProperties)
         throws JSONRPCException {
 
-        if (callProperties != null && callProperties.isEmpty()) {
+        if (callProperties != null && !callProperties.isEmpty()) {
             log.info("outbound call with properties: " + ServerUtils.serializeWithoutException(callProperties));
             if (callProperties.get("ANONYMOUS") != null) {
                 AdapterConfig adapter = AdapterConfig.getAdapterForOwner(adapterID, accountId);

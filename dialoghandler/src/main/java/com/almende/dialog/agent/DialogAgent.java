@@ -19,6 +19,7 @@ import com.almende.dialog.adapter.NotificareServlet;
 import com.almende.dialog.adapter.TwitterServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.adapter.XMPPServlet;
+import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.ServerUtils;
@@ -32,6 +33,7 @@ import com.almende.eve.rpc.jsonrpc.JSONRPCException.CODE;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.askfast.commons.agent.intf.DialogAgentInterface;
+import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -125,6 +127,60 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 		return outboundCallWithMap(addressNameMap, null, null, senderName, subject, url,
 				adapterType, adapterID, accountID, bearerToken);
 	}
+	
+    /**
+     * Triggers seperate call for each member in the address map.
+     * 
+     * @throws Exception
+     */
+    public HashMap<String, String> outboundSeperateCallWithMap(@Name("addressMap") Map<String, String> addressMap,
+        @Name("addressCcMap") @Optional Map<String, String> addressCcMap,
+        @Name("addressBccMap") @Optional Map<String, String> addressBccMap,
+        @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
+        @Name("url") String url, @Name("adapterType") @Optional String adapterType,
+        @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
+        @Name("bearerToken") String bearerToken) throws JSONRPCException {
+
+        HashMap<String, String> result = new HashMap<String, String>();
+        for (String address : addressMap.keySet()) {
+            Map<String, String> addreses = new HashMap<String, String>();
+            addreses.put(address, addressMap.get(address));
+            result.putAll(outboundCallWithMap(addreses, addressCcMap, addressBccMap, senderName, subject, url,
+                                              adapterType, adapterID, accountId, bearerToken));
+        }
+        return result;
+    }
+    
+    /**
+     * Similar call to
+     * {@link DialogAgent#outboundCallWithMap(Map, Map, Map, String, String, String, String, String, String, String)}
+     * , but passes any call related properties
+     * 
+     * @param callProperties
+     *            call specific properties can be passed here.
+     * @throws JSONRPCException
+     */
+    public HashMap<String, String> outboundCallWithProperties(@Name("addressMap") Map<String, String> addressMap,
+        @Name("addressCcMap") @Optional Map<String, String> addressCcMap,
+        @Name("addressBccMap") @Optional Map<String, String> addressBccMap,
+        @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
+        @Name("url") String url, @Name("adapterType") @Optional String adapterType,
+        @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
+        @Name("bearerToken") String bearerToken, @Name("callProperties") @Optional Map<String, String> callProperties)
+        throws JSONRPCException {
+
+        if (callProperties != null && callProperties.isEmpty()) {
+            if (callProperties.get("ANONYMOUS") != null) {
+                AdapterConfig adapter = AdapterConfig.getAdapterForOwner(adapterID, accountId);
+                if (adapter != null && AdapterType.CALL.equals(AdapterType.getByValue(adapter.getAdapterType()))) {
+                    Broadsoft bs = new Broadsoft(adapter);
+                    bs.hideCallerId(Boolean.parseBoolean(callProperties.get("ANONYMOUS")));
+                }
+            }
+        }
+        return outboundCallWithMap(addressMap, addressCcMap, addressBccMap, senderName, subject, url, adapterType,
+                                   adapterID, accountId, bearerToken);
+    }
 	
 	/**
          * Triggers seperate call for each member in the address map. 

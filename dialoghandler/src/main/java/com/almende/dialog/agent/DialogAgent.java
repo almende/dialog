@@ -192,7 +192,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 	 * @throws Exception
 	 */
 	public HashMap<String, String> outboundCallWithMap(
-			@Name("addressMap") Map<String, String> addressMap,
+			@Name("addressMap") @Optional Map<String, String> addressMap,
 			@Name("addressCcMap") @Optional Map<String, String> addressCcMap,
 			@Name("addressBccMap") @Optional Map<String, String> addressBccMap,
 			@Name("senderName") @Optional String senderName,
@@ -226,9 +226,11 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             } else {
                 // If no adapterId is given. Load the first one of the type.
                 // TODO: Add default field to adapter (to be able to load default adapter)
+                adapterType = adapterType != null && AdapterType.getByValue(adapterType) != null ? AdapterType
+                                                .getByValue(adapterType).getName() : adapterType;
                 final List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters(adapterType, null, null);
                 for (AdapterConfig cfg : adapterConfigs) {
-                    if (cfg.getOwner().equals(accountId)) {
+                    if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), cfg, false) != null) {
                         config = cfg;
                         break;
                     }
@@ -303,9 +305,9 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                 }
             }
             else {
-                throw new JSONRPCException("Invalid adapter found");
+                throw new JSONRPCException("Invalid adapter. We could not find adapter of " +
+                                           (adapterID != null ? ("adapterId: " + adapterID) : ("type: " + adapterType)));
             }
-    
             return resultSessionMap;
 	}
 	

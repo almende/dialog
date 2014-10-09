@@ -175,7 +175,7 @@ public class VoiceXMLRESTProxy {
                 session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
                 session.setAdapterID(config.getConfigId());
                 session.setQuestion(question);
-                dialogLog.log(LogLevel.INFO, session.getAdapterConfig(), String.format("Outgoing call from: %s to: %s",
+                dialogLog.log(LogLevel.INFO, session.getAdapterConfig(), String.format("Outgoing call requested from: %s to: %s",
                                                                                        session.getLocalAddress(),
                                                                                        formattedAddress), session);
                 String extSession = "";
@@ -271,9 +271,9 @@ public class VoiceXMLRESTProxy {
         String url = "";
         if ( session != null && direction.equalsIgnoreCase("outbound")) {
                 url = session.getStartUrl();
-            dialogLog.log(LogLevel.INFO, config,
-                          String.format("Outgoing Call from: %s to: %s", config.getMyAddress(), formattedRemoteId),
-                          session);
+            dialogLog.log(LogLevel.INFO, config, String
+                                            .format("Trying to fetch dialog for %s, due to outgoing Call from: %s ",
+                                                    formattedRemoteId, config.getMyAddress()), session);
         }
         else if(direction.equals("inbound")) {
             //create a session for incoming only
@@ -371,10 +371,13 @@ public class VoiceXMLRESTProxy {
                     log.warning( "session is killed" );
                     return Response.status( Response.Status.BAD_REQUEST ).build();
                 }
-                dialogLog.log(LogLevel.INFO,
-                              session.getAdapterConfig(),
-                              String.format("Answer input: %s from: %s to question: %s", answer_input,
-                                            session.getRemoteAddress(), question.getQuestion_expandedtext()), session);
+                if (question.getType() != null && !question.getType().equalsIgnoreCase("comment")) {
+                    dialogLog.log(LogLevel.INFO,
+                                  session.getAdapterConfig(),
+                                  String.format("Answer input: %s from: %s to question: %s", answer_input,
+                                                session.getRemoteAddress(), question.getQuestion_expandedtext()),
+                                  session);
+                }
                 String answerForQuestion = question.getQuestion_expandedtext();
                 question = question.answer( responder, session.getAdapterConfig().getConfigId(), answer_id,
                     answer_input, sessionKey );

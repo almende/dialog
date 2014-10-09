@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+8-10-2014, version 1.4.1
+- fix: fixed log messages and adapter fetch by address
+
 3-10-2014, version 1.4.0
 - feature: support multiple account sharing an adapter
  

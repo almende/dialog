@@ -345,10 +345,10 @@ public class AdapterConfig {
 				AdapterConfig.class);
 
 		if (adapterType != null)
-			cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType);
+			cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
 
 		if (myAddress != null)
-			cmd.addFilter("myAddress", FilterOperator.EQUAL, myAddress.toLowerCase());
+			cmd.addFilter("myAddress", FilterOperator.EQUAL, myAddress);
 		
 		if (keyword != null) {
 			if(keyword.equals("null")) {

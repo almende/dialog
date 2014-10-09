@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -31,18 +32,31 @@ import com.almende.eve.rpc.annotation.Optional;
 import com.almende.eve.rpc.jsonrpc.JSONRPCException;
 import com.almende.eve.rpc.jsonrpc.JSONRPCException.CODE;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.util.TypeUtil;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.askfast.commons.agent.intf.DialogAgentInterface;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DialogRequestDetails;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.QueueingConsumer;
+import com.rabbitmq.client.QueueingConsumer.Delivery;
 
 @Access(AccessType.PUBLIC)
 public class DialogAgent extends Agent implements DialogAgentInterface {
 	private static final Logger	log	= Logger.getLogger(DialogAgent.class
 											.getName());
-	
+
+    //create a single static connection for collecting dialog requests
+    private static ConnectionFactory rabbitMQConnectionFactory;
+    private static final String DIALOG_PROCESS_QUEUE_NAME = "DIALOG_PUBLISH_QUEUE";
+    private static final Integer MAXIMUM_DEFAULT_DIALOG_ALLOWED = 15;
+    
 	public ArrayList<String> getActiveCalls(@Name("adapterID") String adapterID) {
 		
 		try {
@@ -134,8 +148,6 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      * @throws Exception
      */
     public HashMap<String, String> outboundSeperateCallWithMap(@Name("addressMap") Map<String, String> addressMap,
-        @Name("addressCcMap") @Optional Map<String, String> addressCcMap,
-        @Name("addressBccMap") @Optional Map<String, String> addressBccMap,
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
         @Name("url") String url, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
@@ -145,8 +157,8 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         for (String address : addressMap.keySet()) {
             Map<String, String> addreses = new HashMap<String, String>();
             addreses.put(address, addressMap.get(address));
-            result.putAll(outboundCallWithMap(addreses, addressCcMap, addressBccMap, senderName, subject, url,
-                                              adapterType, adapterID, accountId, bearerToken));
+            result.putAll(outboundCallWithMap(addreses, null, null, senderName, subject, url, adapterType, adapterID,
+                                              accountId, bearerToken));
         }
         return result;
     }
@@ -192,7 +204,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 	 * @throws Exception
 	 */
 	public HashMap<String, String> outboundCallWithMap(
-			@Name("addressMap") Map<String, String> addressMap,
+			@Name("addressMap") @Optional Map<String, String> addressMap,
 			@Name("addressCcMap") @Optional Map<String, String> addressCcMap,
 			@Name("addressBccMap") @Optional Map<String, String> addressBccMap,
 			@Name("senderName") @Optional String senderName,
@@ -449,8 +461,165 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 	
 	@Override
 	public String getVersion() {
-		return "2.1.0";
+		return "1.4.2";
 	}
+	
+    public void consumeDialogInitiationQueue() {
+
+        try {
+            rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory
+                                                                         : new ConnectionFactory();
+            rabbitMQConnectionFactory.setHost("localhost");
+            Connection connection = rabbitMQConnectionFactory.newConnection();
+            Channel channel = connection.createChannel();
+            //create a message
+            channel.queueDeclare(DIALOG_PROCESS_QUEUE_NAME, false, false, false, null);
+            QueueingConsumer consumer = new QueueingConsumer(channel);
+            channel.basicConsume(DIALOG_PROCESS_QUEUE_NAME, true, consumer);
+
+            Integer currentSessionsCountInQueue = getCurrentSessionsCountInQueue();
+            Integer maxSessionsAllowedInQueue = getMaxSessionsAllowedInQueue();
+            log.info(String.format("Waiting to process dialogs... current list size: %s. Maximum allowed: %s",
+                                   currentSessionsCountInQueue, maxSessionsAllowedInQueue));
+            while (currentSessionsCountInQueue < maxSessionsAllowedInQueue) {
+                Delivery delivery = consumer.nextDelivery();
+                ObjectMapper om = JOM.getInstance();
+                try {
+                    DialogRequestDetails dialogDetails = om.readValue(delivery.getBody(), DialogRequestDetails.class);
+                    log.info(String.format("---------Received a dialog request to process: %s ---------",
+                                           new String(delivery.getBody())));
+                    outboundCall(dialogDetails);
+                }
+                catch (Exception e) {
+                    log.severe(String.format("Dialog processing failed for payload: %s. Error: %s",
+                                             new String(delivery.getBody()), e.toString()));
+                }
+            }
+        }
+        catch (Exception e) {
+            log.severe("Error seen: " + e.getLocalizedMessage());
+        }
+    }
+    
+    private HashMap<String, String> outboundCall(DialogRequestDetails dialogDetails) throws Exception {
+
+        HashMap<String, String> result = new HashMap<String, String>();
+        if (dialogDetails != null && dialogDetails.getMethod() != null) {
+            String dialogMethod = dialogDetails.getMethod();
+            switch (dialogMethod) {
+                case "outboundCall":
+                    if (dialogDetails.getAddressMap() != null && !dialogDetails.getAddressMap().isEmpty()) {
+                        result = outboundCall(dialogDetails.getAddressMap().keySet().iterator().next(),
+                                              dialogDetails.getSenderName(), dialogDetails.getSubject(),
+                                              dialogDetails.getUrl(), dialogDetails.getAdapterType(),
+                                              dialogDetails.getAdapterID(), dialogDetails.getAccountId(),
+                                              dialogDetails.getBearerToken());
+                    }
+                    else {
+                        result.put("Error!. No addresses found", null);
+                    }
+                    break;
+                case "outboundCallWithList":
+                    if (dialogDetails.getAddressMap() != null && !dialogDetails.getAddressMap().isEmpty()) {
+                        result = outboundCallWithList(dialogDetails.getAddressMap().keySet(),
+                                                      dialogDetails.getSenderName(), dialogDetails.getSubject(),
+                                                      dialogDetails.getUrl(), dialogDetails.getAdapterType(),
+                                                      dialogDetails.getAdapterID(), dialogDetails.getAccountId(),
+                                                      dialogDetails.getBearerToken());
+                    }
+                    else {
+                        result.put("Error!. No addresses found", null);
+                    }
+                    break;
+                case "outboundSeperateCallWithMap":
+                    if (dialogDetails.getAddressMap() != null && !dialogDetails.getAddressMap().isEmpty()) {
+                        result = outboundSeperateCallWithMap(dialogDetails.getAddressMap(),
+                                                             dialogDetails.getSenderName(), dialogDetails.getSubject(),
+                                                             dialogDetails.getUrl(), dialogDetails.getAdapterType(),
+                                                             dialogDetails.getAdapterID(),
+                                                             dialogDetails.getAccountId(),
+                                                             dialogDetails.getBearerToken());
+                    }
+                    else {
+                        result.put("Error!. No addresses found", null);
+                    }
+                    break;
+                case "outboundCallWithProperties":
+                    result = outboundCallWithProperties(dialogDetails.getAddressMap(), dialogDetails.getAddressCcMap(),
+                                                        dialogDetails.getAddressBccMap(),
+                                                        dialogDetails.getSenderName(), dialogDetails.getSubject(),
+                                                        dialogDetails.getUrl(), dialogDetails.getAdapterType(),
+                                                        dialogDetails.getAdapterID(), dialogDetails.getAccountId(),
+                                                        dialogDetails.getBearerToken(),
+                                                        dialogDetails.getCallProperties());
+                case "outboundCallWithMap":
+                    result = outboundCallWithMap(dialogDetails.getAddressMap(), dialogDetails.getAddressCcMap(),
+                                                 dialogDetails.getAddressBccMap(), dialogDetails.getSenderName(),
+                                                 dialogDetails.getSubject(), dialogDetails.getUrl(),
+                                                 dialogDetails.getAdapterType(), dialogDetails.getAdapterID(),
+                                                 dialogDetails.getAccountId(), dialogDetails.getBearerToken());
+                    break;
+                default:
+                    break;
+            }
+        }
+        return result;
+    }
+    
+    /**
+     * Returns all the sessionKeys that are currently being processed and in queue.
+     * @return
+     */
+    public Collection<String> getCurrentSessionsInQueue() {
+        return getState().get("sessionsInQueue", new TypeUtil<Collection<String>>() {});
+    }
+    
+    /**
+     * Returns the number of sessions currently being handled.
+     * @return
+     */
+    public Integer getCurrentSessionsCountInQueue() {
+        Collection<String> currentSessions = getCurrentSessionsInQueue();
+        return currentSessions != null ? currentSessions.size() : 0;
+    }
+    
+    /**
+     * Returns the maximum number of sessions allowed by the processor
+     * @return
+     */
+    public Integer getMaxSessionsAllowedInQueue() {
+        Integer maxSessionsAllowed = getState().get("max_sessionsInQueue", Integer.class);
+        if(maxSessionsAllowed == null) {
+            maxSessionsAllowed = MAXIMUM_DEFAULT_DIALOG_ALLOWED;
+            getState().put("max_sessionsInQueue", maxSessionsAllowed);
+        }
+        return maxSessionsAllowed;
+    }
+    
+    /**
+     * Set the maximum number of sessions that can be handled in the queue.
+     * @return
+     */
+    public Integer setMaxSessionsAllowedInQueue(@Name("maxSessionsInQueue") Integer maxSessionsInQueue) {
+
+        getState().put("max_sessionsInQueue", maxSessionsInQueue);
+        return getMaxSessionsAllowedInQueue();
+    }
+    
+    /**
+     * Returns the number of sessions currently being handled.
+     * @return
+     */
+    private Collection<String> addSessionToProcessQueue(String sessionKey) {
+
+        if (sessionKey != null) {
+            Collection<String> currentSessions = getCurrentSessionsInQueue();
+            currentSessions = currentSessions != null ? currentSessions : new HashSet<String>();
+            currentSessions.add(sessionKey);
+            getState().put("sessionsInQueue", currentSessions);
+        }
+        return getCurrentSessionsInQueue();
+    }
 	
     /**
      * basic check to see if a map is empty or null

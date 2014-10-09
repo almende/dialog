@@ -235,10 +235,12 @@ abstract public class TextServlet extends HttpServlet {
         // deceiving.
         String loadAddress = null;
         Session session = null;
-        if (addressNameMap.size() == 1) {
+        if (addressNameMap.size() == 1 && addressCcNameMap != null && addressCcNameMap.isEmpty() &&
+            addressBccNameMap != null && addressBccNameMap.isEmpty()) {
+            
             loadAddress = addressNameMap.keySet().iterator().next();
             if (config.getAdapterType().equals("CM") ||
-                                            config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
                 loadAddress = PhoneNumberUtils.formatNumber(loadAddress, null);
             }
             //create a session if its only for one number
@@ -270,6 +272,7 @@ abstract public class TextServlet extends HttpServlet {
             }
 
             Return res = null;
+            //keep a copy of the formatted addressNameMap. dont save any cc or bcc address name maps here 
             Map<String, String> formattedAddressNameToMap = new HashMap<String, String>();
             if (loadAddress != null && session != null) {
 
@@ -319,7 +322,9 @@ abstract public class TextServlet extends HttpServlet {
                         //save this session
                         session.storeSession();
                         //put the formatted address to that a text can be broadcasted to it
-                        formattedAddressNameToMap.put(formattedAddress, addressNameMap.get(address));
+                        if(addressNameMap.get(address) != null) {
+                            formattedAddressNameToMap.put(formattedAddress, addressNameMap.get(address));
+                        }
                         // Add key to the map (for the return)
                         sessionKeyMap.put(formattedAddress, session.getKey());
                         sessions.add(session);

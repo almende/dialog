@@ -62,7 +62,7 @@ public class TwilioAdapter {
 	private String host = "";
 	
 	public static HashMap<String, String> dial(Map<String, String> addressNameMap, String url, String senderName,
-	        AdapterConfig config) throws Exception {
+	        AdapterConfig config, String applicationId) throws Exception {
 		
 		HashMap<String, String> resultSessionMap = new HashMap<String, String>();
         // If it is a broadcast don't provide the remote address because it is deceiving.
@@ -110,7 +110,7 @@ public class TwilioAdapter {
             		callParams.put("To", formattedAddress); // Replace with a valid phone number
             		callParams.put("From", config.getMyAddress()); // Replace with a valid phone
             		// number in your account
-            		callParams.put("ApplicationSid", "AP865e18e691287a06b24ad1097d935c35");
+            		callParams.put("ApplicationSid", applicationId);
             		//callParams.put("Url", "http://" + Settings.HOST + "/dialoghandler/rest/twilio/new");
             		
             		Call call = callFactory.create(callParams);

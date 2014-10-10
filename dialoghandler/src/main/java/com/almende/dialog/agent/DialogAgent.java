@@ -267,8 +267,8 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                     }
                     else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWILIO)) {
                         // fetch the first address in the map
-                        if (!addressMap.keySet().isEmpty()) {
-                            resultSessionMap = TwilioAdapter.dial(addressMap, url, senderName, config);
+                        if (!addressMap.keySet().isEmpty() && getApplicationId()!=null) {
+                            resultSessionMap = TwilioAdapter.dial(addressMap, url, senderName, config, getApplicationId());
                         }
                         else {
                             throw new Exception("Address should not be empty to setup a call");
@@ -453,6 +453,14 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     {
         List<Dialog> dialogs = Dialog.getDialogs( accountId );
         return JOM.getInstance().convertValue( dialogs, ArrayNode.class );
+    }
+    
+    public String getApplicationId() {
+    	return getState().get("applicationId", String.class);
+    }
+    
+    public void setApplicationId(@Name("applicationId") String applicationId) {
+    	getState().put("applicationId", applicationId);
     }
     
 	@Override

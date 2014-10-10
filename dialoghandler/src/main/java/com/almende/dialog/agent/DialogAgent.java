@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -16,6 +17,7 @@ import com.almende.dialog.adapter.CMSmsServlet;
 import com.almende.dialog.adapter.MBSmsServlet;
 import com.almende.dialog.adapter.MailServlet;
 import com.almende.dialog.adapter.NotificareServlet;
+import com.almende.dialog.adapter.TwilioAdapter;
 import com.almende.dialog.adapter.TwitterServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.adapter.XMPPServlet;
@@ -258,6 +260,15 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         // fetch the first address in the map
                         if (!addressMap.keySet().isEmpty()) {
                             resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, url, senderName, config);
+                        }
+                        else {
+                            throw new Exception("Address should not be empty to setup a call");
+                        }
+                    }
+                    else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWILIO)) {
+                        // fetch the first address in the map
+                        if (!addressMap.keySet().isEmpty()) {
+                            resultSessionMap = TwilioAdapter.dial(addressMap, url, senderName, config);
                         }
                         else {
                             throw new Exception("Address should not be empty to setup a call");

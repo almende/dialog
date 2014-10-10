@@ -38,6 +38,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	
 	public static final String ADAPTER_TYPE_BROADSOFT = AdapterType.CALL.getName();
+	public static final String ADAPTER_TYPE_TWILIO = AdapterType.TWILIO.getName();
 	public static final String ADAPTER_TYPE_SMS = AdapterType.SMS.getName();
 	public static final String ADAPTER_TYPE_FACEBOOK = AdapterType.FACEBOOK.getName();
 	public static final String ADAPTER_TYPE_EMAIL = AdapterType.EMAIL.getName();
@@ -248,6 +249,44 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.addAccount(accountId);
         config.setAnonymous(anonymous);
         config.setAccountType(AccountType.fromJson(accountType));
+        AdapterConfig newConfig = createAdapter(config);
+        return newConfig.getConfigId();
+    }
+    
+    /**
+     * Adds a new broadsoft adapter
+     * 
+     * @param address
+     * @param username
+     * @param password
+     * @param preferredLanguage
+     * @param accountId
+     * @param anonymous
+     * @return AdapterId
+     * @throws Exception
+     */
+    public String createTwilioAdapter(@Name("address") String address, @Name("accountSid") @Optional String accountSid,
+                                         @Name("authToken") String authToken,
+                                         @Name("preferredLanguage") @Optional String preferredLanguage,
+                                         @Name("accountId") @Optional String accountId,
+                                         @Name("anonymous") boolean anonymous) throws Exception {
+
+        preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
+
+        String normAddress = address.replaceFirst("^0", "").replace("+31", "");
+        String externalAddress = "+31" + normAddress;
+
+        AdapterConfig config = new AdapterConfig();
+        config.setAdapterType(ADAPTER_TYPE_TWILIO);
+        config.setMyAddress(externalAddress);
+        config.setAddress(externalAddress);
+        config.setPreferred_language(preferredLanguage);
+        config.setPublicKey(accountId);
+        config.setOwner(accountId);
+        config.addAccount(accountId);
+        config.setAccessToken(accountSid);
+        config.setAccessTokenSecret(authToken);
+        config.setAnonymous(anonymous);
         AdapterConfig newConfig = createAdapter(config);
         return newConfig.getConfigId();
     }

@@ -4,16 +4,13 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -23,18 +20,16 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
 import org.znerd.xmlenc.XMLOutputter;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.Answer;
-import com.almende.dialog.model.Question;
-import com.almende.dialog.model.Session;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
+import com.almende.dialog.model.Question;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
@@ -311,46 +306,39 @@ public class TwilioAdapter {
         }
 	}
 	
-	@Path( "answer" )
+    @Path("answer")
     @GET
     @Produces("application/xml")
-    public Response answer( @QueryParam( "answerId" ) String answer_id, @QueryParam( "Digits" ) String answer_input,
-            @QueryParam( "From" ) String localID,
-            @QueryParam( "To" ) String remoteID,
-            @QueryParam( "Direction" ) String direction,
-            @Context UriInfo ui )
-    {
-		TwiMLResponse twiml = new TwiMLResponse();
-		
-		try
-        {
-            answer_input = answer_input != null ? URLDecoder.decode( answer_input, "UTF-8" ) : answer_input;
+    public Response answer(@QueryParam("answerId") String answer_id, @QueryParam("Digits") String answer_input,
+        @QueryParam("From") String localID, @QueryParam("To") String remoteID,
+        @QueryParam("Direction") String direction, @Context UriInfo ui) {
+
+        TwiMLResponse twiml = new TwiMLResponse();
+
+        try {
+            answer_input = answer_input != null ? URLDecoder.decode(answer_input, "UTF-8") : answer_input;
         }
-        catch ( UnsupportedEncodingException e )
-        {
-            log.warning( String.format( "Answer input decode failed for: %s", answer_input) );
+        catch (UnsupportedEncodingException e) {
+            log.warning(String.format("Answer input decode failed for: %s", answer_input));
         }
-		
-		if(direction.equals("inbound")) {
-        	String tmpLocalId = localID;
-        	localID = remoteID;
-        	remoteID = tmpLocalId;        			
+
+        if (direction.equals("inbound")) {
+            String tmpLocalId = localID;
+            localID = remoteID;
+            remoteID = tmpLocalId;
         }
-            
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ remoteID;
-        this.host = ui.getBaseUri().toString().replace( ":80", "" );
-        
-        Session session = Session.getSession( sessionKey );
-        if ( session != null )
-        {
+
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localID + "|" + remoteID;
+        this.host = ui.getBaseUri().toString().replace(":80", "");
+
+        Session session = Session.getSession(sessionKey);
+        if (session != null) {
             Question question = session.getQuestion();
-            if ( question != null )
-            {
+            if (question != null) {
                 String responder = session.getRemoteAddress();
-                if ( session.killed )
-                {
-                    log.warning( "session is killed" );
-                    return Response.status( Response.Status.BAD_REQUEST ).build();
+                if (session.killed) {
+                    log.warning("session is killed");
+                    return Response.status(Response.Status.BAD_REQUEST).build();
                 }
                 if (question.getType() != null && !question.getType().equalsIgnoreCase("comment")) {
                     dialogLog.log(LogLevel.INFO,
@@ -360,17 +348,17 @@ public class TwilioAdapter {
                                   session);
                 }
                 String answerForQuestion = question.getQuestion_expandedtext();
-                question = question.answer( responder, session.getAdapterConfig().getConfigId(), answer_id,
-                    answer_input, sessionKey );
+                question = question.answer(responder, session.getAdapterConfig().getConfigId(), answer_id,
+                                           answer_input, sessionKey);
                 //reload the session
-                session = Session.getSession( sessionKey );
-                session.setQuestion( question );
+                session = Session.getSession(sessionKey);
+                session.setQuestion(question);
                 session.storeSession();
                 //check if ddr is in session. save the answer in the ddr
-                if(session.getDdrRecordId() != null) {
+                if (session.getDdrRecordId() != null) {
                     try {
                         DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
-                        if(ddrRecord != null) {
+                        if (ddrRecord != null) {
                             ddrRecord.addAdditionalInfo(DDRRecord.ANSWER_INPUT_KEY + ":" + answerForQuestion,
                                                         answer_input);
                             ddrRecord.createOrUpdateWithLog();
@@ -379,32 +367,68 @@ public class TwilioAdapter {
                     catch (Exception e) {
                     }
                 }
-                return handleQuestion( question, session.getAdapterConfig(), responder, sessionKey );
-            } else {
-                log.warning( "No question found in session!" );
+                return handleQuestion(question, session.getAdapterConfig(), responder, sessionKey);
+            }
+            else {
+                log.warning("No question found in session!");
             }
         }
-        else
-        {
-            log.warning( "No session found for: " + sessionKey );
+        else {
+            log.warning("No session found for: " + sessionKey);
             dialogLog.severe(null, "No session found!", session);
         }
-        
+
         String reply = twiml.toXML();
-        return Response.ok( reply ).build();
+        return Response.ok(reply).build();
     }
 	
-	@Path( "timeout" )
+    @Path("timeout")
     @GET
-    @Produces( "application/xml" )
-    public Response timeout( @QueryParam( "From" ) String localID,
-            @QueryParam( "To" ) String remoteID,
-            @QueryParam( "Direction" ) String direction ) throws Exception
-    {
-		TwiMLResponse twiml = new TwiMLResponse();
-		String reply = twiml.toXML();
-    	// TODO: Implement
-    	return Response.ok(reply).build();
+    @Produces("application/xml")
+    public Response timeout(@QueryParam("From") String localID, @QueryParam("To") String remoteID,
+        @QueryParam("Direction") String direction) throws Exception {
+
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ remoteID;
+        Session session = Session.getSession(sessionKey);
+        if (session != null) {
+            Question question = session.getQuestion();
+            String responder = session.getRemoteAddress();
+            if (session.killed) {
+                return Response.status(Response.Status.BAD_REQUEST).build();
+            }
+            dialogLog.log(LogLevel.INFO,
+                          session.getAdapterConfig(),
+                          String.format("Timeout from: %s for question: %s", responder,
+                                        question.getQuestion_expandedtext()), session);
+            HashMap<String, Object> extras = new HashMap<String, Object>();
+            extras.put("sessionKey", sessionKey);
+            question = question.event("timeout", "No answer received", extras, responder);
+            session.setQuestion(question);
+            if (question != null) {
+                String retryLimit = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT);
+                retryLimit = retryLimit != null ? retryLimit : String.valueOf(Question.DEFAULT_MAX_QUESTION_LOAD);
+                Integer retryCount = session.getRetryCount();
+                retryCount = retryCount != null ? retryCount : 0;
+                if (retryCount < Integer.parseInt(retryLimit)) {
+                    session.setRetryCount(++retryCount);
+                }
+                else {
+                    //hangup so set question to null
+                    question = null;
+                }
+            }
+            else {
+                log.warning("No question found for this session :" + sessionKey);
+            }
+            session.storeSession();
+            return handleQuestion(question, session.getAdapterConfig(), responder, sessionKey);
+        }
+        else {
+            log.warning("Strange that no session is found for: " + sessionKey);
+        }
+        TwiMLResponse twiml = new TwiMLResponse();
+        String reply = twiml.toXML();
+        return Response.ok(reply).build();
     }
 	
 	@Path("cc")
@@ -721,20 +745,21 @@ public class TwilioAdapter {
 		return sw.toString();	
 	}*/
 	
-	private String renderClosedQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
-				
-		try {
-			sessionKey = URLEncoder.encode(sessionKey, "UTF-8");
-		} catch (UnsupportedEncodingException e ) {
-			e.printStackTrace();
-		}
-		
-		TwiMLResponse twiml = new TwiMLResponse();
+    private String renderClosedQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
+
+        try {
+            sessionKey = URLEncoder.encode(sessionKey, "UTF-8");
+        }
+        catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+
+        TwiMLResponse twiml = new TwiMLResponse();
         Gather gather = new Gather();
         gather.setAction(getAnswerUrl());
         gather.setMethod("GET");
         gather.setNumDigits(1);
-        
+
         String noAnswerTimeout = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT);
         //assign a default timeout if one is not specified
         noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "10";
@@ -744,27 +769,28 @@ public class TwilioAdapter {
         }
         int timeout = 10;
         try {
-        	timeout = Integer.parseInt(noAnswerTimeout);
-        } catch (NumberFormatException e) {
-        	e.printStackTrace();
+            timeout = Integer.parseInt(noAnswerTimeout);
+        }
+        catch (NumberFormatException e) {
+            e.printStackTrace();
         }
         gather.setTimeout(timeout);
         try {
-	        for (String prompt : prompts) {
-	            gather.append(new Play(prompt));
-	        }
-        
-        
+            for (String prompt : prompts) {
+                gather.append(new Play(prompt));
+            }
+            
             twiml.append(gather);
             Redirect redirect = new Redirect(getTimeoutUrl());
             redirect.setMethod("GET");
             twiml.append(redirect);
-        } catch (TwiMLException e) {
+        }
+        catch (TwiMLException e) {
             e.printStackTrace();
         }
-        
+
         return twiml.toXML();
-	}
+    }
 	
 
    /* private String renderClosedQuestion(Question question, ArrayList<String> prompts, String sessionKey) {

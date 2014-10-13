@@ -6,7 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
 import org.joda.time.DateTime;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.Session;
@@ -17,6 +19,7 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.entity.Adapter;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
@@ -601,7 +604,7 @@ public class DDRUtils
                         session.setDdrRecordId(ddrRecord.getId());
                     }
                 }
-                if (AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(adapterConfig.getAdapterType())) {
+                if (isCallAdapter(adapterConfig.getAdapterType())) {
                     if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
                         session.getDirection() != null) {
                         ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
@@ -683,7 +686,7 @@ public class DDRUtils
      */
     protected static double applyStartUpCost(double result, AdapterConfig config, String direction) throws Exception {
 
-        if (config != null && AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(config.getAdapterType()) && result > 0.0 &&
+        if (config != null && isCallAdapter(config.getAdapterType()) && result > 0.0 &&
             "outbound".equalsIgnoreCase(direction)) {
             DDRPrice startUpPrice = fetchDDRPrice(DDRTypeCategory.START_UP_COST,
                                                   AdapterType.getByValue(config.getAdapterType()),
@@ -714,7 +717,7 @@ public class DDRUtils
 
             //dont apply service charge if its a missed call or call ignroed (call duration is 0)
             if (ddrRecord.getAdapter() != null &&
-                AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(ddrRecord.getAdapter().getAdapterType()) &&
+                isCallAdapter(ddrRecord.getAdapter().getAdapterType()) &&
                 (ddrRecord.getDuration() == null || ddrRecord.getDuration() <= 0)) {
                 applyServiceCharge = false;
             }
@@ -825,5 +828,14 @@ public class DDRUtils
             }
         }
         return selecteDdrRecord;
+    }
+    
+    private static boolean isCallAdapter(String adapterType) {
+    	if(adapterType.equals(AdapterAgent.ADAPTER_TYPE_BROADSOFT) ||
+    			adapterType.equals(AdapterAgent.ADAPTER_TYPE_TWILIO) ) {
+    		return true;
+    	}
+    	
+    	return false;
     }
 }

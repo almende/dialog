@@ -114,7 +114,6 @@ public class TwilioAdapter {
             		callParams.put("StatusCallback", "http://" + Settings.HOST + "/dialoghandler/rest/twilio/cc");
             		callParams.put("StatusCallbackMethod", "GET");  
             		callParams.put("IfMachine", "Hangup"); 
-            		callParams.put("Timeout", "10"); 
             		callParams.put("Record", "false");
             		
             		Call call = callFactory.create(callParams);
@@ -143,7 +142,6 @@ public class TwilioAdapter {
     		@QueryParam("Direction") String direction,
     		@Context UriInfo ui) {
 		
-		// TODO: Implement
 		log.info("call started:"+direction+":"+remoteID+":"+localID);
         this.host=ui.getBaseUri().toString().replace(":80", "");
         
@@ -234,8 +232,6 @@ public class TwilioAdapter {
     		@FormParam("Direction") String direction, 
     		@Context UriInfo ui) {
 		
-		
-		// TODO: Implement
 		log.info("call started:"+direction+":"+remoteID+":"+localID);
         this.host=ui.getBaseUri().toString().replace(":80", "");
         String formattedRemoteId = remoteID;
@@ -480,6 +476,10 @@ public class TwilioAdapter {
             @QueryParam( "Direction" ) String direction,
             @QueryParam( "CallStatus" ) String status) {
 		
+		if(direction.equals("outbound-api")) {
+			direction = "outbound";
+		}
+		
 		if(direction.equals("inbound")) {
         	String tmpLocalId = localID;
         	localID = remoteID;
@@ -696,95 +696,6 @@ public class TwilioAdapter {
     	}
     	return twiml.toXML();
     }
-	/*protected String renderComment(Question question,ArrayList<String> prompts, String sessionKey){
-
-	String redirectTimeoutProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
-        //assign a default timeout if one is not specified
-        String redirectTimeout = redirectTimeoutProperty != null ? redirectTimeoutProperty : "40s";
-        if(!redirectTimeout.endsWith("s"))
-        {
-            log.warning("Redirect timeout must be end with 's'. E.g. 40s. Found: "+ redirectTimeout);
-            redirectTimeout += "s";
-        }
-        
-        String redirectTypeProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TYPE );
-        String redirectType = redirectTypeProperty != null ? redirectTypeProperty.toLowerCase() : "bridge";
-        if(!redirectType.equals("blind") && !redirectType.equals("bridge"))
-        {
-            log.warning("Redirect must be blind or bridge. Found: "+ redirectTimeout);
-            redirectTypeProperty = "bridge";
-        }
-        
-		StringWriter sw = new StringWriter();
-		try {
-			XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
-			outputter.declaration();
-			outputter.startTag("vxml");
-				outputter.attribute("version", "2.1");
-				outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
-				outputter.startTag("form");
-						if (question != null && question.getType().equalsIgnoreCase("referral")){
-							outputter.startTag("transfer");
-								outputter.attribute("name", "thisCall");
-								outputter.attribute("dest", question.getUrl());
-								if(redirectType.equals("bridge")) {
-									outputter.attribute("bridge","true");
-								} else {
-									outputter.attribute("bridge","false");
-								}
-								outputter.attribute("connecttimeout",redirectTimeout);
-								for (String prompt : prompts){
-									outputter.startTag("prompt");
-										outputter.startTag("audio");
-											outputter.attribute("src", prompt);
-										outputter.endTag();
-									outputter.endTag();
-								}
-								outputter.startTag("filled");
-									outputter.startTag("if");
-										outputter.attribute("cond", "thisCall=='noanswer'");
-										outputter.startTag("goto");
-											outputter.attribute("next", TIMEOUT_URL+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
-										outputter.endTag();
-									outputter.startTag("elseif");
-										outputter.attribute("cond", "thisCall=='busy' || thisCall=='network_busy'");
-									outputter.endTag();
-										outputter.startTag("goto");
-											outputter.attribute("next", EXCEPTION_URL+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
-										outputter.endTag();	
-									outputter.startTag("else");
-									outputter.endTag();
-										outputter.startTag("goto");
-											outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
-										outputter.endTag();	
-									outputter.endTag();
-								outputter.endTag();
-							outputter.endTag();
-						} else {
-							outputter.startTag("block");
-								for (String prompt : prompts){
-									outputter.startTag("prompt");
-										outputter.startTag("audio");
-											outputter.attribute("src", prompt);
-										outputter.endTag();
-									outputter.endTag();
-								}
-								if(question!=null) {
-									outputter.startTag("goto");
-										outputter.attribute("next", getAnswerUrl()+"?questionId="+question.getQuestion_id()+"&sessionKey="+URLEncoder.encode(sessionKey, "UTF-8"));
-									outputter.endTag();
-								}
-							outputter.endTag();
-						}
-						
-				outputter.endTag();
-			outputter.endTag();
-			outputter.endDocument();
-		} catch (Exception e) {
-			log.severe("Exception in creating question XML: "+ e.toString());
-		}
-		return sw.toString();	
-	}*/
 	
     private String renderClosedQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
 
@@ -849,221 +760,12 @@ public class TwilioAdapter {
 
         return twiml.toXML();
     }
-	
 
-   /* private String renderClosedQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
-
-        ArrayList<Answer> answers = question.getAnswers();
-
-        StringWriter sw = new StringWriter();
-        try {
-            XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
-            outputter.declaration();
-            outputter.startTag("vxml");
-            outputter.attribute("version", "2.1");
-            outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
-
-            //remove the termchar operator when # is found in the answer
-            for (Answer answer : answers) {
-                if (answers.size() > 11 ||
-                    (answer.getAnswer_text() != null && answer.getAnswer_text().contains("dtmfKey://"))) {
-                    outputter.startTag("property");
-                    outputter.attribute("name", "termchar");
-                    outputter.attribute("value", "");
-                    outputter.endTag();
-                    break;
-                }
-            }
-            String noAnswerTimeout = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT);
-            //assign a default timeout if one is not specified
-            noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "10s";
-            if (!noAnswerTimeout.endsWith("s")) {
-                log.warning("No answer timeout must end with 's'. E.g. 10s. Found: " + noAnswerTimeout);
-                noAnswerTimeout += "s";
-            }
-            outputter.startTag("property");
-            outputter.attribute("name", "timeout");
-            outputter.attribute("value", noAnswerTimeout);
-            outputter.endTag();
-            outputter.startTag("menu");
-            for (String prompt : prompts) {
-                outputter.startTag("prompt");
-                outputter.startTag("audio");
-                outputter.attribute("src", prompt);
-                outputter.endTag();
-                outputter.endTag();
-            }
-            for (int cnt = 0; cnt < answers.size(); cnt++) {
-                Integer dtmf = cnt + 1;
-                String dtmfValue = dtmf.toString();
-                if (answers.get(cnt).getAnswer_text() != null &&
-                    answers.get(cnt).getAnswer_text().startsWith("dtmfKey://")) {
-                    dtmfValue = answers.get(cnt).getAnswer_text().replace("dtmfKey://", "").trim();
-                }
-                else {
-                    if (dtmf == 10) { // 10 translates into 0
-                        dtmfValue = "0";
-                    }
-                    else if (dtmf == 11) {
-                        dtmfValue = "*";
-                    }
-                    else if (dtmf == 12) {
-                        dtmfValue = "#";
-                    }
-                    else if (dtmf > 12) {
-                        break;
-                    }
-                }
-                outputter.startTag("choice");
-                outputter.attribute("dtmf", dtmfValue);
-                outputter.attribute("next",
-                                    getAnswerUrl() + "?questionId=" + question.getQuestion_id() + "&answerId=" +
-                                                                    answers.get(cnt).getAnswer_id() + "&answerInput=" +
-                                                                    URLEncoder.encode(dtmfValue, "UTF-8") +
-                                                                    "&sessionKey=" +
-                                                                    URLEncoder.encode(sessionKey, "UTF-8"));
-                outputter.endTag();
-            }
-            outputter.startTag("noinput");
-            outputter.startTag("goto");
-            outputter.attribute("next", TIMEOUT_URL + "?questionId=" + question.getQuestion_id() + "&sessionKey=" +
-                                        URLEncoder.encode(sessionKey, "UTF-8"));
-            outputter.endTag();
-            outputter.endTag();
-            outputter.startTag("nomatch");
-            outputter.startTag("goto");
-            outputter.attribute("next", getAnswerUrl() + "?questionId=" + question.getQuestion_id() +
-                                        "&answerId=-1&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8"));
-            outputter.endTag();
-            outputter.endTag();
-            outputter.endTag();
-            outputter.endTag();
-            outputter.endDocument();
-        }
-        catch (Exception e) {
-            log.severe("Exception in creating question XML: " + e.toString());
-        }
-        return sw.toString();
-    }*/
-	
-	protected String renderOpenQuestion(Question question,ArrayList<String> prompts,String sessionKey) {
+    protected String renderOpenQuestion(Question question,ArrayList<String> prompts,String sessionKey) {
 		TwiMLResponse twiml = new TwiMLResponse();
 		// TODO: Implement
     	return twiml.toXML();
 	}
-	
-	/*protected String renderOpenQuestion(Question question,ArrayList<String> prompts,String sessionKey)
-	{
-		StringWriter sw = new StringWriter();
-		try {
-			XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
-			outputter.declaration();
-			outputter.startTag("vxml");
-				outputter.attribute("version", "2.1");
-				outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
-
-				// Check if media property type equals audio
-				// if so record audio message, if not record dtmf input
-				String typeProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TYPE );
-				if(typeProperty!=null && typeProperty.equalsIgnoreCase("audio")) 
-				{
-				    renderVoiceMailQuestion( question, prompts, sessionKey, outputter );
-				} 
-				else 
-				{
-				    //see if a dtmf length is defined in the question
-                    String dtmfMinLength = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.ANSWER_INPUT_MIN_LENGTH );
-                    dtmfMinLength = dtmfMinLength != null ? dtmfMinLength : "";
-                    String dtmfMaxLength = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.ANSWER_INPUT_MAX_LENGTH );
-                    dtmfMaxLength = dtmfMaxLength != null ? dtmfMaxLength : "";
-                    String noAnswerTimeout = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
-                    String retryLimit = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT );
-                    retryLimit = retryLimit != null ? retryLimit : String.valueOf(Question.DEFAULT_MAX_QUESTION_LOAD);
-                    //assign a default timeout if one is not specified
-                    noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "5s";
-                    if(!noAnswerTimeout.endsWith("s"))
-                    {
-                        log.warning("No answer timeout must end with 's'. E.g. 10s. Found: "+ noAnswerTimeout);
-                        noAnswerTimeout += "s";
-                    }
-    				outputter.startTag("var");
-    					outputter.attribute("name","answerInput");
-    				outputter.endTag();
-    				outputter.startTag("var");
-    					outputter.attribute("name","questionId");
-    					outputter.attribute("expr", "'"+question.getQuestion_id()+"'");
-    				outputter.endTag();
-    				outputter.startTag("var");
-    					outputter.attribute("name","sessionKey");
-    					outputter.attribute("expr", "'"+sessionKey+"'");
-    				outputter.endTag();
-    				outputter.startTag("form");
-        				outputter.startTag( "property" );
-                                        outputter.attribute( "name", "timeout" );
-                                        outputter.attribute( "value", noAnswerTimeout );
-                                outputter.endTag();
-    				outputter.startTag("field");
-    				        outputter.attribute("name", "answer");
-    					outputter.startTag("grammar");
-    					outputter.attribute("mode", "dtmf");
-                                        outputter.attribute( "src", DTMFGRAMMAR + "?minlength=" + dtmfMinLength 
-                                    + "&maxlength=" + dtmfMaxLength );
-    							outputter.attribute("type", "application/srgs+xml");
-    						outputter.endTag();
-    						for (String prompt: prompts){
-    							outputter.startTag("prompt");
-    								outputter.startTag("audio");
-    									outputter.attribute("src", prompt);
-    								outputter.endTag();
-    							outputter.endTag();
-    						}
-				outputter.startTag( "noinput" );
-				    outputter.startTag( "goto" );
-                                if ( question.getEventCallback("timeout") != null)
-                                {
-                                    outputter.attribute("next", "timeout?questionId=" + question.getQuestion_id() +
-                                                                "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8"));
-                                }
-                                else
-                                {
-                                    Integer retryCount = Question.getRetryCount( sessionKey );
-                                    if ( retryCount < Integer.parseInt( retryLimit ) )
-                                    {
-                                        outputter.attribute( "next", "retry?questionId=" + question.getQuestion_id()
-                                            + "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8") );
-                                        Question.updateRetryCount( sessionKey );
-                                    }
-                                    else
-                                    {
-                                        outputter.attribute("next", "retry?questionId=" + question.getQuestion_id());
-                                        Question.flushRetryCount( sessionKey );
-                                    }
-                                }
-                                    outputter.endTag();
-                                outputter.endTag();
-						outputter.startTag("filled");
-							outputter.startTag("assign");
-								outputter.attribute("name", "answerInput");
-								outputter.attribute("expr", "answer$.utterance.replace(' ','','g')");
-							outputter.endTag();
-							outputter.startTag("submit");
-								outputter.attribute("next", getAnswerUrl());
-								outputter.attribute("namelist","answerInput questionId sessionKey");
-							outputter.endTag();
-							outputter.startTag("clear");
-								outputter.attribute("namelist", "answerInput answer");
-							outputter.endTag();
-						outputter.endTag();
-					outputter.endTag();
-					outputter.endTag();
-				}
-			outputter.endTag();
-			outputter.endDocument();	
-		} catch (Exception e) {
-			log.severe("Exception in creating open question XML: "+ e.toString());
-		}		
-		return sw.toString();
-	}*/
 
 	/** renders/updates the xml for recording an audio and posts it to the user on the callback 
 	     * @param question

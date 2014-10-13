@@ -256,6 +256,19 @@ public class Question implements QuestionIntf {
                 }
                 catch (NumberFormatException ex) {
                     log.severe(ex.getLocalizedMessage());
+                    if(answer_input.equals("#") && answers.size() > 11) {
+                    	
+                    } else if(answer_input.equals("*") && answers.size() > 10) {
+                    	
+                    } else {
+                    	for (Answer ans : answers) {
+                            if (ans.getAnswer_text() != null && ans.getAnswer_text().contains(answer_input)) {
+                                answer = ans;
+                                break;
+                            }
+                        }
+                    }
+                    
                 }
             }
         }

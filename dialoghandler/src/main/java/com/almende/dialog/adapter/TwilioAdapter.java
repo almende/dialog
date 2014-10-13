@@ -7,10 +7,12 @@ import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
+
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -20,7 +22,9 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+
 import org.znerd.xmlenc.XMLOutputter;
+
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -107,6 +111,11 @@ public class TwilioAdapter {
             		// number in your account
             		callParams.put("ApplicationSid", applicationId);
             		//callParams.put("Url", "http://" + Settings.HOST + "/dialoghandler/rest/twilio/new");
+            		callParams.put("StatusCallback", "http://" + Settings.HOST + "/dialoghandler/rest/twilio/cc");
+            		callParams.put("StatusCallbackMethod", "GET");  
+            		callParams.put("IfMachine", "Hangup"); 
+            		callParams.put("Timeout", "10"); 
+            		callParams.put("Record", "false");
             		
             		Call call = callFactory.create(callParams);
             		System.out.println(call.getSid());
@@ -430,6 +439,38 @@ public class TwilioAdapter {
         String reply = twiml.toXML();
         return Response.ok(reply).build();
     }
+    
+    @Path("exception")
+    @GET
+    @Produces("application/voicexml+xml")
+    public Response
+        exception(@QueryParam("questionId") String question_id, @QueryParam("sessionKey") String sessionKey) {
+
+        String reply = (new TwiMLResponse()).toXML();
+        Session session = Session.getSession(sessionKey);
+        if (session != null && session.getQuestion() != null) {
+            Question question = session.getQuestion();
+            String responder = session.getRemoteAddress();
+
+            if (session.killed) {
+                return Response.status(Response.Status.BAD_REQUEST).build();
+            }
+            dialogLog.log(LogLevel.INFO,
+                          session.getAdapterConfig(),
+                          String.format("Wrong answer received from: %s for question: %s", responder,
+                                        question.getQuestion_expandedtext()), session);
+
+            HashMap<String, String> extras = new HashMap<String, String>();
+            extras.put("sessionKey", sessionKey);
+            question = question.event("exception", "Wrong answer received", extras, responder);
+            //reload the session
+            session = Session.getSession(sessionKey);
+            session.setQuestion(question);
+            session.storeSession();
+            return handleQuestion(question, session.getAdapterConfig(), responder, sessionKey);
+        }
+        return Response.ok(reply).build();
+    }
 	
 	@Path("cc")
     @GET
@@ -494,7 +535,7 @@ public class TwilioAdapter {
 		log.info("Session key: " + sessionKey);
         
 		
-		return Response.ok().build();
+		return Response.ok("").build();
 	}
 	
 	/**
@@ -761,6 +802,20 @@ public class TwilioAdapter {
         gather.setNumDigits(1);
 
         String noAnswerTimeout = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT);
+        
+        boolean useHash = true;
+        if(question.getAnswers().size() > 11) {
+        	useHash = false;
+        } else {
+        	List<Answer> answers = question.getAnswers();
+        	for(Answer answer : answers) {
+        		if(answer.getAnswer_text().startsWith("dtmfKey://#")) {
+        			useHash = true;
+        			break;
+        		}
+        	}
+        }
+        
         //assign a default timeout if one is not specified
         noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "10";
         if (noAnswerTimeout.endsWith("s")) {
@@ -775,6 +830,9 @@ public class TwilioAdapter {
             e.printStackTrace();
         }
         gather.setTimeout(timeout);
+        if(useHash) {
+        	gather.setFinishOnKey("");
+        }
         try {
             for (String prompt : prompts) {
                 gather.append(new Play(prompt));

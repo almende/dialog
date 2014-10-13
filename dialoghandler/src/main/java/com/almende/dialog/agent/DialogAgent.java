@@ -49,13 +49,13 @@ import com.rabbitmq.client.QueueingConsumer.Delivery;
 
 @Access(AccessType.PUBLIC)
 public class DialogAgent extends Agent implements DialogAgentInterface {
-	private static final Logger	log	= Logger.getLogger(DialogAgent.class
-											.getName());
+
+    private static final Logger log = Logger.getLogger(DialogAgent.class.getName());
 
     //create a single static connection for collecting dialog requests
     private static ConnectionFactory rabbitMQConnectionFactory;
     private static final String DIALOG_PROCESS_QUEUE_NAME = "DIALOG_PUBLISH_QUEUE";
-    private static final Integer MAXIMUM_DEFAULT_DIALOG_ALLOWED = 15;
+    private static final Integer MAXIMUM_DEFAULT_DIALOG_ALLOWED = 2;
     
 	public ArrayList<String> getActiveCalls(@Name("adapterID") String adapterID) {
 		
@@ -477,18 +477,35 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             QueueingConsumer consumer = new QueueingConsumer(channel);
             channel.basicConsume(DIALOG_PROCESS_QUEUE_NAME, true, consumer);
 
-            Integer currentSessionsCountInQueue = getCurrentSessionsCountInQueue();
-            Integer maxSessionsAllowedInQueue = getMaxSessionsAllowedInQueue();
-            log.info(String.format("Waiting to process dialogs... current list size: %s. Maximum allowed: %s",
-                                   currentSessionsCountInQueue, maxSessionsAllowedInQueue));
-            while (currentSessionsCountInQueue < maxSessionsAllowedInQueue) {
+            while (true) {
+                
+                //first check if any outbound requests are in the buffer
+                Map<String, Collection<DialogRequestDetails>> bufferedRequests = getAllBufferedOutboundDialogRequests();
+                if(bufferedRequests != null) {
+                    for (String accountId : bufferedRequests.keySet()) {
+                        for (DialogRequestDetails dialogDetails : bufferedRequests.get(accountId)) {
+                            log.info(String.format("Clearing outbound request in buffer: %s", JOM.getInstance()
+                                                            .writeValueAsString(dialogDetails)));
+                            HashMap<String, String> sessionTriggered = outboundCall(dialogDetails);
+                            for (String sessionId : sessionTriggered.values()) {
+                                addSessionToProcessQueue(dialogDetails.getAccountId(), sessionId);
+                            }
+                        }
+                    }
+                }
+                
                 Delivery delivery = consumer.nextDelivery();
                 ObjectMapper om = JOM.getInstance();
                 try {
                     DialogRequestDetails dialogDetails = om.readValue(delivery.getBody(), DialogRequestDetails.class);
-                    log.info(String.format("---------Received a dialog request to process: %s ---------",
-                                           new String(delivery.getBody())));
-                    outboundCall(dialogDetails);
+                    if (dialogDetails != null) {
+                        log.info(String.format("---------Received a dialog request to process: %s ---------",
+                                               new String(delivery.getBody())));
+                        HashMap<String, String> sessionTriggered = outboundCall(dialogDetails);
+                        for (String sessionId : sessionTriggered.values()) {
+                            addSessionToProcessQueue(dialogDetails.getAccountId(), sessionId);
+                        }
+                    }
                 }
                 catch (Exception e) {
                     log.severe(String.format("Dialog processing failed for payload: %s. Error: %s",
@@ -501,8 +518,153 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         }
     }
     
+    /**
+     * Returns all the sessionKeys that are currently being processed and in queue.
+     * @return
+     */
+    public Map<String, Collection<String>> getAllSessionsInQueue() {
+
+        return getState().get("sessionsInQueue", new TypeUtil<Map<String, Collection<String>>>() {});
+    }
+    
+    /**
+     * Returns the number of sessions currently being handled.
+     * @return
+     */
+    public Integer getCurrentSessionsCountInQueue(String accountId) {
+        Map<String, Collection<String>> currentSessions = getAllSessionsInQueue();
+        return currentSessions != null && currentSessions.get(accountId) != null ? currentSessions.get(accountId)
+                                        .size() : 0;
+    }
+    
+    public boolean clearSessionFromCurrentQueue(String accountId, String sessionKey) {
+        Map<String, Collection<String>> allSessionsInQueue = getAllSessionsInQueue();
+        if(allSessionsInQueue != null) {
+            Collection<String> allSessions = allSessionsInQueue.get(accountId);
+            if(allSessions != null) {
+                boolean isSessionExisting = allSessions.contains(sessionKey);
+                log.info(String.format("SessionKey lookup in currentQueue is: %s for accountId: %s and sessionKey: %s",
+                                       isSessionExisting, accountId, sessionKey));
+                allSessions.remove(sessionKey);
+                getState().put("sessionsInQueue", allSessionsInQueue);
+                return isSessionExisting;
+            }
+            else {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
+    }
+    
+    /**
+     * Returns the maximum number of sessions allowed by the processor
+     * @return
+     */
+    public Integer getMaxSessionsAllowedInQueue() {
+        Integer maxSessionsAllowed = getState().get("max_sessionsInQueue", Integer.class);
+        if(maxSessionsAllowed == null) {
+            maxSessionsAllowed = MAXIMUM_DEFAULT_DIALOG_ALLOWED;
+            getState().put("max_sessionsInQueue", maxSessionsAllowed);
+        }
+        return maxSessionsAllowed;
+    }
+    
+    /**
+     * Set the maximum number of sessions that can be handled in the queue.
+     * @return
+     */
+    public Integer setMaxSessionsAllowedInQueue(@Name("maxSessionsInQueue") Integer maxSessionsInQueue) {
+
+        getState().put("max_sessionsInQueue", maxSessionsInQueue);
+        return getMaxSessionsAllowedInQueue();
+    }
+    
+    /**
+     * Get the buffered outbound requests based on accountId
+     * @return
+     */
+    public Collection<DialogRequestDetails> getBufferedOutboundDialogRequests(String accountId) {
+
+        Map<String, Collection<DialogRequestDetails>> bufferedRequests = getAllBufferedOutboundDialogRequests();
+        return bufferedRequests != null ? bufferedRequests.get(accountId) : null;
+    }
+
+    /** Get all the buffered outbound dialog requests
+     * @return
+     */
+    private Map<String, Collection<DialogRequestDetails>> getAllBufferedOutboundDialogRequests() {
+
+        return getState().get("buffered_requestsInQueue",
+                              new TypeUtil<Map<String, Collection<DialogRequestDetails>>>() {});
+    }
+    
+    /**
+     * Returns the number of sessions currently being handled.
+     * @return
+     */
+    private Map<String, Collection<String>> addSessionToProcessQueue(String accountId, String sessionKey) {
+
+        if (sessionKey != null) {
+            Map<String, Collection<String>> allCurrentSessions = getAllSessionsInQueue();
+            allCurrentSessions = allCurrentSessions != null ? allCurrentSessions : new HashMap<String, Collection<String>>();
+            Collection<String> currentSessions = allCurrentSessions.get(accountId) != null ? allCurrentSessions
+                                            .get(accountId) : new HashSet<String>();
+            currentSessions.add(sessionKey);
+            allCurrentSessions.put(accountId, currentSessions);
+            getState().put("sessionsInQueue", currentSessions);
+        }
+        return getAllSessionsInQueue();
+    }
+    
+    /**
+     * Add some outbound requests to the buffer
+     * @return
+     */
+    private Collection<DialogRequestDetails> addOutboundDialogRequestsToBuffer(DialogRequestDetails dialogRequest) {
+
+        Map<String, Collection<DialogRequestDetails>> allBufferedOutboundDialogRequests = getAllBufferedOutboundDialogRequests();
+        Collection<DialogRequestDetails> bufferedOutboundDialogRequests = allBufferedOutboundDialogRequests != null 
+                                        ? allBufferedOutboundDialogRequests.get(dialogRequest.getAccountId()) : new ArrayList<DialogRequestDetails>();
+        bufferedOutboundDialogRequests.add(dialogRequest);
+        allBufferedOutboundDialogRequests.put(dialogRequest.getAccountId(), bufferedOutboundDialogRequests);
+        getState().put("buffered_requestsInQueue", allBufferedOutboundDialogRequests);
+        return bufferedOutboundDialogRequests;
+    }
+	
+    /**
+     * basic check to see if a map is empty or null
+     * 
+     * @param mapObject
+     * @return
+     */
+    private boolean isNullOrEmpty(Map<String, String> mapObject) {
+        return mapObject == null || mapObject.isEmpty() ? true : false;
+    }
+    
+    /**
+     * Triggers an outbound call by calling the appropriate call based on the {@link DialogRequestDetails#getMethod()}
+     * @param dialogDetails
+     * @return
+     * @throws Exception
+     */
     private HashMap<String, String> outboundCall(DialogRequestDetails dialogDetails) throws Exception {
 
+        Integer currentSessionsCountInQueue = getCurrentSessionsCountInQueue(dialogDetails.getAccountId());
+        Integer maxSessionsAllowedInQueue = getMaxSessionsAllowedInQueue();
+        //buffer the outbound request when the limit exceeds
+        if(currentSessionsCountInQueue >= maxSessionsAllowedInQueue) {
+            Collection<DialogRequestDetails> dialogRequestsBuffered = addOutboundDialogRequestsToBuffer(dialogDetails);
+            if(dialogRequestsBuffered != null && !dialogRequestsBuffered.isEmpty()) {
+                log.info( dialogRequestsBuffered.size() + " dialog requests buffered");
+                return null;
+            }
+        }
+        //if the buffer exceeds for this call, adjust the buffer
+        else if (dialogDetails.getAddressMap().size() > (maxSessionsAllowedInQueue - currentSessionsCountInQueue)) {
+            dialogDetails = processDialogRequest(currentSessionsCountInQueue, maxSessionsAllowedInQueue, dialogDetails);
+        }
         HashMap<String, String> result = new HashMap<String, String>();
         if (dialogDetails != null && dialogDetails.getMethod() != null) {
             String dialogMethod = dialogDetails.getMethod();
@@ -565,69 +727,111 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         }
         return result;
     }
-    
-    /**
-     * Returns all the sessionKeys that are currently being processed and in queue.
-     * @return
-     */
-    public Collection<String> getCurrentSessionsInQueue() {
-        return getState().get("sessionsInQueue", new TypeUtil<Collection<String>>() {});
-    }
-    
-    /**
-     * Returns the number of sessions currently being handled.
-     * @return
-     */
-    public Integer getCurrentSessionsCountInQueue() {
-        Collection<String> currentSessions = getCurrentSessionsInQueue();
-        return currentSessions != null ? currentSessions.size() : 0;
-    }
-    
-    /**
-     * Returns the maximum number of sessions allowed by the processor
-     * @return
-     */
-    public Integer getMaxSessionsAllowedInQueue() {
-        Integer maxSessionsAllowed = getState().get("max_sessionsInQueue", Integer.class);
-        if(maxSessionsAllowed == null) {
-            maxSessionsAllowed = MAXIMUM_DEFAULT_DIALOG_ALLOWED;
-            getState().put("max_sessionsInQueue", maxSessionsAllowed);
-        }
-        return maxSessionsAllowed;
-    }
-    
-    /**
-     * Set the maximum number of sessions that can be handled in the queue.
-     * @return
-     */
-    public Integer setMaxSessionsAllowedInQueue(@Name("maxSessionsInQueue") Integer maxSessionsInQueue) {
 
-        getState().put("max_sessionsInQueue", maxSessionsInQueue);
-        return getMaxSessionsAllowedInQueue();
-    }
+//    /** Count of all the addresses in this dialogDetails
+//     * @param dialogDetails
+//     * @param totalOutBoundCalls
+//     * @return
+//     */
+//    private Integer getTotalAddressCountInDialogRequests(DialogRequestDetails dialogDetails) {
+//
+//        Integer totalOutBoundCalls = 0;
+//        if (isNullOrEmpty(dialogDetails.getAddressMap())) {
+//            totalOutBoundCalls += dialogDetails.getAddressMap().size();
+//        }
+//        if (isNullOrEmpty(dialogDetails.getAddressCcMap())) {
+//            totalOutBoundCalls += dialogDetails.getAddressCcMap().size();
+//        }
+//        if (isNullOrEmpty(dialogDetails.getAddressBccMap())) {
+//            totalOutBoundCalls += dialogDetails.getAddressBccMap().size();
+//        }
+//        return totalOutBoundCalls;
+//    }
     
     /**
-     * Returns the number of sessions currently being handled.
-     * @return
-     */
-    private Collection<String> addSessionToProcessQueue(String sessionKey) {
-
-        if (sessionKey != null) {
-            Collection<String> currentSessions = getCurrentSessionsInQueue();
-            currentSessions = currentSessions != null ? currentSessions : new HashSet<String>();
-            currentSessions.add(sessionKey);
-            getState().put("sessionsInQueue", currentSessions);
-        }
-        return getCurrentSessionsInQueue();
-    }
-	
-    /**
-     * basic check to see if a map is empty or null
+     * Resets the addresses given of the given dialogRequestDetails given and
+     * buffers it in the state information of this agent
      * 
-     * @param mapObject
+     * @param currentSessionSize
+     * @param dialogRequestDetails
      * @return
      */
-    private boolean isNullOrEmpty(Map<String, String> mapObject) {
-        return mapObject == null || mapObject.isEmpty() ? true : false;
+    private DialogRequestDetails processDialogRequest(Integer currentSessionSize, Integer maxSessionsAllowedInQueue,
+        DialogRequestDetails dialogRequestDetails) {
+
+        //check if currentSession size allows some of the addresses 
+        Integer manageableBufferSize = maxSessionsAllowedInQueue - currentSessionSize;
+        DialogRequestDetails dialogRequestForSending = null;
+        dialogRequestForSending = new DialogRequestDetails(dialogRequestDetails);
+
+        if (!dialogRequestDetails.getAddressMap().isEmpty()) {
+            if (manageableBufferSize - dialogRequestDetails.getAddressMap().size() >= 0) {
+                dialogRequestForSending.setAddressMap(dialogRequestDetails.getAddressMap());
+            }
+            //buffer part of the addressMap
+            else {
+                Integer addressCountForBuffering = dialogRequestDetails.getAddressMap().size() - manageableBufferSize;
+                splitAddressesMapAndBuffer(dialogRequestForSending, dialogRequestDetails.getAddressMap(),
+                                           addressCountForBuffering);
+            }
+        }
+        return dialogRequestForSending;
     }
+
+    /** Returns part of the addresses based on the length of the allowed address size. Rest of the addresses
+     * are buffered
+     * @param dialogRequestDetails
+     * @param addresses
+     * @param allowedAddressesSize
+     * @return
+     */
+    private DialogRequestDetails splitAddressesMapAndBuffer(DialogRequestDetails dialogRequestDetails,
+        Map<String, String> addresses, Integer allowedAddressesSize) {
+
+        Integer addressCount = 0;
+        if(dialogRequestDetails.getAddressMap() == null) {
+            dialogRequestDetails.setAddressMap(new HashMap<String, String>()); 
+        }
+        DialogRequestDetails dialogRequestForBuffer = null;
+        for (String address : addresses.keySet()) {
+            if (addressCount < allowedAddressesSize) {
+                dialogRequestDetails.getAddressMap().put(address, addresses.get(address));
+            }
+            else {
+                if (dialogRequestForBuffer == null) {
+                    dialogRequestForBuffer = new DialogRequestDetails(dialogRequestDetails);
+                    dialogRequestForBuffer.setAddressMap(new HashMap<String, String>());
+                }
+                dialogRequestForBuffer.getAddressMap().put(address, addresses.get(address));
+            }
+        }
+        if (dialogRequestForBuffer != null) {
+            addOutboundDialogRequestsToBuffer(dialogRequestForBuffer);
+        }
+        return dialogRequestDetails;
+    }
+    
+//    private DialogRequestDetails addAddressToDialogRequest(String key, String address, String addressName, DialogRequestDetails dialogRequestDetails) {
+//        if(address != null && !address.isEmpty()) {
+//            switch (key) {
+//                case "to":
+//                    if(!dialogRequestDetails.getAddressMap().isEmpty()) {
+//                        dialogRequestDetails.getAddressMap().put(address, addressName);
+//                    }
+//                    break;
+//                case "cc":
+//                    if(!dialogRequestDetails.getAddressCcMap().isEmpty()) {
+//                        dialogRequestDetails.getAddressCcMap().put(address, addressName);
+//                    }
+//                    break;
+//                case "bcc":
+//                    if(!dialogRequestDetails.getAddressBccMap().isEmpty()) {
+//                        dialogRequestDetails.getAddressBccMap().put(address, addressName);
+//                    }
+//                default:
+//                    break;
+//            } 
+//        }
+//        return dialogRequestDetails;
+//    }
 }

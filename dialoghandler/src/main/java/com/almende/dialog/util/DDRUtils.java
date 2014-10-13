@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 import org.joda.time.DateTime;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -16,6 +17,8 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.almende.eve.agent.Agent;
+import com.almende.eve.agent.AgentHost;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
@@ -640,6 +643,12 @@ public class DDRUtils
                         }
                         publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
                         result = true;
+                        //clear the session from the dialog publish queue
+                        Agent agent = AgentHost.getInstance().getAgent("dialog");
+                        if(agent != null) {
+                            DialogAgent dialogAgent = (DialogAgent) agent;
+                            dialogAgent.clearSessionFromCurrentQueue(ddrRecord.getAccountId(), sessionKey);
+                        }
                     }
                     //if answerTimestamp and releastTimestamp is not found, add it to the queue
                     else {

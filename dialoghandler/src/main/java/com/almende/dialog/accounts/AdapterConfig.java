@@ -793,8 +793,11 @@ public class AdapterConfig {
     public static AdapterConfig checkIfAdapterMatchesForAccountId(Collection<String> accountIds,
         AdapterConfig adapterConfig, boolean checkOwnerOnly) {
 
+        if(adapterConfig == null) {
+            return null;
+        }
         //if accountId is null, the adapter owner and accounts must also be null or empty
-        if (accountIds == null && adapterConfig.getOwner() == null &&
+        else if (accountIds == null && adapterConfig.getOwner() == null &&
             (adapterConfig.getAccounts() == null || adapterConfig.getAccounts().isEmpty())) {
             return adapterConfig;
         }

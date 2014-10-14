@@ -25,6 +25,7 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
+import com.almende.eve.agent.annotation.ThreadSafe;
 import com.almende.eve.rpc.annotation.Access;
 import com.almende.eve.rpc.annotation.AccessType;
 import com.almende.eve.rpc.annotation.Name;
@@ -48,6 +49,7 @@ import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.QueueingConsumer.Delivery;
 
 @Access(AccessType.PUBLIC)
+@ThreadSafe(true)
 public class DialogAgent extends Agent implements DialogAgentInterface {
 
     private static final Logger log = Logger.getLogger(DialogAgent.class.getName());
@@ -56,6 +58,28 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     private static ConnectionFactory rabbitMQConnectionFactory;
     private static final String DIALOG_PROCESS_QUEUE_NAME = "DIALOG_PUBLISH_QUEUE";
     private static final Integer MAXIMUM_DEFAULT_DIALOG_ALLOWED = 2;
+    
+    @Override
+    protected void onInit() {
+
+        Thread dialogProcessorThread = new Thread(
+        //run the process to listen to incoming ddr records/processings
+                                                  new Runnable() {
+
+                                                      @Override
+                                                      public void run() {
+
+                                                          try {
+                                                              consumeDialogInitiationQueue();
+                                                          }
+                                                          catch (Exception e) {
+                                                              log.severe("Dialog processing of queue failed!. Error: " +
+                                                                         e.getLocalizedMessage());
+                                                          }
+                                                      }
+                                                  });
+        dialogProcessorThread.start();
+    }
     
 	public ArrayList<String> getActiveCalls(@Name("adapterID") String adapterID) {
 		
@@ -67,7 +91,6 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 			}
 		} catch (Exception ex) {
 		}
-		
 		return null;
 	}
 	
@@ -240,7 +263,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                 // TODO: Add default field to adapter (to be able to load default adapter)
                 final List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters(adapterType, null, null);
                 for (AdapterConfig cfg : adapterConfigs) {
-                    if (cfg.getOwner().equals(accountId)) {
+                    if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), cfg, false) != null) {
                         config = cfg;
                         break;
                     }
@@ -481,38 +504,23 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             Integer maxSessionsAllowedInQueue = getMaxSessionsAllowedInQueue();
             
             while (currentSessionsCountInQueue <= maxSessionsAllowedInQueue) {
-                
-//                //first check if any outbound requests are in the buffer
-//                Map<String, Collection<DialogRequestDetails>> bufferedRequests = getAllBufferedOutboundDialogRequests();
-//                if(bufferedRequests != null) {
-//                    for (String accountId : bufferedRequests.keySet()) {
-//                        for (DialogRequestDetails dialogDetails : bufferedRequests.get(accountId)) {
-//                            log.info(String.format("Clearing outbound request in buffer: %s", JOM.getInstance()
-//                                                            .writeValueAsString(dialogDetails)));
-//                            HashMap<String, String> sessionTriggered = outboundCall(dialogDetails);
-//                            for (String sessionId : sessionTriggered.values()) {
-//                                addSessionToProcessQueue(dialogDetails.getAccountId(), sessionId);
-//                            }
-//                        }
-//                    }
-//                }
                 Delivery delivery = consumer.nextDelivery();
                 ObjectMapper om = JOM.getInstance();
                 try {
                     DialogRequestDetails dialogDetails = om.readValue(delivery.getBody(), DialogRequestDetails.class);
                     if (dialogDetails != null) {
-                        
+
                         log.info(String.format("---------Received a dialog request to process: %s ---------",
                                                new String(delivery.getBody())));
                         HashMap<String, String> sessionTriggered = outboundCall(dialogDetails);
-                        
+
                         boolean isCallAdapter = false;
-                        if(AdapterType.isCallAdapter(dialogDetails.getAdapterType())) {
+                        if (AdapterType.isCallAdapter(dialogDetails.getAdapterType())) {
                             isCallAdapter = true;
                         }
-                        else if(dialogDetails.getAdapterID() != null){
+                        else if (dialogDetails.getAdapterID() != null) {
                             AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(dialogDetails.getAdapterID());
-                            if(adapterConfig != null) {
+                            if (adapterConfig != null) {
                                 isCallAdapter = AdapterType.isCallAdapter(adapterConfig.getAdapterType());
                             }
                         }
@@ -667,37 +675,24 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      */
     private HashMap<String, String> outboundCall(DialogRequestDetails dialogDetails) throws Exception {
 
-//        //buffer the outbound request when the limit exceeds
-//        if(currentSessionsCountInQueue >= maxSessionsAllowedInQueue) {
-//            Collection<DialogRequestDetails> dialogRequestsBuffered = addOutboundDialogRequestsToBuffer(dialogDetails);
-//            if(dialogRequestsBuffered != null && !dialogRequestsBuffered.isEmpty()) {
-//                log.info( dialogRequestsBuffered.size() + " dialog requests buffered");
-//                return null;
-//            }
-//        }
-//        //if the buffer exceeds for this call, adjust the buffer
-//        else if (dialogDetails.getAddressMap().size() > (maxSessionsAllowedInQueue - currentSessionsCountInQueue)) {
-//            dialogDetails = processDialogRequest(currentSessionsCountInQueue, maxSessionsAllowedInQueue, dialogDetails);
-//        }
         HashMap<String, String> result = new HashMap<String, String>();
         if (dialogDetails != null && dialogDetails.getMethod() != null) {
             String dialogMethod = dialogDetails.getMethod();
             switch (dialogMethod) {
                 case "outboundCall":
-                    if (dialogDetails.getAddressMap() != null && !dialogDetails.getAddressMap().isEmpty()) {
-                        result = outboundCall(dialogDetails.getAddressMap().keySet().iterator().next(),
-                                              dialogDetails.getSenderName(), dialogDetails.getSubject(),
-                                              dialogDetails.getUrl(), dialogDetails.getAdapterType(),
-                                              dialogDetails.getAdapterID(), dialogDetails.getAccountId(),
-                                              dialogDetails.getBearerToken());
+                    if (dialogDetails.getAddress() != null) {
+                        result = outboundCall(dialogDetails.getAddress(), dialogDetails.getSenderName(),
+                                              dialogDetails.getSubject(), dialogDetails.getUrl(),
+                                              dialogDetails.getAdapterType(), dialogDetails.getAdapterID(),
+                                              dialogDetails.getAccountId(), dialogDetails.getBearerToken());
                     }
                     else {
                         result.put("Error!. No addresses found", null);
                     }
                     break;
                 case "outboundCallWithList":
-                    if (dialogDetails.getAddressMap() != null && !dialogDetails.getAddressMap().isEmpty()) {
-                        result = outboundCallWithList(dialogDetails.getAddressMap().keySet(),
+                    if (dialogDetails.getAddressList() != null && !dialogDetails.getAddressList().isEmpty()) {
+                        result = outboundCallWithList(dialogDetails.getAddressList(),
                                                       dialogDetails.getSenderName(), dialogDetails.getSubject(),
                                                       dialogDetails.getUrl(), dialogDetails.getAdapterType(),
                                                       dialogDetails.getAdapterID(), dialogDetails.getAccountId(),

@@ -500,41 +500,43 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             QueueingConsumer consumer = new QueueingConsumer(channel);
             channel.basicConsume(DIALOG_PROCESS_QUEUE_NAME, true, consumer);
             
-            Integer currentSessionsCountInQueue = getCurrentSessionsCountInQueue();
-            Integer maxSessionsAllowedInQueue = getMaxSessionsAllowedInQueue();
-            
-            while (currentSessionsCountInQueue <= maxSessionsAllowedInQueue) {
-                Delivery delivery = consumer.nextDelivery();
-                ObjectMapper om = JOM.getInstance();
-                try {
-                    DialogRequestDetails dialogDetails = om.readValue(delivery.getBody(), DialogRequestDetails.class);
-                    if (dialogDetails != null) {
+            while (true) {
+                Integer currentSessionsCountInQueue = getCurrentSessionsCountInQueue();
+                Integer maxSessionsAllowedInQueue = getMaxSessionsAllowedInQueue();
+                if (currentSessionsCountInQueue < maxSessionsAllowedInQueue) {
+                    Delivery delivery = consumer.nextDelivery();
+                    ObjectMapper om = JOM.getInstance();
+                    try {
+                        DialogRequestDetails dialogDetails = om.readValue(delivery.getBody(),
+                                                                          DialogRequestDetails.class);
+                        if (dialogDetails != null) {
 
-                        log.info(String.format("---------Received a dialog request to process: %s ---------",
-                                               new String(delivery.getBody())));
-                        HashMap<String, String> sessionTriggered = outboundCall(dialogDetails);
-
-                        boolean isCallAdapter = false;
-                        if (AdapterType.isCallAdapter(dialogDetails.getAdapterType())) {
-                            isCallAdapter = true;
-                        }
-                        else if (dialogDetails.getAdapterID() != null) {
-                            AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(dialogDetails.getAdapterID());
-                            if (adapterConfig != null) {
-                                isCallAdapter = AdapterType.isCallAdapter(adapterConfig.getAdapterType());
+                            log.info(String.format("---------Received a dialog request to process: %s ---------",
+                                                   new String(delivery.getBody())));
+                            HashMap<String, String> sessionTriggered = outboundCall(dialogDetails);
+                            boolean isCallAdapter = false;
+                            if (AdapterType.isCallAdapter(dialogDetails.getAdapterType())) {
+                                isCallAdapter = true;
                             }
-                        }
-                        //only add it to the process queue only for a phone call. 
-                        if (isCallAdapter) {
-                            for (String sessionId : sessionTriggered.values()) {
-                                addSessionToProcessQueue(dialogDetails.getAccountId(), sessionId);
+                            else if (dialogDetails.getAdapterID() != null) {
+                                AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(dialogDetails
+                                                                .getAdapterID());
+                                if (adapterConfig != null) {
+                                    isCallAdapter = AdapterType.isCallAdapter(adapterConfig.getAdapterType());
+                                }
+                            }
+                            //only add it to the process queue only for a phone call. 
+                            if (isCallAdapter) {
+                                for (String sessionId : sessionTriggered.values()) {
+                                    addSessionToProcessQueue(sessionId);
+                                }
                             }
                         }
                     }
-                }
-                catch (Exception e) {
-                    log.severe(String.format("Dialog processing failed for payload: %s. Error: %s",
-                                             new String(delivery.getBody()), e.toString()));
+                    catch (Exception e) {
+                        log.severe(String.format("Dialog processing failed for payload: %s. Error: %s",
+                                                 new String(delivery.getBody()), e.toString()));
+                    }
                 }
             }
         }
@@ -547,9 +549,13 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      * Returns all the sessionKeys that are currently being processed and in queue.
      * @return
      */
-    public Map<String, Collection<String>> getAllSessionsInQueue() {
+    public HashSet<String> getAllSessionsInQueue() {
 
-        return getState().get("sessionsInQueue", new TypeUtil<Map<String, Collection<String>>>() {});
+        Collection<String> allSessions = getState().get("sessionsInQueue", new TypeUtil<Collection<String>>() {});
+        if(allSessions != null) {
+            return new HashSet<String>(allSessions);
+        }
+        return null;
     }
     
     /**
@@ -557,25 +563,20 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      * @return
      */
     public Integer getCurrentSessionsCountInQueue() {
-        Map<String, Collection<String>> currentSessions = getAllSessionsInQueue();
+        Collection<String> currentSessions = getAllSessionsInQueue();
         return currentSessions != null ? currentSessions.size() : 0;
     }
     
-    public boolean clearSessionFromCurrentQueue(String accountId, String sessionKey) {
-        Map<String, Collection<String>> allSessionsInQueue = getAllSessionsInQueue();
-        if(allSessionsInQueue != null) {
-            Collection<String> allSessions = allSessionsInQueue.get(accountId);
-            if(allSessions != null) {
-                boolean isSessionExisting = allSessions.contains(sessionKey);
-                log.info(String.format("SessionKey lookup in currentQueue is: %s for accountId: %s and sessionKey: %s",
-                                       isSessionExisting, accountId, sessionKey));
-                allSessions.remove(sessionKey);
-                getState().put("sessionsInQueue", allSessionsInQueue);
-                return isSessionExisting;
-            }
-            else {
-                return false;
-            }
+    public boolean clearSessionFromCurrentQueue(@Name("sessionKey") String sessionKey) {
+
+        Collection<String> allSessionsInQueue = getAllSessionsInQueue();
+        if (allSessionsInQueue != null) {
+            boolean isSessionExisting = allSessionsInQueue.contains(sessionKey);
+            log.info(String.format("SessionKey lookup in currentQueue is: %s for sessionKey: %s", isSessionExisting,
+                                   sessionKey));
+            allSessionsInQueue.remove(sessionKey);
+            getState().put("sessionsInQueue", allSessionsInQueue);
+            return isSessionExisting;
         }
         else {
             return false;
@@ -628,16 +629,13 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      * Returns the number of sessions currently being handled.
      * @return
      */
-    private Map<String, Collection<String>> addSessionToProcessQueue(String accountId, String sessionKey) {
+    private Collection<String> addSessionToProcessQueue(String sessionKey) {
 
         if (sessionKey != null) {
-            Map<String, Collection<String>> allCurrentSessions = getAllSessionsInQueue();
-            allCurrentSessions = allCurrentSessions != null ? allCurrentSessions : new HashMap<String, Collection<String>>();
-            Collection<String> currentSessions = allCurrentSessions.get(accountId) != null ? allCurrentSessions
-                                            .get(accountId) : new HashSet<String>();
-            currentSessions.add(sessionKey);
-            allCurrentSessions.put(accountId, currentSessions);
-            getState().put("sessionsInQueue", currentSessions);
+            Collection<String> allCurrentSessions = getAllSessionsInQueue();
+            allCurrentSessions = allCurrentSessions != null ? allCurrentSessions : new HashSet<String>();
+            allCurrentSessions.add(sessionKey);
+            getState().put("sessionsInQueue", allCurrentSessions);
         }
         return getAllSessionsInQueue();
     }
@@ -684,7 +682,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         result = outboundCall(dialogDetails.getAddress(), dialogDetails.getSenderName(),
                                               dialogDetails.getSubject(), dialogDetails.getUrl(),
                                               dialogDetails.getAdapterType(), dialogDetails.getAdapterID(),
-                                              dialogDetails.getAccountId(), dialogDetails.getBearerToken());
+                                              dialogDetails.getAccountID(), dialogDetails.getBearerToken());
                     }
                     else {
                         result.put("Error!. No addresses found", null);
@@ -695,7 +693,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         result = outboundCallWithList(dialogDetails.getAddressList(),
                                                       dialogDetails.getSenderName(), dialogDetails.getSubject(),
                                                       dialogDetails.getUrl(), dialogDetails.getAdapterType(),
-                                                      dialogDetails.getAdapterID(), dialogDetails.getAccountId(),
+                                                      dialogDetails.getAdapterID(), dialogDetails.getAccountID(),
                                                       dialogDetails.getBearerToken());
                     }
                     else {
@@ -708,7 +706,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                                                              dialogDetails.getSenderName(), dialogDetails.getSubject(),
                                                              dialogDetails.getUrl(), dialogDetails.getAdapterType(),
                                                              dialogDetails.getAdapterID(),
-                                                             dialogDetails.getAccountId(),
+                                                             dialogDetails.getAccountID(),
                                                              dialogDetails.getBearerToken());
                     }
                     else {
@@ -720,7 +718,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                                                         dialogDetails.getAddressBccMap(),
                                                         dialogDetails.getSenderName(), dialogDetails.getSubject(),
                                                         dialogDetails.getUrl(), dialogDetails.getAdapterType(),
-                                                        dialogDetails.getAdapterID(), dialogDetails.getAccountId(),
+                                                        dialogDetails.getAdapterID(), dialogDetails.getAccountID(),
                                                         dialogDetails.getBearerToken(),
                                                         dialogDetails.getCallProperties());
                 case "outboundCallWithMap":
@@ -728,7 +726,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                                                  dialogDetails.getAddressBccMap(), dialogDetails.getSenderName(),
                                                  dialogDetails.getSubject(), dialogDetails.getUrl(),
                                                  dialogDetails.getAdapterType(), dialogDetails.getAdapterID(),
-                                                 dialogDetails.getAccountId(), dialogDetails.getBearerToken());
+                                                 dialogDetails.getAccountID(), dialogDetails.getBearerToken());
                     break;
                 default:
                     break;

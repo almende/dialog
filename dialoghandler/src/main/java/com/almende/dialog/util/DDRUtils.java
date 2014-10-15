@@ -643,12 +643,6 @@ public class DDRUtils
                         }
                         publishDDREntryToQueue(adapterConfig.getOwner(), totalCost);
                         result = true;
-                        //clear the session from the dialog publish queue
-                        Agent agent = AgentHost.getInstance().getAgent("dialog");
-                        if(agent != null) {
-                            DialogAgent dialogAgent = (DialogAgent) agent;
-                            dialogAgent.clearSessionFromCurrentQueue(ddrRecord.getAccountId(), sessionKey);
-                        }
                     }
                     //if answerTimestamp and releastTimestamp is not found, add it to the queue
                     else {
@@ -679,6 +673,21 @@ public class DDRUtils
                     session.pushSessionToQueue();
                 }
             }
+        }
+        
+        //clear the session from the dialog publish queue
+        try {
+            Agent agent = AgentHost.getInstance().getAgent("dialog");
+            if (agent != null) {
+                DialogAgent dialogAgent = (DialogAgent) agent;
+                boolean clearSessionFromCurrentQueue = dialogAgent.clearSessionFromCurrentQueue(sessionKey);
+                log.severe(String.format("Tried to remove SessionKey: %s from queue. Status: %s", sessionKey,
+                                         clearSessionFromCurrentQueue));
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            log.severe(String.format("Could not clear session: %s from queue", sessionKey));
         }
         return result;
     }

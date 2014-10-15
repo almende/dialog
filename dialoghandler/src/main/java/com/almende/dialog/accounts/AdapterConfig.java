@@ -590,6 +590,24 @@ public class AdapterConfig {
         this.initialAgentURL = initialAgentURL;
     }
     
+    /**
+     * Gets the dialog that is linked to the owner of this adapter. 
+     * @return
+     */
+    public Dialog getDialog() {
+        Object dialogId = properties != null ? properties.get(DIALOG_ID_KEY) : null;
+        if(dialogId != null) {
+            try {
+                return Dialog.getDialog(dialogId.toString(), owner);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe("Dialog fetch failed. Reason: " + e.getMessage());
+            }
+        }
+        return null;
+    }
+    
 	public String getAddress() {
 		return address;
 	}

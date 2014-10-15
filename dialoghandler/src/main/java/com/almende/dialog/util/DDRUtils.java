@@ -11,6 +11,7 @@ import org.joda.time.DateTime;
 
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -18,6 +19,8 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.almende.eve.agent.Agent;
+import com.almende.eve.agent.AgentHost;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
 import com.askfast.commons.entity.AdapterType;
@@ -673,6 +676,21 @@ public class DDRUtils
                     session.pushSessionToQueue();
                 }
             }
+        }
+        
+        //clear the session from the dialog publish queue
+        try {
+            Agent agent = AgentHost.getInstance().getAgent("dialog");
+            if (agent != null) {
+                DialogAgent dialogAgent = (DialogAgent) agent;
+                boolean clearSessionFromCurrentQueue = dialogAgent.clearSessionFromCurrentQueue(sessionKey);
+                log.severe(String.format("Tried to remove SessionKey: %s from queue. Status: %s", sessionKey,
+                                         clearSessionFromCurrentQueue));
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            log.severe(String.format("Could not clear session: %s from queue", sessionKey));
         }
         return result;
     }

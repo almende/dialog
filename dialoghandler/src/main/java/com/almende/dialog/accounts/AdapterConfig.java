@@ -594,6 +594,7 @@ public class AdapterConfig {
      * Gets the dialog that is linked to the owner of this adapter. 
      * @return
      */
+    @JsonIgnore
     public Dialog getDialog() {
         Object dialogId = properties != null ? properties.get(DIALOG_ID_KEY) : null;
         if(dialogId != null) {

@@ -643,13 +643,14 @@ public class VoiceXMLRESTProxy {
                             log.info("Going to format phone number: " + address);
                             String[] addressArray = address.split("@");
                             address = PhoneNumberUtils.formatNumber(addressArray[0], null);
+                            String formattedAddress = address != null ? new String(address) : addressArray[0];
                             if (address != null) {
                                 if (addressArray.length > 1) {
                                     address += "@" + addressArray[1];
                                 }
 
                                 String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT + "|" + config.getMyAddress() +
-                                                    "|" + addressArray[0];
+                                                    "|" + formattedAddress;
                                 Session session = Session.getSession(sessionKey);
                                 if (session != null) {
 

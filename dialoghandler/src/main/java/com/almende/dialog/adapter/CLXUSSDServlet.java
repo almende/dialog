@@ -18,6 +18,7 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
+import com.almende.dialog.util.ServerUtils;
 
 public class CLXUSSDServlet extends TextServlet {
 
@@ -25,36 +26,35 @@ public class CLXUSSDServlet extends TextServlet {
 	protected static final com.almende.dialog.Logger dialogLog =  new com.almende.dialog.Logger();
 	private static final String servletPath = "/ussd/";
 	
-	@Override
-	protected int sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName,
-			Map<String, Object> extras, AdapterConfig config) throws Exception {
+    @Override
+    protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
+        Map<String, Object> extras, AdapterConfig config) throws Exception {
 
-		
-		//CLXUSSD clxussd = new CLXUSSD(config.getAccessToken(),
-			//	config.getAccessTokenSecret(), config);
-		
-		CLXUSSD clxussd = new CLXUSSD();
-		clxussd.sendMessage(message, subject, from, fromName, to, toName, extras, config);
-		
-		//TODO: implement subscrtipion for 2 way communication
-		
-		/*
-		String subId = config.getXsiSubscription();
-		
-		
-			if (subId == "" || subId ==null) {
-				subId = clxussd.startSubScription(to, config);
-			}
-			
-		String xml = "";
-		if (extras.get("questionType").equals("comment")) {
-			
+        //CLXUSSD clxussd = new CLXUSSD(config.getAccessToken(),
+        //	config.getAccessTokenSecret(), config);
 
-		}*/
- 
-		return 1;
-	}
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            CLXUSSD clxussd = new CLXUSSD();
+            clxussd.sendMessage(message, subject, from, fromName, to, toName, extras, config);
+        }
+
+        //TODO: implement subscrtipion for 2 way communication
+
+        /*
+         * String subId = config.getXsiSubscription();
+         * 
+         * 
+         * if (subId == "" || subId ==null) { subId =
+         * clxussd.startSubScription(to, config); }
+         * 
+         * String xml = ""; if (extras.get("questionType").equals("comment")) {
+         * 
+         * 
+         * }
+         */
+
+        return 1;
+    }
 
     @Override
     protected int broadcastMessage(String message, String subject, String from, String senderName,

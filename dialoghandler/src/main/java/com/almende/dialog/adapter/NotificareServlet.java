@@ -13,6 +13,7 @@ import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
+import com.almende.dialog.util.ServerUtils;
 import com.google.common.io.CharStreams;
 
 public  class NotificareServlet extends TextServlet {
@@ -22,16 +23,17 @@ public  class NotificareServlet extends TextServlet {
 	protected static final com.almende.dialog.Logger dialogLog =  new com.almende.dialog.Logger();
 	public static final String servletPath = "/push/";
 	
-	@Override
-	protected int sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName,
-			Map<String, Object> extras, AdapterConfig config) throws Exception{
-		
-		Session ses = Session.getSession(getAdapterType(),config.getMyAddress(),to);
-		Notificare notificare = new Notificare();
-		notificare.sendMessage(message, subject, from, fromName, to, toName, config,ses);
-		return 1;
-	}
+        @Override
+        protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
+            Map<String, Object> extras, AdapterConfig config) throws Exception {
+    
+            Session ses = Session.getSession(getAdapterType(), config.getMyAddress(), to);
+            if (!ServerUtils.isInUnitTestingEnvironment()) {
+                Notificare notificare = new Notificare();
+                notificare.sendMessage(message, subject, from, fromName, to, toName, config, ses);
+            }
+            return 1;
+        }
 
 	@Override
 	protected int broadcastMessage(String message, String subject, String from,

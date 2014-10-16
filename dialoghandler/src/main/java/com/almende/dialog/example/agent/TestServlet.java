@@ -6,7 +6,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -309,35 +308,22 @@ public class TestServlet extends HttpServlet
     /**
      * returns a String format of a question. used for testing.
      * E.g. Are you available today?
-            [ Yup | Nope  ]
+            [ Yup | Nope ]
      * @param questionJSON
      * @return
      * @throws Exception 
      */
-    public static String getResponseQuestionWithOptionsInString( String questionJSON ) throws Exception
-    {
-        Question question = ServerUtils.deserialize( questionJSON, false, Question.class );
-        if ( question != null )
-        {
+    public static String getResponseQuestionWithOptionsInString(String questionJSON) throws Exception {
+
+        Question question = ServerUtils.deserialize(questionJSON, false, Question.class);
+        if (question != null) {
             String result = question.getQuestion_expandedtext();
-            if ( question.getAnswers() != null && question.getType().equals( "closed" ) )
-            {
-                result += "\n[ ";
-                Iterator<Answer> answerIterator = question.getAnswers().iterator();
-                while ( answerIterator.hasNext() )
-                {
-                    result += answerIterator.next().getAnswer_expandedtext();
-                    if ( answerIterator.hasNext() )
-                    {
-                        result += " | ";
-                    }
-                }
-                result += "  ]";
+            if (question.getAnswers() != null && question.getType().equals("closed")) {
+                result = question.getTextWithAnswerTexts();
             }
             return result;
         }
-        else
-        {
+        else {
             return questionJSON;
         }
     }

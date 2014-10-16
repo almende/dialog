@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
-
 import javax.mail.Address;
 import javax.mail.Folder;
 import javax.mail.Message;
@@ -32,12 +31,11 @@ import javax.mail.search.ComparisonTerm;
 import javax.mail.search.ReceivedDateTerm;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.joda.time.DateTime;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
@@ -146,12 +144,13 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
 		{
 			msg.setBody(  getText((Part)mp.getBodyPart( 0 )));
 			Session ses =  Session.getSession(AdapterAgent.ADAPTER_TYPE_EMAIL, msg.getLocalAddress(), msg.getAddress());    
-			if(ses != null && ses.getQuestion().getType().equals("closed")){
-				msg.setBody(getFristLineOfEmail(msg, mp.getBodyPart( 0 ).getContentType()));
-				log.info("Receive mail trimmed down body: "+msg.getBody());
-			}else{
-				log.info( "Receive mail: " + msg.getBody() );
-			}
+                        if (ses != null && ses.getQuestion() != null && ses.getQuestion().getType().equals("closed")) {
+                            msg.setBody(getFristLineOfEmail(msg, mp.getBodyPart(0).getContentType()));
+                            log.info("Receive mail trimmed down body: " + msg.getBody());
+                        }
+                        else {
+                            log.info("Receive mail: " + msg.getBody());
+                        }
 		}
 		return msg;
 	}
@@ -346,11 +345,16 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                 sendEmailWithDefaultAccount(simpleMessage, session);
             }
             else {
-                //sometimes Transport.send(simpleMessage); is used, but for gmail it's different
-                Transport transport = session.getTransport(sendingProtocol);
-                transport.connect(sendingHost, Integer.parseInt(sendingPort), username, password);
-                transport.sendMessage(simpleMessage, simpleMessage.getAllRecipients());
-                transport.close();
+                if (!ServerUtils.isInUnitTestingEnvironment()) {
+                    //sometimes Transport.send(simpleMessage); is used, but for gmail it's different
+                    Transport transport = session.getTransport(sendingProtocol);
+                    transport.connect(sendingHost, Integer.parseInt(sendingPort), username, password);
+                    transport.sendMessage(simpleMessage, simpleMessage.getAllRecipients());
+                    transport.close();
+                }
+                else {
+                    TestServlet.logForTest(simpleMessage);
+                }
             }
         }
         catch (Exception e) {
@@ -580,20 +584,27 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
     }
     
     /**
-     * used as a proxy to send outbound emails when the appspotemail is configured as the fromAddress 
+     * used as a proxy to send outbound emails when the appspotemail is
+     * configured as the fromAddress
+     * 
      * @param simpleMessage
-     * @param session 
+     * @param session
      * @throws NumberFormatException
      * @throws MessagingException
      */
-    private void sendEmailWithDefaultAccount( Message simpleMessage, javax.mail.Session session ) throws NumberFormatException,
-    MessagingException
-    {
-        Transport transport = session.getTransport( GMAIL_SENDING_PROTOCOL );
-        transport.connect( GMAIL_SENDING_HOST, Integer.parseInt( GMAIL_SENDING_PORT ), DEFAULT_SENDER_EMAIL,
-            DEFAULT_SENDER_EMAIL_PASSWORD );
-        transport.sendMessage( simpleMessage, simpleMessage.getAllRecipients() );
-        transport.close();
+    private void sendEmailWithDefaultAccount(Message simpleMessage, javax.mail.Session session)
+        throws NumberFormatException, MessagingException {
+
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            Transport transport = session.getTransport(GMAIL_SENDING_PROTOCOL);
+            transport.connect(GMAIL_SENDING_HOST, Integer.parseInt(GMAIL_SENDING_PORT), DEFAULT_SENDER_EMAIL,
+                              DEFAULT_SENDER_EMAIL_PASSWORD);
+            transport.sendMessage(simpleMessage, simpleMessage.getAllRecipients());
+            transport.close();
+        }
+        else {
+            TestServlet.logForTest(simpleMessage);
+        }
     }
 
     @Override

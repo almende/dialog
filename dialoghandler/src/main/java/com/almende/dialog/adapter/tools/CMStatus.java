@@ -232,8 +232,8 @@ public class CMStatus implements Serializable
     public static String getHostFromReference(String reference) {
         if(reference != null) {
             String[] referenceArray = reference.split("_");
-            if(referenceArray.length == 5) {
-                return referenceArray[4].startsWith("http") ? referenceArray[4] : null;
+            if(referenceArray.length == 4) {
+                return referenceArray[3].startsWith("http") ? referenceArray[3] : null;
             }
         }
         return null;

@@ -253,7 +253,7 @@ public class VoiceXMLRESTProxy {
     public Response getNewDialog(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID, @Context UriInfo ui)
     {
         log.info("call started:"+direction+":"+remoteID+":"+localID);
-        this.host=ui.getBaseUri().toString().replace(":80", "");
+        this.host=ui.getBaseUri().toString().replace(":80/", "/");
         
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localID);
         String formattedRemoteId = remoteID;
@@ -321,7 +321,9 @@ public class VoiceXMLRESTProxy {
                     ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, formattedRemoteId, 1, url);
                 }
                 session.setDdrRecordId( ddrRecord != null ? ddrRecord.getId() : null);
-                ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+                if (ddrRecord != null) {
+                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+                }
             }
             catch (Exception e) {
                 String errorMessage = String.format("Creating DDR records failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
@@ -332,8 +334,18 @@ public class VoiceXMLRESTProxy {
                                  sessionKey);
             }
             finally {
-            	ddrRecord.createOrUpdate();
-                session.storeSession();
+                if (ddrRecord != null) {
+                    ddrRecord.createOrUpdate();
+                }
+                else {
+                    log.severe("DDRRecord not found. Not expected to be null here!!");
+                }
+                if(session != null) {
+                    session.storeSession();
+                }
+                else {
+                    log.severe("Session not found. Not expected to be null here!!");
+                }
             }
             return handleQuestion( question, config, formattedRemoteId, sessionKey );
         }
@@ -1195,12 +1207,12 @@ public class VoiceXMLRESTProxy {
                                     {
                                         outputter.attribute( "next", "retry?questionId=" + question.getQuestion_id()
                                             + "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8") );
-                                        Question.updateRetryCount( sessionKey );
+//                                        Question.updateRetryCount( sessionKey );
                                     }
                                     else
                                     {
                                         outputter.attribute("next", "retry?questionId=" + question.getQuestion_id());
-                                        Question.flushRetryCount( sessionKey );
+//                                        Question.flushRetryCount( sessionKey );
                                     }
                                 }
                                     outputter.endTag();
@@ -1224,6 +1236,7 @@ public class VoiceXMLRESTProxy {
 			outputter.endTag();
 			outputter.endDocument();	
 		} catch (Exception e) {
+		        e.printStackTrace();
 			log.severe("Exception in creating open question XML: "+ e.toString());
 		}		
 		return sw.toString();

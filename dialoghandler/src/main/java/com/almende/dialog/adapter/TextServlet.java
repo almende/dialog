@@ -131,7 +131,7 @@ abstract public class TextServlet extends HttpServlet {
                     for (Answer ans : question.getAnswers()) {
                         reply += " " + ans.getAnswer_expandedtext(question.getPreferred_language()) + " |";
                     }
-                    reply = reply.substring(0, reply.length() - 1) + " ]";
+                    reply = reply.substring(0, reply.length() - 1) + "]";
                     break; // Jump from forloop
                 }
                 else if (question.getType().equalsIgnoreCase("comment")) {
@@ -753,10 +753,7 @@ abstract public class TextServlet extends HttpServlet {
             extras.put(DDRRecord.DDR_RECORD_KEY, ddrRecord.getId());
         }
         //broadcast the message if its not a test environment
-        Integer count = 0; 
-        if (!ServerUtils.isInUnitTestingEnvironment()) {
-            count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config);
-        }
+        Integer count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config);
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
         DDRUtils.publishDDREntryToQueue(config.getOwner(), totalCost);

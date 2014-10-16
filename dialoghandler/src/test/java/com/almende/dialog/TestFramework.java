@@ -19,8 +19,11 @@ import org.w3c.dom.Document;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
+import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.utils.PhoneNumberUtils;
 import com.meterware.servletunit.ServletRunner;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -86,27 +89,37 @@ public class TestFramework
     }
     
     public String createSessionKey(AdapterConfig adapterConfig, String responder) {
-        return adapterConfig.getAdapterType() + "|" + adapterConfig.getMyAddress() + "|" + responder;
+
+        return adapterConfig.getAdapterType() + "|" + adapterConfig.getMyAddress() + "|" +
+               PhoneNumberUtils.formatNumber(responder, null);
+    }
+    
+    public Session createSession(String sessionKey) {
+
+        return Session.getOrCreateSession(sessionKey);
     }
     
     public AdapterConfig createBroadsoftAdapter() throws Exception {
-        return createAdapterConfig("BROADSOFT", TEST_PUBLIC_KEY, localAddressBroadsoft, "");
+
+        return createAdapterConfig(AdapterType.CALL.getName(), TEST_PUBLIC_KEY, localAddressBroadsoft, "");
     }
     
-    public static AdapterConfig createAdapterConfig( String adapterType, String publicKey, String myAddress,
-        String initiatAgentURL ) throws Exception
-    {
+    public static AdapterConfig createAdapterConfig(String adapterType, String accountId, String myAddress,
+        String initiatAgentURL) throws Exception {
+
         AdapterConfig adapterConfig = new AdapterConfig();
-        adapterConfig.setAdapterType( adapterType );
-        adapterConfig.setAnonymous( false );
-        adapterConfig.setPublicKey( publicKey );
-        adapterConfig.setMyAddress( myAddress );
-        adapterConfig.setAccessToken( "1111|blabla" );
+        adapterConfig.setAdapterType(adapterType);
+        adapterConfig.setAnonymous(false);
+        adapterConfig.setPublicKey(accountId);
+        adapterConfig.setMyAddress(myAddress);
+        adapterConfig.setAccessToken("1111|blabla");
         adapterConfig.setKeyword("TEST");
-        adapterConfig.setInitialAgentURL( initiatAgentURL );
-        String adapterConfigString = adapterConfig.createConfig( ServerUtils.serialize( adapterConfig ) ).getEntity()
-            .toString();
-        return ServerUtils.deserialize( adapterConfigString, AdapterConfig.class );
+        adapterConfig.setInitialAgentURL(initiatAgentURL);
+        adapterConfig.setOwner(accountId);
+        adapterConfig.addAccount(accountId);
+        String adapterConfigString = adapterConfig.createConfig(ServerUtils.serialize(adapterConfig)).getEntity()
+                                        .toString();
+        return ServerUtils.deserialize(adapterConfigString, AdapterConfig.class);
     }
     
     public static AdapterConfig createAdapterConfig(String adapterType, String owner,
@@ -194,37 +207,6 @@ public class TestFramework
         internetHeaders.addHeader( "Content-Disposition", appendedHeaderValue );
         mimeMultipart.addBodyPart( new MimeBodyPart( internetHeaders, value.getBytes()) );
     }
-    
-   /* private static String getFieldName( BodyPart part ) throws MessagingException
-    {
-        String[] values = part.getHeader( "Content-Disposition" );
-        String name = null;
-        if ( values != null && values.length > 0 )
-        {
-            name = new ContentDisposition( values[0] ).getParameter( "name" );
-        }
-        return ( name != null ) ? name : "unknown";
-    }
-    
-    private static String getTextContent( BodyPart part ) throws MessagingException, IOException
-    {
-        ContentType contentType = new ContentType( part.getContentType() );
-        String charset = contentType.getParameter( "charset" );
-        if ( charset == null )
-        {
-            charset = "ISO-8859-1";
-        }
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ByteStreams.copy( part.getInputStream(), baos );
-        try
-        {
-            return new String( baos.toByteArray(), charset );
-        }
-        catch ( UnsupportedEncodingException ex )
-        {
-            return new String( baos.toByteArray() );
-        }
-    }*/
     
     private ServletRunner setupTestServlet()
     {

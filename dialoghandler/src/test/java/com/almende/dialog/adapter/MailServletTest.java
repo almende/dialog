@@ -20,6 +20,7 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
+import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.uuid.UUID;
@@ -138,6 +139,11 @@ public class MailServletTest extends TestFramework
         //create session
         Session.getOrCreateSession( adapterConfig, remoteAddressEmail );
         TextMessage textMessage = mailAppointmentInteraction("hi");
+        //update the question text in the textMessage
+        Question question = Question.fromURL(initialAgentURL, adapterConfig.getConfigId(), null, null);
+        if(question != null) {
+            textMessage.setBody(question.getTextWithAnswerTexts());
+        }
         assertOutgoingTextMessage(textMessage);
     }
     
@@ -154,7 +160,7 @@ public class MailServletTest extends TestFramework
         
         //send Yup to the Appointment question
         TextMessage textMessage = mailAppointmentInteraction(TestServlet.APPOINTMENT_YES_ANSWER);
-
+        textMessage.setBody(TestServlet.APPOINTMENT_SECOND_QUESION);
         assertOutgoingTextMessage(textMessage);
     }
     
@@ -168,10 +174,9 @@ public class MailServletTest extends TestFramework
     {
         //use existing session to recreate a scenario where the second question is alrady asked
         AcceptAppointmentExistingSessionMessageTest();
-        
         //send Yup to the Appointment question
         TextMessage textMessage = mailAppointmentInteraction("120");//send free for 120 mins
-
+        textMessage.setBody(TestServlet.APPOINTMENT_ACCEPTANCE_RESPONSE);
         assertOutgoingTextMessage(textMessage);
     }
 
@@ -188,6 +193,7 @@ public class MailServletTest extends TestFramework
         
         //send Yup to the Appointment question
         TextMessage textMessage = mailAppointmentInteraction(TestServlet.APPOINTMENT_NO_ANSWER);
+        textMessage.setBody(TestServlet.APPOINTMENT_REJECT_RESPONSE);
         assertOutgoingTextMessage(textMessage);
     }
     
@@ -257,12 +263,9 @@ public class MailServletTest extends TestFramework
                                                                   Arrays.asList( MimeMessage.class, String.class ) );
         TextMessage textMessage = (TextMessage) invokeMethodByReflection( fetchMethodByReflection, mailServlet, 
                                                        Arrays.asList( mimeMessage, localAddressMail ));
-        
         //fetch the processMessage function
         Method processMessage = fetchMethodByReflection( "processMessage", TextServlet.class,  TextMessage.class);
-        
         int count = (Integer) invokeMethodByReflection( processMessage, mailServlet, textMessage );
-        
         assertTrue( count == 1 );
         return textMessage;
     }
@@ -270,7 +273,7 @@ public class MailServletTest extends TestFramework
     private void assertOutgoingTextMessage( TextMessage textMessage ) throws Exception
     {
         javax.mail.Message messageFromDetails = getMessageFromDetails( textMessage.getAddress(),
-            textMessage.getLocalAddress(), TestServlet.responseQuestionString, "" );
+            textMessage.getLocalAddress(), textMessage.getBody(), "" );
         assertTrue( TestServlet.getLogObject() instanceof javax.mail.Message );
         javax.mail.Message messageLogged = (javax.mail.Message) TestServlet.getLogObject();
         assertArrayEquals( messageFromDetails.getFrom(), messageLogged.getFrom() );

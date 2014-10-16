@@ -38,6 +38,7 @@ import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
 
 
@@ -53,7 +54,7 @@ public class CMServletTest extends TestFramework
         String remoteAddressVoice2 = "+31614753658";
         String senderName = "TestUser";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, "", "" );
+        AdapterConfig adapterConfig = createAdapterConfig( AdapterType.SMS.getName(), TEST_PUBLIC_KEY, remoteAddressVoice, "" );
 
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( remoteAddressVoice, "testUser1" );
@@ -72,7 +73,7 @@ public class CMServletTest extends TestFramework
     {
         String senderName = "TestUser";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, "ASK", "" );
+        AdapterConfig adapterConfig = createAdapterConfig( AdapterType.SMS.getName(), TEST_PUBLIC_KEY, "ASK", "" );
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put( remoteAddressVoice, null );
@@ -92,7 +93,7 @@ public class CMServletTest extends TestFramework
     {
         String myAddress = "Ask-Fast";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( "CM", TEST_PUBLIC_KEY, myAddress, TEST_PRIVATE_KEY );
+        AdapterConfig adapterConfig = createAdapterConfig( AdapterType.SMS.getName(), TEST_PUBLIC_KEY, myAddress, TEST_PRIVATE_KEY );
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put( remoteAddressVoice, null );
@@ -265,9 +266,9 @@ public class CMServletTest extends TestFramework
         MBSmsServlet mbSmsServlet = new MBSmsServlet();
         HashMap<String, String> testInboundSMSData = new HashMap<String, String>();
         testInboundSMSData.put("id", "87708ec0453c4d95a284ff4m68999827");
-        testInboundSMSData.put("message", "TEST yup");
+        testInboundSMSData.put("message", "yup");
         testInboundSMSData.put("sender", remoteAddressVoice);
-        testInboundSMSData.put("body", "TEST yup");
+        testInboundSMSData.put("body", "yup");
         testInboundSMSData.put("receiver", "0642500086");
         Object textMessage = invokeMethodByReflection(receiveMessage, mbSmsServlet, testInboundSMSData);
         
@@ -316,7 +317,7 @@ public class CMServletTest extends TestFramework
         assertTrue(TestServlet.getLogObject() instanceof CMStatus);
         CMStatus smsPayload = (CMStatus) TestServlet.getLogObject();
         assertTrue(smsPayload != null);
-        assertEquals("Are you available today?\n[ Yup | Nope  ]", smsPayload.getSms());
+        assertEquals("Are you available today?\n[ Yup | Nope ]", smsPayload.getSms());
         assertEquals("2009-06-15T13:45:30", smsPayload.getSentTimeStamp());
         assertEquals("2009-06-15T13:45:30", smsPayload.getDeliveredTimeStamp());
         assertTrue(cmStatus.getRemoteAddresses().contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));

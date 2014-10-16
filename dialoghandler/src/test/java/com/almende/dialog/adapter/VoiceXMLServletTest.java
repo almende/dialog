@@ -5,7 +5,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,10 +12,6 @@ import java.util.HashMap;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import org.hamcrest.Matchers;
-import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.w3c.dom.Document;
@@ -74,17 +69,14 @@ public class VoiceXMLServletTest extends TestFramework {
         int i = 0;
         while ( i++ < 10 )
         {
-            Response answerResponse = voiceXMLRESTProxy.answer( answerVariables.get( "question_id" ), null,
-                answerVariables.get( "answer_input" ), answerVariables.get( "sessionKey" ), uriInfo );
+            Response answerResponse = voiceXMLRESTProxy.answer(answerVariables.get("questionId"), null,
+                                                               answerVariables.get("answerInput"),
+                                                               answerVariables.get("sessionKey"), uriInfo);
             if ( answerResponse.getEntity() != null )
             {
-                if ( answerResponse
-                    .getEntity()
-                    .toString()
-                    .equals(
-                        "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" "
-                            + "xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>" ) )
-                {
+                if (answerResponse.getEntity().toString().equals("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                                                "<vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\">" +
+                                                "<form><block><exit/></block></form></vxml>")) {
                     break;
                 }
             }
@@ -201,8 +193,8 @@ public class VoiceXMLServletTest extends TestFramework {
         assertEquals(COMMENT_QUESTION_AUDIO, prompt.getFirstChild()
                 .getAttributes().getNamedItem("src").getNodeValue());
 
-        assertEquals( "answer?question_id=" + COMMENT_QUESTION_ID + "&sessionKey=" + sessionKey, _goto.getAttributes()
-            .getNamedItem( "next" ).getNodeValue() );
+        assertEquals("answer?questionId=" + COMMENT_QUESTION_ID + "&sessionKey=" + sessionKey,
+                     java.net.URLDecoder.decode(_goto.getAttributes().getNamedItem("next").getNodeValue(), "UTF-8"));
     }
 
     @Test
@@ -221,9 +213,8 @@ public class VoiceXMLServletTest extends TestFramework {
         Question question = getOpenDTMFQuestion();
         AdapterConfig adapter = createBroadsoftAdapter();
         String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        
+        createSession(sessionKey);
         String result = renderQuestion(question, adapter, sessionKey);
-
         assertOpenQuestionWithDTMFType( result );
     }
 
@@ -254,28 +245,6 @@ public class VoiceXMLServletTest extends TestFramework {
         assertEquals(subdialog.getNodeName(), "subdialog");
     }
     
-    @Test
-    public void initiatingMultipleCallsMustBeRejectedTest() throws Exception {
-
-        String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<Call xmlns=\"http://schema.broadsoft.com/xsi\" " +
-                     "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\">" +
-                     "<callId>callhalf-17239906917:0</callId><extTrackingId>597601:1</extTrackingId>" +
-                     "<personality>Originator</personality><state>Active</state><releaseCause>" +
-                     "<internalReleaseCause>Temporarily Unavailable</internalReleaseCause>" +
-                     "</releaseCause><remoteParty><address>sip:" + remoteAddressVoice + "@outbound</address>" +
-                     "<callType>Network</callType></remoteParty><endpoint xsi1:type=\"xsi:AccessEndpoint\" " +
-                     "xmlns:xsi=\"http://schema.broadsoft.com/xsi\"><addressOfRecord>0854881021@ask.ask.voipit.nl" +
-                     "</addressOfRecord></endpoint><appearance>1</appearance><diversionInhibited/><startTime>" +
-                     "1405610418786</startTime></Call>";
-        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-        DocumentBuilder db = dbf.newDocumentBuilder();
-        Document dom = db.parse(new ByteArrayInputStream(xml.getBytes("UTF-8")));
-        Node callStateNode = dom.getElementsByTagName("state").item(0);
-        Node addressNode = dom.getElementsByTagName("address").item(0);
-        Assert.assertThat(callStateNode.getFirstChild().getNodeValue(), Matchers.is("Active"));
-        Assert.assertThat(addressNode.getFirstChild().getNodeValue(), Matchers.is(remoteAddressVoice));
-    }
-    
     /**
      * @param result
      * @throws Exception
@@ -297,27 +266,27 @@ public class VoiceXMLServletTest extends TestFramework {
         assertEquals( doc.getChildNodes().getLength(), 1 );
         assertEquals( vxml.getNodeName(), "vxml" );
         assertEquals( "form", form.getNodeName() );
-        assertEquals( "answer_input", answerInputNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
-        assertEquals( "question_id", questionIdNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
+        assertEquals( "answerInput", answerInputNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
+        assertEquals( "questionId", questionIdNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
         assertEquals( "sessionKey", sessionKeyNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
         assertEquals( "property", field.getNodeName() );
         
         field = form.getChildNodes().item( 1 );
         assertEquals( "form", form.getNodeName() );
-        assertEquals( "answer_input", answerInputNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
-        assertEquals( "question_id", questionIdNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
+        assertEquals( "answerInput", answerInputNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
+        assertEquals( "questionId", questionIdNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
         assertEquals( "sessionKey", sessionKeyNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
         assertEquals( "field", field.getNodeName() );
         assertEquals( 4, field.getChildNodes().getLength() );
 
         if(answerInputNode.getAttributes().getNamedItem( "expr" ) != null)
         {
-            variablesForAnswer.put( "answer_input", answerInputNode.getAttributes().getNamedItem( "expr" ).getNodeValue()
+            variablesForAnswer.put( "answerInput", answerInputNode.getAttributes().getNamedItem( "expr" ).getNodeValue()
             .replace( "'", "" ) );
         }
         if(questionIdNode.getAttributes().getNamedItem( "expr" ) != null)
         {
-            variablesForAnswer.put( "question_id", questionIdNode.getAttributes().getNamedItem( "expr" ).getNodeValue()
+            variablesForAnswer.put( "questionId", questionIdNode.getAttributes().getNamedItem( "expr" ).getNodeValue()
             .replace( "'", "" ) );
         }
         if(sessionKeyNode.getAttributes().getNamedItem( "expr" ) != null)

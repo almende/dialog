@@ -683,6 +683,23 @@ public class Question implements QuestionIntf {
         }
         return retryCount;
     }
+    
+    /**
+     * Returns the message body in the format: <br>
+     * Question_Text <br>
+     * [ AnswerText1 | AnswerText2 | ... AnswerText-n ]
+     * @return
+     */
+    @JsonIgnore
+    public String getTextWithAnswerTexts() {
+
+        String reply = getQuestion_expandedtext() + "\n[";
+        for (Answer ans : question.getAnswers()) {
+            reply += " " + ans.getAnswer_expandedtext(getPreferred_language()) + " |";
+        }
+        reply = reply.substring(0, reply.length() - 1) + "]";
+        return reply;
+    }
 
     /**
      * (intended for VOICE) simple retry mechanism to reload the question

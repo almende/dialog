@@ -8,7 +8,7 @@
 	<name>Dialog Handler</name>
 
 	<properties>
-		<skipTests>true</skipTests>
+		<skipTests>false</skipTests>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven-resources-plugin.version>2.5</maven-resources-plugin.version>
 		<maven-eclipse-plugin.version>2.9</maven-eclipse-plugin.version>

@@ -3,9 +3,7 @@ package com.almende.dialog.adapter;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.junit.Test;
-
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.DialogAgent;
@@ -28,7 +26,7 @@ public class NotificareServeletTest extends TestFramework {
 		HashMap<String,String> addressNameMap = new HashMap<String,String>();
 		addressNameMap.put(remoteAdressVoice2, senderName);
 		
-		AdapterConfig adapterConfig = createAdapterConfig("push",TEST_PUBLIC_KEY,"","");
+		AdapterConfig adapterConfig = createAdapterConfig("push",TEST_PUBLIC_KEY,localAddressBroadsoft,"");
 		//set tokens beore testing
 		adapterConfig.setAccessToken("");
 		adapterConfig.setAccessTokenSecret("");

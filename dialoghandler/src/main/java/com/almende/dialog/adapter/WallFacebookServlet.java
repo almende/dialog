@@ -15,6 +15,7 @@ import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -108,13 +109,13 @@ public class WallFacebookServlet extends TextServlet {
     }
 
     @Override
-    protected int sendMessage( String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config )
-    {
+    protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
+        Map<String, Object> extras, AdapterConfig config) {
 
-        Facebook fb = new Facebook( new Token( config.getAccessToken(), config.getAccessTokenSecret() ) );
-        fb.sendComment( message, to, toName );
-
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            Facebook fb = new Facebook(new Token(config.getAccessToken(), config.getAccessTokenSecret()));
+            fb.sendComment(message, to, toName);
+        }
         return 1;
     }
 

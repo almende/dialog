@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 import org.joda.time.DateTime;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -16,6 +16,8 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.almende.eve.agent.Agent;
+import com.almende.eve.agent.AgentHost;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
@@ -601,7 +603,7 @@ public class DDRUtils
                         session.setDdrRecordId(ddrRecord.getId());
                     }
                 }
-                if (AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(adapterConfig.getAdapterType())) {
+                if (AdapterType.isCallAdapter(adapterConfig.getAdapterType())) {
                     if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
                         session.getDirection() != null) {
                         ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
@@ -671,6 +673,21 @@ public class DDRUtils
                 }
             }
         }
+        
+        //clear the session from the dialog publish queue
+        try {
+            Agent agent = AgentHost.getInstance().getAgent("dialog");
+            if (agent != null) {
+                DialogAgent dialogAgent = (DialogAgent) agent;
+                boolean clearSessionFromCurrentQueue = dialogAgent.clearSessionFromCurrentQueue(sessionKey);
+                log.severe(String.format("Tried to remove SessionKey: %s from queue. Status: %s", sessionKey,
+                                         clearSessionFromCurrentQueue));
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            log.severe(String.format("Could not clear session: %s from queue", sessionKey));
+        }
         return result;
     }
     
@@ -683,7 +700,7 @@ public class DDRUtils
      */
     protected static double applyStartUpCost(double result, AdapterConfig config, String direction) throws Exception {
 
-        if (config != null && AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(config.getAdapterType()) && result > 0.0 &&
+        if (config != null && AdapterType.isCallAdapter(config.getAdapterType()) && result > 0.0 &&
             "outbound".equalsIgnoreCase(direction)) {
             DDRPrice startUpPrice = fetchDDRPrice(DDRTypeCategory.START_UP_COST,
                                                   AdapterType.getByValue(config.getAdapterType()),
@@ -713,8 +730,7 @@ public class DDRUtils
             boolean applyServiceCharge = true;
 
             //dont apply service charge if its a missed call or call ignroed (call duration is 0)
-            if (ddrRecord.getAdapter() != null &&
-                AdapterAgent.ADAPTER_TYPE_BROADSOFT.equals(ddrRecord.getAdapter().getAdapterType()) &&
+            if (ddrRecord.getAdapter() != null && AdapterType.isCallAdapter(ddrRecord.getAdapter().getAdapterType()) &&
                 (ddrRecord.getDuration() == null || ddrRecord.getDuration() <= 0)) {
                 applyServiceCharge = false;
             }

@@ -3,10 +3,8 @@ package com.almende.dialog.adapter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.jivesoftware.smack.AccountManager;
 import org.jivesoftware.smack.Chat;
 import org.jivesoftware.smack.ChatManagerListener;
@@ -22,7 +20,6 @@ import org.jivesoftware.smack.packet.Message.Body;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Presence.Mode;
 import org.jivesoftware.smack.packet.Presence.Type;
-
 import com.almende.dialog.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
@@ -30,6 +27,7 @@ import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
+import com.almende.dialog.util.ServerUtils;
 
 public class XMPPServlet extends TextServlet implements MessageListener, ChatManagerListener
 {
@@ -70,8 +68,10 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
                 xmppConnection.sendPacket( presence );
                 message = "*" + fromName + ":* "+message;
             }
-            Chat chat = xmppConnection.getChatManager().createChat( to, this );
-            chat.sendMessage( message );
+            if (!ServerUtils.isInUnitTestingEnvironment()) {
+                Chat chat = xmppConnection.getChatManager().createChat(to, this);
+                chat.sendMessage(message);
+            }
             return 1;
         }
         catch ( Exception ex )

@@ -590,6 +590,25 @@ public class AdapterConfig {
         this.initialAgentURL = initialAgentURL;
     }
     
+    /**
+     * Gets the dialog that is linked to the owner of this adapter. 
+     * @return
+     */
+    @JsonIgnore
+    public Dialog getDialog() {
+        Object dialogId = properties != null ? properties.get(DIALOG_ID_KEY) : null;
+        if(dialogId != null) {
+            try {
+                return Dialog.getDialog(dialogId.toString(), owner);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe("Dialog fetch failed. Reason: " + e.getMessage());
+            }
+        }
+        return null;
+    }
+    
 	public String getAddress() {
 		return address;
 	}
@@ -793,8 +812,11 @@ public class AdapterConfig {
     public static AdapterConfig checkIfAdapterMatchesForAccountId(Collection<String> accountIds,
         AdapterConfig adapterConfig, boolean checkOwnerOnly) {
 
+        if(adapterConfig == null) {
+            return null;
+        }
         //if accountId is null, the adapter owner and accounts must also be null or empty
-        if (accountIds == null && adapterConfig.getOwner() == null &&
+        else if (accountIds == null && adapterConfig.getOwner() == null &&
             (adapterConfig.getAccounts() == null || adapterConfig.getAccounts().isEmpty())) {
             return adapterConfig;
         }

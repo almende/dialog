@@ -17,12 +17,14 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AccountType;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.mongodb.DB;
 
@@ -37,6 +39,7 @@ public class DDRRecord
     public static final String DDR_TOTALCOST_KEY = "totalCost";
     public static final String DDR_RECORD_KEY = "DDR_RECORD_ID";
     public static final String ANSWER_INPUT_KEY = "ANSWER_INPUT";
+    private static final String DOT_REPLACER_KEY = "[%dot%]";
     
     /**
      * status of the communication
@@ -343,8 +346,7 @@ public class DDRRecord
         }
         else if ((toAddress == null || toAddress.isEmpty()) && toAddressString != null) {
             try {
-                toAddress = ServerUtils.deserialize(toAddressString, new TypeReference<HashMap<String, String>>() {
-                });
+                toAddress = ServerUtils.deserialize(toAddressString, new TypeReference<HashMap<String, String>>() {});
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -402,8 +404,13 @@ public class DDRRecord
      */
     public CommunicationStatus getStatus()
     {
+        //return the only statusPerAddress if its there and this is null
+        if(status == null && statusPerAddress != null && statusPerAddress.size() == 1) {
+            return statusPerAddress.values().iterator().next();
+        }
         return status;
     }
+    
     /**
      * @deprecated
      * kept for backward compatibility. Use {@link DDRRecord#setStatusPerAddress(Map)} to set status
@@ -425,18 +432,20 @@ public class DDRRecord
     public String getToAddressString() {
 
         if ((toAddress == null || toAddress.isEmpty()) && toAddressString != null) {
-            return toAddressString;
+            toAddressString = getDotReplacedString(toAddressString);
         }
         else {
             try {
                 toAddressString = ServerUtils.serialize(toAddress);
+                //replace dot(.) by - as mongo doesnt allow map variables with (.)
+                toAddressString = getDotReplacedString(toAddressString);
             }
             catch (Exception e) {
                 e.printStackTrace();
                 log.severe(String.format("Exception while serializing toAddress: %s", toAddress));
             }
-            return toAddressString;
         }
+        return toAddressString;
     }
 
     /**
@@ -446,7 +455,7 @@ public class DDRRecord
      */
     public void setToAddressString( String toAddressString ) throws Exception
     {
-        this.toAddressString = toAddressString;
+        this.toAddressString = correctDotReplacedString(toAddressString);
     }
     
     @JsonIgnore    
@@ -539,11 +548,21 @@ public class DDRRecord
     }
     
     @JsonIgnore
-    public void addAdditionalInfo(String key, String value) {
-        
+    public void addAdditionalInfo(String key, Object value) {
+
         additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, String>();
         if (!DDR_RECORD_KEY.equals(key)) {
-            additionalInfo.put(key, value);
+            //dot(.) is not allowed to be saved in mongo. just replace with -
+            if (!(value instanceof String)) {
+                try {
+                    value = JOM.getInstance().writeValueAsString(value);
+                }
+                catch (JsonProcessingException e) {
+                    log.severe(String.format("JSON serialization of additionalInfo failed for key: %s and value: %s. Reason: %s",
+                                             key, value, e.getMessage()));
+                }
+            }
+            additionalInfo.put(key, value.toString());
         }
     }
     
@@ -568,11 +587,12 @@ public class DDRRecord
 
         statusPerAddress = statusPerAddress != null ? statusPerAddress : new HashMap<String, CommunicationStatus>();
         //if status is there but statusPerAddress is empty, use status
-        if ( status != null) {
-            
+        if (status != null && (statusPerAddress == null || statusPerAddress.isEmpty())) {
+
             try {
                 Map<String, String> toAddresses = ServerUtils.deserialize(toAddressString, false,
-                                                                          new TypeReference<Map<String, String>>() {});
+                                                                          new TypeReference<Map<String, String>>() {
+                                                                          });
                 if (toAddresses != null) {
                     for (String address : toAddresses.keySet()) {
                         statusPerAddress.put(address, status);
@@ -597,7 +617,7 @@ public class DDRRecord
      * @param status
      */
     public void addStatusForAddress(String address, CommunicationStatus status) {
-        address = address.contains(".") ? address.replaceAll("\\.", "-") : address;
+        address = getDotReplacedString(address);
         getStatusPerAddress().put(address, status);
     }
     
@@ -607,7 +627,7 @@ public class DDRRecord
      * @param status
      */
     public CommunicationStatus getStatusForAddress(String address) {
-        return getStatusPerAddress().get(address);
+        return getStatusPerAddress().get(getDotReplacedString(address));
     }
     
     /**
@@ -627,5 +647,25 @@ public class DDRRecord
     
     @JsonIgnore
     public void setDirection() {
+    }
+    
+    /**
+     * Ideally should be called by the GETTER methods of fields whose dot (.) values are to be
+     * replaced by {@link DDRRecord#DOT_REPLACER_KEY}
+     * @param data
+     * @return
+     */
+    private String getDotReplacedString(String data) {
+        return data != null ? data.replace(".", DOT_REPLACER_KEY) : null;
+    }
+    
+    /**
+     * Ideally should be called by the SETTER methods of fields whose dot (.) values are 
+     * replaced by {@link DDRRecord#DOT_REPLACER_KEY}
+     * @param data
+     * @return
+     */
+    private String correctDotReplacedString(String data) {
+        return data != null ? data.replace(DOT_REPLACER_KEY, ".") : null;
     }
 }

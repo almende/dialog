@@ -165,101 +165,88 @@ public class TwitterServlet extends TextServlet implements Runnable {
                 if ( tweetOrDirectMesssageId != null && !tweetOrDirectMesssageId.equals( "0" ) )
                     url += "?since_id=" + tweetOrDirectMesssageId;
             }
-            OAuthRequest request = new OAuthRequest( Verb.GET, url );
-            service.signRequest( accessToken, request );
-            Response response = request.send();
-            ObjectMapper om = ParallelInit.getObjectMapper();
-            
-            //initialize updatedTweetId with the previously seen one
-            String updatedTweedOrDirectMesssageId = tweetOrDirectMesssageId;
-            try
-            {
-                String format = "EEE MMM dd HH:mm:ss ZZZZZ yyyy";
-                DateTime date = null;
-                //check if an error is seen in the response
-                TwitterErrorResponse errorValue = getIfTwitterErrorInResponse( response.getBody(), false );
-                if( errorValue != null)
-                {
-                    for ( Map<String, String> error : errorValue.getErrors() )
-                    {
-                        log.severe( String.format(
-                            "Ërror: \"%s\" code: \"%s\" seen while fetching: %s for adapterId: %s with address: %s ",
-                            error.get( "message" ), error.get( "code" ), req.getPathInfo(), config.getConfigId(),
-                            config.getMyAddress() ) );
-                    }
-                    continue;
-                }
-                ArrayNode res = om.readValue( response.getBody(), ArrayNode.class );
-                if ( updatedTweedOrDirectMesssageId == null )
-                {
-                    for ( JsonNode tweet : res )
-                    {
-                        String msgDate = tweet.get( "created_at" ).asText();
-                        SimpleDateFormat sf = new SimpleDateFormat( format, Locale.ENGLISH );
-                        sf.setLenient( true );
-                        Date newDate = sf.parse( msgDate );
-                        if ( date == null || date.isBefore( newDate.getTime() ) )
-                        {
-                            updatedTweedOrDirectMesssageId = tweet.get( "id_str" ).asText();
-                            date = new DateTime( newDate.getTime() );
-                        }
-                    }
-                }
-                else
-                {
-                    String userKeyInResponseJSON = isDirectMessageCall ? "sender" : "user";
-                    for ( JsonNode tweet : res )
-                    {
-                        String message = tweet.get( "text" ).asText();
-                        message = message.replace( config.getMyAddress(), "" );
+            if (!ServerUtils.isInUnitTestingEnvironment()) {
+                OAuthRequest request = new OAuthRequest(Verb.GET, url);
+                service.signRequest(accessToken, request);
+                Response response = request.send();
+                ObjectMapper om = ParallelInit.getObjectMapper();
 
-                        TextMessage msg = new TextMessage();
-                        msg.setAddress( "@" + tweet.get( userKeyInResponseJSON ).get( "screen_name" ).asText() );
-                        msg.setRecipientName( tweet.get( userKeyInResponseJSON ).get( "name" ).asText() );
-                        msg.setBody( message.trim() );
-                        msg.setLocalAddress( config.getMyAddress() );
-                        msg.getExtras().put( STATUS_ID_KEY, tweet.get( "id" ) );
-                        if ( isDirectMessageCall )
-                        {
-                            MediaProperty mediaProperty = new MediaProperty();
-                            mediaProperty.setMedium( MediumType.TWITTER );
-                            mediaProperty.addProperty( MediaPropertyKey.TYPE, "direct" );
-                            msg.getExtras().put( Question.MEDIA_PROPERTIES, Arrays.asList( mediaProperty ) );
+                //initialize updatedTweetId with the previously seen one
+                String updatedTweedOrDirectMesssageId = tweetOrDirectMesssageId;
+                try {
+                    String format = "EEE MMM dd HH:mm:ss ZZZZZ yyyy";
+                    DateTime date = null;
+                    //check if an error is seen in the response
+                    TwitterErrorResponse errorValue = getIfTwitterErrorInResponse(response.getBody(), false);
+                    if (errorValue != null) {
+                        for (Map<String, String> error : errorValue.getErrors()) {
+                            log.severe(String.format("Ërror: \"%s\" code: \"%s\" seen while fetching: %s for adapterId: %s with address: %s ",
+                                                     error.get("message"), error.get("code"), req.getPathInfo(),
+                                                     config.getConfigId(), config.getMyAddress()));
                         }
-                        processMessage( msg );
+                        continue;
+                    }
+                    ArrayNode res = om.readValue(response.getBody(), ArrayNode.class);
+                    if (updatedTweedOrDirectMesssageId == null) {
+                        for (JsonNode tweet : res) {
+                            String msgDate = tweet.get("created_at").asText();
+                            SimpleDateFormat sf = new SimpleDateFormat(format, Locale.ENGLISH);
+                            sf.setLenient(true);
+                            Date newDate = sf.parse(msgDate);
+                            if (date == null || date.isBefore(newDate.getTime())) {
+                                updatedTweedOrDirectMesssageId = tweet.get("id_str").asText();
+                                date = new DateTime(newDate.getTime());
+                            }
+                        }
+                    }
+                    else {
+                        String userKeyInResponseJSON = isDirectMessageCall ? "sender" : "user";
+                        for (JsonNode tweet : res) {
+                            String message = tweet.get("text").asText();
+                            message = message.replace(config.getMyAddress(), "");
 
-                        String msgDate = tweet.get( "created_at" ).asText();
-                        SimpleDateFormat sf = new SimpleDateFormat( format, Locale.ENGLISH );
-                        sf.setLenient( true );
-                        Date newDate = sf.parse( msgDate );
-                        if ( date == null || date.isBefore( newDate.getTime() ) )
-                        {
-                            date = new DateTime( newDate.getTime() );
-                            updatedTweedOrDirectMesssageId = tweet.get( "id_str" ).asText();
+                            TextMessage msg = new TextMessage();
+                            msg.setAddress("@" + tweet.get(userKeyInResponseJSON).get("screen_name").asText());
+                            msg.setRecipientName(tweet.get(userKeyInResponseJSON).get("name").asText());
+                            msg.setBody(message.trim());
+                            msg.setLocalAddress(config.getMyAddress());
+                            msg.getExtras().put(STATUS_ID_KEY, tweet.get("id"));
+                            if (isDirectMessageCall) {
+                                MediaProperty mediaProperty = new MediaProperty();
+                                mediaProperty.setMedium(MediumType.TWITTER);
+                                mediaProperty.addProperty(MediaPropertyKey.TYPE, "direct");
+                                msg.getExtras().put(Question.MEDIA_PROPERTIES, Arrays.asList(mediaProperty));
+                            }
+                            processMessage(msg);
+
+                            String msgDate = tweet.get("created_at").asText();
+                            SimpleDateFormat sf = new SimpleDateFormat(format, Locale.ENGLISH);
+                            sf.setLenient(true);
+                            Date newDate = sf.parse(msgDate);
+                            if (date == null || date.isBefore(newDate.getTime())) {
+                                date = new DateTime(newDate.getTime());
+                                updatedTweedOrDirectMesssageId = tweet.get("id_str").asText();
+                            }
+                        }
+                    }
+                    if (updatedTweedOrDirectMesssageId != null &&
+                        !updatedTweedOrDirectMesssageId.equals(tweetOrDirectMesssageId)) {
+                        if (req.getPathInfo().equals(TwitterEndpoint.DIRECT_MESSAGE.getUrl())) {
+                            Session.storeString("lastdirectmessage_" + config.getConfigId(),
+                                                updatedTweedOrDirectMesssageId);
+                        }
+                        else {
+                            Session.storeString("lasttweet_" + config.getConfigId(), updatedTweedOrDirectMesssageId);
                         }
                     }
                 }
-                if ( updatedTweedOrDirectMesssageId != null
-                    && !updatedTweedOrDirectMesssageId.equals( tweetOrDirectMesssageId ) )
-                {
-                    if ( req.getPathInfo().equals( TwitterEndpoint.DIRECT_MESSAGE.getUrl() ) )
-                    {
-                        Session.storeString( "lastdirectmessage_" + config.getConfigId(),
-                            updatedTweedOrDirectMesssageId );
-                    }
-                    else
-                    {
-                        Session.storeString( "lasttweet_" + config.getConfigId(), updatedTweedOrDirectMesssageId );
-                    }
+                catch (Exception ex) {
+                    log.warning("Failed to parse result. Error: " + ex.getLocalizedMessage());
+                    out.print(response.getBody());
+                    out.close();
                 }
+                out.print(response.getBody());
             }
-            catch ( Exception ex )
-            {
-                log.warning( "Failed to parse result. Error: "+ ex.getLocalizedMessage() );
-                out.print( response.getBody() );
-                out.close();
-            }
-            out.print( response.getBody() );
         }
         out.close();
     }

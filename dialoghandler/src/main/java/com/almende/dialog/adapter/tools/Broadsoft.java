@@ -15,6 +15,7 @@ import org.w3c.dom.NodeList;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -57,39 +58,42 @@ public class Broadsoft {
      */
     public String startCall(String address, Session session) {
 
-        WebResource webResource = null;
-        HashMap<String, String> queryKeyValue = new HashMap<String, String>();
-        try {
-            webResource = client.resource(XSI_URL + XSI_ACTIONS + user + XSI_START_CALL);
-            webResource.addFilter(this.auth);
-
-            if (retryCounter.get(webResource.toString()) == null) {
-                retryCounter.put(webResource.toString(), 0);
-            }
-            queryKeyValue.put("address", URLEncoder.encode(address, "UTF-8"));
-        }
-        catch (UnsupportedEncodingException ex) {
-            log.severe("Problems dialing out:" + ex.getMessage());
-            dialogLog.severe(config, "Failed to start call to: " + address + " Error: " + ex.getMessage(), session);
-        }
-
-        while (retryCounter.get(webResource.toString()) != null &&
-               retryCounter.get(webResource.toString()) < MAX_RETRY_COUNT) {
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            WebResource webResource = null;
+            HashMap<String, String> queryKeyValue = new HashMap<String, String>();
             try {
-                String result = sendRequestWithRetry(webResource, queryKeyValue, HTTPMethod.POST, null);
-                log.info("Result from BroadSoft: " + result);
-                dialogLog.info(config, "Start outbound call to: " + address, session);
-                //flush retryCount
+                webResource = client.resource(XSI_URL + XSI_ACTIONS + user + XSI_START_CALL);
+                webResource.addFilter(this.auth);
 
-                retryCounter.remove(webResource.toString());
-                return getCallId(result);
+                if (retryCounter.get(webResource.toString()) == null) {
+                    retryCounter.put(webResource.toString(), 0);
+                }
+                queryKeyValue.put("address", URLEncoder.encode(address, "UTF-8"));
             }
-            catch (Exception ex) {
-                Integer retry = retryCounter.get(webResource.toString());
+            catch (UnsupportedEncodingException ex) {
                 log.severe("Problems dialing out:" + ex.getMessage());
-                dialogLog.severe(config, String.format("Failed to start call to: %s Error: %s. Retrying! Count: %s",
-                                                       address, ex.getMessage(), retry), session);
-                retryCounter.put(webResource.toString(), ++retry);
+                dialogLog.severe(config, "Failed to start call to: " + address + " Error: " + ex.getMessage(), session);
+            }
+
+            while (retryCounter.get(webResource.toString()) != null &&
+                   retryCounter.get(webResource.toString()) < MAX_RETRY_COUNT) {
+                try {
+                    String result = sendRequestWithRetry(webResource, queryKeyValue, HTTPMethod.POST, null);
+                    log.info("Result from BroadSoft: " + result);
+                    dialogLog.info(config, "Start outbound call to: " + address, session);
+                    //flush retryCount
+
+                    retryCounter.remove(webResource.toString());
+                    return getCallId(result);
+                }
+                catch (Exception ex) {
+                    Integer retry = retryCounter.get(webResource.toString());
+                    log.severe("Problems dialing out:" + ex.getMessage());
+                    dialogLog.severe(config,
+                                     String.format("Failed to start call to: %s Error: %s. Retrying! Count: %s",
+                                                   address, ex.getMessage(), retry), session);
+                    retryCounter.put(webResource.toString(), ++retry);
+                }
             }
         }
         return null;
@@ -329,41 +333,37 @@ public class Broadsoft {
 		return ids;
 	}
 	
-    private String sendRequestWithRetry( WebResource webResource, Map<String, String> queryKeyValue, HTTPMethod method, String payload )
-    throws UnsupportedEncodingException
-    {
-        for ( String queryKey : queryKeyValue.keySet() )
-        {
-            webResource = webResource.queryParam( queryKey, queryKeyValue.get( queryKey ) );
-        }
+    private String sendRequestWithRetry(WebResource webResource, Map<String, String> queryKeyValue, HTTPMethod method,
+        String payload) throws UnsupportedEncodingException {
+
         String result = null;
-        switch ( method )
-        {
-            case POST:
-                if(payload != null)
-                {
-                    result = webResource.type( "text/plain" ).post( String.class, payload );
-                }
-                else
-                {
-                    result = webResource.type( "text/plain" ).post( String.class );
-                }
-                break;
-            case PUT:
-                if(payload != null)
-                {
-                    result = webResource.type( "text/plain" ).put( String.class, payload );
-                }
-                else
-                {
-                    result = webResource.type( "text/plain" ).put( String.class );
-                }
-                break;
-            case GET:
-                result = webResource.type( "text/plain" ).get( String.class );
-                break;
-            default:
-                break;
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            for (String queryKey : queryKeyValue.keySet()) {
+                webResource = webResource.queryParam(queryKey, queryKeyValue.get(queryKey));
+            }
+            switch (method) {
+                case POST:
+                    if (payload != null) {
+                        result = webResource.type("text/plain").post(String.class, payload);
+                    }
+                    else {
+                        result = webResource.type("text/plain").post(String.class);
+                    }
+                    break;
+                case PUT:
+                    if (payload != null) {
+                        result = webResource.type("text/plain").put(String.class, payload);
+                    }
+                    else {
+                        result = webResource.type("text/plain").put(String.class);
+                    }
+                    break;
+                case GET:
+                    result = webResource.type("text/plain").get(String.class);
+                    break;
+                default:
+                    break;
+            }
         }
         return result;
     }

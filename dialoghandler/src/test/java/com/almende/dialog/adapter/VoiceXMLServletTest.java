@@ -4,168 +4,26 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import javax.ws.rs.HttpMethod;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
 import org.junit.Test;
-import org.mockito.Mockito;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy.Return;
-import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.example.agent.TestServlet;
-import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
-import com.almende.dialog.model.Session;
-import com.almende.dialog.util.ServerUtils;
 
 public class VoiceXMLServletTest extends TestFramework {
 
     protected static final String COMMENT_QUESTION_ID = "1";
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio.wav";
-
-    /**
-     * this test is to check the bug which rethrows the same question when an open question doesnt
-     * have an answer nor a timeout eventtype
-     * @throws Exception
-     */
-    @Test
-    public void inbountPhoneCall_WithOpenQuestion_MissingAnswerTest() throws Exception
-    {
-        String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType",
-            QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name() );
-        url = ServerUtils.getURLWithQueryParams( url, "question", COMMENT_QUESTION_AUDIO );
-        //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_BROADSOFT, TEST_PUBLIC_KEY, localAddressBroadsoft, url );
-
-        //create session
-        Session.getOrCreateSession( adapterConfig, remoteAddressVoice );
-
-        //mock the Context
-        UriInfo uriInfo = Mockito.mock( UriInfo.class );
-        Mockito.when( uriInfo.getBaseUri() ).thenReturn( new URI( TestServlet.TEST_SERVLET_PATH ) );
-        VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        Response newDialog = voiceXMLRESTProxy.getNewDialog( "inbound", remoteAddressVoice, localAddressBroadsoft,
-            uriInfo );
-        HashMap<String, String> answerVariables = assertOpenQuestionWithDTMFType( newDialog.getEntity().toString() );
-
-        //answer the dialog
-        Question retrivedQuestion = ServerUtils.deserialize( TestFramework.fetchResponse( HttpMethod.GET, url, null ),
-            Question.class );
-        String mediaPropertyValue = retrivedQuestion.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT );
-        
-        Integer retryCount = Question.getRetryCount( answerVariables.get( "sessionKey" ) );
-        int i = 0;
-        while ( i++ < 10 )
-        {
-            Response answerResponse = voiceXMLRESTProxy.answer(answerVariables.get("questionId"), null,
-                                                               answerVariables.get("answerInput"),
-                                                               answerVariables.get("sessionKey"), uriInfo);
-            if ( answerResponse.getEntity() != null )
-            {
-                if (answerResponse.getEntity().toString().equals("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                                                "<vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\">" +
-                                                "<form><block><exit/></block></form></vxml>")) {
-                    break;
-                }
-            }
-            retryCount++;
-        }
-        assertTrue( retryCount != null );
-        if(mediaPropertyValue != null)
-        {
-            assertTrue( retryCount < i );
-            assertTrue( retryCount == Integer.parseInt( mediaPropertyValue ));
-        }
-        else
-        {
-            assertTrue( retryCount <= i );
-            assertEquals( new Integer(Question.DEFAULT_MAX_QUESTION_LOAD), retryCount );
-        }
-    }
-    
-    private Question getCommentQuestion() {
-
-        Question question = new Question();
-        question.setQuestion_id(COMMENT_QUESTION_ID);
-        question.setType("comment");
-        question.setQuestion_text(COMMENT_QUESTION_AUDIO);
-
-        Answer answer = new Answer("http://answer.wav", "/next");
-        question.setAnswers(new ArrayList<Answer>(Arrays.asList(answer)));
-
-        // set the answers in the question
-        question.generateIds();
-        return question;
-    }
-
-    private Question getOpenDTMFQuestion() {
-
-        Question question = new Question();
-        question.setQuestion_id(COMMENT_QUESTION_ID);
-        question.setType( "open" );
-        question.setQuestion_text(COMMENT_QUESTION_AUDIO);
-
-        Answer answer = new Answer("http://answer.wav", "/next");
-        question.setAnswers(new ArrayList<Answer>(Arrays.asList(answer)));
-
-        // set the answers in the question
-        question.generateIds();
-        return question;
-    }
-    
-    private Question getOpenAudioQuestion() {
-
-        Question question = new Question();
-        question.setQuestion_id(COMMENT_QUESTION_ID);
-        question.setType( "open" );
-        question.setQuestion_text(COMMENT_QUESTION_AUDIO);
-
-        Answer answer = new Answer("http://answer.wav", "/next");
-        question.setAnswers(new ArrayList<Answer>(Arrays.asList(answer)));
-        
-        MediaProperty property = new MediaProperty();
-        property.setMedium(MediumType.BROADSOFT);
-        property.addProperty(MediaPropertyKey.TYPE, "AudIO");
-        
-        question.addMedia_Properties(property);
-
-        // set the answers in the question
-        question.generateIds();
-        return question;
-    }
-    
-    private String renderQuestion(Question question, AdapterConfig adapter, String sessionKey) throws Exception {
-
-        VoiceXMLRESTProxy servlet = new VoiceXMLRESTProxy();
-        Return res = servlet.formQuestion(question, adapter.getConfigId(), remoteAddressVoice, null, sessionKey);
-
-        if (question.getType().equalsIgnoreCase("comment")) {
-            return servlet.renderComment(res.question, res.prompts, sessionKey);
-        }
-        else if (question.getType().equalsIgnoreCase("referral")) {
-
-        }
-        else if (question.getType().equalsIgnoreCase("open")) {
-            return servlet.renderOpenQuestion(res.question, res.prompts, sessionKey);
-        }
-        else if (question.getType().equalsIgnoreCase("closed")) {
-
-        }
-
-        return null;
-    }
 
     @Test
     public void renderCommentQuestionTest() throws Exception {
@@ -245,6 +103,78 @@ public class VoiceXMLServletTest extends TestFramework {
         assertEquals(subdialog.getNodeName(), "subdialog");
     }
     
+    private Question getCommentQuestion() {
+
+        Question question = new Question();
+        question.setQuestion_id(COMMENT_QUESTION_ID);
+        question.setType("comment");
+        question.setQuestion_text(COMMENT_QUESTION_AUDIO);
+
+        Answer answer = new Answer("http://answer.wav", "/next");
+        question.setAnswers(new ArrayList<Answer>(Arrays.asList(answer)));
+
+        // set the answers in the question
+        question.generateIds();
+        return question;
+    }
+
+    private Question getOpenDTMFQuestion() {
+
+        Question question = new Question();
+        question.setQuestion_id(COMMENT_QUESTION_ID);
+        question.setType( "open" );
+        question.setQuestion_text(COMMENT_QUESTION_AUDIO);
+
+        Answer answer = new Answer("http://answer.wav", "/next");
+        question.setAnswers(new ArrayList<Answer>(Arrays.asList(answer)));
+
+        // set the answers in the question
+        question.generateIds();
+        return question;
+    }
+    
+    private Question getOpenAudioQuestion() {
+
+        Question question = new Question();
+        question.setQuestion_id(COMMENT_QUESTION_ID);
+        question.setType( "open" );
+        question.setQuestion_text(COMMENT_QUESTION_AUDIO);
+
+        Answer answer = new Answer("http://answer.wav", "/next");
+        question.setAnswers(new ArrayList<Answer>(Arrays.asList(answer)));
+        
+        MediaProperty property = new MediaProperty();
+        property.setMedium(MediumType.BROADSOFT);
+        property.addProperty(MediaPropertyKey.TYPE, "AudIO");
+        
+        question.addMedia_Properties(property);
+
+        // set the answers in the question
+        question.generateIds();
+        return question;
+    }
+    
+    private String renderQuestion(Question question, AdapterConfig adapter, String sessionKey) throws Exception {
+
+        VoiceXMLRESTProxy servlet = new VoiceXMLRESTProxy();
+        Return res = servlet.formQuestion(question, adapter.getConfigId(), remoteAddressVoice, null, sessionKey);
+
+        if (question.getType().equalsIgnoreCase("comment")) {
+            return servlet.renderComment(res.question, res.prompts, sessionKey);
+        }
+        else if (question.getType().equalsIgnoreCase("referral")) {
+
+        }
+        else if (question.getType().equalsIgnoreCase("open")) {
+            return servlet.renderOpenQuestion(res.question, res.prompts, sessionKey);
+        }
+        else if (question.getType().equalsIgnoreCase("closed")) {
+
+        }
+
+        return null;
+    }
+
     /**
      * @param result
      * @throws Exception

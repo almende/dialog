@@ -4,6 +4,8 @@ import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import com.almende.dialog.IntegrationTest;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.DialogAgent;
@@ -12,8 +14,8 @@ import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 
-
-public class CLXUSSDServletTest extends TestFramework{
+@Category(IntegrationTest.class)
+public class CLXUSSDServletIT extends TestFramework{
 	
 	private static final String message = "How are you doing? today";
 	private static final String remoteAdressVoice2 = "31624107792";

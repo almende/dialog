@@ -3,13 +3,16 @@ package com.almende.dialog.test;
 import javax.ws.rs.HttpMethod;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import com.almende.dialog.IntegrationTest;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.util.ServerUtils;
 
-public class TestServletTest extends TestFramework
+@Category(IntegrationTest.class)
+public class TestServletTestIT extends TestFramework
 {
     @Test
     public void fetchAppointmentQuestionUsingServletRunnerTest() throws Exception

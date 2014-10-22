@@ -120,7 +120,17 @@ public class VoiceXMLRESTProxy {
             bs.startSubscription();
 
             String extSession = bs.startCall(formattedAddress + "@outbound", session);
-
+            //create a ddrRecord
+            try {
+                DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedAddress, 1, url);
+                if(ddrRecord != null) {
+                    session.setDdrRecordId(ddrRecord.getId());
+                }
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(String.format("DDR creation failed for session: %s. Reason: %s", session.getKey(), e.getMessage()));
+            }
             session.setExternalSession(extSession);
             session.storeSession();
 
@@ -185,6 +195,17 @@ public class VoiceXMLRESTProxy {
                     log.info(String.format("Calling subscription complete. Message: %s. Starting call.. ",
                                            subscriptiion));
                     extSession = bs.startCall(formattedAddress + "@outbound", session);
+                }
+                //create a ddrRecord
+                try {
+                    DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedAddress, 1, url);
+                    if(ddrRecord != null) {
+                        session.setDdrRecordId(ddrRecord.getId());
+                    }
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                    log.severe(String.format("DDR creation failed for session: %s. Reason: %s", session.getKey(), e.getMessage()));
                 }
                 session.setExternalSession(extSession);
                 session.storeSession();
@@ -306,6 +327,8 @@ public class VoiceXMLRESTProxy {
         }
         session.setQuestion(question);
         
+        log.info("Current session info: "+ ServerUtils.serializeWithoutException(session));
+        
         if (session.getQuestion() != null) {
             //play trial account audio if the account is trial
             if(config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)){
@@ -315,13 +338,24 @@ public class VoiceXMLRESTProxy {
             DDRRecord ddrRecord = null;
             try {
                 if (direction.equalsIgnoreCase("outbound")) {
-                    ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedRemoteId, 1, url);
+                    if (session.getDdrRecordId() == null) {
+                        ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedRemoteId, 1, url);
+                    }
+                    else {
+                        //create a new ddr record only if it is missing
+                        ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+                        if(ddrRecord == null) {
+                            ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedRemoteId, 1, url);
+                        }
+                    }
                 }
                 else {
                     ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, formattedRemoteId, 1, url);
                 }
                 session.setDdrRecordId( ddrRecord != null ? ddrRecord.getId() : null);
                 if (ddrRecord != null) {
+                    log.info(String.format("For session: %s, a new DDRRecord is created: %s", sessionKey,
+                                           ServerUtils.serializeWithoutException(ddrRecord)));
                     ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
                 }
             }
@@ -342,6 +376,22 @@ public class VoiceXMLRESTProxy {
                 }
                 if(session != null) {
                     session.storeSession();
+                    //refetch the session and make sure the ddr is attached
+                    session = Session.getSession(session.getKey());
+                    if(session != null) {
+                        if(session.getDdrRecordId() != null) {
+                            log.info(String.format("Session: %s updated with ddrRecord: %s for direction: %s",
+                                                   session.getKey(), session.getDdrRecordId(), direction));
+                        }
+                        else {
+                            log.severe(String.format("Session: %s updated with no ddrRecord for direction: %s",
+                                                     session.getKey(), direction));
+                        }
+                    }
+                    else {
+                        log.severe(String.format("Session not found for: %s after trying to attach ddrRecord for direction: %s",
+                                                 sessionKey, direction));
+                    }
                 }
                 else {
                     log.severe("Session not found. Not expected to be null here!!");
@@ -1555,9 +1605,10 @@ public class VoiceXMLRESTProxy {
 
         if (session != null) {
             if (session.getExtras().get("event_" + eventName) != null) {
-                String timestamp = TimeUtils.getStringFormatFromDateTime(Long.parseLong(session.getExtras()
-                                                .get("event_" + eventName)), null);
-                log.warning(eventName + "event already triggered before for this session at: " + timestamp);
+                log.warning(String.format("%s event already triggered before for this session: %s at: %s", eventName,
+                                          session.getKey(),
+                                          TimeUtils.getStringFormatFromDateTime(Long.parseLong(session.getExtras()
+                                                                          .get("event_" + eventName)), null)));
                 return true;
             }
             else {

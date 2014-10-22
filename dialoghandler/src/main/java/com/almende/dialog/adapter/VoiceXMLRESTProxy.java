@@ -120,7 +120,17 @@ public class VoiceXMLRESTProxy {
             bs.startSubscription();
 
             String extSession = bs.startCall(formattedAddress + "@outbound", session);
-
+            //create a ddrRecord
+            try {
+                DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedAddress, 1, url);
+                if(ddrRecord != null) {
+                    session.setDdrRecordId(ddrRecord.getId());
+                }
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(String.format("DDR creation failed for session: %s. Reason: %s", session.getKey(), e.getMessage()));
+            }
             session.setExternalSession(extSession);
             session.storeSession();
 
@@ -185,6 +195,17 @@ public class VoiceXMLRESTProxy {
                     log.info(String.format("Calling subscription complete. Message: %s. Starting call.. ",
                                            subscriptiion));
                     extSession = bs.startCall(formattedAddress + "@outbound", session);
+                }
+                //create a ddrRecord
+                try {
+                    DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedAddress, 1, url);
+                    if(ddrRecord != null) {
+                        session.setDdrRecordId(ddrRecord.getId());
+                    }
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                    log.severe(String.format("DDR creation failed for session: %s. Reason: %s", session.getKey(), e.getMessage()));
                 }
                 session.setExternalSession(extSession);
                 session.storeSession();
@@ -317,7 +338,16 @@ public class VoiceXMLRESTProxy {
             DDRRecord ddrRecord = null;
             try {
                 if (direction.equalsIgnoreCase("outbound")) {
-                    ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedRemoteId, 1, url);
+                    if (session.getDdrRecordId() == null) {
+                        ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedRemoteId, 1, url);
+                    }
+                    else {
+                        //create a new ddr record only if it is missing
+                        ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+                        if(ddrRecord == null) {
+                            ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedRemoteId, 1, url);
+                        }
+                    }
                 }
                 else {
                     ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, formattedRemoteId, 1, url);

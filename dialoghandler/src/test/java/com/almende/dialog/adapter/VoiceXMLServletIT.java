@@ -113,8 +113,8 @@ public class VoiceXMLServletIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_BROADSOFT, TEST_PUBLIC_KEY,
-                                                          localAddressBroadsoft, url);
-        adapterConfig.setXsiUser(localAddressBroadsoft + "@ask.ask.voipit.nl");
+                                                          localAddressPhone, url);
+        adapterConfig.setXsiUser(localAddressPhone + "@ask.ask.voipit.nl");
         adapterConfig.update();
 
         //setup some ddrPrices
@@ -123,7 +123,7 @@ public class VoiceXMLServletIT extends TestFramework {
         //trigger an outbound call
         VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig);
         //fetch the session, assert that a ddrRecord is not attached still
-        Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localAddressBroadsoft,
+        Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localAddressPhone,
                                              PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         assertThat(session, notNullValue());
         assertThat(session.getDdrRecordId(), Matchers.notNullValue());
@@ -136,7 +136,7 @@ public class VoiceXMLServletIT extends TestFramework {
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         //mimick a fetch new dialog/ phone pickup
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        Response newDialog = voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, localAddressBroadsoft,
+        Response newDialog = voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, localAddressPhone,
                                                             uriInfo);
         assertOpenQuestionWithDTMFType(newDialog.getEntity().toString());
         //a ddr must be attached to hte session
@@ -147,7 +147,7 @@ public class VoiceXMLServletIT extends TestFramework {
         //hangup the call after 5 mins
         //send hangup ccxml with an answerTime
         String hangupXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
-                                        "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" + localAddressBroadsoft +"@ask.ask.voipit.nl</subscriberId>" +
+                                        "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" + localAddressPhone +"@ask.ask.voipit.nl</subscriberId>" +
                                         "<applicationId>cc</applicationId><subscriptionId>200fc376-e154-4930-a289-ae0da816707c</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
                                         "\"http://schema.broadsoft.com/xsi-events\"><eventName>CallSessionEvent</eventName><call><callId>callhalf-12914560105:1</callId><extTrackingId>" +
                                         "10669651:1</extTrackingId><personality>Originator</personality><callState>Released</callState><releaseCause>Temporarily Unavailable</releaseCause>" +

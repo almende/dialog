@@ -962,7 +962,7 @@ public class TwilioAdapter {
 					if (redirectedId != null) {
 						// update url with formatted redirecteId. RFC3966
 						// returns format tel:<blabla> as expected
-						question.setUrl(PhoneNumberUtils.formatNumber(redirectedId, PhoneNumberFormat.RFC3966));
+						question.setUrl(redirectedId);
 						// store the remoteId as its lost while trying to
 						// trigger the answered event
 						HashMap<String, String> extras = new HashMap<String, String>();

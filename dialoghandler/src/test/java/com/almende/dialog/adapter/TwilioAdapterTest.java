@@ -18,6 +18,7 @@ import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
+import com.askfast.commons.utils.PhoneNumberUtils;
 
 public class TwilioAdapterTest extends TestFramework {
 	
@@ -140,9 +141,7 @@ public class TwilioAdapterTest extends TestFramework {
         String sessionKey = createSessionKey(adapter, remoteAddressVoice);
         
         String result = renderQuestion(question, adapter, sessionKey);
-        
-        log.info("Result Open Question: "+result);
-        
+                
         Document doc = getXMLDocumentBuilder(result);
         Node response = doc.getFirstChild();
         Node gather = response.getFirstChild();
@@ -167,8 +166,31 @@ public class TwilioAdapterTest extends TestFramework {
 	}
 	
 	@Test
-	public void renderReferralQuestionTest() {
+	public void renderReferralQuestionTest() throws Exception {
 		
+		Question question = getReferralQuestion(false);
+		AdapterConfig adapter = createTwilioAdapter();
+        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
+        
+        String result = renderQuestion(question, adapter, sessionKey);
+        
+
+        log.info("Result Referral Question: "+result);
+        
+        Document doc = getXMLDocumentBuilder(result);
+        Node response = doc.getFirstChild();
+        Node play = response.getFirstChild();
+        Node dial = play.getNextSibling();
+        
+        assertEquals("Play", play.getNodeName());
+        assertEquals("http://audio", play.getTextContent());
+        
+        assertEquals("Dial", dial.getNodeName());
+        assertEquals("GET", dial.getAttributes().getNamedItem("method").getTextContent());
+        assertTrue(dial.getAttributes().getNamedItem("action").getTextContent().endsWith("/dialoghandler/rest/twilio/answer"));
+     
+        String formattedAddress = PhoneNumberUtils.formatNumber(remoteAddressVoice, null);
+        assertEquals(formattedAddress, dial.getTextContent());
 	}
     
     private Question getCommentQuestion(boolean tts) {
@@ -235,6 +257,27 @@ public class TwilioAdapterTest extends TestFramework {
         question.generateIds();
         return question;
     }
+    
+    private Question getReferralQuestion(boolean tts) {
+
+        Question question = new Question();
+        question.setQuestion_id(COMMENT_QUESTION_ID);
+        question.setType("referral");
+        if(tts) {
+        	question.setQuestion_text(COMMENT_QUESTION_TEXT);
+        } else {
+        	question.setQuestion_text(COMMENT_QUESTION_AUDIO);
+        }
+        
+        question.setUrl("tel:"+remoteAddressVoice);
+
+        Answer answer1 = new Answer("http://answer.wav", "/next");
+        question.setAnswers(new ArrayList<Answer>(Arrays.asList(answer1)));
+
+        // set the answers in the question
+        question.generateIds();
+        return question;
+    }
 	
 	private String renderQuestion(Question question, AdapterConfig adapter, String sessionKey) throws Exception {
 
@@ -246,6 +289,13 @@ public class TwilioAdapterTest extends TestFramework {
         }
         else if (question.getType().equalsIgnoreCase("referral")) {
 
+        	String redirectedId = PhoneNumberUtils.formatNumber(question.getUrl().replace("tel:", ""), null);
+			if (redirectedId != null) {
+				// update url with formatted redirecteId. RFC3966
+				// returns format tel:<blabla> as expected
+				question.setUrl(redirectedId);
+			}
+			return servlet.renderReferral(res.question, res.prompts, sessionKey);
         }
         else if (question.getType().equalsIgnoreCase("open")) {
             return servlet.renderOpenQuestion(res.question, res.prompts, sessionKey);
@@ -256,5 +306,4 @@ public class TwilioAdapterTest extends TestFramework {
 
         return null;
     }
-
 }

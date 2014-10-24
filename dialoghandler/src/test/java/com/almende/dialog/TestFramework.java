@@ -18,10 +18,16 @@ import org.junit.Before;
 import org.w3c.dom.Document;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DDRRecordAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRPrice;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
+import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.meterware.servletunit.ServletRunner;
@@ -200,6 +206,33 @@ public class TestFramework
             addHeader( mimeMultipart, "stanza", stanza );
         }
         return mimeMultipart;
+    }
+    
+    /**
+     * Create a DDRPrice. This will also generate all the default,generic ddrtypes 
+     * @param category
+     * @param price
+     * @param name
+     * @param unitType
+     * @param adapterType
+     * @param adapterId
+     * @return
+     * @throws Exception
+     */
+    public static DDRPrice createTestDDRPrice(DDRTypeCategory category, double price, String name, UnitType unitType,
+        AdapterType adapterType, String adapterId) throws Exception {
+
+        DDRRecordAgent ddrRecordAgent = new DDRRecordAgent();
+        ddrRecordAgent.generateDefaultDDRTypes();
+        Object ddrPriceObject = ddrRecordAgent
+                                        .createDDRPriceWithNewDDRType(name, category.name(),
+                                                                      TimeUtils.getServerCurrentTimeInMillis(),
+                                                                      TimeUtils.getCurrentServerTimePlusMinutes(100),
+                                                                      price, 0, 10, 1, unitType.name(),
+                                                                      adapterType != null ? adapterType.name() : null,
+                                                                      adapterId, null);
+        TypeUtil<DDRPrice> injector = new TypeUtil<DDRPrice>() {};
+        return injector.inject(ddrPriceObject);
     }
     
     private static void addHeader(MimeMultipart mimeMultipart, String key, String value) throws MessagingException

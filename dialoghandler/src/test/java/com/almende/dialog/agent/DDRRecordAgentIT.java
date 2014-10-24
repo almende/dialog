@@ -177,19 +177,26 @@ public class DDRRecordAgentIT extends TestFramework {
         //check if a ddr record is created
         Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
         //initially only one record is created corresponding to the adapter creation
-        assertThat( allDdrRecords.size(), Matchers.is( 1 ) );
+        assertThat( allDdrRecords.size(), Matchers.is( 2 ) );
         double totalCost = 0.0;
         int assertCount = 0;
         for ( DDRRecord ddrRecord : allDdrRecords )
         {
-            Double ddrCost = DDRUtils.calculateDDRCost( ddrRecord );
+            assertThat(ddrRecord.getAccountId(), Matchers.is(resultMap.get(ACCOUNT_ID_KEY)));
+            assertThat(ddrRecord.getAdapterId(), Matchers.is(resultMap.get(ADAPTER_ID_KEY)));
+            assertThat(ddrRecord.getQuantity(), Matchers.is(1));
+            Double ddrCost = DDRUtils.calculateDDRCost(ddrRecord);
             totalCost += ddrCost;
-            assertThat( ddrRecord.getAccountId(), Matchers.is( resultMap.get( ACCOUNT_ID_KEY ) ) );
-            assertThat( ddrRecord.getAdapterId(), Matchers.is( resultMap.get( ADAPTER_ID_KEY ) ) );
-            assertThat( ddrRecord.getQuantity(), Matchers.is( 1 ) );
-            assertThat( ddrCost, Matchers.is( 10.0 ) );
+            if (ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.ADAPTER_PURCHASE)) {
+                assertThat(ddrCost, Matchers.is(10.0));
+                assertCount++;
+            }
+            else if(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.OUTGOING_COMMUNICATION_COST)) {
+                assertThat(ddrCost, Matchers.is(0.0));
+                assertCount++;
+            }
         }
-
+        assertThat(assertCount, Matchers.is(2));
         totalCost = 0.0;
         assertCount = 0;
         //mimick behaviour or outbound calling being triggered and answered
@@ -222,7 +229,7 @@ public class DDRRecordAgentIT extends TestFramework {
             }
         }
         //hangup the call after 5 mins
-      //send hangup ccxml with an answerTime
+        //send hangup ccxml with an answerTime
         String hangupXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
                                         "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" + localAddressPhone +"@ask.ask.voipit.nl</subscriberId>" +
                                         "<applicationId>cc</applicationId><subscriptionId>200fc376-e154-4930-a289-ae0da816707c</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
@@ -319,15 +326,27 @@ public class DDRRecordAgentIT extends TestFramework {
         //check if a ddr record is created
         Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
         //initially only one record is created corresponding to the adapter creation
-        assertThat( allDdrRecords.size(), Matchers.is( 1 ) );
+        assertThat( allDdrRecords.size(), Matchers.is( 2 ) );
+        double totalCost = 0.0;
+        int assertCount = 0;
         for ( DDRRecord ddrRecord : allDdrRecords )
         {
-            assertThat( ddrRecord.getAccountId(), Matchers.is( resultMap.get( ACCOUNT_ID_KEY ) ) );
-            assertThat( ddrRecord.getAdapterId(), Matchers.is( resultMap.get( ADAPTER_ID_KEY ) ) );
-            assertThat( ddrRecord.getQuantity(), Matchers.is( 1 ) );
-            Double ddrCost = DDRUtils.calculateDDRCost( ddrRecord );
-            assertThat( ddrCost, Matchers.is( 10.0 ) );
+            assertThat(ddrRecord.getAccountId(), Matchers.is(resultMap.get(ACCOUNT_ID_KEY)));
+            assertThat(ddrRecord.getAdapterId(), Matchers.is(resultMap.get(ADAPTER_ID_KEY)));
+            assertThat(ddrRecord.getQuantity(), Matchers.is(1));
+            Double ddrCost = DDRUtils.calculateDDRCost(ddrRecord);
+            totalCost += ddrCost;
+            if (ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.ADAPTER_PURCHASE)) {
+                assertThat(ddrCost, Matchers.is(10.0));
+                assertCount++;
+            }
+            else if(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.OUTGOING_COMMUNICATION_COST)) {
+                assertThat(ddrCost, Matchers.is(0.0));
+                assertCount++;
+            }
         }
+        assertThat( totalCost, Matchers.is( 10.0 ) );
+        assertThat(assertCount, Matchers.is(2));
 
         //mimick behaviour or outbound calling being triggered and answered
         UriInfo uri = Mockito.mock( UriInfo.class );

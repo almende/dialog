@@ -238,50 +238,52 @@ public class DDRRecord
     public static DDRRecord getDDRRecord(String sessionKey) {
 
         Session session = Session.getSession(sessionKey);
-        JacksonDBCollection<DDRRecord, String> collection = getCollection();
-        ArrayList<Query> queryList = new ArrayList<Query>();
-        //fetch accounts that match
-        queryList.add(DBQuery.is("accountId", session.getAccountId()));
-        if (session.getAdapterID() != null) {
-            queryList.add(DBQuery.is("adapterId", session.getAdapterID()));
-        }
-        if (session.getDirection() != null) {
-            HashMap<String, String> addressMap = new HashMap<String, String>(1);
-            if (session.getDirection().equalsIgnoreCase("incoming")) {
-                queryList.add(DBQuery.is("fromAddress", session.getRemoteAddress()));
-                addressMap.put(session.getLocalAddress(), "");
-                queryList.add(DBQuery.is("status", CommunicationStatus.RECEIVED));
+        if (session != null) {
+            JacksonDBCollection<DDRRecord, String> collection = getCollection();
+            ArrayList<Query> queryList = new ArrayList<Query>();
+            //fetch accounts that match
+            queryList.add(DBQuery.is("accountId", session.getAccountId()));
+            if (session.getAdapterID() != null) {
+                queryList.add(DBQuery.is("adapterId", session.getAdapterID()));
             }
-            else {
-                queryList.add(DBQuery.is("fromAddress", session.getLocalAddress()));
-                addressMap.put(session.getRemoteAddress(), "");
-                queryList.add(DBQuery.is("status", CommunicationStatus.SENT));
+            if (session.getDirection() != null) {
+                HashMap<String, String> addressMap = new HashMap<String, String>(1);
+                if (session.getDirection().equalsIgnoreCase("incoming")) {
+                    queryList.add(DBQuery.is("fromAddress", session.getRemoteAddress()));
+                    addressMap.put(session.getLocalAddress(), "");
+                    queryList.add(DBQuery.is("status", CommunicationStatus.RECEIVED));
+                }
+                else {
+                    queryList.add(DBQuery.is("fromAddress", session.getLocalAddress()));
+                    addressMap.put(session.getRemoteAddress(), "");
+                    queryList.add(DBQuery.is("status", CommunicationStatus.SENT));
+                }
+                try {
+                    queryList.add(DBQuery.is("toAddressString", ServerUtils.serialize(addressMap)));
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                    log.severe("Error while serializing. Message: " + e.toString());
+                }
             }
-            try {
-                queryList.add(DBQuery.is("toAddressString", ServerUtils.serialize(addressMap)));
+            Query[] dbQueries = new Query[queryList.size()];
+            for (int queryCounter = 0; queryCounter < queryList.size(); queryCounter++) {
+                dbQueries[queryCounter] = queryList.get(queryCounter);
             }
-            catch (Exception e) {
-                e.printStackTrace();
-                log.severe("Error while serializing. Message: "+ e.toString());
-            }
-        }
-        Query[] dbQueries = new Query[queryList.size()];
-        for (int queryCounter = 0; queryCounter < queryList.size(); queryCounter++) {
-            dbQueries[queryCounter] = queryList.get(queryCounter);
-        }
-        DBCursor<DDRRecord> ddrCursor = collection.find(DBQuery.and(dbQueries));
-        if (ddrCursor != null) {
-            while (ddrCursor.hasNext()) {
-                DDRRecord ddrRecord = ddrCursor.next();
-                //return the ddrRecord whose startTime matches the creationTime or answerTime of the session
-                if (ddrRecord.getStart() != null &&
-                    (ddrRecord.getStart().toString().equals(session.getCreationTimestamp()) || ddrRecord.getStart()
-                                                    .toString().equals(session.getAnswerTimestamp()))) {
-                    return ddrRecord;
+            DBCursor<DDRRecord> ddrCursor = collection.find(DBQuery.and(dbQueries));
+            if (ddrCursor != null) {
+                while (ddrCursor.hasNext()) {
+                    DDRRecord ddrRecord = ddrCursor.next();
+                    //return the ddrRecord whose startTime matches the creationTime or answerTime of the session
+                    if (ddrRecord.getStart() != null &&
+                        (ddrRecord.getStart().toString().equals(session.getCreationTimestamp()) || ddrRecord.getStart()
+                                                        .toString().equals(session.getAnswerTimestamp()))) {
+                        return ddrRecord;
+                    }
                 }
             }
         }
-        return null; 
+        return null;
     }
     
     // -- getters and setters --

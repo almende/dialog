@@ -1,6 +1,12 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+22-10-2014, version 1.4.3
+- fix: add ddrRecord for outgoing in the dial method
+
+9-10-2014, version 1.4.2
+- fix: change tts host protocol back from https to http (broadsoft cannot parse https for some reason)
+
 8-10-2014, version 1.4.1
 - fix: fixed log messages and adapter fetch by address
 

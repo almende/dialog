@@ -190,13 +190,13 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<servlet-class>com.almende.dialog.example.agent.TestServlet</servlet-class>
 		<init-param>
 			<param-name>servlet_url</param-name>
-			<param-value>http://localhost:8082/unitTestServlet/</param-value>
+			<param-value>http://localhost:8082/dialoghandler/unitTestServlet/</param-value>
 		</init-param>
 		<load-on-startup>1</load-on-startup>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>unitTestServlet</servlet-name>
-		<url-pattern>/unitTestServlet/*</url-pattern>
+		<url-pattern>/dialoghandler/unitTestServlet/*</url-pattern>
 	</servlet-mapping>
 
 	<welcome-file-list>

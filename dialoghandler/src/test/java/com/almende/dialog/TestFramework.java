@@ -38,11 +38,11 @@ public class TestFramework
 //    private final LocalServiceTestHelper helper = new LocalServiceTestHelper( new LocalDatastoreServiceTestConfig() );
     protected static final String localAddressMail      = "info@dialog-handler.appspotmail.com";
     protected static final String localAddressChat      = "info@dialog-handler.appspotchat.com";
-    protected static final String remoteAddressEmail         = "info@askcs.com";
-    protected static final String localAddressBroadsoft = "0854881000";
+    protected static final String remoteAddressEmail    = "info@askcs.com";
+    protected static final String localAddressPhone 	= "0854881000";
     protected static final String remoteAddressVoice    = "0614765800";
-    protected static final String TEST_PUBLIC_KEY    = "agent1@ask-cs.com";
-    protected static final String TEST_PRIVATE_KEY = "test_private_key";
+    protected static final String TEST_PUBLIC_KEY    	= "agent1@ask-cs.com";
+    protected static final String TEST_PRIVATE_KEY 		= "test_private_key";
     
     public static ThreadLocal<ServletRunner> servletRunner = new ThreadLocal<ServletRunner>();
     
@@ -101,7 +101,12 @@ public class TestFramework
     
     public AdapterConfig createBroadsoftAdapter() throws Exception {
 
-        return createAdapterConfig(AdapterType.CALL.getName(), TEST_PUBLIC_KEY, localAddressBroadsoft, "");
+        return createAdapterConfig(AdapterType.CALL.getName(), TEST_PUBLIC_KEY, localAddressPhone, "");
+    }
+    
+    public AdapterConfig createTwilioAdapter() throws Exception {
+
+        return createAdapterConfig(AdapterType.TWILIO.getName(), TEST_PUBLIC_KEY, localAddressPhone, "");
     }
     
     public static AdapterConfig createAdapterConfig(String adapterType, String accountId, String myAddress,

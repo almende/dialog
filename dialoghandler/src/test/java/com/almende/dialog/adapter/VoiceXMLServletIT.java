@@ -44,7 +44,7 @@ public class VoiceXMLServletIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_BROADSOFT, TEST_PUBLIC_KEY,
-                                                          localAddressBroadsoft, url);
+                                                          localAddressPhone, url);
 
         //create session
         Session.getOrCreateSession(adapterConfig, remoteAddressVoice);
@@ -53,7 +53,7 @@ public class VoiceXMLServletIT extends TestFramework {
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        Response newDialog = voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, localAddressBroadsoft,
+        Response newDialog = voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, localAddressPhone,
                                                             uriInfo);
         HashMap<String, String> answerVariables = assertOpenQuestionWithDTMFType(newDialog.getEntity().toString());
 

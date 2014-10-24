@@ -230,7 +230,7 @@ public class AdapterConfigTest extends TestFramework
         throws Exception {
 
         AdapterConfig adapter = createAdapterConfig(AdapterType.CALL.getName(), ownerId, accountIds,
-                                                    localAddressBroadsoft, null);
+                                                    localAddressPhone, null);
         if (accountIds != null) {
             adapter.setAccounts(accountIds);
         }

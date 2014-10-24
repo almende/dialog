@@ -79,7 +79,7 @@ public class CMServletIT extends TestFramework {
 
         //fetch already created adapter
         AdapterConfig adapterConfig = AdapterConfig
-                                        .findAdapters(AdapterAgent.ADAPTER_TYPE_SMS, localAddressBroadsoft, null)
+                                        .findAdapters(AdapterAgent.ADAPTER_TYPE_SMS, localAddressPhone, null)
                                         .iterator().next();
         assertXMLGeneratedFromOutBoundCall(addressNameMap, adapterConfig, expectedQuestion,
                                            textMessage.getLocalAddress());
@@ -119,7 +119,7 @@ public class CMServletIT extends TestFramework {
         initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "questionType", QuestionInRequest.APPOINTMENT.name() );
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, TEST_PUBLIC_KEY,
-                                                          localAddressBroadsoft, initialAgentURL);
+                                                          localAddressPhone, initialAgentURL);
         //create session
         Session.getOrCreateSession( adapterConfig, PhoneNumberUtils.formatNumber(remoteAddressVoice, null ));
         TextMessage textMessage = smsAppointmentInteraction( "hi" );
@@ -151,7 +151,7 @@ public class CMServletIT extends TestFramework {
 
         //fetch already created adapter
         AdapterConfig adapterConfig = AdapterConfig
-                                        .findAdapters(AdapterAgent.ADAPTER_TYPE_SMS, localAddressBroadsoft, null)
+                                        .findAdapters(AdapterAgent.ADAPTER_TYPE_SMS, localAddressPhone, null)
                                         .iterator().next();
         assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, expectedQuestion,
             textMessage.getLocalAddress() );
@@ -197,7 +197,7 @@ public class CMServletIT extends TestFramework {
 
         //fetch already created adapter
         AdapterConfig adapterConfig = AdapterConfig
-                                        .findAdapters(AdapterAgent.ADAPTER_TYPE_SMS, localAddressBroadsoft, null)
+                                        .findAdapters(AdapterAgent.ADAPTER_TYPE_SMS, localAddressPhone, null)
                                         .iterator().next();
         assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, expectedQuestion,
             textMessage.getLocalAddress() );
@@ -384,7 +384,7 @@ public class CMServletIT extends TestFramework {
     private TextMessage smsAppointmentInteraction( String message ) throws Exception
     {
         HashMap<String, String> data = new HashMap<String, String>();
-        data.put( "receiver", localAddressBroadsoft );
+        data.put( "receiver", localAddressPhone );
         data.put( "sender", remoteAddressVoice );
         data.put( "message", message );
         //fetch and invoke the receieveMessage method

@@ -310,14 +310,9 @@ public class TwilioAdapter {
     public Response answer(@QueryParam("answerId") String answer_id, @QueryParam("Digits") String answer_input,
         @QueryParam("From") String localID, @QueryParam("To") String remoteID,
         @QueryParam("Direction") String direction, @QueryParam("RecordingUrl") String recordingUrl, 
-        @QueryParam("DialCallStatus") String dialCallStatus) {
+        @QueryParam("DialCallStatus") String dialCallStatus, @QueryParam("DialCallSid") String dialCallSid) {
 
         TwiMLResponse twiml = new TwiMLResponse();
-
-        if(dialCallStatus!=null) {
-        	
-        	//TODO: Handle hangup of the redirect
-        }
         
         try {
             answer_input = answer_input != null ? URLDecoder.decode(answer_input, "UTF-8") : answer_input;
@@ -339,6 +334,17 @@ public class TwilioAdapter {
         String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localID + "|" + remoteID;
 
         Session session = Session.getSession(sessionKey);
+        
+        // Remove the referralSession
+        if(dialCallSid!=null) {
+        	
+        	if(dialCallStatus.equals("completed")) {
+        		
+        		AdapterConfig config = session.getAdapterConfig();
+        		finalizeCall(config, null, dialCallSid, "outbound", null);
+        	}
+        }
+        
         if (session != null) {
             Question question = session.getQuestion();
             if (question != null) {
@@ -496,41 +502,7 @@ public class TwilioAdapter {
 			//update session with call timings
             if (status.equals("completed")) {
             	
-            	String accountSid = config.getAccessToken();
-            	String authToken = config.getAccessTokenSecret();
-            	TwilioRestClient client = new TwilioRestClient(accountSid, authToken);
-            	
-            	Call call = client.getAccount().getCall(callSid); 
-            	
-            	String pattern = "EEE, dd MMM yyyy HH:mm:ss Z";
-            	SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.ENGLISH);
-            	
-            	Long startTime  = 0L;
-            	Long answerTime = 0L;
-            	Long endTime = 0L;
-            	try {
-            		String created = call.getProperty("date_created");
-            		startTime = format.parse(created).getTime();
-            		answerTime = format.parse(call.getStartTime()).getTime();
-            		endTime = format.parse(call.getEndTime()).getTime();
-            	    
-            		//sometimes answerTimeStamp is only given in the ACTIVE ccxml
-	                session.setAnswerTimestamp(answerTime+"");
-	                session.setStartTimestamp(startTime+"");
-	                session.setReleaseTimestamp(endTime+"");
-	                session.setDirection(direction);
-	                session.setRemoteAddress(remoteID);
-	                session.setLocalAddress(config.getMyAddress());
-	                session.storeSession();
-	                //flush the keys if ddrProcessing was successful
-	                if (DDRUtils.stopDDRCosts(session.getKey(), true)) {
-	                    session.drop();
-	                }
-	                hangup(session);
-                
-            	} catch (Exception e) {
-            		e.printStackTrace();
-            	}
+            	finalizeCall(config, session, callSid, direction, remoteID);
             }
 		}
 		
@@ -538,6 +510,67 @@ public class TwilioAdapter {
         
 		
 		return Response.ok("").build();
+	}
+	
+	/**
+	 * Retrieve call information and with that:
+	 *   - update ddr record
+	 *   - destroy session
+	 *   - send hangup
+	 * @param config
+	 * @param session
+	 * @param callSid
+	 * @param direction
+	 * @param remoteID
+	 */
+	private void finalizeCall(AdapterConfig config, Session session, String callSid, String direction, String remoteID) {
+		
+		String accountSid = config.getAccessToken();
+    	String authToken = config.getAccessTokenSecret();
+    	TwilioRestClient client = new TwilioRestClient(accountSid, authToken);
+    	
+    	Call call = client.getAccount().getCall(callSid); 
+    	
+    	if(session==null) {
+    		remoteID = call.getTo();
+    		String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + config.getMyAddress() + "|" + remoteID;
+    		session = Session.getSession(sessionKey);
+    	}
+    	
+    	if(session!=null) {
+    		log.info("Finalizing call for: "+session.getKey());
+	    	String pattern = "EEE, dd MMM yyyy HH:mm:ss Z";
+	    	SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.ENGLISH);
+	    	
+	    	Long startTime  = 0L;
+	    	Long answerTime = 0L;
+	    	Long endTime = 0L;
+	    	try {
+	    		String created = call.getProperty("date_created");
+	    		startTime = format.parse(created).getTime();
+	    		answerTime = format.parse(call.getStartTime()).getTime();
+	    		endTime = format.parse(call.getEndTime()).getTime();
+	    	    
+	    		//sometimes answerTimeStamp is only given in the ACTIVE ccxml
+	            session.setAnswerTimestamp(answerTime+"");
+	            session.setStartTimestamp(startTime+"");
+	            session.setReleaseTimestamp(endTime+"");
+	            session.setDirection(direction);
+	            session.setRemoteAddress(remoteID);
+	            session.setLocalAddress(config.getMyAddress());
+	            session.storeSession();
+	            //flush the keys if ddrProcessing was successful
+	            if (DDRUtils.stopDDRCosts(session.getKey(), true)) {
+	                session.drop();
+	            }
+	            hangup(session);
+	        
+	    	} catch (Exception e) {
+	    		e.printStackTrace();
+	    	}
+    	} else {
+    		log.warning("Failed to finalize call because no session was found for: " + callSid);
+    	}
 	}
 	
 	/**

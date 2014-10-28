@@ -696,11 +696,10 @@ public class TwilioAdapter {
     	return twiml.toXML();
     }
     
-    protected String renderReferral(Question question,ArrayList<String> prompts, String sessionKey){
+    protected String renderReferral(Question question,ArrayList<String> prompts, String sessionKey, String remoteID){
     	TwiMLResponse twiml = new TwiMLResponse();
     	
     	try {
-	    	// TODO: Implement
     		addPrompts(prompts, question.getPreferred_language(), twiml);
     		
     		String redirectTimeoutProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
@@ -718,6 +717,15 @@ public class TwilioAdapter {
     		
     		dial.setMethod("GET");
     		dial.setAction(getAnswerUrl());
+    		
+    		String externalCallerId = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.USE_EXTERNAL_CALLERID );
+            Boolean callerId = false;
+            if(externalCallerId!=null) {
+            	callerId = Boolean.parseBoolean(externalCallerId);
+            }
+    		if(callerId) {
+    			dial.setCallerId(remoteID);
+    		}
     		
     		twiml.append(dial);
     	}catch(TwiMLException e ) {
@@ -995,7 +1003,7 @@ public class TwilioAdapter {
 					} else {
 						log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ",question.getUrl().replace("tel:", "")));
 					}
-					result = renderReferral(question, res.prompts, sessionKey);
+					result = renderReferral(question, res.prompts, sessionKey, remoteID);
 				}
 			} else if (res.prompts.size() > 0) {
 				result = renderComment(question, res.prompts, sessionKey);

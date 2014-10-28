@@ -27,6 +27,7 @@ public class TwilioAdapterTest extends TestFramework {
 	protected static final String COMMENT_QUESTION_ID = "1";
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio";
     protected static final String COMMENT_QUESTION_TEXT = "text://Hello World";
+    protected static final String REFERRAL_PHONE_NUMBER = "tel:0643002549";
     
     @Test
     public void renderCommentQuestionTest() throws Exception {
@@ -188,6 +189,7 @@ public class TwilioAdapterTest extends TestFramework {
         assertEquals("Dial", dial.getNodeName());
         assertEquals("GET", dial.getAttributes().getNamedItem("method").getTextContent());
         assertTrue(dial.getAttributes().getNamedItem("action").getTextContent().endsWith("/dialoghandler/rest/twilio/answer"));
+        assertTrue(dial.getAttributes().getNamedItem("callerId").getTextContent().equals(remoteAddressVoice));
      
         String formattedAddress = PhoneNumberUtils.formatNumber(remoteAddressVoice, null);
         assertEquals(formattedAddress, dial.getTextContent());
@@ -273,6 +275,11 @@ public class TwilioAdapterTest extends TestFramework {
 
         Answer answer1 = new Answer("http://answer.wav", "/next");
         question.setAnswers(new ArrayList<Answer>(Arrays.asList(answer1)));
+        
+        MediaProperty mp = new MediaProperty();
+    	mp.setMedium(MediumType.BROADSOFT);
+    	mp.addProperty(MediaPropertyKey.USE_EXTERNAL_CALLERID, "true");
+    	question.addMedia_Properties(mp);
 
         // set the answers in the question
         question.generateIds();
@@ -295,7 +302,7 @@ public class TwilioAdapterTest extends TestFramework {
 				// returns format tel:<blabla> as expected
 				question.setUrl(redirectedId);
 			}
-			return servlet.renderReferral(res.question, res.prompts, sessionKey);
+			return servlet.renderReferral(res.question, res.prompts, sessionKey, remoteAddressVoice);
         }
         else if (question.getType().equalsIgnoreCase("open")) {
             return servlet.renderOpenQuestion(res.question, res.prompts, sessionKey);

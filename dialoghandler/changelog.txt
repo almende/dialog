@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+28-10-2014, version 1.5.0
+- add twilio adapter
+
 22-10-2014, version 1.4.3
 - fix: add ddrRecord for outgoing in the dial method
 

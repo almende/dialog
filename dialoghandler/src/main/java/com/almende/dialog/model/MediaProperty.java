@@ -52,7 +52,11 @@ public class MediaProperty
         /**
          * defines which caller id should be when redirecting a call
          */
-        USE_EXTERNAL_CALLERID;
+        USE_EXTERNAL_CALLERID,
+        /**
+         * Pre-connect message. Gives opertunity to play a message before connecting the redirected call
+         */
+        PRE_CONNECT;
         
         @JsonCreator
         public static MediaPropertyKey fromJson(String name) {

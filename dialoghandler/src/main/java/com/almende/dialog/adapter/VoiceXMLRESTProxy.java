@@ -1384,6 +1384,37 @@ public class VoiceXMLRESTProxy {
                     outputter.endTag();
 	}
     
+    protected String renderExitQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
+	    
+    	StringWriter sw = new StringWriter();
+    	try {
+	    	XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
+			outputter.declaration();
+			outputter.startTag("vxml");
+				outputter.attribute("version", "2.1");
+				outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
+				outputter.startTag("form");
+			    	outputter.startTag("block");
+					for (String prompt : prompts){
+						outputter.startTag("prompt");
+							outputter.startTag("audio");
+								outputter.attribute("src", prompt);
+							outputter.endTag();
+						outputter.endTag();
+					}
+						outputter.startTag("exit");
+						outputter.endTag();
+					
+					outputter.endTag();
+					outputter.endTag();
+				outputter.endTag();
+			outputter.endDocument();
+		} catch (Exception e) {
+			log.severe("Exception in creating question XML: "+ e.toString());
+		}
+    	return sw.toString();
+    }
+    
     private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, String sessionKey) {
 
         String result = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>";
@@ -1481,6 +1512,9 @@ public class VoiceXMLRESTProxy {
                     }
                     result = renderComment(question, res.prompts, sessionKey);
                 }
+            }
+            else if (question.getType().equalsIgnoreCase("exit")) {
+            	result = renderExitQuestion(question, res.prompts, sessionKey);
             }
             else if (res.prompts.size() > 0) {
                 result = renderComment(question, res.prompts, sessionKey);

@@ -41,6 +41,7 @@ import com.twilio.sdk.resource.instance.Account;
 import com.twilio.sdk.resource.instance.Call;
 import com.twilio.sdk.verbs.Dial;
 import com.twilio.sdk.verbs.Gather;
+import com.twilio.sdk.verbs.Hangup;
 import com.twilio.sdk.verbs.Play;
 import com.twilio.sdk.verbs.Record;
 import com.twilio.sdk.verbs.Redirect;
@@ -55,7 +56,7 @@ public class TwilioAdapter {
 	protected static final com.almende.dialog.Logger dialogLog =  new com.almende.dialog.Logger();
 	private static final int LOOP_DETECTION=10;
 	protected String TIMEOUT_URL="timeout";
-	protected String EXCEPTION_URL="exception";
+	//protected String EXCEPTION_URL="exception";
 	
 	public static HashMap<String, String> dial(Map<String, String> addressNameMap, String url, String senderName,
 	        AdapterConfig config, String applicationId) throws Exception {
@@ -443,13 +444,16 @@ public class TwilioAdapter {
         String reply = twiml.toXML();
         return Response.ok(reply).build();
     }
-    
-    @Path("exception")
+	
+    @Path("preconnect")
     @GET
     @Produces("application/voicexml+xml")
-    public Response
-        exception(@QueryParam("questionId") String question_id, @QueryParam("sessionKey") String sessionKey) {
+    public Response preconnect(@QueryParam("From") String localID, @QueryParam("To") String remoteID,
+            @QueryParam("Direction") String direction) {
 
+    	// TODO: test
+    	String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ remoteID;
+    	
         String reply = (new TwiMLResponse()).toXML();
         Session session = Session.getSession(sessionKey);
         if (session != null && session.getQuestion() != null) {
@@ -466,7 +470,8 @@ public class TwilioAdapter {
 
             HashMap<String, String> extras = new HashMap<String, String>();
             extras.put("sessionKey", sessionKey);
-            question = question.event("exception", "Wrong answer received", extras, responder);
+            question = question.event("preconnect", "Wrong answer received", extras, responder);
+            
             //reload the session
             session = Session.getSession(sessionKey);
             session.setQuestion(question);
@@ -475,7 +480,7 @@ public class TwilioAdapter {
         }
         return Response.ok(reply).build();
     }
-	
+    
 	@Path("cc")
     @GET
     public Response receiveCCMessage(@QueryParam( "CallSid" ) String callSid,
@@ -532,8 +537,9 @@ public class TwilioAdapter {
     	Call call = client.getAccount().getCall(callSid); 
     	
     	if(session==null) {
+    		String localAddress = call.getFrom(); 
     		remoteID = call.getTo();
-    		String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + config.getMyAddress() + "|" + remoteID;
+    		String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localAddress + "|" + remoteID;
     		session = Session.getSession(sessionKey);
     	}
     	
@@ -744,21 +750,25 @@ public class TwilioAdapter {
             catch (NumberFormatException e) {
                 e.printStackTrace();
             }
+            
+            com.twilio.sdk.verbs.Number number = new com.twilio.sdk.verbs.Number(question.getUrl());
+            
+            String usePreconnect = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.USE_PRECONNECT );
+    		usePreconnect = usePreconnect != null ? usePreconnect : "false";
+    		boolean preconnect = Boolean.parseBoolean(usePreconnect);
     		
-    		Dial dial = new Dial(question.getUrl());
+    		if(preconnect) {
+    			number.setMethod("GET");
+    			number.setUrl(getPreconnectUrl());
+    		}
+    		
+    		Dial dial = new Dial();
+    		dial.setCallerId(remoteID);
+    		dial.append(number);
     		dial.setTimeout(timeout);
     		
     		dial.setMethod("GET");
     		dial.setAction(getAnswerUrl());
-    		
-    		String externalCallerId = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.USE_EXTERNAL_CALLERID );
-            Boolean callerId = false;
-            if(externalCallerId!=null) {
-            	callerId = Boolean.parseBoolean(externalCallerId);
-            }
-    		if(callerId) {
-    			dial.setCallerId(remoteID);
-    		}
     		
     		twiml.append(dial);
     	}catch(TwiMLException e ) {
@@ -947,6 +957,20 @@ public class TwilioAdapter {
         }
 	}
     
+    protected String renderExitQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
+    	TwiMLResponse twiml = new TwiMLResponse();
+    	
+    	addPrompts(prompts, question.getPreferred_language(), twiml);
+    	
+    	try {
+        	twiml.append(new Hangup());
+        } catch (TwiMLException e) {
+        	log.warning("Failed to append hangup");
+        }
+    	
+    	return twiml.toXML();
+    }
+    
     protected void addPrompts(ArrayList<String> prompts, String language, Verb twiml) {
     	
     	String lang = language.contains("-") ? language : "nl-NL";
@@ -970,14 +994,12 @@ public class TwilioAdapter {
 	private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, String sessionKey) {
 
 		String result = (new TwiMLResponse()).toXML();
-		Return res = formQuestion(question, adapterConfig.getConfigId(),
-				remoteID, null, sessionKey);
+		Return res = formQuestion(question, adapterConfig.getConfigId(),remoteID, null, sessionKey);
 		if (question != null && !question.getType().equalsIgnoreCase("comment"))
 			question = res.question;
 		Session session = Session.getSession(sessionKey);
 		// if the adapter is a trial adapter, add a introductory node
-		log.info("question formed at handleQuestion is: "
-				+ ServerUtils.serializeWithoutException(question));
+		log.info("question formed at handleQuestion is: "+ ServerUtils.serializeWithoutException(question));
 		log.info("prompts formed at handleQuestion is: " + res.prompts);
 
 		if (question != null) {
@@ -996,9 +1018,19 @@ public class TwilioAdapter {
 					// added for release0.4.2 to store the question in the
 					// session,
 					// for triggering an answered event
-					log.info(String
-							.format("current session key before referral is: %s and remoteId %s",
-									sessionKey, remoteID));
+					
+					// Check with remoteID we are going to use for the call
+					String externalCallerId = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.USE_EXTERNAL_CALLERID );
+		            Boolean callerId = false;
+		            if(externalCallerId!=null) {
+		            	callerId = Boolean.parseBoolean(externalCallerId);
+		            }
+		    		if(!callerId) {
+		    			remoteID = adapterConfig.getMyAddress();
+		    		}
+		    		
+		    		log.info(String.format("current session key before referral is: %s and remoteId %s", sessionKey, remoteID));
+					
 					String redirectedId = PhoneNumberUtils.formatNumber(question.getUrl().replace("tel:", ""), null);
 					if (redirectedId != null) {
 						// update url with formatted redirecteId. RFC3966
@@ -1011,9 +1043,10 @@ public class TwilioAdapter {
 						session.getExtras().putAll(extras);
 						session.setQuestion(question);
 						session.setRemoteAddress(remoteID);
+						
 						// create a new ddr record and session to catch the
 						// redirect
-						Session referralSession = Session.getOrCreateSession(adapterConfig, redirectedId);
+						Session referralSession = Session.getOrCreateSession(adapterConfig, remoteID, redirectedId);
 						if (session.getDirection() != null) {
 							DDRRecord ddrRecord = null;
 							try {
@@ -1038,6 +1071,8 @@ public class TwilioAdapter {
 					}
 					result = renderReferral(question, res.prompts, sessionKey, remoteID);
 				}
+			} else if (question.getType().equalsIgnoreCase("exit")) {
+				result = renderExitQuestion(question, res.prompts, sessionKey);
 			} else if (res.prompts.size() > 0) {
 				result = renderComment(question, res.prompts, sessionKey);
 			}
@@ -1056,5 +1091,9 @@ public class TwilioAdapter {
     
     protected String getTimeoutUrl() {
     	return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/timeout";
+    }
+    
+    protected String getPreconnectUrl() {
+    	return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/preconnect";
     }
 }

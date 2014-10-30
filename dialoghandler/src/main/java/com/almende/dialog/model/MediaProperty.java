@@ -56,7 +56,7 @@ public class MediaProperty
         /**
          * Pre-connect message. Gives opertunity to play a message before connecting the redirected call
          */
-        PRE_CONNECT;
+        USE_PRECONNECT;
         
         @JsonCreator
         public static MediaPropertyKey fromJson(String name) {

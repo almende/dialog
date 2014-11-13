@@ -11,15 +11,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
+import javax.ws.rs.core.Response.Status;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -720,19 +720,20 @@ public class TwilioAdapter {
         return new Return(prompts, question);
     }
 	
-    protected String renderComment(Question question,ArrayList<String> prompts, String sessionKey){
-    	TwiMLResponse twiml = new TwiMLResponse();
-    	
-    	try {
-	    	addPrompts(prompts, question.getPreferred_language(), twiml);
-	    	
-	    	Redirect redirect = new Redirect(getAnswerUrl());
-	    	redirect.setMethod("GET");
-	    	twiml.append(redirect);
-    	}catch(TwiMLException e ) {
-    		e.printStackTrace();
-    	}
-    	return twiml.toXML();
+    protected String renderComment(Question question, ArrayList<String> prompts, String sessionKey) {
+
+        TwiMLResponse twiml = new TwiMLResponse();
+
+        try {
+            addPrompts(prompts, question.getPreferred_language(), twiml);
+            Redirect redirect = new Redirect(getAnswerUrl());
+            redirect.setMethod("GET");
+            twiml.append(redirect);
+        }
+        catch (TwiMLException e) {
+            e.printStackTrace();
+        }
+        return twiml.toXML();
     }
     
     protected String renderReferral(Question question,ArrayList<String> prompts, String sessionKey, String remoteID){
@@ -972,23 +973,23 @@ public class TwilioAdapter {
     }
     
     protected void addPrompts(ArrayList<String> prompts, String language, Verb twiml) {
-    	
-    	String lang = language.contains("-") ? language : "nl-NL";
-    	
-    	try {
-    	for(String prompt : prompts) {
-    		if(prompt.startsWith("http")) {
-    			twiml.append(new Play(prompt));
-    		} else {
-    			Say say = new Say(prompt.replace( "text://", "" ));
-    			say.setLanguage(lang);
-    			
-    			twiml.append(say);
-    		}
-    	}
-    	} catch (TwiMLException e) {
-    		log.warning("failed to added prompts: "+e.getMessage());
-    	}
+
+        String lang = language.contains("-") ? language : "nl-NL";
+        try {
+            for (String prompt : prompts) {
+                if (prompt.startsWith("http")) {
+                    twiml.append(new Play(prompt));
+                }
+                else {
+                    Say say = new Say(prompt.replace("text://", ""));
+                    say.setLanguage(lang);
+                    twiml.append(say);
+                }
+            }
+        }
+        catch (TwiMLException e) {
+            log.warning("failed to added prompts: " + e.getMessage());
+        }
     }
     
 	private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, String sessionKey) {
@@ -1082,7 +1083,7 @@ public class TwilioAdapter {
 			log.info("Going to hangup? So clear Session?");
 		}
 		log.info("Sending xml: " + result);
-		return Response.ok(result).build();
+		return Response.status(Status.OK).type(MediaType.APPLICATION_XML).entity(result).build();
 	}
     
     protected String getAnswerUrl() {

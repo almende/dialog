@@ -282,7 +282,15 @@ public class Question implements QuestionIntf {
             // TODO: somewhat smarter behavior? Should dialog standard provide
             // error handling?
             if (answered) {
-                newQ = this.event("exception", "Wrong answer received", null, responder);
+                HashMap<String, Object> extras = null;
+                if(adapterID != null) {
+                    String localAddress = AdapterConfig.getAdapterConfig(adapterID).getMyAddress();
+                    if(localAddress != null) {
+                        extras = new HashMap<String, Object>();
+                        extras.put("requester", localAddress);
+                    }
+                }
+                newQ = this.event("exception", "Wrong answer received", extras, responder);
             }
             if (newQ != null) {
                 return newQ;
@@ -299,6 +307,13 @@ public class Question implements QuestionIntf {
         WebResource webResource = client.resource(answer.getCallback());
         AnswerPost ans = new AnswerPost(this.getQuestion_id(), answer.getAnswer_id(), answer_input, responder);
         ans.getExtras().put("adapterId", adapterID);
+        String requester = null;
+        if(adapterID != null) {
+            requester = AdapterConfig.getAdapterConfig(adapterID).getMyAddress();
+        }
+        if(requester != null) {
+            ans.getExtras().put("requester", requester);
+        }
         // Check if answer.callback gives new question for this dialog
         try {
             log.info(String.format("answerText: %s and answer: %s", answer_input, om.writeValueAsString(answer)));

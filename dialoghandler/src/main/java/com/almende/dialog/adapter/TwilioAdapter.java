@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -19,7 +18,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -409,6 +407,7 @@ public class TwilioAdapter {
                                         question.getQuestion_expandedtext()), session);
             HashMap<String, Object> extras = new HashMap<String, Object>();
             extras.put("sessionKey", sessionKey);
+            extras.put("requester", session.getLocalAddress());
             question = question.event("timeout", "No answer received", extras, responder);
             session.setQuestion(question);
             if (question != null) {
@@ -460,6 +459,7 @@ public class TwilioAdapter {
 
             HashMap<String, String> extras = new HashMap<String, String>();
             extras.put("sessionKey", sessionKey);
+            extras.put("requester", session.getLocalAddress());
             question = question.event("exception", "Wrong answer received", extras, responder);
             //reload the session
             session = Session.getSession(sessionKey);
@@ -570,6 +570,7 @@ public class TwilioAdapter {
                 }
                 Response hangupResponse = handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(),
                                                          session.getKey());
+                timeMap.put("requester", session.getLocalAddress());
                 session.getQuestion().event("hangup", "Hangup", timeMap, session.getRemoteAddress());
                 dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
                               String.format("Call hungup from: %s", session.getRemoteAddress()), session);

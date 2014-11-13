@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+22-10-2014, version 1.4.4
+- fix: fixed the context path of unitTest servlet
+
 22-10-2014, version 1.4.3
 - fix: add ddrRecord for outgoing in the dial method
 

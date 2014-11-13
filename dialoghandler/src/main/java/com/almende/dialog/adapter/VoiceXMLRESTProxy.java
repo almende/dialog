@@ -495,6 +495,7 @@ public class VoiceXMLRESTProxy {
                                         question.getQuestion_expandedtext()), session);
             HashMap<String,Object> extras = new HashMap<String, Object>();
             extras.put( "sessionKey", sessionKey );
+            extras.put("requester", session.getLocalAddress());
             question = question.event( "timeout", "No answer received", extras, responder );
             session.setQuestion( question );
             if (question != null) {
@@ -544,6 +545,7 @@ public class VoiceXMLRESTProxy {
 
             HashMap<String, String> extras = new HashMap<String, String>();
             extras.put("sessionKey", sessionKey);
+            extras.put("requester", session.getLocalAddress());
             question = question.event("exception", "Wrong answer received", extras, responder);
             //reload the session
             session = Session.getSession(sessionKey);
@@ -585,6 +587,7 @@ public class VoiceXMLRESTProxy {
                 }
                 Response hangupResponse = handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(),
                                                          session.getKey());
+                timeMap.put("requester", session.getLocalAddress());
                 session.getQuestion().event("hangup", "Hangup", timeMap, session.getRemoteAddress());
                 dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
                               String.format("Call hungup from: %s", session.getRemoteAddress()), session);
@@ -616,6 +619,7 @@ public class VoiceXMLRESTProxy {
             HashMap<String, Object> timeMap = getTimeMap(startTime, answerTime, null);
             timeMap.put("referredCalledId", referredCalledId);
             timeMap.put("sessionKey", sessionKey);
+            timeMap.put("requester", session.getLocalAddress());
             session.getQuestion().event("answered", "Answered", timeMap, responder);
             dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
                           String.format("Call from: %s answered by: %s", session.getLocalAddress(), responder), session);

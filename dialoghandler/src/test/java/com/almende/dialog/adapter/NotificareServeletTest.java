@@ -26,7 +26,7 @@ public class NotificareServeletTest extends TestFramework {
 		HashMap<String,String> addressNameMap = new HashMap<String,String>();
 		addressNameMap.put(remoteAdressVoice2, senderName);
 		
-		AdapterConfig adapterConfig = createAdapterConfig("push",TEST_PUBLIC_KEY,localAddressPhone,"");
+		AdapterConfig adapterConfig = createAdapterConfig("push",TEST_PUBLIC_KEY,localAddressBroadsoft,"");
 		//set tokens beore testing
 		adapterConfig.setAccessToken("");
 		adapterConfig.setAccessTokenSecret("");

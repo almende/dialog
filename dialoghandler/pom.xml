@@ -230,17 +230,14 @@
 			</plugin>
 
 			<plugin>
-				<groupId>org.mortbay.jetty</groupId>
-				<artifactId>maven-jetty-plugin</artifactId>
-				<version>6.1.16</version>
+				<groupId>org.eclipse.jetty</groupId>
+				<artifactId>jetty-maven-plugin</artifactId>
+				<version>${jetty.version}</version>
 				<configuration>
 					<scanIntervalSeconds>10</scanIntervalSeconds>
-					<connectors>
-						<connector implementation="org.mortbay.jetty.nio.SelectChannelConnector">
-							<port>8082</port>
-							<maxIdleTime>60000</maxIdleTime>
-						</connector>
-					</connectors>
+					<httpConnector>
+						<port>8082</port>
+					</httpConnector>
 					<reload>manual</reload>
 					<webAppSourceDirectory>${basedir}/src/main/webapp</webAppSourceDirectory>
 					<webApp>
@@ -328,9 +325,9 @@
 				</dependencies>
 				<configuration>
 					<skipTests>${skipTests}</skipTests>
-<!-- 					<forkMode>never</forkMode> -->
-<!-- 					<parallel>methods</parallel> -->
-<!-- 					<threadCount>10</threadCount> -->
+					<!-- <forkMode>never</forkMode> -->
+					<!-- <parallel>methods</parallel> -->
+					<!-- <threadCount>10</threadCount> -->
 					<includes>
 						<include>**/*.class</include>
 					</includes>
@@ -359,9 +356,9 @@
 				<configuration>
 					<groups>com.almende.dialog.IntegrationTest</groups>
 					<skipTests>${skipTests}</skipTests>
-<!-- 					<forkMode>never</forkMode> -->
-<!-- 					<parallel>methods</parallel> -->
-<!-- 					<threadCount>10</threadCount> -->
+					<!-- <forkMode>never</forkMode> -->
+					<!-- <parallel>methods</parallel> -->
+					<!-- <threadCount>10</threadCount> -->
 				</configuration>
 			</plugin>
 		</plugins>

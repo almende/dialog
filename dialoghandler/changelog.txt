@@ -1,6 +1,12 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+13-11-2014, version 1.4.6
+- update: added some extra logs when url fetch fails 
+
+4-11-2014, version 1.4.5
+- fix: added the requester info to the post callbacks
+
 22-10-2014, version 1.4.4
 - fix: fixed the context path of unitTest servlet
 

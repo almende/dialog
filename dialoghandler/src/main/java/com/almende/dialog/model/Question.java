@@ -96,7 +96,9 @@ public class Question implements QuestionIntf {
             }
             catch (Exception e) {
                 log.severe(e.toString());
-                dialogLog.severe(adapterID, "ERROR loading question: " + e.toString(), ddrRecordId, sessionKey);
+                dialogLog.severe(adapterID,
+                                 String.format("ERROR loading question from: %s. Error: %s", url, e.toString()),
+                                 ddrRecordId, sessionKey);
                 if (questionReloadCounter.get(url) == null) {
                     questionReloadCounter.put(url, 0);
                 }
@@ -330,7 +332,9 @@ public class Question implements QuestionIntf {
             newQ.setPreferred_language(preferred_language);
         }
         catch (ClientHandlerException ioe) {
-            dialogLog.severe(adapterID, "Unable to load question: " + ioe.getMessage(), null, sessionKey);
+            dialogLog.severe(adapterID,
+                             String.format("Unable to load question from: %s. \n Error: %s", answer.getCallback(),
+                                           ioe.getMessage()), null, sessionKey);
             log.severe(ioe.toString());
             ioe.printStackTrace();
             newQ = this.event("exception", "Unable to load question", null, responder);

@@ -196,7 +196,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>unitTestServlet</servlet-name>
-		<url-pattern>/dialoghandler/unitTestServlet/*</url-pattern>
+		<url-pattern>/unitTestServlet/*</url-pattern>
 	</servlet-mapping>
 
 	<welcome-file-list>

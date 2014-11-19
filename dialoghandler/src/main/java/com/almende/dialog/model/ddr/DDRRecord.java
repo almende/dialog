@@ -49,7 +49,7 @@ public class DDRRecord
 
         /**
          * use to collect alternate name. there was a typo in the enum back in
-         * days :) But we want to fetch both RECEIVED as well as RECEIEVED
+         * the days :) But we want to fetch both RECEIVED as well as RECEIEVED
          * 
          * @param name
          */
@@ -110,6 +110,12 @@ public class DDRRecord
      */
     @JsonIgnore
     private AdapterConfig config;
+    /**
+     * Flag to make sure that the data with (.) is correcting on a get from any level other than 
+     * database/mongo e.g. resource/agent 
+     */
+    @JsonIgnore
+    private boolean correctDotData;
     
     public DDRRecord(){}
     
@@ -124,6 +130,7 @@ public class DDRRecord
     public void createOrUpdate() {
 
         _id = _id != null && !_id.isEmpty() ? _id : org.bson.types.ObjectId.get().toStringMongod();
+        correctDotData = true;
         JacksonDBCollection<DDRRecord, String> collection = getCollection();
         DDRRecord existingDDRRecord = collection.findOneById(_id);
         //update if existing
@@ -541,12 +548,27 @@ public class DDRRecord
     public Map<String, String> getAdditionalInfo() {
     
         additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, String>();
+        if (!additionalInfo.isEmpty()) {
+            HashMap<String, String> additionalInfoCopy = new HashMap<String, String>();
+            for (String key : additionalInfo.keySet()) {
+                additionalInfoCopy.put(getDotReplacedString(key), additionalInfo.get(key));
+            }
+            additionalInfo = additionalInfoCopy;
+        }
         return additionalInfo;
     }
 
     public void setAdditionalInfo(Map<String, String> additionalInfo) {
     
-        this.additionalInfo = additionalInfo;
+        if (additionalInfo != null) {
+            this.additionalInfo = this.additionalInfo != null ? this.additionalInfo : new HashMap<String, String>();
+            for (String key : additionalInfo.keySet()) {
+                this.additionalInfo.put(correctDotReplacedString(key), additionalInfo.get(key));
+            }
+        }
+        else {
+            this.additionalInfo = additionalInfo;
+        }
     }
     
     @JsonIgnore
@@ -605,12 +627,30 @@ public class DDRRecord
                 log.severe(String.format("ToAddress map couldnt be deserialized: %s", toAddressString));
             }
         }
+        //make sure each of the key is dot replaced
+        if (!statusPerAddress.isEmpty()) {
+            HashMap<String, CommunicationStatus> statusPerAddressCopy = new HashMap<String, CommunicationStatus>();
+            for (String key : statusPerAddress.keySet()) {
+                statusPerAddressCopy.put(getDotReplacedString(key), statusPerAddress.get(key));
+            }
+            statusPerAddress = statusPerAddressCopy;
+        }
         return statusPerAddress;
     }
 
     public void setStatusPerAddress(Map<String, CommunicationStatus> statusPerAddress) {
-    
-        this.statusPerAddress = statusPerAddress;
+
+        //make sure each of the key is dot corrected
+        if (statusPerAddress != null) {
+            this.statusPerAddress = this.statusPerAddress != null ? this.statusPerAddress
+                                                                 : new HashMap<String, CommunicationStatus>();
+            for (String key : statusPerAddress.keySet()) {
+                this.statusPerAddress.put(correctDotReplacedString(key), statusPerAddress.get(key));
+            }
+        }
+        else {
+            this.statusPerAddress = statusPerAddress;
+        }
     }
     
     /**
@@ -619,7 +659,6 @@ public class DDRRecord
      * @param status
      */
     public void addStatusForAddress(String address, CommunicationStatus status) {
-        address = getDotReplacedString(address);
         getStatusPerAddress().put(address, status);
     }
     
@@ -629,6 +668,7 @@ public class DDRRecord
      * @param status
      */
     public CommunicationStatus getStatusForAddress(String address) {
+
         return getStatusPerAddress().get(getDotReplacedString(address));
     }
     
@@ -647,10 +687,6 @@ public class DDRRecord
         return null;
     }
     
-    @JsonIgnore
-    public void setDirection() {
-    }
-    
     /**
      * Ideally should be called by the GETTER methods of fields whose dot (.) values are to be
      * replaced by {@link DDRRecord#DOT_REPLACER_KEY}
@@ -658,7 +694,13 @@ public class DDRRecord
      * @return
      */
     private String getDotReplacedString(String data) {
-        return data != null ? data.replace(".", DOT_REPLACER_KEY) : null;
+
+        if (Boolean.TRUE.equals(correctDotData)) {
+            return data != null ? data.replace(".", DOT_REPLACER_KEY) : null;
+        }
+        else {
+            return correctDotReplacedString(data);
+        }
     }
     
     /**

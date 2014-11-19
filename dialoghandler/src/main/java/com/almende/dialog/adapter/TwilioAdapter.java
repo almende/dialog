@@ -141,15 +141,13 @@ public class TwilioAdapter {
 		
 		log.info("call started:"+direction+":"+remoteID+":"+localID);
         
-        String formattedRemoteId = remoteID;
-        
-        if(direction.equals("inbound")) {
-        	String tmpLocalId = localID;
-        	localID = remoteID;
-        	remoteID = tmpLocalId;        			
+        if (direction.equals("inbound")) {
+            String tmpLocalId = new String(localID);
+            localID = new String(remoteID);
+            remoteID = tmpLocalId;
         }
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_TWILIO, localID);
-            
+        String formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
         String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ formattedRemoteId;
         Session session = Session.getSession(sessionKey);
         
@@ -228,15 +226,15 @@ public class TwilioAdapter {
     		@FormParam("Direction") String direction) {
 		
 		log.info("call started:"+direction+":"+remoteID+":"+localID);
-        String formattedRemoteId = remoteID;
         
+        //swap the remote and the local numbers if its inbound
         if(direction.equals("inbound")) {
-        	String tmpLocalId = localID;
-        	localID = remoteID;
+        	String tmpLocalId = new String(localID);
+        	localID = new String(remoteID);
         	remoteID = tmpLocalId;        			
         }
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_TWILIO, localID);
-                    
+        String formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
         String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ formattedRemoteId;
         Session session = Session.getSession(sessionKey);
         
@@ -250,6 +248,7 @@ public class TwilioAdapter {
         else if(direction.equals("inbound")) {
             //create a session for incoming only
             session = Session.getOrCreateSession(config, formattedRemoteId);
+            url = config.getURLForInboundScenario();
         }
         
         if(session != null) {
@@ -337,13 +336,18 @@ public class TwilioAdapter {
         Session session = Session.getSession(sessionKey);
         
         // Remove the referralSession
-        if(dialCallSid!=null) {
-        	
-        	if(dialCallStatus.equals("completed")) {
-        		
-        		AdapterConfig config = session.getAdapterConfig();
-        		finalizeCall(config, null, dialCallSid, "outbound", null);
-        	}
+        if ("completed".equals(dialCallStatus)) {
+
+            AdapterConfig config = session.getAdapterConfig();
+            finalizeCall(config, null, dialCallSid, "outbound", null);
+        }
+        //if call is rejected. call the hangup event
+        else if ("no-answer".equalsIgnoreCase(dialCallStatus) && session != null && session.getQuestion() != null) {
+            
+            Map<String, String> extras = session.getExtras();
+            extras.put("requester", session.getLocalAddress());
+            Question noAnswerQuestion = session.getQuestion().event("hangup", "Call rejected", extras, remoteID);
+            return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, sessionKey);
         }
         
         if (session != null) {
@@ -379,6 +383,7 @@ public class TwilioAdapter {
                         }
                     }
                     catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }
                 return handleQuestion(question, session.getAdapterConfig(), responder, sessionKey);
@@ -745,7 +750,7 @@ public class TwilioAdapter {
     		addPrompts(prompts, question.getPreferred_language(), twiml);
     		
     		String redirectTimeoutProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
-    		String redirectTimeout = redirectTimeoutProperty != null ? redirectTimeoutProperty : "30";
+                String redirectTimeout = redirectTimeoutProperty != null ? redirectTimeoutProperty.replace("s", "") : "30";
     		int timeout = 30;
             try {
                 timeout = Integer.parseInt(redirectTimeout);
@@ -753,7 +758,7 @@ public class TwilioAdapter {
             catch (NumberFormatException e) {
                 e.printStackTrace();
             }
-            
+
             com.twilio.sdk.verbs.Number number = new com.twilio.sdk.verbs.Number(question.getUrl());
             
             String usePreconnect = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.USE_PRECONNECT );

@@ -6,6 +6,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -160,6 +161,10 @@ public class TwilioAdapter {
         }
         else if(direction.equals("inbound")) {
             //create a session for incoming only
+            session = Session.getSession(Session.getSessionKey(config, formattedRemoteId));
+            if(session != null) {
+                session.drop();
+            }
             session = Session.getOrCreateSession(config, formattedRemoteId);
         }
         
@@ -247,6 +252,10 @@ public class TwilioAdapter {
         }
         else if(direction.equals("inbound")) {
             //create a session for incoming only
+            session = Session.getSession(Session.getSessionKey(config, formattedRemoteId));
+            if(session != null) {
+                session.drop();
+            }
             session = Session.getOrCreateSession(config, formattedRemoteId);
             url = config.getURLForInboundScenario();
         }
@@ -326,27 +335,29 @@ public class TwilioAdapter {
         }
 
         if (direction.equals("inbound")) {
-            String tmpLocalId = localID;
-            localID = remoteID;
+            String tmpLocalId = new String(localID);
+            localID = new String(remoteID);
             remoteID = tmpLocalId;
         }
 
         String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localID + "|" + remoteID;
 
         Session session = Session.getSession(sessionKey);
-        
+        List<String> callIgnored = Arrays.asList("no-answer", "busy", "canceled", "failed");
         // Remove the referralSession
         if ("completed".equals(dialCallStatus)) {
 
             AdapterConfig config = session.getAdapterConfig();
-            finalizeCall(config, null, dialCallSid, "outbound", null);
+            finalizeCall(config, null, dialCallSid, null);
         }
         //if call is rejected. call the hangup event
-        else if ("no-answer".equalsIgnoreCase(dialCallStatus) && session != null && session.getQuestion() != null) {
+        else if (callIgnored.contains(dialCallStatus) && session != null && session.getQuestion() != null) {
             
             Map<String, String> extras = session.getExtras();
             extras.put("requester", session.getLocalAddress());
             Question noAnswerQuestion = session.getQuestion().event("hangup", "Call rejected", extras, remoteID);
+            AdapterConfig config = session.getAdapterConfig();
+            finalizeCall(config, null, dialCallSid, null);
             return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, sessionKey);
         }
         
@@ -513,7 +524,7 @@ public class TwilioAdapter {
 			//update session with call timings
             if (status.equals("completed")) {
             	
-            	finalizeCall(config, session, callSid, direction, remoteID);
+            	finalizeCall(config, session, callSid, remoteID);
             }
 		}
 		
@@ -534,7 +545,7 @@ public class TwilioAdapter {
 	 * @param direction
 	 * @param remoteID
 	 */
-	private void finalizeCall(AdapterConfig config, Session session, String callSid, String direction, String remoteID) {
+	private void finalizeCall(AdapterConfig config, Session session, String callSid, String remoteID) {
 		
 		String accountSid = config.getAccessToken();
     	String authToken = config.getAccessTokenSecret();
@@ -553,18 +564,19 @@ public class TwilioAdapter {
     		log.info("Finalizing call for: "+session.getKey());
 	    	String pattern = "EEE, dd MMM yyyy HH:mm:ss Z";
 	    	SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.ENGLISH);
-	    	
+                String direction = call.getDirection() != null && call.getDirection().equalsIgnoreCase("outbound-dial") ? "outbound"
+                                                                                                                       : "inbound";
 	    	Long startTime  = 0L;
 	    	Long answerTime = 0L;
 	    	Long endTime = 0L;
 	    	try {
 	    		String created = call.getProperty("date_created");
 	    		startTime = format.parse(created).getTime();
-	    		answerTime = format.parse(call.getStartTime()).getTime();
 	    		endTime = format.parse(call.getEndTime()).getTime();
+                        answerTime = call.getDuration().equals("0") ? endTime : format.parse(call.getStartTime()).getTime();
 	    	    
 	    		//sometimes answerTimeStamp is only given in the ACTIVE ccxml
-	            session.setAnswerTimestamp(answerTime+"");
+	            session.setAnswerTimestamp(answerTime.toString());
 	            session.setStartTimestamp(startTime+"");
 	            session.setReleaseTimestamp(endTime+"");
 	            session.setDirection(direction);
@@ -1072,6 +1084,7 @@ public class TwilioAdapter {
 							referralSession.setTrackingToken(session.getTrackingToken());
 						}
 						referralSession.setQuestion(session.getQuestion());
+						referralSession.getExtras().put("referralSessionKey", session.getKey());
 						referralSession.storeSession();
 						session.storeSession();
 					} else {

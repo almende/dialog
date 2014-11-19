@@ -127,7 +127,11 @@ public class Session{
     public void drop() {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        datastore.delete(this);
+        Session session = datastore.load(Session.class, key);
+        if (session != null) {
+            log.info("Deleing session with id: "+ session.getKey());
+            datastore.delete(session);
+        }
     }
 	
     public static void drop( String key )

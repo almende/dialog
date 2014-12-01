@@ -252,6 +252,7 @@
 					</systemProperties>
 					<stopKey>myAgents</stopKey>
 					<stopPort>9992</stopPort>
+					<contextPath>/</contextPath>
 				</configuration>
 
 				<executions>
@@ -324,9 +325,9 @@
 				</dependencies>
 				<configuration>
 					<skipTests>${skipTests}</skipTests>
-<!-- 					<forkMode>never</forkMode> -->
-<!-- 					<parallel>methods</parallel> -->
-<!-- 					<threadCount>10</threadCount> -->
+					<!-- <forkMode>never</forkMode> -->
+					<!-- <parallel>methods</parallel> -->
+					<!-- <threadCount>10</threadCount> -->
 					<includes>
 						<include>**/*.class</include>
 					</includes>
@@ -355,9 +356,9 @@
 				<configuration>
 					<groups>com.almende.dialog.IntegrationTest</groups>
 					<skipTests>${skipTests}</skipTests>
-<!-- 					<forkMode>never</forkMode> -->
-<!-- 					<parallel>methods</parallel> -->
-<!-- 					<threadCount>10</threadCount> -->
+					<!-- <forkMode>never</forkMode> -->
+					<!-- <parallel>methods</parallel> -->
+					<!-- <threadCount>10</threadCount> -->
 				</configuration>
 			</plugin>
 		</plugins>

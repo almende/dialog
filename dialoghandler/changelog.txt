@@ -1,8 +1,14 @@
 DialogHandler
 https://github.com/almende/dialog/
 
-28-10-2014, version 1.5.0
+1-12-2014, version 1.5.0
 - add twilio adapter
+
+13-11-2014, version 1.4.6
+- update: added some extra logs when url fetch fails 
+
+4-11-2014, version 1.4.5
+- fix: added the requester info to the post callbacks
 
 22-10-2014, version 1.4.4
 - fix: fixed the context path of unitTest servlet

@@ -817,14 +817,17 @@ public class TwilioAdapter {
         boolean useHash = true;
         if(question.getAnswers().size() > 11) {
         	useHash = false;
-        } else {
-        	List<Answer> answers = question.getAnswers();
-        	for(Answer answer : answers) {
-        		if(answer.getAnswer_text().startsWith("dtmfKey://#")) {
-        			useHash = true;
-        			break;
-        		}
-        	}
+        }
+        else {
+            List<Answer> answers = question.getAnswers();
+            for (Answer answer : answers) {
+                if (answer != null && answer.getAnswer_text() != null &&
+                    answer.getAnswer_text().startsWith("dtmfKey://#")) {
+
+                    useHash = true;
+                    break;
+                }
+            }
         }
         
         //assign a default timeout if one is not specified

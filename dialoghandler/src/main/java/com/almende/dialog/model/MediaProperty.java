@@ -48,7 +48,15 @@ public class MediaProperty
         /**
          * defines the speed at which the TTS is spoken by the TTS engine
          */
-        TSS_SPEED;
+        TSS_SPEED,
+        /**
+         * defines which caller id should be when redirecting a call
+         */
+        USE_EXTERNAL_CALLERID,
+        /**
+         * Pre-connect message. Gives opertunity to play a message before connecting the redirected call
+         */
+        USE_PRECONNECT;
         
         @JsonCreator
         public static MediaPropertyKey fromJson(String name) {
@@ -58,7 +66,7 @@ public class MediaProperty
 
     public enum MediumType
     {
-        BROADSOFT, GTALK, SKYPE, SMS, TWITTER;
+        BROADSOFT, GTALK, SKYPE, SMS, TWITTER, CALL;
         
         @JsonCreator
         public static MediumType fromJson(String name) {

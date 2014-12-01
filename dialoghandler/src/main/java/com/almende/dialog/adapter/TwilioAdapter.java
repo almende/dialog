@@ -6,11 +6,11 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.UUID;
 import java.util.logging.Logger;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
@@ -18,10 +18,9 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
-import org.znerd.xmlenc.XMLOutputter;
+import javax.ws.rs.core.Response.Status;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -35,18 +34,22 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
-import com.almende.util.myBlobstore.MyBlobStore;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.resource.factory.CallFactory;
 import com.twilio.sdk.resource.instance.Account;
 import com.twilio.sdk.resource.instance.Call;
+import com.twilio.sdk.verbs.Dial;
 import com.twilio.sdk.verbs.Gather;
+import com.twilio.sdk.verbs.Hangup;
 import com.twilio.sdk.verbs.Play;
+import com.twilio.sdk.verbs.Record;
 import com.twilio.sdk.verbs.Redirect;
+import com.twilio.sdk.verbs.Say;
 import com.twilio.sdk.verbs.TwiMLException;
 import com.twilio.sdk.verbs.TwiMLResponse;
+import com.twilio.sdk.verbs.Verb;
 
 @Path("twilio")
 public class TwilioAdapter {
@@ -54,8 +57,7 @@ public class TwilioAdapter {
 	protected static final com.almende.dialog.Logger dialogLog =  new com.almende.dialog.Logger();
 	private static final int LOOP_DETECTION=10;
 	protected String TIMEOUT_URL="timeout";
-	protected String EXCEPTION_URL="exception";
-	private String host = "";
+	//protected String EXCEPTION_URL="exception";
 	
 	public static HashMap<String, String> dial(Map<String, String> addressNameMap, String url, String senderName,
 	        AdapterConfig config, String applicationId) throws Exception {
@@ -136,21 +138,17 @@ public class TwilioAdapter {
     		@QueryParam("AccountSid") String AccountSid,
     		@QueryParam("From") String localID,
     		@QueryParam("To") String remoteID,
-    		@QueryParam("Direction") String direction,
-    		@Context UriInfo ui) {
+    		@QueryParam("Direction") String direction) {
 		
 		log.info("call started:"+direction+":"+remoteID+":"+localID);
-        this.host=ui.getBaseUri().toString().replace(":80", "");
         
-        String formattedRemoteId = remoteID;
-        
-        if(direction.equals("inbound")) {
-        	String tmpLocalId = localID;
-        	localID = remoteID;
-        	remoteID = tmpLocalId;        			
+        if (direction.equals("inbound")) {
+            String tmpLocalId = new String(localID);
+            localID = new String(remoteID);
+            remoteID = tmpLocalId;
         }
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_TWILIO, localID);
-            
+        String formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
         String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ formattedRemoteId;
         Session session = Session.getSession(sessionKey);
         
@@ -163,6 +161,10 @@ public class TwilioAdapter {
         }
         else if(direction.equals("inbound")) {
             //create a session for incoming only
+            session = Session.getSession(Session.getSessionKey(config, formattedRemoteId));
+            if(session != null) {
+                session.drop();
+            }
             session = Session.getOrCreateSession(config, formattedRemoteId);
         }
         
@@ -226,20 +228,18 @@ public class TwilioAdapter {
     		@FormParam("AccountSid") String AccountSid,
     		@FormParam("From") String localID,
     		@FormParam("To") String remoteID,
-    		@FormParam("Direction") String direction, 
-    		@Context UriInfo ui) {
+    		@FormParam("Direction") String direction) {
 		
 		log.info("call started:"+direction+":"+remoteID+":"+localID);
-        this.host=ui.getBaseUri().toString().replace(":80", "");
-        String formattedRemoteId = remoteID;
         
+        //swap the remote and the local numbers if its inbound
         if(direction.equals("inbound")) {
-        	String tmpLocalId = localID;
-        	localID = remoteID;
+        	String tmpLocalId = new String(localID);
+        	localID = new String(remoteID);
         	remoteID = tmpLocalId;        			
         }
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_TWILIO, localID);
-                    
+        String formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
         String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ formattedRemoteId;
         Session session = Session.getSession(sessionKey);
         
@@ -252,7 +252,12 @@ public class TwilioAdapter {
         }
         else if(direction.equals("inbound")) {
             //create a session for incoming only
+            session = Session.getSession(Session.getSessionKey(config, formattedRemoteId));
+            if(session != null) {
+                session.drop();
+            }
             session = Session.getOrCreateSession(config, formattedRemoteId);
+            url = config.getURLForInboundScenario();
         }
         
         if(session != null) {
@@ -313,27 +318,49 @@ public class TwilioAdapter {
     @Produces("application/xml")
     public Response answer(@QueryParam("answerId") String answer_id, @QueryParam("Digits") String answer_input,
         @QueryParam("From") String localID, @QueryParam("To") String remoteID,
-        @QueryParam("Direction") String direction, @Context UriInfo ui) {
+        @QueryParam("Direction") String direction, @QueryParam("RecordingUrl") String recordingUrl, 
+        @QueryParam("DialCallStatus") String dialCallStatus, @QueryParam("DialCallSid") String dialCallSid) {
 
         TwiMLResponse twiml = new TwiMLResponse();
-
+        
         try {
             answer_input = answer_input != null ? URLDecoder.decode(answer_input, "UTF-8") : answer_input;
         }
         catch (UnsupportedEncodingException e) {
             log.warning(String.format("Answer input decode failed for: %s", answer_input));
         }
+        
+        if(recordingUrl!=null) {
+        	answer_input= recordingUrl.replace(".wav", "") + ".wav";
+        }
 
         if (direction.equals("inbound")) {
-            String tmpLocalId = localID;
-            localID = remoteID;
+            String tmpLocalId = new String(localID);
+            localID = new String(remoteID);
             remoteID = tmpLocalId;
         }
 
         String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localID + "|" + remoteID;
-        this.host = ui.getBaseUri().toString().replace(":80", "");
 
         Session session = Session.getSession(sessionKey);
+        List<String> callIgnored = Arrays.asList("no-answer", "busy", "canceled", "failed");
+        // Remove the referralSession
+        if ("completed".equals(dialCallStatus)) {
+
+            AdapterConfig config = session.getAdapterConfig();
+            finalizeCall(config, null, dialCallSid, null);
+        }
+        //if call is rejected. call the hangup event
+        else if (callIgnored.contains(dialCallStatus) && session != null && session.getQuestion() != null) {
+            
+            Map<String, String> extras = session.getExtras();
+            extras.put("requester", session.getLocalAddress());
+            Question noAnswerQuestion = session.getQuestion().event("hangup", "Call rejected", extras, remoteID);
+            AdapterConfig config = session.getAdapterConfig();
+            finalizeCall(config, null, dialCallSid, null);
+            return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, sessionKey);
+        }
+        
         if (session != null) {
             Question question = session.getQuestion();
             if (question != null) {
@@ -367,6 +394,7 @@ public class TwilioAdapter {
                         }
                     }
                     catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }
                 return handleQuestion(question, session.getAdapterConfig(), responder, sessionKey);
@@ -433,13 +461,16 @@ public class TwilioAdapter {
         String reply = twiml.toXML();
         return Response.ok(reply).build();
     }
-    
-    @Path("exception")
+	
+    @Path("preconnect")
     @GET
     @Produces("application/voicexml+xml")
-    public Response
-        exception(@QueryParam("questionId") String question_id, @QueryParam("sessionKey") String sessionKey) {
+    public Response preconnect(@QueryParam("From") String localID, @QueryParam("To") String remoteID,
+            @QueryParam("Direction") String direction) {
 
+    	// TODO: test
+    	String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ remoteID;
+    	
         String reply = (new TwiMLResponse()).toXML();
         Session session = Session.getSession(sessionKey);
         if (session != null && session.getQuestion() != null) {
@@ -457,7 +488,7 @@ public class TwilioAdapter {
             HashMap<String, String> extras = new HashMap<String, String>();
             extras.put("sessionKey", sessionKey);
             extras.put("requester", session.getLocalAddress());
-            question = question.event("exception", "Wrong answer received", extras, responder);
+            question = question.event("preconnect", "Wrong answer received", extras, responder);
             //reload the session
             session = Session.getSession(sessionKey);
             session.setQuestion(question);
@@ -466,7 +497,7 @@ public class TwilioAdapter {
         }
         return Response.ok(reply).build();
     }
-	
+    
 	@Path("cc")
     @GET
     public Response receiveCCMessage(@QueryParam( "CallSid" ) String callSid,
@@ -493,41 +524,7 @@ public class TwilioAdapter {
 			//update session with call timings
             if (status.equals("completed")) {
             	
-            	String accountSid = config.getAccessToken();
-            	String authToken = config.getAccessTokenSecret();
-            	TwilioRestClient client = new TwilioRestClient(accountSid, authToken);
-            	
-            	Call call = client.getAccount().getCall(callSid); 
-            	
-            	String pattern = "EEE, dd MMM yyyy HH:mm:ss Z";
-            	SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.ENGLISH);
-            	
-            	Long startTime  = 0L;
-            	Long answerTime = 0L;
-            	Long endTime = 0L;
-            	try {
-            		String created = call.getProperty("date_created");
-            		startTime = format.parse(created).getTime();
-            		answerTime = format.parse(call.getStartTime()).getTime();
-            		endTime = format.parse(call.getEndTime()).getTime();
-            	    
-            		//sometimes answerTimeStamp is only given in the ACTIVE ccxml
-	                session.setAnswerTimestamp(answerTime+"");
-	                session.setStartTimestamp(startTime+"");
-	                session.setReleaseTimestamp(endTime+"");
-	                session.setDirection(direction);
-	                session.setRemoteAddress(remoteID);
-	                session.setLocalAddress(config.getMyAddress());
-	                session.storeSession();
-	                //flush the keys if ddrProcessing was successful
-	                if (DDRUtils.stopDDRCosts(session.getKey(), true)) {
-	                    session.drop();
-	                }
-	                hangup(session);
-                
-            	} catch (Exception e) {
-            		e.printStackTrace();
-            	}
+            	finalizeCall(config, session, callSid, remoteID);
             }
 		}
 		
@@ -535,6 +532,69 @@ public class TwilioAdapter {
         
 		
 		return Response.ok("").build();
+	}
+	
+	/**
+	 * Retrieve call information and with that:
+	 *   - update ddr record
+	 *   - destroy session
+	 *   - send hangup
+	 * @param config
+	 * @param session
+	 * @param callSid
+	 * @param direction
+	 * @param remoteID
+	 */
+	private void finalizeCall(AdapterConfig config, Session session, String callSid, String remoteID) {
+		
+		String accountSid = config.getAccessToken();
+    	String authToken = config.getAccessTokenSecret();
+    	TwilioRestClient client = new TwilioRestClient(accountSid, authToken);
+    	
+    	Call call = client.getAccount().getCall(callSid); 
+    	
+    	if(session==null) {
+    		String localAddress = call.getFrom(); 
+    		remoteID = call.getTo();
+    		String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localAddress + "|" + remoteID;
+    		session = Session.getSession(sessionKey);
+    	}
+    	
+    	if(session!=null) {
+    		log.info("Finalizing call for: "+session.getKey());
+	    	String pattern = "EEE, dd MMM yyyy HH:mm:ss Z";
+	    	SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.ENGLISH);
+                String direction = call.getDirection() != null && call.getDirection().equalsIgnoreCase("outbound-dial") ? "outbound"
+                                                                                                                       : "inbound";
+	    	Long startTime  = 0L;
+	    	Long answerTime = 0L;
+	    	Long endTime = 0L;
+	    	try {
+	    		String created = call.getProperty("date_created");
+	    		startTime = format.parse(created).getTime();
+	    		endTime = format.parse(call.getEndTime()).getTime();
+                        answerTime = call.getDuration().equals("0") ? endTime : format.parse(call.getStartTime()).getTime();
+	    	    
+	    		//sometimes answerTimeStamp is only given in the ACTIVE ccxml
+	            session.setAnswerTimestamp(answerTime.toString());
+	            session.setStartTimestamp(startTime+"");
+	            session.setReleaseTimestamp(endTime+"");
+	            session.setDirection(direction);
+	            session.setRemoteAddress(remoteID);
+	            session.setLocalAddress(config.getMyAddress());
+	            session.storeSession();
+	            //flush the keys if ddrProcessing was successful
+	            if (DDRUtils.stopDDRCosts(session.getKey(), true)) {
+	                session.drop();
+	            }
+	            hangup(session);
+	        
+	    	} catch (Exception e) {
+	    		e.printStackTrace();
+	    	}
+    	} else {
+    		log.warning("Failed to finalize call because no session was found for: " + callSid);
+    	}
 	}
 	
 	/**
@@ -645,16 +705,14 @@ public class TwilioAdapter {
             String qText = question.getQuestion_text();
 
             if (qText != null && !qText.equals("")) {
-            	String prefix = "http://tts.ask-fast.com/api/parse?text=";
-                prompts.add(prefix+qText);
+                prompts.add(qText);
             }
             
             if (question.getType().equalsIgnoreCase("closed")) {
                 for (Answer ans : question.getAnswers()) {
                     String answer = ans.getAnswer_text();
                     if (answer != null && !answer.equals("") && !answer.startsWith("dtmfKey://")) {
-                    	String prefix = "http://tts.ask-fast.com/api/parse?text=";
-                        prompts.add(prefix+answer);
+                        prompts.add(answer);
                     }
                 }
                 break; //Jump from forloop
@@ -681,23 +739,65 @@ public class TwilioAdapter {
         return new Return(prompts, question);
     }
 	
-    protected String renderComment(Question question,ArrayList<String> prompts, String sessionKey){
+    protected String renderComment(Question question, ArrayList<String> prompts, String sessionKey) {
+
+        TwiMLResponse twiml = new TwiMLResponse();
+
+        try {
+            addPrompts(prompts, question.getPreferred_language(), twiml);
+            Redirect redirect = new Redirect(getAnswerUrl());
+            redirect.setMethod("GET");
+            twiml.append(redirect);
+        }
+        catch (TwiMLException e) {
+            e.printStackTrace();
+        }
+        return twiml.toXML();
+    }
+    
+    protected String renderReferral(Question question,ArrayList<String> prompts, String sessionKey, String remoteID){
     	TwiMLResponse twiml = new TwiMLResponse();
     	
     	try {
-	    	for(String prompt : prompts) {
-	    		twiml.append(new Play(prompt));
-	    	}
-	    	Redirect redirect = new Redirect(getAnswerUrl());
-	    	redirect.setMethod("GET");
-	    	twiml.append(redirect);
+    		addPrompts(prompts, question.getPreferred_language(), twiml);
+    		
+    		String redirectTimeoutProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
+                String redirectTimeout = redirectTimeoutProperty != null ? redirectTimeoutProperty.replace("s", "") : "30";
+    		int timeout = 30;
+            try {
+                timeout = Integer.parseInt(redirectTimeout);
+            }
+            catch (NumberFormatException e) {
+                e.printStackTrace();
+            }
+
+            com.twilio.sdk.verbs.Number number = new com.twilio.sdk.verbs.Number(question.getUrl());
+            
+            String usePreconnect = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.USE_PRECONNECT );
+    		usePreconnect = usePreconnect != null ? usePreconnect : "false";
+    		boolean preconnect = Boolean.parseBoolean(usePreconnect);
+    		
+    		if(preconnect) {
+    			number.setMethod("GET");
+    			number.setUrl(getPreconnectUrl());
+    		}
+    		
+    		Dial dial = new Dial();
+    		dial.setCallerId(remoteID);
+    		dial.append(number);
+    		dial.setTimeout(timeout);
+    		
+    		dial.setMethod("GET");
+    		dial.setAction(getAnswerUrl());
+    		
+    		twiml.append(dial);
     	}catch(TwiMLException e ) {
-    		e.printStackTrace();
+    		log.warning("Failed to create referal");
     	}
     	return twiml.toXML();
     }
 	
-    private String renderClosedQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
+    protected String renderClosedQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
 
         try {
             sessionKey = URLEncoder.encode(sessionKey, "UTF-8");
@@ -728,12 +828,12 @@ public class TwilioAdapter {
         }
         
         //assign a default timeout if one is not specified
-        noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "10";
+        noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "5";
         if (noAnswerTimeout.endsWith("s")) {
             log.warning("No answer timeout must end with 's'. E.g. 10s. Found: " + noAnswerTimeout);
             noAnswerTimeout = noAnswerTimeout.replace("s", "");
         }
-        int timeout = 10;
+        int timeout = 5;
         try {
             timeout = Integer.parseInt(noAnswerTimeout);
         }
@@ -745,9 +845,7 @@ public class TwilioAdapter {
         	gather.setFinishOnKey("");
         }
         try {
-            for (String prompt : prompts) {
-                gather.append(new Play(prompt));
-            }
+            addPrompts(prompts, question.getPreferred_language(), gather);
             
             twiml.append(gather);
             Redirect redirect = new Redirect(getTimeoutUrl());
@@ -763,7 +861,57 @@ public class TwilioAdapter {
 
     protected String renderOpenQuestion(Question question,ArrayList<String> prompts,String sessionKey) {
 		TwiMLResponse twiml = new TwiMLResponse();
-		// TODO: Implement
+		
+		String typeProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TYPE );
+		if(typeProperty!=null && typeProperty.equalsIgnoreCase("audio")) {
+			renderVoiceMailQuestion(question, prompts, sessionKey, twiml);
+		} else {
+			
+	        Gather gather = new Gather();
+	        gather.setAction(getAnswerUrl());
+	        gather.setMethod("GET");
+			
+			String dtmfMaxLength = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.ANSWER_INPUT_MAX_LENGTH );
+			if(dtmfMaxLength!=null) {
+	            try {
+	            	int digits = Integer.parseInt(dtmfMaxLength);
+	            	gather.setNumDigits(digits);
+	            }
+	            catch (NumberFormatException e) {
+	                e.printStackTrace();
+	            }
+			}
+			
+			String noAnswerTimeout = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
+            //assign a default timeout if one is not specified
+          
+            noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "5";
+            if (noAnswerTimeout.endsWith("s")) {
+                log.warning("No answer timeout must end with 's'. E.g. 10s. Found: " + noAnswerTimeout);
+                noAnswerTimeout = noAnswerTimeout.replace("s", "");
+            }
+            int timeout = 5;
+            try {
+                timeout = Integer.parseInt(noAnswerTimeout);
+            }
+            catch (NumberFormatException e) {
+                e.printStackTrace();
+            }
+            gather.setTimeout(timeout);
+            
+            try {
+            	addPrompts(prompts, question.getPreferred_language(), gather);
+                
+                twiml.append(gather);
+                Redirect redirect = new Redirect(getTimeoutUrl());
+                redirect.setMethod("GET");
+                twiml.append(redirect);
+            }
+            catch (TwiMLException e) {
+                e.printStackTrace();
+            }          
+		}
+		
     	return twiml.toXML();
 	}
 
@@ -776,100 +924,102 @@ public class TwilioAdapter {
 	     * @throws UnsupportedEncodingException
 	     */
     protected void renderVoiceMailQuestion(Question question, ArrayList<String> prompts, String sessionKey,
-                                           XMLOutputter outputter) throws IOException, UnsupportedEncodingException {
+                                           TwiMLResponse twiml) {
 
-        //assign a default voice mail length if one is not specified
+    	addPrompts(prompts, question.getPreferred_language(), twiml);
+    	
+    	Record record = new Record();    	
+    	record.setAction(getAnswerUrl());
+    	record.setMethod("GET");
+    	
+    	// Set max voicemail length
+    	//assign a default voice mail length if one is not specified
         String voiceMessageLengthProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
                                                                            MediaPropertyKey.VOICE_MESSAGE_LENGTH);
-        voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
-        if (!voiceMessageLengthProperty.endsWith("s")) {
-            log.warning("Voicemail length must be end with 's'. E.g. 40s. Found: " + voiceMessageLengthProperty);
-            voiceMessageLengthProperty += "s";
+        voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15";
+        int length = 15;
+        try {
+            length = Integer.parseInt(voiceMessageLengthProperty);
         }
+        catch (NumberFormatException e) {
+            log.warning("Failed to parse timeout for voicemail e: "+e.getMessage());
+        }
+        record.setMaxLength(length);
 
-        String dtmfTerm = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.DTMF_TERMINATE);
-        dtmfTerm = dtmfTerm != null ? dtmfTerm : "true";
+        // Set timeout
+        String timeoutProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                MediaPropertyKey.TIMEOUT);
+        timeoutProperty = timeoutProperty != null ? timeoutProperty : "5";
+        int timeout = 5;
+        try {
+            timeout = Integer.parseInt(timeoutProperty);
+        }
+        catch (NumberFormatException e) {
+            log.warning("Failed to parse timeout for voicemail e: "+e.getMessage());
+        }
+        
+        record.setTimeout(timeout);
+        
+        // Set voicemail beep
         String voiceMailBeep = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_BEEP);
         voiceMailBeep = voiceMailBeep != null ? voiceMailBeep : "true";
-
-        // Fetch the upload url
-        //String host = this.host.replace("rest/", "");
-        String uuid = UUID.randomUUID().toString();
-        String filename = uuid + ".wav";
-        String storedAudiofile = host + "download/" + filename;
-
-        MyBlobStore store = new MyBlobStore();
-        String uploadURL = store.createUploadUrl(filename, "/dialoghandler/rest/download/audio.vxml");
-
-        outputter.startTag("form");
-        outputter.attribute("id", "ComposeMessage");
-            outputter.startTag("record");
-                    outputter.attribute("name", "file");
-                    outputter.attribute("beep", voiceMailBeep);
-                    outputter.attribute("maxtime", voiceMessageLengthProperty);
-                    outputter.attribute("dtmfterm", dtmfTerm);
-                    //outputter.attribute("finalsilence", "3s");
-                    for (String prompt : prompts){
-                            outputter.startTag("prompt");
-                                    outputter.attribute("timeout", "5s");
-                                    outputter.startTag("audio");
-                                            outputter.attribute("src", prompt);
-                                    outputter.endTag();
-                            outputter.endTag();
-                    }
-                    outputter.startTag("noinput");
-                            for (String prompt : prompts){
-                                    outputter.startTag("prompt");
-                                            outputter.startTag("audio");
-                                                    outputter.attribute("src", prompt);
-                                            outputter.endTag();
-                                    outputter.endTag();
-                            }
-                            /*outputter.startTag("goto");
-                                    outputter.attribute("next", handleTimeoutURL+"?question_id="+question.getQuestion_id()+"&sessionKey="+sessionKey);
-                            outputter.endTag();*/
-                    outputter.endTag();
-            outputter.endTag();
+        boolean beep = Boolean.parseBoolean(voiceMailBeep);
+        record.setPlayBeep(beep);
         
-            outputter.startTag("subdialog");
-                    outputter.attribute("name", "saveWav");
-                    outputter.attribute("src", uploadURL);
-                    outputter.attribute("namelist", "file");
-                    outputter.attribute("method", "post");
-                    outputter.attribute("enctype", "multipart/form-data");
-                    outputter.startTag("filled");
-                            outputter.startTag("if");
-                                    outputter.attribute("cond", "saveWav.response='SUCCESS'");
-                                    outputter.startTag("goto");
-                                    outputter.attribute("next",
-                                                        getAnswerUrl() + "?questionId=" + question.getQuestion_id() + "&sessionKey=" +
-                                                                                        URLEncoder.encode(sessionKey, "UTF-8") + "&answerInput=" +
-                                                                                        URLEncoder.encode(storedAudiofile, "UTF-8"));
-                                    outputter.endTag();
-                            outputter.startTag("else");
-                            outputter.endTag();
-                                    for (String prompt : prompts){
-                                            outputter.startTag("prompt");
-                                                    outputter.startTag("audio");
-                                                            outputter.attribute("src", prompt);
-                                                    outputter.endTag();
-                                            outputter.endTag();
-                                    }
-                            outputter.endTag();
-                    outputter.endTag();
+        try {
+        	twiml.append(record);
+        	
+        	Redirect redirect = new Redirect(getTimeoutUrl());
+            redirect.setMethod("GET");
+            twiml.append(redirect);
+        } catch (TwiMLException e) {
+        	log.warning("Failed to append record");
+        }
 	}
+    
+    protected String renderExitQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
+    	TwiMLResponse twiml = new TwiMLResponse();
+    	
+    	addPrompts(prompts, question.getPreferred_language(), twiml);
+    	
+    	try {
+        	twiml.append(new Hangup());
+        } catch (TwiMLException e) {
+        	log.warning("Failed to append hangup");
+        }
+    	
+    	return twiml.toXML();
+    }
+    
+    protected void addPrompts(ArrayList<String> prompts, String language, Verb twiml) {
+
+        String lang = language.contains("-") ? language : "nl-NL";
+        try {
+            for (String prompt : prompts) {
+                if (prompt.startsWith("http")) {
+                    twiml.append(new Play(prompt));
+                }
+                else {
+                    Say say = new Say(prompt.replace("text://", ""));
+                    say.setLanguage(lang);
+                    twiml.append(say);
+                }
+            }
+        }
+        catch (TwiMLException e) {
+            log.warning("failed to added prompts: " + e.getMessage());
+        }
+    }
     
 	private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, String sessionKey) {
 
 		String result = (new TwiMLResponse()).toXML();
-		Return res = formQuestion(question, adapterConfig.getConfigId(),
-				remoteID, null, sessionKey);
+		Return res = formQuestion(question, adapterConfig.getConfigId(),remoteID, null, sessionKey);
 		if (question != null && !question.getType().equalsIgnoreCase("comment"))
 			question = res.question;
 		Session session = Session.getSession(sessionKey);
 		// if the adapter is a trial adapter, add a introductory node
-		log.info("question formed at handleQuestion is: "
-				+ ServerUtils.serializeWithoutException(question));
+		log.info("question formed at handleQuestion is: "+ ServerUtils.serializeWithoutException(question));
 		log.info("prompts formed at handleQuestion is: " + res.prompts);
 
 		if (question != null) {
@@ -877,29 +1027,6 @@ public class TwilioAdapter {
 			session.setQuestion(question);
 			session.setRemoteAddress(remoteID);
 			session.storeSession();
-
-			// convert all text prompts to speech
-			if (res.prompts != null) {
-				String language = question.getPreferred_language()
-						.contains("-") ? question.getPreferred_language()
-						: "nl-nl";
-				String ttsSpeedProperty = question.getMediaPropertyValue(
-						MediumType.BROADSOFT, MediaPropertyKey.TSS_SPEED);
-				ttsSpeedProperty = ttsSpeedProperty != null ? ttsSpeedProperty
-						: "0";
-				ArrayList<String> promptsCopy = new ArrayList<String>();
-				for (String prompt : res.prompts) {
-					if (!prompt.startsWith("dtmfKey://")) {
-						if (!prompt.endsWith(".wav")) {
-							promptsCopy.add(getTTSURL(prompt, language, "wav",
-									ttsSpeedProperty, null));
-						} else {
-							promptsCopy.add(prompt);
-						}
-					}
-				}
-				res.prompts = promptsCopy;
-			}
 
 			if (question.getType().equalsIgnoreCase("closed")) {
 				result = renderClosedQuestion(question, res.prompts, sessionKey);
@@ -911,16 +1038,24 @@ public class TwilioAdapter {
 					// added for release0.4.2 to store the question in the
 					// session,
 					// for triggering an answered event
-					log.info(String
-							.format("current session key before referral is: %s and remoteId %s",
-									sessionKey, remoteID));
-					String redirectedId = PhoneNumberUtils.formatNumber(
-							question.getUrl().replace("tel:", ""), null);
+					
+					// Check with remoteID we are going to use for the call
+					String externalCallerId = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.USE_EXTERNAL_CALLERID );
+		            Boolean callerId = false;
+		            if(externalCallerId!=null) {
+		            	callerId = Boolean.parseBoolean(externalCallerId);
+		            }
+		    		if(!callerId) {
+		    			remoteID = adapterConfig.getMyAddress();
+		    		}
+		    		
+		    		log.info(String.format("current session key before referral is: %s and remoteId %s", sessionKey, remoteID));
+					
+					String redirectedId = PhoneNumberUtils.formatNumber(question.getUrl().replace("tel:", ""), null);
 					if (redirectedId != null) {
 						// update url with formatted redirecteId. RFC3966
 						// returns format tel:<blabla> as expected
-						question.setUrl(PhoneNumberUtils.formatNumber(
-								redirectedId, PhoneNumberFormat.RFC3966));
+						question.setUrl(redirectedId);
 						// store the remoteId as its lost while trying to
 						// trigger the answered event
 						HashMap<String, String> extras = new HashMap<String, String>();
@@ -928,46 +1063,37 @@ public class TwilioAdapter {
 						session.getExtras().putAll(extras);
 						session.setQuestion(question);
 						session.setRemoteAddress(remoteID);
+						
 						// create a new ddr record and session to catch the
 						// redirect
-						Session referralSession = Session.getOrCreateSession(
-								adapterConfig, redirectedId);
+						Session referralSession = Session.getOrCreateSession(adapterConfig, remoteID, redirectedId);
 						if (session.getDirection() != null) {
 							DDRRecord ddrRecord = null;
 							try {
-								ddrRecord = DDRUtils
-										.createDDRRecordOnOutgoingCommunication(
-												adapterConfig, redirectedId, 1,
-												question.getUrl());
+								ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, redirectedId, 1,question.getUrl());
 								if (ddrRecord != null) {
-									ddrRecord.addAdditionalInfo(
-											Session.TRACKING_TOKEN_KEY,
-											session.getTrackingToken());
+									ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY,session.getTrackingToken());
 									ddrRecord.createOrUpdate();
-									referralSession.setDdrRecordId(ddrRecord
-											.getId());
+									referralSession.setDdrRecordId(ddrRecord.getId());
 								}
 							} catch (Exception e) {
 								e.printStackTrace();
-								log.severe(String.format(
-										"Continuing without DDR. Error: %s",
-										e.toString()));
+								log.severe(String.format("Continuing without DDR. Error: %s",e.toString()));
 							}
-							referralSession
-									.setDirection(session.getDirection());
-							referralSession.setTrackingToken(session
-									.getTrackingToken());
+							referralSession.setDirection(session.getDirection());
+							referralSession.setTrackingToken(session.getTrackingToken());
 						}
 						referralSession.setQuestion(session.getQuestion());
+						referralSession.getExtras().put("referralSessionKey", session.getKey());
 						referralSession.storeSession();
 						session.storeSession();
 					} else {
-						log.severe(String.format(
-								"Redirect address is invalid: %s. Ignoring.. ",
-								question.getUrl().replace("tel:", "")));
+						log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ",question.getUrl().replace("tel:", "")));
 					}
-					result = renderComment(question, res.prompts, sessionKey);
+					result = renderReferral(question, res.prompts, sessionKey, remoteID);
 				}
+			} else if (question.getType().equalsIgnoreCase("exit")) {
+				result = renderExitQuestion(question, res.prompts, sessionKey);
 			} else if (res.prompts.size() > 0) {
 				result = renderComment(question, res.prompts, sessionKey);
 			}
@@ -977,34 +1103,8 @@ public class TwilioAdapter {
 			log.info("Going to hangup? So clear Session?");
 		}
 		log.info("Sending xml: " + result);
-		return Response.ok(result).build();
+		return Response.status(Status.OK).type(MediaType.APPLICATION_XML).entity(result).build();
 	}
-	
-	/**
-     * returns the TTS URL from tts.ask-fast
-     * 
-     * @param textForSpeech
-     * @param language
-     * @param contentType
-     * @return
-     */
-    private String getTTSURL( String textForSpeech, String language, String contentType, String speed, String format )
-    {
-        speed = (speed != null && !speed.isEmpty()) ? speed : "0"; 
-        contentType = (contentType != null && !contentType.isEmpty()) ? contentType : "wav";
-        format = (format != null && !format.isEmpty()) ? format : "8khz_8bit_mono";
-        try
-        {
-            textForSpeech = URLEncoder.encode( textForSpeech.replace( "text://", "" ), "UTF-8").replace( "+", "%20" );
-        }
-        catch ( UnsupportedEncodingException e )
-        {
-            e.printStackTrace();
-            log.severe( e.getLocalizedMessage() );
-        }
-        return "http://tts.ask-fast.com/api/parse?text=" + textForSpeech + "&lang=" + language
-            + "&codec=" + contentType + "&speed=" + speed + "&format=" + format + "&type=.wav";
-    }
     
     protected String getAnswerUrl() {
         return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/answer";
@@ -1012,5 +1112,9 @@ public class TwilioAdapter {
     
     protected String getTimeoutUrl() {
     	return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/timeout";
+    }
+    
+    protected String getPreconnectUrl() {
+    	return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/preconnect";
     }
 }

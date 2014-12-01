@@ -127,7 +127,11 @@ public class Session{
     public void drop() {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        datastore.delete(this);
+        Session session = datastore.load(Session.class, key);
+        if (session != null) {
+            log.info("Deleing session with id: "+ session.getKey());
+            datastore.delete(session);
+        }
     }
 	
     public static void drop( String key )
@@ -200,24 +204,27 @@ public class Session{
     }
     
     public static Session getOrCreateSession(AdapterConfig config, String remoteAddress) {
-        
-        String key = config.getAdapterType() + "|" + config.getMyAddress() + "|" + remoteAddress;
-                                        
-        //TODO: check account/pubkey usage here
-        Session session = new Session();
-        session.setAdapterID(config.getConfigId());
-        session.setAccountId(config.getOwner());
-        session.setRemoteAddress(remoteAddress);
-        session.setLocalAddress(config.getMyAddress());
-        session.setType(config.getAdapterType());
-        session.setKeyword(config.getKeyword());
-        session.key = key;
-        session.creationTimestamp = String.valueOf(TimeUtils.getServerCurrentTimeInMillis());
-        session.setTrackingToken(UUID.randomUUID().toString());
-        session.storeSession();
-        log.info("new session created with id: " + session.key);
-        return session;
+        return getOrCreateSession(config, config.getMyAddress(), remoteAddress);
     }
+
+	public static Session getOrCreateSession(AdapterConfig config, String fromAddress, String remoteAddress) {
+	    
+	    String key = config.getAdapterType() + "|" + fromAddress + "|" + remoteAddress;
+	                                    
+	    Session session = new Session();
+	    session.setAdapterID(config.getConfigId());
+	    session.setAccountId(config.getOwner());
+	    session.setRemoteAddress(remoteAddress);
+	    session.setLocalAddress(fromAddress);
+	    session.setType(config.getAdapterType());
+	    session.setKeyword(config.getKeyword());
+	    session.key = key;
+	    session.creationTimestamp = String.valueOf(TimeUtils.getServerCurrentTimeInMillis());
+	    session.setTrackingToken(UUID.randomUUID().toString());
+	    session.storeSession();
+	    log.info("new session created with id: " + session.key);
+	    return session;
+	}
     
     /**
      * returns the session without creating a new default one

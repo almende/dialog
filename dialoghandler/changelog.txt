@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+1-12-2014, version 1.5.0
+- add twilio adapter
+
 13-11-2014, version 1.4.6
 - update: added some extra logs when url fetch fails 
 

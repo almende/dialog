@@ -606,8 +606,7 @@ public class DDRUtils
                 if (AdapterType.isCallAdapter(adapterConfig.getAdapterType())) {
                     if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
                         session.getDirection() != null) {
-                        ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(),
-                                                               adapterConfig,
+                        ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(), adapterConfig,
                                                                Long.parseLong(session.getStartTimestamp()),
                                                                session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
                                                                                                    : null,

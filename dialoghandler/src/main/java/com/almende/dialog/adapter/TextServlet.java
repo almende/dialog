@@ -228,6 +228,8 @@ abstract public class TextServlet extends HttpServlet {
                                                String subject, AdapterConfig config) throws Exception {
 
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
+        addressCcNameMap = addressCcNameMap != null ? addressCcNameMap : new HashMap<String, String>();
+        addressBccNameMap = addressBccNameMap != null ? addressBccNameMap : new HashMap<String, String>();
         String localaddress = config.getMyAddress();
         url = encodeURLParams(url);
 
@@ -238,8 +240,7 @@ abstract public class TextServlet extends HttpServlet {
         // deceiving.
         String loadAddress = null;
         Session session = null;
-        if (addressNameMap.size() == 1 && addressCcNameMap != null && addressCcNameMap.isEmpty() &&
-            addressBccNameMap != null && addressBccNameMap.isEmpty()) {
+        if (addressNameMap.size() + addressCcNameMap.size() + addressBccNameMap.size() == 1) {
             
             loadAddress = addressNameMap.keySet().iterator().next();
             if (config.getAdapterType().equals("CM") ||
@@ -325,9 +326,7 @@ abstract public class TextServlet extends HttpServlet {
                         //save this session
                         session.storeSession();
                         //put the formatted address to that a text can be broadcasted to it
-                        if(addressNameMap.get(address) != null) {
-                            formattedAddressNameToMap.put(formattedAddress, addressNameMap.get(address));
-                        }
+                        formattedAddressNameToMap.put(formattedAddress, addressNameMap.get(address));
                         // Add key to the map (for the return)
                         sessionKeyMap.put(formattedAddress, session.getKey());
                         sessions.add(session);

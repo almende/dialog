@@ -1,6 +1,12 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+3-12-2014, version 1.5.2
+- fix: bug with null name given in the addressMap for textServlet
+
+1-12-2014, version 1.5.1
+- fix: null pointer fix when no answer text is given
+
 1-12-2014, version 1.5.0
 - add twilio adapter
 

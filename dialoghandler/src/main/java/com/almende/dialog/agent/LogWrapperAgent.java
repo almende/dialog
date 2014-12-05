@@ -80,34 +80,31 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
         }
     }
 	
-    private List<Log> getLogsAsList( String accountId, String adapterID, String adapterType, LogLevel level,
-        Long endTime, Integer offset, Integer limit ) throws Exception
-    {
+    private List<Log> getLogsAsList(String accountId, String adapterID, String adapterType, LogLevel level,
+        Long endTime, Integer offset, Integer limit) throws Exception {
+
         ArrayList<AdapterConfig> ownerAdapters = new ArrayList<AdapterConfig>();
-        if(adapterID != null && !adapterID.isEmpty())
-        {
-            ownerAdapters.add( AdapterConfig.getAdapterConfig( adapterID ));
-        }
-        else
-        {
-            ownerAdapters = AdapterConfig.findAdapterByAccount( accountId, adapterType, null );
-        }
-        Collection<String> adapterIDs = new HashSet<String>();
-        for ( AdapterConfig config : ownerAdapters )
-        {
-            if ( config.getOwner() != null && config.getOwner().equals( accountId ) )
-            {
-                adapterIDs.add( config.getConfigId() );
+        if (adapterID != null && !adapterID.isEmpty()) {
+            AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
+            if (adapterConfig != null) {
+                ownerAdapters.add(adapterConfig);
             }
         }
-        if ( adapterIDs != null && !adapterIDs.isEmpty() )
-        {
-            Logger logger = new Logger();
-            return logger.find( adapterIDs, getMinSeverityLogLevelFor( level ), adapterType, endTime, offset, limit );
+        else {
+            ownerAdapters = AdapterConfig.findAdapterByAccount(accountId, adapterType, null);
         }
-        else
-        {
-            log.severe( NO_ADAPTER_MESSAGE );
+        Collection<String> adapterIDs = new HashSet<String>();
+        for (AdapterConfig config : ownerAdapters) {
+            if (config.getOwner() != null && config.getOwner().equals(accountId)) {
+                adapterIDs.add(config.getConfigId());
+            }
+        }
+        if (adapterIDs != null && !adapterIDs.isEmpty()) {
+            Logger logger = new Logger();
+            return logger.find(adapterIDs, getMinSeverityLogLevelFor(level), adapterType, endTime, offset, limit);
+        }
+        else {
+            log.severe(NO_ADAPTER_MESSAGE);
             return null;
         }
     }

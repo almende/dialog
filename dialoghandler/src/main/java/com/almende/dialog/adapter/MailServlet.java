@@ -269,10 +269,17 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             for (String address : addressNameMap.keySet()) {
                 String toName = addressNameMap.get(address) != null ? addressNameMap.get(address) : address;
                 try {
-                    simpleMessage.addRecipient(Message.RecipientType.TO, new InternetAddress(address, toName));
+                    InternetAddress internetAddress = new InternetAddress(address, toName);
+                    internetAddress.validate();
+                    simpleMessage.addRecipient(Message.RecipientType.TO, internetAddress);
                 }
                 catch (Exception e) {
-                    log.severe(String.format("Error in adding TO: receipient: %s (%s). Ignored", address, toName));
+                    String errorMessage = String.format("Error in adding TO: receipient: %s (%s). Ignored. Message: %s",
+                                                        address, toName, e.toString());
+                    log.severe(errorMessage);
+                    Session askfastSession = Session.getSession(Session.getSessionKey(config, address));
+                    logger.severe(config, errorMessage.replace("javax.mail.internet.AddressException: ", ""),
+                                  askfastSession);
                 }
             }
             if (extras != null) {
@@ -286,12 +293,17 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                             String toName = ccAddressNameMap.get(address) != null ? ccAddressNameMap.get(address)
                                                                                  : address;
                             try {
-                                simpleMessage.addRecipient(Message.RecipientType.CC, new InternetAddress(address,
-                                                                                                         toName));
+                                InternetAddress ccInternetAddress = new InternetAddress(address, toName);
+                                ccInternetAddress.validate();
+                                simpleMessage.addRecipient(Message.RecipientType.CC, ccInternetAddress);
                             }
                             catch (Exception e) {
-                                log.severe(String.format("Error in adding CC: receipient: %s (%s). Ignored. Message: %s",
-                                                         address, toName, e.toString()));
+                                String errorMessage = String.format("Error in adding CC: receipient: %s (%s). Ignored. Message: %s",
+                                                                    address, toName, e.toString());
+                                log.severe(errorMessage);
+                                Session askfastSession = Session.getSession(Session.getSessionKey(config, address));
+                                logger.severe(config, errorMessage.replace("javax.mail.internet.AddressException: ", ""),
+                                              askfastSession);
                             }
                         }
                     }
@@ -309,12 +321,17 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                             String toName = bccAddressNameMap.get(address) != null ? bccAddressNameMap.get(address)
                                                                                   : address;
                             try {
-                                simpleMessage.addRecipient(Message.RecipientType.BCC, new InternetAddress(address,
-                                                                                                          toName));
+                                InternetAddress bccInternetAddress = new InternetAddress(address, toName);
+                                bccInternetAddress.validate();
+                                simpleMessage.addRecipient(Message.RecipientType.BCC, bccInternetAddress);
                             }
                             catch (Exception e) {
-                                log.severe(String.format("Error in adding CC: receipient: %s (%s). Ignored. Message: %s",
-                                                         address, toName, e.toString()));
+                                String errorMessage = String.format("Error in adding BCC: receipient: %s (%s). Ignored. Message: %s",
+                                                                    address, toName, e.toString());
+                                log.severe(errorMessage);
+                                Session askfastSession = Session.getSession(Session.getSessionKey(config, address));
+                                logger.severe(config, errorMessage.replace("javax.mail.internet.AddressException: ", ""),
+                                              askfastSession);
                             }
                         }
                     }

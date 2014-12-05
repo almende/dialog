@@ -418,6 +418,12 @@ public class TwilioAdapter {
     public Response timeout(@QueryParam("From") String localID, @QueryParam("To") String remoteID,
         @QueryParam("Direction") String direction) throws Exception {
 
+        //swap local and remote ids if its an incoming call
+        if (direction.equals("inbound")) {
+            String tmpLocalId = new String(localID);
+            localID = new String(remoteID);
+            remoteID = tmpLocalId;
+        }
         String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ remoteID;
         Session session = Session.getSession(sessionKey);
         if (session != null) {

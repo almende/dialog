@@ -237,7 +237,8 @@ public class Question implements QuestionIntf {
             answer_input = answer_input.trim();
             ArrayList<Answer> answers = question.getAnswers();
             for (Answer ans : answers) {
-                if (ans.getAnswer_text() != null && ans.getAnswer_text().equalsIgnoreCase(answer_input)) {
+                if (ans.getAnswer_text() != null &&
+                    ans.getAnswer_text().replace("dtmfKey://", "").equalsIgnoreCase(answer_input)) {
                     answer = ans;
                     break;
                 }
@@ -253,8 +254,9 @@ public class Question implements QuestionIntf {
             if (answer == null) {
                 try {
                     int answer_nr = Integer.parseInt(answer_input);
-                    if (answer_nr <= answers.size())
+                    if (answer_nr <= answers.size()) {
                         answer = answers.get(answer_nr - 1);
+                    }
                 }
                 catch (NumberFormatException ex) {
                     log.severe(ex.getLocalizedMessage());

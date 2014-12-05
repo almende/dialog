@@ -2,6 +2,7 @@ DialogHandler
 https://github.com/almende/dialog/
 
 5-12-2014, version 1.5.3
+- update added dtmfKey:// answers for twilio adapter
 - fix: issue with wrong email addresses (they are truely ignored now). sorting issue with logs
 
 3-12-2014, version 1.5.2

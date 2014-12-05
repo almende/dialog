@@ -253,8 +253,8 @@ public class Logger {
             aggregate = collection.aggregate(groupQuery);
         }
         //update the aggregate query with sort (on timestamp), offset and limit
-        aggregate = aggregate.and(String.format("{$skip :%s}", offset)).and(String.format("{$limit :%s}",
-                                                                                          trackingTokenFetchlimit));
+        aggregate = aggregate.and("{$sort :{timestamp: -1}}").and(String.format("{$skip :%s}", offset))
+                                        .and(String.format("{$limit :%s}", trackingTokenFetchlimit));
 
         List<ObjectNode> logsByTrackingToken = aggregate.as(ObjectNode.class);
         ArrayList<Log> resultLogs = new ArrayList<Log>();

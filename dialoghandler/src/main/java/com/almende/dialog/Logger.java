@@ -107,10 +107,12 @@ public class Logger {
         String sessionKey) {
 
         if (sessionKey != null) {
-            Log log = new Log(level, adapterId, adapterType, message, ddrRecordId, sessionKey);
-            if (log.getSessionKey() != null) {
+            Log devLog = new Log(level, adapterId, adapterType, message, ddrRecordId, sessionKey);
+            if (devLog.getSessionKey() != null) {
                 MongoCollection collection = getCollection();
-                collection.insert(log);
+                collection.insert(devLog);
+                //TODO: remove in live 
+                log.info("New log added: "+ ServerUtils.serializeWithoutException(devLog));
             }
         }
     }
@@ -126,17 +128,23 @@ public class Logger {
 
         if (session != null && session.getTrackingToken() != null) {
             MongoCollection collection = getCollection();
-            collection.insert(new Log(level, adapter, message, session));
+            Log devLog = new Log(level, adapter, message, session);
+            collection.insert(devLog);
+            //TODO: remove in live 
+            log.info("New log added: "+ ServerUtils.serializeWithoutException(devLog));
         }
     }
     
     /**
      * Updates this log in the mongo database
-     * @param log
+     * @param devLog
      */
-    public static void save(Log log) {
+    public static void save(Log devLog) {
+
         MongoCollection collection = getCollection();
-        collection.save(log);
+        collection.save(devLog);
+        //TODO: remove in live 
+        log.info("Log updated " + ServerUtils.serializeWithoutException(devLog));
     }
 
     /**

@@ -97,6 +97,8 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface {
         errorOrIssues.put("totalSize", String.valueOf(allLogs.size()));
         errorOrIssues.put("Success", String.valueOf(updateSuccess));
         errorOrIssues.put("UnSuccess", String.valueOf(updateUnSuccess));
+        log.info(String.format("updateLogsWithAccountIdScript result: totalSize: %s Success: %s UnSuccess: %s",
+                               allLogs.size(), updateSuccess, updateUnSuccess));
         return errorOrIssues;
     }
 

@@ -18,6 +18,8 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.rpc.annotation.Access;
 import com.almende.eve.rpc.annotation.AccessType;
+import com.almende.eve.rpc.annotation.Name;
+import com.almende.eve.rpc.annotation.Optional;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.agent.intf.LogAgentInterface;
@@ -40,8 +42,10 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface {
     private static final String NO_ADAPTER_MESSAGE = "This account has no adapters";
 
     @Override
-    public ArrayNode getLogs(String accountId, String adapterID, String adapterType, String level, Long endTime,
-        Integer offset, Integer limit) throws Exception {
+    public ArrayNode getLogs(@Name("accountId") String accountId, @Name("id") @Optional String adapterID,
+        @Name("type") @Optional String adapterType, @Name("level") @Optional String level,
+        @Name("end") @Optional Long endTime, @Name("offset") @Optional Integer offset,
+        @Name("limit") @Optional Integer limit) throws Exception {
 
         LogLevel logLevel = LogLevel.fromJson(level);
         List<Log> logs = getLogsAsList(accountId, adapterID, adapterType, logLevel, endTime, offset, limit);
@@ -131,36 +135,52 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface {
         }
     }
 
+    
+    /**
+     * Fetches all the logs corresponding to the accountId and other corresponding given parameters.
+     * @param accountId if null, throws exception
+     * @param adapterID if null, tries to fetch all the adapters for the given accountId. 
+     * @param adapterType if null, tries to fetch all the adpaters for the given accountId.
+     * @param level 
+     * @param endTime
+     * @param offset 
+     * @param limit
+     * @return a List of fetched logs
+     * @throws Exception
+     */
     private List<Log> getLogsAsList(String accountId, String adapterID, String adapterType, LogLevel level,
         Long endTime, Integer offset, Integer limit) throws Exception {
 
-        ArrayList<AdapterConfig> ownerAdapters = new ArrayList<AdapterConfig>();
-        if (adapterID != null && !adapterID.isEmpty()) {
-            AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
-            if (adapterConfig != null) {
-                ownerAdapters.add(adapterConfig);
-            }
-        }
-        else if (accountId != null) {
-            ownerAdapters = AdapterConfig.findAdapterByAccount(accountId, adapterType, null);
-        }
-        else {
-            log.severe("AccountId is null, no logs fetched. Returning null");
-            return null;
-        }
         Collection<String> adapterIDs = new HashSet<String>();
-        for (AdapterConfig config : ownerAdapters) {
-            if (config.getOwner() != null && config.getOwner().equals(accountId)) {
-                adapterIDs.add(config.getConfigId());
+        if (accountId != null) {
+            if (adapterID != null && !adapterID.isEmpty()) {
+                AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
+                if (adapterConfig != null &&
+                    AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), adapterConfig, false) != null) {
+
+                    adapterIDs.add(adapterConfig.getConfigId());
+                }
+            }
+            else {
+                ArrayList<AdapterConfig> accountAdapters = AdapterConfig.findAdapterByAccount(accountId, adapterType,
+                                                                                              null);
+                for (AdapterConfig adapterConfig : accountAdapters) {
+                    adapterIDs.add(adapterConfig.getConfigId());
+                }
+            }
+            //fetch logs for each of the adapters
+            if (adapterIDs != null && !adapterIDs.isEmpty()) {
+                return Logger.find(accountId, adapterIDs, getMinSeverityLogLevelFor(level), adapterType, endTime,
+                                   offset, limit);
+            }
+            else {
+                log.severe(NO_ADAPTER_MESSAGE);
+                return null;
             }
         }
-        if (adapterIDs != null && !adapterIDs.isEmpty()) {
-            return Logger.find(accountId, adapterIDs, getMinSeverityLogLevelFor(level), adapterType, endTime, offset,
-                               limit);
-        }
         else {
-            log.severe(NO_ADAPTER_MESSAGE);
-            return null;
+            log.severe("AccountId is null");
+            throw new Exception("AccountId cannot be null to fetch the logs");
         }
     }
 

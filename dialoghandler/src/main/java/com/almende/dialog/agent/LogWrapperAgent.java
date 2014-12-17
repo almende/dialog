@@ -63,6 +63,8 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface {
 
         List<Log> allLogs = Logger.findAllLogs();
         HashMap<String, String> errorOrIssues = new HashMap<String, String>();
+        int updateSuccess = 0;
+        int updateUnSuccess = 0;
         for (Log log : allLogs) {
             //check if the adapter linked to this log has only one owner
             AdapterConfig adapterConfig = log.getAdapterConfig();
@@ -70,6 +72,7 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface {
                 adapterConfig.getAccounts().size() == 1 &&
                 adapterConfig.getAccounts().contains(adapterConfig.getOwner())) {
                 log.setAccountId(adapterConfig.getOwner());
+                updateSuccess++;
             }
             else {
                 log.setAccountId(null);
@@ -87,9 +90,13 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface {
                     issueMessage = "updated NULL as shared account list does not contain owner";
                 }
                 errorOrIssues.put(log.getLogId(), issueMessage);
+                updateUnSuccess++;
             }
             Logger.save(log);
         }
+        errorOrIssues.put("totalSize", String.valueOf(allLogs.size()));
+        errorOrIssues.put("Success", String.valueOf(updateSuccess));
+        errorOrIssues.put("UnSuccess", String.valueOf(updateUnSuccess));
         return errorOrIssues;
     }
 

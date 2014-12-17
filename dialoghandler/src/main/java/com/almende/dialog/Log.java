@@ -5,6 +5,7 @@ import org.jongo.marshall.jackson.oid.Id;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.util.uuid.UUID;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class Log implements Serializable {
 
@@ -20,18 +21,26 @@ public class Log implements Serializable {
     private String ddrRecordId = null;
     private String sessionKey = null;
     private String trackingToken = null;
-
+    private String accountId = null;
+    @JsonIgnore
+    private AdapterConfig cachedAdapterConfig = null;
+    
     public Log() {
 
     }
     
     /**
-     * detailed constructor
+     * Creates a Log instance if a session is found and a corresponding
+     * trackingToken is attached to that session
      * @param level
      * @param adapterID
      * @param adapterType
+     *            If null, and adapterId is not null, it fetches the adapter and
+     *            updates the type.
      * @param message
-     * @param ddrRecordId if null, will try to fetch the current ddrRecord from {@link Session#getDdrRecordId()}
+     * @param ddrRecordId
+     *            if null, will try to fetch the current ddrRecord from
+     *            {@link Session#getDdrRecordId()}
      * @param sessionKey
      */
     public Log(LogLevel level, String adapterID, String adapterType, String message, String ddrRecordId,
@@ -39,13 +48,13 @@ public class Log implements Serializable {
 
         if (sessionKey != null) {
             Session session = Session.getSession(sessionKey);
+            AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
             if (session != null && session.getTrackingToken() != null) {
                 this.logId = new UUID().toString();
                 this.level = level;
                 this.adapterID = adapterID;
                 //fetch the adapter type if empty
                 if ((adapterType == null || adapterType.isEmpty()) && adapterID != null) {
-                    AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
                     adapterType = adapterConfig != null ? adapterConfig.getAdapterType() : null;
                 }
                 this.adapterType = adapterType;
@@ -54,12 +63,15 @@ public class Log implements Serializable {
                 this.sessionKey = sessionKey;
                 this.trackingToken = session.getTrackingToken();
                 this.ddrRecordId = ddrRecordId != null ? ddrRecordId : session.getDdrRecordId();
+                this.setAccountId(session.getAccountId());
             }
         }
     }
-    
+
     /**
-     * detailed constructor
+     * Creates a Log instance if a session is found and a corresponding
+     * trackingToken is attached to that session
+     * 
      * @param level
      * @param adapterID
      * @param adapterType
@@ -71,7 +83,7 @@ public class Log implements Serializable {
      */
     public Log(LogLevel level, AdapterConfig adapter, String message, Session session) {
 
-        if (session != null) {
+        if (session != null && session.getTrackingToken() != null) {
             this.logId = new UUID().toString();
             this.level = level;
             //fetch the adapter type if empty
@@ -84,6 +96,7 @@ public class Log implements Serializable {
             this.sessionKey = session.getKey();
             this.trackingToken = session.getTrackingToken();
             this.ddrRecordId = ddrRecordId != null ? ddrRecordId : session.getDdrRecordId();
+            this.accountId = session.getAccountId();
         }
     }
 	
@@ -162,5 +175,30 @@ public class Log implements Serializable {
     public void setTrackingToken(String trackingToken) {
     
         this.trackingToken = trackingToken;
+    }
+
+    public String getAccountId() {
+
+        return accountId;
+    }
+
+    public void setAccountId(String accountId) {
+
+        this.accountId = accountId;
+    }
+    
+    /**
+     * Returns the adapterConfig linked to this log. This also caches this
+     * adapterConfig in this instance of the log.
+     * 
+     * @return
+     */
+    @JsonIgnore
+    public AdapterConfig getAdapterConfig() {
+
+        if (cachedAdapterConfig == null && adapterID != null) {
+            cachedAdapterConfig = AdapterConfig.getAdapterConfig(adapterID);
+        }
+        return cachedAdapterConfig;
     }
 }

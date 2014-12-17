@@ -3,6 +3,7 @@ package com.almende.dialog.agent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import javax.ws.rs.GET;
@@ -26,60 +27,101 @@ import com.sun.jersey.api.client.ClientResponse.Status;
 
 @Path("log")
 @Access(AccessType.PUBLIC)
-public class LogWrapperAgent extends Agent implements LogAgentInterface
-{
-	
-	public LogWrapperAgent() {
-	    super();
+public class LogWrapperAgent extends Agent implements LogAgentInterface {
+
+    public LogWrapperAgent() {
+
+        super();
         ParallelInit.startThreads();
-	}
-	
-	private static final java.util.logging.Logger log = java.util.logging.Logger.getLogger( LogWrapperAgent.class.getSimpleName() );
-	private static final String NO_ADAPTER_MESSAGE = "This account has no adapters";
-	
+    }
+
+    private static final java.util.logging.Logger log = java.util.logging.Logger.getLogger(LogWrapperAgent.class
+                                    .getSimpleName());
+    private static final String NO_ADAPTER_MESSAGE = "This account has no adapters";
+
     @Override
-    public ArrayNode getLogs( String accountId, String adapterID, String adapterType, String level, Long endTime,
-        Integer offset, Integer limit ) throws Exception
-    {
-        LogLevel logLevel = LogLevel.fromJson( level );
-        List<Log> logs = getLogsAsList( accountId, adapterID, adapterType, logLevel, endTime, offset, limit );
+    public ArrayNode getLogs(String accountId, String adapterID, String adapterType, String level, Long endTime,
+        Integer offset, Integer limit) throws Exception {
+
+        LogLevel logLevel = LogLevel.fromJson(level);
+        List<Log> logs = getLogsAsList(accountId, adapterID, adapterType, logLevel, endTime, offset, limit);
         return JOM.getInstance().convertValue(logs, ArrayNode.class);
     }
-	
+
+    /**
+     * Updates all the accountId in the {@link Log} documents. <br>
+     * Checks if the adapter is owned by one account only. else updates null. <br>
+     * This agent method makes sure there is backward compatibility for the logs
+     * that do not have an accountId as a field in their document to the new
+     * version which does have them.
+     * 
+     * @return Map<String, String> of all the logs which has been updated with
+     *         null or an error. i.e <logId, null| reason if an error occured>
+     * @throws Exception
+     */
+    public HashMap<String, String> updateLogsWithAccountIdScript() throws Exception {
+
+        List<Log> allLogs = Logger.findAllLogs();
+        HashMap<String, String> errorOrIssues = new HashMap<String, String>();
+        for (Log log : allLogs) {
+            //check if the adapter linked to this log has only one owner
+            AdapterConfig adapterConfig = log.getAdapterConfig();
+            if (adapterConfig != null && adapterConfig.getAccounts() != null &&
+                adapterConfig.getAccounts().size() == 1 &&
+                adapterConfig.getAccounts().contains(adapterConfig.getOwner())) {
+                log.setAccountId(adapterConfig.getOwner());
+            }
+            else {
+                log.setAccountId(null);
+                String issueMessage = "NULL accountId is updated";
+                if (adapterConfig == null) {
+                    issueMessage = "updated NULL as adapterConfig is not found";
+                }
+                else if (adapterConfig.getAccounts() == null) {
+                    issueMessage = "updated NULL as no linked accounts found";
+                }
+                else if (adapterConfig.getAccounts().size() != 1) {
+                    issueMessage = "updated NULL as shared adapter found";
+                }
+                else if (adapterConfig.getAccounts().contains(adapterConfig.getOwner())) {
+                    issueMessage = "updated NULL as shared account list does not contain owner";
+                }
+                errorOrIssues.put(log.getLogId(), issueMessage);
+            }
+            Logger.save(log);
+        }
+        return errorOrIssues;
+    }
+
     @GET
-    @Produces( "application/json" )
-    public Response getLogsResponse( @QueryParam( "accountID" ) String accountId, @QueryParam( "id" ) String adapterID,
-        @QueryParam( "type" ) String adapterType, @QueryParam( "level" ) LogLevel level,
-        @QueryParam( "end" ) Long endTime, @QueryParam( "offset" ) Integer offset, @QueryParam( "limit" ) Integer limit )
-    throws Exception
-    {
-        try
-        {
-            List<Log> logs = getLogsAsList( accountId, adapterID, adapterType, level, endTime, offset, limit );
+    @Produces("application/json")
+    public Response getLogsResponse(@QueryParam("accountID") String accountId, @QueryParam("id") String adapterID,
+        @QueryParam("type") String adapterType, @QueryParam("level") LogLevel level, @QueryParam("end") Long endTime,
+        @QueryParam("offset") Integer offset, @QueryParam("limit") Integer limit) throws Exception {
+
+        try {
+            List<Log> logs = getLogsAsList(accountId, adapterID, adapterType, level, endTime, offset, limit);
             ObjectMapper om = ParallelInit.getObjectMapper();
             String result = "";
-            try
-            {
-                result = om.writeValueAsString( logs );
+            try {
+                result = om.writeValueAsString(logs);
             }
-            catch ( Exception e )
-            {
-                return Response.status( Status.INTERNAL_SERVER_ERROR )
-                    .entity( "Failed parsing logs: " + e.getMessage() ).build();
+            catch (Exception e) {
+                return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Failed parsing logs: " + e.getMessage())
+                                                .build();
             }
-            return Response.ok( result ).build();
+            return Response.ok(result).build();
         }
-        catch ( Exception e )
-        {
-            if ( e.getLocalizedMessage() != null && e.getLocalizedMessage().equals( NO_ADAPTER_MESSAGE ) )
-            {
-                return Response.status( Status.BAD_REQUEST ).entity( "This account has no adapters" ).build();
+        catch (Exception e) {
+            if (e.getLocalizedMessage() != null && e.getLocalizedMessage().equals(NO_ADAPTER_MESSAGE)) {
+                return Response.status(Status.BAD_REQUEST).entity("This account has no adapters").build();
             }
-            return Response.status( Status.INTERNAL_SERVER_ERROR )
-                .entity( "Something failed while trying to fetch logs. Message: " + e.getLocalizedMessage() ).build();
+            return Response.status(Status.INTERNAL_SERVER_ERROR)
+                                            .entity("Something failed while trying to fetch logs. Message: " +
+                                                                                    e.getLocalizedMessage()).build();
         }
     }
-	
+
     private List<Log> getLogsAsList(String accountId, String adapterID, String adapterType, LogLevel level,
         Long endTime, Integer offset, Integer limit) throws Exception {
 
@@ -90,8 +132,12 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
                 ownerAdapters.add(adapterConfig);
             }
         }
-        else {
+        else if (accountId != null) {
             ownerAdapters = AdapterConfig.findAdapterByAccount(accountId, adapterType, null);
+        }
+        else {
+            log.severe("AccountId is null, no logs fetched. Returning null");
+            return null;
         }
         Collection<String> adapterIDs = new HashSet<String>();
         for (AdapterConfig config : ownerAdapters) {
@@ -100,15 +146,15 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface
             }
         }
         if (adapterIDs != null && !adapterIDs.isEmpty()) {
-            Logger logger = new Logger();
-            return logger.find(adapterIDs, getMinSeverityLogLevelFor(level), adapterType, endTime, offset, limit);
+            return Logger.find(accountId, adapterIDs, getMinSeverityLogLevelFor(level), adapterType, endTime, offset,
+                               limit);
         }
         else {
             log.severe(NO_ADAPTER_MESSAGE);
             return null;
         }
     }
-	
+
     private Collection<LogLevel> getMinSeverityLogLevelFor(LogLevel logLevel) {
 
         Collection<LogLevel> result = null;

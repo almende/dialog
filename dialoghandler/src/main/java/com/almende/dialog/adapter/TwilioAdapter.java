@@ -472,11 +472,10 @@ public class TwilioAdapter {
     @GET
     @Produces("application/voicexml+xml")
     public Response preconnect(@QueryParam("From") String localID, @QueryParam("To") String remoteID,
-            @QueryParam("Direction") String direction) {
+        @QueryParam("Direction") String direction) {
 
-    	// TODO: test
-    	String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ remoteID;
-    	
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localID + "|" + remoteID;
+
         String reply = (new TwiMLResponse()).toXML();
         Session session = Session.getSession(sessionKey);
         if (session != null && session.getQuestion() != null) {
@@ -494,7 +493,7 @@ public class TwilioAdapter {
             HashMap<String, String> extras = new HashMap<String, String>();
             extras.put("sessionKey", sessionKey);
             extras.put("requester", session.getLocalAddress());
-            question = question.event("preconnect", "Wrong answer received", extras, responder);
+            question = question.event("preconnect", "preconnect event", extras, responder);
             //reload the session
             session = Session.getSession(sessionKey);
             session.setQuestion(question);

@@ -148,13 +148,13 @@ public class Logger {
     }
 
     /**
-     * Returns all the logs that match to the given parameters. This is an
-     * expensive step as it fetches the logs in 2 steps: first loads all the
-     * trackingTokens by descending timestamp. Then fetches all the logs
-     * corresponding to this tracking token in batches, so that related tracking
-     * token are grouped together
+     * Returns all the logs that match to the given parameters. AccountId is a
+     * mandatory field. This is an expensive step as it fetches the logs in 2
+     * steps: first loads all the trackingTokens by descending timestamp. Then
+     * fetches all the logs corresponding to this tracking token in batches, so
+     * that related tracking token are grouped together
      * 
-     * @param accountId
+     * @param accountId AccountId is a mandatory field
      * @param adapters
      * @param levels
      * @param adapterType
@@ -214,7 +214,7 @@ public class Logger {
 
     /**
      * fetches the logs based on the initial {@link Logger#adapter_chunk_size}
-     * adapters. <br>
+     * adapters. AccountId is a mandatory field <br>
      * creates a jongo aggregate query similar to: <br>
      * ( [ { $match: { adapterID: {$in:
      * ["f9a398e0-ba5d-11e3-a019-08edb99eaa2d"]}, timestamp: {$lte:
@@ -231,6 +231,14 @@ public class Logger {
 
         //initially collect all the match queries
         String matchQuery = null;
+        if (accountId != null) {
+            matchQuery = matchQuery != null ? (matchQuery + ",") : "";
+            matchQuery += "accountId:\"" + accountId + "\"";
+        }
+        else {
+            throw new Exception("AccountId is not expected to be null.");
+        }
+        
         if (adapters != null) {
             int endIndex = adapters.size() <= adapter_chunk_size - 1 ? adapters.size() : adapter_chunk_size;
             List<String> subAdapterList = new ArrayList<String>(adapters).subList(0, endIndex);
@@ -244,11 +252,6 @@ public class Logger {
             matchQuery += "adapterType:\"" + adapterType + "\"";
         }
         
-        if (accountId != null) {
-            matchQuery = matchQuery != null ? (matchQuery + ",") : "";
-            matchQuery += "accountId:\"" + accountId + "\"";
-        }
-
         if (endTime != null) {
             matchQuery = matchQuery != null ? (matchQuery + ",") : "";
             matchQuery += "timestamp:{$lte:" + endTime + "}";

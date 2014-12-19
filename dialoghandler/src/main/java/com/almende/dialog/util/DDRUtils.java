@@ -816,8 +816,6 @@ public class DDRUtils
                 ddrRecord.setAccountType(config.getAccountType());
                 ddrRecord.addAdditionalInfo("message", message);
                 ddrRecord.createOrUpdateWithLog();
-                //log this ddr record
-                new com.almende.dialog.Logger().ddr(ddrRecord.getAdapter(), ddrRecord, session);
                 return ddrRecord;
             }
         }

@@ -265,6 +265,8 @@ abstract public class TextServlet extends HttpServlet {
             //create a session if its only for one number
             if (loadAddress != null) {
                 session = Session.getOrCreateSession(Session.getSessionKey(config, loadAddress), config.getKeyword());
+                session.setAccountId(accountId);
+                session.storeSession();
             }
         }
 

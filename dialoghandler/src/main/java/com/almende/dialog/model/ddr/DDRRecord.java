@@ -163,6 +163,15 @@ public class DDRRecord
         }
     }
     
+    /**
+     * Gets the DDRRecord for the given id only if accountId matches that of the
+     * owner of the DDRRecord itself
+     * 
+     * @param id
+     * @param accountId
+     * @return
+     * @throws Exception
+     */
     public static DDRRecord getDDRRecord(String id, String accountId) throws Exception {
 
         JacksonDBCollection<DDRRecord, String> coll = getCollection();
@@ -174,11 +183,11 @@ public class DDRRecord
     }
     
     /**
-     * fetch the ddr records based the input parameters. fetches the records
-     * that matches to all the parameters given
+     * Fetch the ddr records based the input parameters. fetches the records
+     * that matches to all the parameters given. The accountId is mandatory and rest are optional
      * 
-     * @param adapterId
-     * @param accountId
+     * @param adapterId 
+     * @param accountId Mandatory field
      * @param fromAddress
      * @param ddrTypeId
      * @param status

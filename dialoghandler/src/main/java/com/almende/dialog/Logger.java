@@ -230,9 +230,8 @@ public class Logger {
         String adapterType, Long endTime, Integer offset, Integer limit) throws Exception {
 
         //initially collect all the match queries
-        String matchQuery = null;
+        String matchQuery = "";
         if (accountId != null) {
-            matchQuery = matchQuery != null ? (matchQuery + ",") : "";
             matchQuery += "accountId:\"" + accountId + "\"";
         }
         else {
@@ -243,23 +242,20 @@ public class Logger {
             int endIndex = adapters.size() <= adapter_chunk_size - 1 ? adapters.size() : adapter_chunk_size;
             List<String> subAdapterList = new ArrayList<String>(adapters).subList(0, endIndex);
             if (!subAdapterList.isEmpty()) {
-                matchQuery = "adapterID: {$in:" + ServerUtils.serialize(subAdapterList) + "}";
+                matchQuery += ", adapterID: {$in:" + ServerUtils.serialize(subAdapterList) + "}";
             }
         }
 
         if (adapterType != null) {
-            matchQuery = matchQuery != null ? (matchQuery + ",") : "";
-            matchQuery += "adapterType:\"" + adapterType + "\"";
+            matchQuery += ", adapterType:\"" + adapterType + "\"";
         }
         
         if (endTime != null) {
-            matchQuery = matchQuery != null ? (matchQuery + ",") : "";
-            matchQuery += "timestamp:{$lte:" + endTime + "}";
+            matchQuery += ", timestamp:{$lte:" + endTime + "}";
         }
 
         if (levels != null) {
-            matchQuery = matchQuery != null ? (matchQuery + ",") : "";
-            matchQuery += "level:{$in:" + ServerUtils.serialize(levels) + "}";
+            matchQuery += ", level:{$in:" + ServerUtils.serialize(levels) + "}";
         }
         offset = offset == null ? 0 : offset;
         limit = limit == null ? 50 : limit;
@@ -267,7 +263,7 @@ public class Logger {
         ArrayList<Log> resultLogs = new ArrayList<Log>();
         //fetch in batches of 5
         for (; resultLogs.size() <= limit;) {
-            ArrayList<Log> logs = fetchLogs(matchQuery, offset, 5, limit - resultLogs.size());
+            ArrayList<Log> logs = fetchLogs(accountId, matchQuery, offset, 5, limit - resultLogs.size());
             if (logs != null && !logs.isEmpty()) {
                 resultLogs.addAll(logs);
             }
@@ -286,25 +282,17 @@ public class Logger {
      * @param aggregate
      * @return
      */
-    private static ArrayList<Log> fetchLogs(String matchQuery, Integer offset, Integer trackingTokenFetchlimit,
-        Integer logLimit) {
+    private static ArrayList<Log> fetchLogs(String accountId, String matchQuery, Integer offset,
+        Integer trackingTokenFetchlimit, Integer logLimit) {
 
-        log.info("Match query: "+ matchQuery);
+        matchQuery = String.format("{$match: {%s}}", matchQuery);
+        log.info("Match query: " + matchQuery);
         MongoCollection collection = getCollection();
-        Aggregate aggregate = null;
-        //create an aggregate query with the matchQuery first
-        if (matchQuery != null) {
-            aggregate = collection.aggregate(String.format("{$match: {%s}}", matchQuery));
-        }
+        Aggregate aggregate = collection.aggregate(matchQuery);
 
         //update the aggregate query with groupQuery next. This includes all the fields to fetch
         String groupQuery = "{$group:{_id: \"$trackingToken\", timestamp:{$max: \"$timestamp\"}}}";
-        if (aggregate != null) {
-            aggregate = aggregate.and(groupQuery);
-        }
-        else {
-            aggregate = collection.aggregate(groupQuery);
-        }
+        aggregate = aggregate.and(groupQuery);
         //update the aggregate query with sort (on timestamp), offset and limit
         aggregate = aggregate.and("{$sort :{timestamp: -1}}").and(String.format("{$skip :%s}", offset))
                                         .and(String.format("{$limit :%s}", trackingTokenFetchlimit));
@@ -314,11 +302,12 @@ public class Logger {
         for (ObjectNode logByTrackingToken : logsByTrackingToken) {
             JsonNode trackingToken = logByTrackingToken.get("_id");
             MongoCursor<Log> logsCursor = collection
-                                            .find(String.format("{trackingToken: \"%s\"}", trackingToken.asText()))
+                                            .find(String.format("{trackingToken: \"%s\", accountId: \"%s\"}",
+                                                                trackingToken.asText(), accountId))
                                             .sort("{timestamp: -1}").as(Log.class);
             if (logsCursor != null) {
                 while (logsCursor.hasNext() && resultLogs.size() < logLimit) {
-                    resultLogs.add(logsCursor.next());
+                        resultLogs.add(logsCursor.next());
                 }
             }
         }

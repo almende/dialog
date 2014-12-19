@@ -121,7 +121,7 @@ public class CMServletIT extends TestFramework {
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, TEST_PUBLIC_KEY,
                                                           localAddressBroadsoft, initialAgentURL);
         //create session
-        Session.getOrCreateSession( adapterConfig, PhoneNumberUtils.formatNumber(remoteAddressVoice, null ));
+        Session.createSession( adapterConfig, PhoneNumberUtils.formatNumber(remoteAddressVoice, null ));
         TextMessage textMessage = smsAppointmentInteraction( "hi" );
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( textMessage.getAddress(), textMessage.getRecipientName() );
@@ -257,7 +257,7 @@ public class CMServletIT extends TestFramework {
         AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, TEST_PUBLIC_KEY, "0642500086",
                                                        null);
         //create a session with already a question (meaning a message is already sent)
-        Session session = Session.getOrCreateSession(smsAdapter,
+        Session session = Session.createSession(smsAdapter,
                                                      PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.APPOINTMENT.name());

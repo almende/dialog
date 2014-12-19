@@ -30,21 +30,22 @@ public class MBSmsServlet extends TextServlet {
 
     @Override
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
-                              Map<String, Object> extras, AdapterConfig config) throws Exception {
+        Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
 
         String[] tokens = config.getAccessToken().split("\\|");
 
         CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
-        return cm.sendMessage(message, subject, from, fromName, to, toName, extras, config);
+        return cm.sendMessage(message, subject, from, fromName, to, toName, extras, config, accountId);
     }
-	
+
     @Override
-    protected int broadcastMessage( String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
-    {
-        String[] tokens = config.getAccessToken().split( "\\|" );
-        CM cm = new CM( tokens[0], tokens[1], config.getAccessTokenSecret() );
-        return cm.broadcastMessage( message, subject, from, senderName, addressNameMap, extras, config );
+    protected int broadcastMessage(String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
+        throws Exception {
+
+        String[] tokens = config.getAccessToken().split("\\|");
+        CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
+        return cm.broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId);
     }
 
     @Override
@@ -84,17 +85,18 @@ public class MBSmsServlet extends TextServlet {
     }
     
     @Override
-    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
+        String message) throws Exception {
 
-        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, fromAddress, message);
+        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message);
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
-                                             Map<String, String> toAddress, String message) throws Exception {
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
+        Map<String, String> toAddress, String message) throws Exception {
 
         //add costs with no.of messages * recipients
-        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, senderName, toAddress,
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, senderName, toAddress,
                                                                CM.countMessageParts(message) * toAddress.size(),
                                                                message);
     }

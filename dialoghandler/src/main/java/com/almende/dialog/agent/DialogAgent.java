@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -219,143 +218,149 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         return outboundCallWithMap(addressMap, addressCcMap, addressBccMap, senderName, subject, url, adapterType,
                                    adapterID, accountId, bearerToken);
     }
-	
-	/**
-	 * updated the outboundCall functionality to support broadcast
-	 * functionality.
-	 * 
-	 * @param addressMap
-	 *            Key: address and Value: name
-	 * @throws Exception
-	 */
-	public HashMap<String, String> outboundCallWithMap(
-			@Name("addressMap") @Optional Map<String, String> addressMap,
-			@Name("addressCcMap") @Optional Map<String, String> addressCcMap,
-			@Name("addressBccMap") @Optional Map<String, String> addressBccMap,
-			@Name("senderName") @Optional String senderName,
-			@Name("subject") @Optional String subject, @Name("url") String url,
-			@Name("adapterType") @Optional String adapterType,
-			@Name("adapterID") @Optional String adapterID,
-			@Name("accountID") String accountId,
-			@Name("bearerToken") String bearerToken) throws JSONRPCException {
-    
-            HashMap<String, String> resultSessionMap = new HashMap<String, String>();
-            if (adapterType != null && !adapterType.equals("") && adapterID != null && !adapterID.equals("")) {
-                throw new JSONRPCException("Choose adapterType or adapterID not both");
+
+    /**
+     * Method used to broadcast the same message to multiple addresses
+     * @param addressNameMap Map with address (e.g. phonenumber or email) as Key and name
+    *            as value. The name is useful for email and not used for SMS etc
+     * @param addressCcNameMap Cc list of the address to which this message is broadcasted. This is only used by the email servlet.
+     * @param addressBccNameMap Bcc list of the address to which this message is broadcasted. This is only used by the email servlet.
+     * @param senderName The sendername, used only by the email servlet, SMS
+     * @param subject This is used only by the email servlet
+     * @param url The URL on which a GET HTTPRequest is performed and expected a question JSON
+     * @param adapterType Either an adapterType must be given (in which case it will fetch the first adapter on this type), if null an adapterId is expected
+     * @param adapterID AdapterId for a channel configuration. This configuration is used to perform this outbound communication 
+     * @param accountId This accountId is charged with the costs for this communication
+     * @param bearerToken Secure token used for verifying this communication request
+     * @return
+     * @throws JSONRPCException
+     */
+    public HashMap<String, String> outboundCallWithMap(@Name("addressMap") @Optional Map<String, String> addressMap,
+        @Name("addressCcMap") @Optional Map<String, String> addressCcMap,
+        @Name("addressBccMap") @Optional Map<String, String> addressBccMap,
+        @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
+        @Name("url") String url, @Name("adapterType") @Optional String adapterType,
+        @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
+        @Name("bearerToken") String bearerToken) throws JSONRPCException {
+
+        HashMap<String, String> resultSessionMap = new HashMap<String, String>();
+        if (adapterType != null && !adapterType.equals("") && adapterID != null && !adapterID.equals("")) {
+            throw new JSONRPCException("Choose adapterType or adapterID not both");
+        }
+        //return if no address is fileed
+        if (isNullOrEmpty(addressMap) && isNullOrEmpty(addressCcMap) && isNullOrEmpty(addressBccMap)) {
+            resultSessionMap.put("Error", "No addresses given to communicate");
+            return resultSessionMap;
+        }
+        log.info(String.format("accountId: %s bearer %s adapterType %s", accountId, bearerToken, adapterType));
+        // Check accountID/bearer Token against OAuth KeyServer
+        if (Settings.KEYSERVER != null) {
+            if (!KeyServerLib.checkAccount(accountId, bearerToken)) {
+                throw new JSONRPCException(CODE.INVALID_REQUEST, "Invalid token given");
             }
-            //return if no address is fileed
-            if(isNullOrEmpty(addressMap) && isNullOrEmpty(addressCcMap) && isNullOrEmpty(addressBccMap)) {
-                resultSessionMap.put("Error", "No addresses given to communicate");
-                return resultSessionMap;
-            }
-            log.info(String.format("accountId: %s bearer %s adapterType %s", accountId, bearerToken, adapterType));
-            // Check accountID/bearer Token against OAuth KeyServer
-            if (Settings.KEYSERVER != null) {
-                if (!KeyServerLib.checkAccount(accountId, bearerToken)) {
-                    throw new JSONRPCException(CODE.INVALID_REQUEST, "Invalid token given");
+        }
+        log.info("KeyServer says ok!");
+        log.info("Trying to find config");
+        AdapterConfig config = null;
+        if (adapterID != null) {
+            config = AdapterConfig.getAdapterConfig(adapterID);
+        }
+        else {
+            // If no adapterId is given. Load the first one of the type.
+            // TODO: Add default field to adapter (to be able to load default adapter)
+            adapterType = adapterType != null && AdapterType.getByValue(adapterType) != null ? AdapterType
+                                            .getByValue(adapterType).getName() : adapterType;
+            final List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters(adapterType, null, null);
+            for (AdapterConfig cfg : adapterConfigs) {
+                if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), cfg, false) != null) {
+                    config = cfg;
+                    break;
                 }
             }
-            log.info("KeyServer says ok!");
-            log.info("Trying to find config");
-            AdapterConfig config = null;
-            if (adapterID != null) {
-                config = AdapterConfig.getAdapterConfig(adapterID);
-            } else {
-                // If no adapterId is given. Load the first one of the type.
-                // TODO: Add default field to adapter (to be able to load default adapter)
-                adapterType = adapterType != null && AdapterType.getByValue(adapterType) != null ? AdapterType
-                                                .getByValue(adapterType).getName() : adapterType;
-                final List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters(adapterType, null, null);
-                for (AdapterConfig cfg : adapterConfigs) {
-                    if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), cfg, false) != null) {
-                        config = cfg;
-                        break;
-                    }
-                }
+        }
+        if (config != null) {
+            if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, false) == null) {
+                throw new JSONRPCException("You are not allowed to use this adapter!");
             }
-            if (config != null) {
-                if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, false) == null) {
-                    throw new JSONRPCException("You are not allowed to use this adapter!");
+
+            log.info(String.format("Config found: %s of Type: %s with address: %s", config.getConfigId(),
+                                   config.getAdapterType(), config.getMyAddress()));
+            adapterType = config.getAdapterType();
+            try {
+                //log all addresses 
+                log.info(String.format("recepients of question at: %s are: %s", url, ServerUtils.serialize(addressMap)));
+                log.info(String.format("cc recepients are: %s", ServerUtils.serialize(addressCcMap)));
+                log.info(String.format("bcc recepients are: %s", ServerUtils.serialize(addressBccMap)));
+
+                if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_XMPP)) {
+                    resultSessionMap = new XMPPServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
+                                                                     senderName, subject, config, accountId);
                 }
-    
-                log.info(String.format("Config found: %s of Type: %s with address: %s", config.getConfigId(),
-                                       config.getAdapterType(), config.getMyAddress()));
-                adapterType = config.getAdapterType();
-                try {
-                    //log all addresses 
-                    log.info(String.format("recepients of question at: %s are: %s", url, ServerUtils.serialize(addressMap)));
-                    log.info(String.format("cc recepients are: %s", ServerUtils.serialize(addressCcMap)));
-                    log.info(String.format("bcc recepients are: %s", ServerUtils.serialize(addressBccMap)));
-                    
-                    if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_XMPP)) {
-                        resultSessionMap = new XMPPServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
-                                                                         senderName, subject, config);
-                    }
-                    else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
-                        // fetch the first address in the map
-                        if (!addressMap.keySet().isEmpty()) {
-                            resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, url, senderName, config);
-                        }
-                        else {
-                            throw new Exception("Address should not be empty to setup a call");
-                        }
-                    }
-                    else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWILIO)) {
-                        // fetch the first address in the map
-                        if (!addressMap.keySet().isEmpty() && getApplicationId()!=null) {
-                            resultSessionMap = TwilioAdapter.dial(addressMap, url, senderName, config, getApplicationId());
-                        }
-                        else {
-                            throw new Exception("Address should not be empty to setup a call");
-                        }
-                    }
-                    else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_EMAIL)) {
-                        resultSessionMap = new MailServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
-                                                                         senderName, subject, config);
-                    }
-                    else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                        resultSessionMap = new MBSmsServlet().startDialog(addressMap, null, null, url, senderName, subject,
-                                                                          config);
-                    }
-                    else if (adapterType.toUpperCase().equals("CM")) {
-                        resultSessionMap = new CMSmsServlet().startDialog(addressMap, null, null, url, senderName, subject,
-                                                                          config);
-                    }
-                    else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_USSD)) {
-    					resultSessionMap = new CLXUSSDServlet().startDialog(
-    							addressMap, null, null, url, senderName, subject, config);
-    				}
-                    else if (adapterType.equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_PUSH)) {
-    					resultSessionMap = new NotificareServlet().startDialog(
-    							addressMap, null, null, url, senderName, subject, config);
-    				}
-                    else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWITTER)) {
-                        HashMap<String, String> formattedTwitterAddresses = new HashMap<String, String>(addressMap.size());
-                        //convert all addresses to start with @
-                        for (String address : addressMap.keySet()) {
-                            String formattedTwitterAddress = address.startsWith("@") ? address : ("@" + address);
-                            formattedTwitterAddresses.put(formattedTwitterAddress, addressMap.get(address));
-                        }
-                        resultSessionMap = new TwitterServlet().startDialog(formattedTwitterAddresses, null, null, url,
-                                                                            senderName, subject, config);
+                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
+                    // fetch the first address in the map
+                    if (!addressMap.keySet().isEmpty()) {
+                        resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, url, config, accountId);
                     }
                     else {
-                        throw new Exception("Unknown type given: either broadsoft or phone or mail:" +
-                                            adapterType.toUpperCase());
+                        throw new Exception("Address should not be empty to setup a call");
                     }
                 }
-                catch (Exception e) {
-                    JSONRPCException jse = new JSONRPCException(CODE.REMOTE_EXCEPTION, "Failed to call out!", e);
-                    log.log(Level.WARNING, "OutboundCallWithMap, failed to call out!", e);
-                    throw jse;
+                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWILIO)) {
+                    // fetch the first address in the map
+                    if (!addressMap.keySet().isEmpty() && getApplicationId() != null) {
+                        resultSessionMap = TwilioAdapter.dial(addressMap, url, config, accountId, getApplicationId());
+                    }
+                    else {
+                        throw new Exception("Address should not be empty to setup a call");
+                    }
+                }
+                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_EMAIL)) {
+                    resultSessionMap = new MailServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
+                                                                     senderName, subject, config, accountId);
+                }
+                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                    resultSessionMap = new MBSmsServlet().startDialog(addressMap, null, null, url, senderName, subject,
+                                                                      config, accountId);
+                }
+                else if (adapterType.toUpperCase().equals("CM")) {
+                    resultSessionMap = new CMSmsServlet().startDialog(addressMap, null, null, url, senderName, subject,
+                                                                      config, accountId);
+                }
+                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_USSD)) {
+                    resultSessionMap = new CLXUSSDServlet().startDialog(addressMap, null, null, url, senderName,
+                                                                        subject, config, accountId);
+                }
+                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_PUSH)) {
+                    resultSessionMap = new NotificareServlet().startDialog(addressMap, null, null, url, senderName,
+                                                                           subject, config, accountId);
+                }
+                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWITTER)) {
+                    HashMap<String, String> formattedTwitterAddresses = new HashMap<String, String>(addressMap.size());
+                    //convert all addresses to start with @
+                    for (String address : addressMap.keySet()) {
+                        String formattedTwitterAddress = address.startsWith("@") ? address : ("@" + address);
+                        formattedTwitterAddresses.put(formattedTwitterAddress, addressMap.get(address));
+                    }
+                    resultSessionMap = new TwitterServlet().startDialog(formattedTwitterAddresses, null, null, url,
+                                                                        senderName, subject, config, accountId);
+                }
+                else {
+                    throw new Exception("Unknown type given: either broadsoft or phone or mail:" +
+                                        adapterType.toUpperCase());
                 }
             }
-            else {
-                throw new JSONRPCException("Invalid adapter. We could not find adapter of " +
-                                           (adapterID != null ? ("adapterId: " + adapterID) : ("type: " + adapterType)));
+            catch (Exception e) {
+                JSONRPCException jse = new JSONRPCException(CODE.REMOTE_EXCEPTION, "Failed to call out!", e);
+                log.log(Level.WARNING, "OutboundCallWithMap, failed to call out!", e);
+                throw jse;
             }
-            return resultSessionMap;
-	}
+        }
+        else {
+            throw new JSONRPCException("Invalid adapter. We could not find adapter of " +
+                                       (adapterID != null ? ("adapterId: " + adapterID) : ("type: " + adapterType)));
+        }
+        return resultSessionMap;
+    }
 	
     public String changeAgent(@Name("url") String url, @Name("adapterType") @Optional String adapterType,
                               @Name("adapterID") @Optional String adapterID, @Name("accountId") String accountId,

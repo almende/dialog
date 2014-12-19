@@ -97,6 +97,7 @@ public class DDRRecordAgentIT extends TestFramework {
         assertCount = 0;
         for (DDRRecord ddrRecord : allDdrRecords) {
             if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
+                ddrRecord.setShouldGenerateCosts(true);
                 assertThat(ddrRecord.getTotalCost(), Matchers.is(0.5));
                 assertThat(ddrRecord.getFromAddress(), Matchers.is(MailServlet.DEFAULT_SENDER_EMAIL));
                 assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
@@ -273,6 +274,7 @@ public class DDRRecordAgentIT extends TestFramework {
      * 
      * @throws Exception
      */
+    @SuppressWarnings("deprecation")
     @Test
     public void outgoingEMAILCallAddsADDRRecordTest() throws Exception
     {
@@ -315,6 +317,7 @@ public class DDRRecordAgentIT extends TestFramework {
      * Assert that the session is not deleted and added to the queue. And post processing is done.
      * @throws Exception 
      */
+    @SuppressWarnings("deprecation")
     @Test
     public void outgoingCallPickupAndImmediateHangupTest() throws Exception{
         String formattedRemoteAddressVoice = PhoneNumberUtils.formatNumber( remoteAddressVoice, null );
@@ -441,39 +444,43 @@ public class DDRRecordAgentIT extends TestFramework {
                                                               UnitType.PART, adapterType, null);
         assertThat(ddrPriceForAdapterPurchase.getDdrTypeId(), Matchers.notNullValue());
         String adapterId = null;
+        AdapterConfig adapterConfig = null;
         message = message.startsWith("http") ? message
                                             : ("http://askfastmarket.appspot.com/resource/question/open?message=" + message);
         switch (adapterType) {
             case SMS:
                 adapterId = adapterAgent.createMBAdapter("TEST", "TEST", "1111|TEST", "test", null, TEST_ACCOUNTID,
                                                          null);
+                adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
                 updateAdapterAsTrial(adapterId);
                 //check if a ddr record is created by sending an outbound email
                 new MBSmsServlet().startDialog(addressNameMap, null, null, message, "Test Customer", "Test subject",
-                                               AdapterConfig.getAdapterConfig(adapterId));
+                                               adapterConfig, adapterConfig.getOwner());
                 break;
             case EMAIL:
                 adapterId = adapterAgent.createEmailAdapter(MailServlet.DEFAULT_SENDER_EMAIL,
                                                             MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "Test", null,
                                                             null, null, null, null, null, TEST_ACCOUNTID, null, null);
+                adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
                 updateAdapterAsTrial(adapterId);
                 new MailServlet().startDialog(addressNameMap, null, null, message, "Test Customer", "Test subject",
-                                              AdapterConfig.getAdapterConfig(adapterId));
+                                              adapterConfig, adapterConfig.getOwner());
                 break;
             case XMPP:
                 adapterId = adapterAgent.createXMPPAdapter(MailServlet.DEFAULT_SENDER_EMAIL,
                                                            MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "test", null,
                                                            null, null, null, TEST_ACCOUNTID, null, null);
                 updateAdapterAsTrial(adapterId);
+                adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
                 new XMPPServlet().startDialog(addressNameMap, null, null, message, "Test Customer", "Test subject",
-                                              AdapterConfig.getAdapterConfig(adapterId));
+                                              adapterConfig, adapterConfig.getOwner());
                 break;
             case CALL:
                 adapterId = adapterAgent.createBroadSoftAdapter(localAddressBroadsoft, null, "askask", null,
                                                                 TEST_ACCOUNTID, false, null);
                 updateAdapterAsTrial(adapterId);
-                VoiceXMLRESTProxy.dial(addressNameMap, message, "Test Customer",
-                                       AdapterConfig.getAdapterConfig(adapterId));
+                adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
+                VoiceXMLRESTProxy.dial(addressNameMap, message, adapterConfig, adapterConfig.getOwner());
                 break;
             default:
                 break;

@@ -55,7 +55,7 @@ public class VoiceXMLServletIT extends TestFramework {
                                                           localAddressBroadsoft, url);
 
         //create session
-        Session.getOrCreateSession(adapterConfig, remoteAddressVoice);
+        Session.createSession(adapterConfig, remoteAddressVoice);
 
         //mock the Context
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
@@ -121,7 +121,7 @@ public class VoiceXMLServletIT extends TestFramework {
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.8, "Test outgoing", UnitType.SECOND, null, null);
         
         //trigger an outbound call
-        VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig);
+        VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner());
         //fetch the session, assert that a ddrRecord is not attached still
         Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localAddressBroadsoft,
                                              PhoneNumberUtils.formatNumber(remoteAddressVoice, null));

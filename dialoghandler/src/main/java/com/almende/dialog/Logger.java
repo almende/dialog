@@ -111,7 +111,7 @@ public class Logger {
             if (devLog.getSessionKey() != null) {
                 MongoCollection collection = getCollection();
                 collection.insert(devLog);
-                //TODO: remove in live 
+//                //TODO: remove in live 
                 log.info("New log added: "+ ServerUtils.serializeWithoutException(devLog));
             }
         }
@@ -286,6 +286,7 @@ public class Logger {
     private static ArrayList<Log> fetchLogs(String matchQuery, Integer offset, Integer trackingTokenFetchlimit,
         Integer logLimit) {
 
+        log.info("Match query: "+ matchQuery);
         MongoCollection collection = getCollection();
         Aggregate aggregate = null;
         //create an aggregate query with the matchQuery first

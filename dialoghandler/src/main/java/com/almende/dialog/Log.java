@@ -63,7 +63,7 @@ public class Log implements Serializable {
                 this.sessionKey = sessionKey;
                 this.trackingToken = session.getTrackingToken();
                 this.ddrRecordId = ddrRecordId != null ? ddrRecordId : session.getDdrRecordId();
-                this.setAccountId(session.getAccountId());
+                this.accountId = session.getAccountId();
             }
         }
     }

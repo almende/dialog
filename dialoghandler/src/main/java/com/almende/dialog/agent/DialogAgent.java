@@ -176,7 +176,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
         @Name("url") String url, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
-        @Name("bearerToken") String bearerToken) throws JSONRPCException {
+        @Name("bearerToken") String bearerToken) throws Exception {
 
         HashMap<String, String> result = new HashMap<String, String>();
         for (String address : addressMap.keySet()) {
@@ -204,7 +204,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("url") String url, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
         @Name("bearerToken") String bearerToken, @Name("callProperties") @Optional Map<String, String> callProperties)
-        throws JSONRPCException {
+        throws Exception {
 
         if (callProperties != null && !callProperties.isEmpty()) {
             log.info("outbound call with properties: " + ServerUtils.serializeWithoutException(callProperties));
@@ -237,7 +237,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 			@Name("adapterType") @Optional String adapterType,
 			@Name("adapterID") @Optional String adapterID,
 			@Name("accountID") String accountId,
-			@Name("bearerToken") String bearerToken) throws JSONRPCException {
+			@Name("bearerToken") String bearerToken) throws Exception {
     
             HashMap<String, String> resultSessionMap = new HashMap<String, String>();
             if (adapterType != null && !adapterType.equals("") && adapterID != null && !adapterID.equals("")) {

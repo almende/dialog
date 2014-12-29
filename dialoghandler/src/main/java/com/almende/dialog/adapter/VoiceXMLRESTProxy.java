@@ -287,7 +287,11 @@ public class VoiceXMLRESTProxy {
     @Path("new")
     @GET
     @Produces("application/voicexml")
-    public Response getNewDialog(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID, @Context UriInfo ui)
+    public Response getNewDialog(@QueryParam("direction") String direction,
+                                 @QueryParam("remoteID") String remoteID,
+                                 @QueryParam("externalRemoteID") String externalRemoteID,
+                                 @QueryParam("localID") String localID,
+                                 @Context UriInfo ui)
     {
         log.info("call started:"+direction+":"+remoteID+":"+localID);
         this.host=ui.getBaseUri().toString().replace(":80/", "/");
@@ -296,6 +300,7 @@ public class VoiceXMLRESTProxy {
         String formattedRemoteId = remoteID;
         //format the remote number
         formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID.split("@")[0], PhoneNumberFormat.E164);
+        externalRemoteID = PhoneNumberUtils.formatNumber(externalRemoteID.split("@")[0], PhoneNumberFormat.E164);
 
         if (formattedRemoteId == null) {
             log.severe(String.format("RemoveId address is invalid: %s. Ignoring.. ", remoteID));
@@ -343,7 +348,7 @@ public class VoiceXMLRESTProxy {
         
         Question question = session.getQuestion();
         if(question == null) {
-            question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), formattedRemoteId, localID,
+            question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), externalRemoteID, localID,
                                         session.getDdrRecordId(), session.getKey());
         }
         session.setQuestion(question);

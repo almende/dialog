@@ -61,7 +61,7 @@ public class VoiceXMLServletIT extends TestFramework {
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        Response newDialog = voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, localAddressBroadsoft,
+        Response newDialog = voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
                                                             uriInfo);
         HashMap<String, String> answerVariables = assertOpenQuestionWithDTMFType(newDialog.getEntity().toString());
 
@@ -136,7 +136,7 @@ public class VoiceXMLServletIT extends TestFramework {
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         //mimick a fetch new dialog/ phone pickup
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        Response newDialog = voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, localAddressBroadsoft,
+        Response newDialog = voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
                                                             uriInfo);
         assertOpenQuestionWithDTMFType(newDialog.getEntity().toString());
         //a ddr must be attached to hte session

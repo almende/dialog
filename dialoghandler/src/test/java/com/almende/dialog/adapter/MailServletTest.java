@@ -27,7 +27,7 @@ public class MailServletTest extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
             localAddressMail, "" );
         //create session
-        Session.getOrCreateSession( adapterConfig, remoteAddressEmail );
+        Session.createSession( adapterConfig, remoteAddressEmail );
 
         MimeMessage mimeMessage = new MimeMessage( javax.mail.Session.getDefaultInstance( new Properties(), null) );
         mimeMessage.setFrom( new InternetAddress( remoteAddressEmail ) );

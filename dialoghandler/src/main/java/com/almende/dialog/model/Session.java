@@ -55,42 +55,37 @@ public class Session{
     Map<String, String> extras = null;
     Integer retryCount = null;
     @JsonIgnore
+    boolean existingSession = false;
+    
+    @JsonIgnore
     AdapterConfig adapterConfig = null;
 	
-	@JsonIgnore
-	public void kill(){
-		this.killed=true;
-		this.storeSession();
-        if ( AdapterAgent.ADAPTER_TYPE_XMPP.equalsIgnoreCase( this.getType() )
-            || AdapterAgent.ADAPTER_TYPE_EMAIL.equalsIgnoreCase( this.getType() )
-            || AdapterAgent.ADAPTER_TYPE_SMS.equalsIgnoreCase( this.getType() ) )
-        {
-            TextServlet.killSession( this );
+    @JsonIgnore
+    public void kill() {
+
+        this.killed = true;
+        this.storeSession();
+        if (AdapterAgent.ADAPTER_TYPE_XMPP.equalsIgnoreCase(this.getType()) ||
+            AdapterAgent.ADAPTER_TYPE_EMAIL.equalsIgnoreCase(this.getType()) ||
+            AdapterAgent.ADAPTER_TYPE_SMS.equalsIgnoreCase(this.getType())) {
+            TextServlet.killSession(this);
         }
-        else
-        {
-            VoiceXMLRESTProxy.killSession( this );
+        else {
+            VoiceXMLRESTProxy.killSession(this);
         }
-	}
-	
-	@JsonIgnore
-	public String toJSON() {
-		try {
-			return JOM.getInstance().writeValueAsString(this);
-		} catch (Exception e) {
-			log.severe("Session toJSON: failed to serialize Session!");
-		}
-		return null;
-	}
-	@JsonIgnore
-	public static Session fromJSON(String json) {
-		try {
-			return JOM.getInstance().readValue(json, Session.class);
-		} catch (Exception e){
-			log.severe("Session fromJSON: failed to parse Session JSON!: "+ json );
-		}
-		return null;
-	}
+    }
+
+    @JsonIgnore
+    public String toJSON() {
+
+        try {
+            return JOM.getInstance().writeValueAsString(this);
+        }
+        catch (Exception e) {
+            log.severe("Session toJSON: failed to serialize Session!");
+        }
+        return null;
+    }
 
     /**
      * Session can be updated from many different sources. esp in
@@ -194,37 +189,41 @@ public class Session{
                                  " keyword: " + keyword);
                     }
                 }
-                session = getOrCreateSession(config, split[2]);
+                session = createSession(config, split[2]);
             }
             else {
                 log.severe("getSession: incorrect key given:" + key);
             }
+            session.existingSession = false;
+        }
+        else {
+            session.existingSession = true;
         }
         return session;
     }
     
-    public static Session getOrCreateSession(AdapterConfig config, String remoteAddress) {
-        return getOrCreateSession(config, config.getMyAddress(), remoteAddress);
+    public static Session createSession(AdapterConfig config, String remoteAddress) {
+        return createSession(config, config.getMyAddress(), remoteAddress);
     }
 
-	public static Session getOrCreateSession(AdapterConfig config, String fromAddress, String remoteAddress) {
-	    
-	    String key = config.getAdapterType() + "|" + fromAddress + "|" + remoteAddress;
-	                                    
-	    Session session = new Session();
-	    session.setAdapterID(config.getConfigId());
-	    session.setAccountId(config.getOwner());
-	    session.setRemoteAddress(remoteAddress);
-	    session.setLocalAddress(fromAddress);
-	    session.setType(config.getAdapterType());
-	    session.setKeyword(config.getKeyword());
-	    session.key = key;
-	    session.creationTimestamp = String.valueOf(TimeUtils.getServerCurrentTimeInMillis());
-	    session.setTrackingToken(UUID.randomUUID().toString());
-	    session.storeSession();
-	    log.info("new session created with id: " + session.key);
-	    return session;
-	}
+    public static Session createSession(AdapterConfig config, String fromAddress, String remoteAddress) {
+
+        String key = config.getAdapterType() + "|" + fromAddress + "|" + remoteAddress;
+
+        Session session = new Session();
+        session.setAdapterID(config.getConfigId());
+        session.setRemoteAddress(remoteAddress);
+        session.setLocalAddress(fromAddress);
+        session.setType(config.getAdapterType());
+        session.setKeyword(config.getKeyword());
+        session.key = key;
+        session.creationTimestamp = String.valueOf(TimeUtils.getServerCurrentTimeInMillis());
+        session.setTrackingToken(UUID.randomUUID().toString());
+        session.storeSession();
+        log.info("new session created with id: " + session.key);
+        session.existingSession = false;
+        return session;
+    }
     
     /**
      * returns the session without creating a new default one
@@ -567,5 +566,16 @@ public class Session{
     public void setLocalName(String localName) {
     
         this.localName = localName;
+    }
+
+    /**
+     * This field is set to false if a new session is created in the {@link Session#getOrCreateSession} methods.
+     * If an old session is fetched, this should return true.
+     * @return
+     */
+    @JsonIgnore
+    public boolean isExistingSession() {
+        
+        return existingSession;
     }
 }

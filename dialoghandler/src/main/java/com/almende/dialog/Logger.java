@@ -92,17 +92,33 @@ public class Logger {
         this.log(LogLevel.DEBUG, adapter, message, session);
     }
 
+    /**
+     * Logs something only if a session and a trackingToken is found
+     * corresponding to the sessionKey
+     * 
+     * @param level
+     * @param adapterId
+     * @param adapterType
+     * @param message
+     * @param ddrRecordId
+     * @param sessionKey
+     */
     public void log(LogLevel level, String adapterId, String adapterType, String message, String ddrRecordId,
-                    String sessionKey) {
+        String sessionKey) {
 
         if (sessionKey != null) {
-            MongoCollection collection = getCollection();
-            collection.insert(new Log(level, adapterId, adapterType, message, ddrRecordId, sessionKey));
+            Log devLog = new Log(level, adapterId, adapterType, message, ddrRecordId, sessionKey);
+            if (devLog.getSessionKey() != null) {
+                MongoCollection collection = getCollection();
+                collection.insert(devLog);
+//                //TODO: remove in live 
+                log.info("New log added: "+ ServerUtils.serializeWithoutException(devLog));
+            }
         }
     }
 
     /**
-     * logs something only if a session and a trackingToken is found in the session
+     * Logs something only if a session and a trackingToken is found in the session
      * @param level
      * @param adapter
      * @param message
@@ -112,12 +128,43 @@ public class Logger {
 
         if (session != null && session.getTrackingToken() != null) {
             MongoCollection collection = getCollection();
-            collection.insert(new Log(level, adapter, message, session));
+            Log devLog = new Log(level, adapter, message, session);
+            collection.insert(devLog);
+            //TODO: remove in live 
+            log.info("New log added: "+ ServerUtils.serializeWithoutException(devLog));
         }
     }
+    
+    /**
+     * Updates this log in the mongo database
+     * @param devLog
+     */
+    public static void save(Log devLog) {
 
-    public List<Log> find(Collection<String> adapters, Collection<LogLevel> levels, String adapterType, Long endTime,
-                          Integer offset, Integer limit) {
+        MongoCollection collection = getCollection();
+        collection.save(devLog);
+        //TODO: remove in live 
+        log.info("Log updated " + ServerUtils.serializeWithoutException(devLog));
+    }
+
+    /**
+     * Returns all the logs that match to the given parameters. AccountId is a
+     * mandatory field. This is an expensive step as it fetches the logs in 2
+     * steps: first loads all the trackingTokens by descending timestamp. Then
+     * fetches all the logs corresponding to this tracking token in batches, so
+     * that related tracking token are grouped together
+     * 
+     * @param accountId AccountId is a mandatory field
+     * @param adapters
+     * @param levels
+     * @param adapterType
+     * @param endTime
+     * @param offset
+     * @param limit
+     * @return
+     */
+    public static List<Log> find(String accountId, Collection<String> adapters, Collection<LogLevel> levels,
+        String adapterType, Long endTime, Integer offset, Integer limit) {
 
         List<Log> resultLogs = new ArrayList<Log>();
         try {
@@ -129,8 +176,8 @@ public class Logger {
                     log.info(String.format("chunkCount %s startIndex: %s endIndex %s", chunkCount, startingIndex,
                                            endIndex));
                     List<String> chunkedAdapters = new ArrayList<String>(adapters).subList(startingIndex, endIndex);
-                    List<Log> logsWithLimit = getLogsWithLimit(chunkedAdapters, levels, adapterType, endTime, offset,
-                                                               limit);
+                    List<Log> logsWithLimit = getLogsWithLimit(accountId, chunkedAdapters, levels, adapterType,
+                                                               endTime, offset, limit);
                     if (logsWithLimit != null && !logsWithLimit.isEmpty()) {
                         resultLogs.addAll(logsWithLimit);
                     }
@@ -141,7 +188,7 @@ public class Logger {
                 }
             }
             else {
-                resultLogs = getLogsWithLimit(adapters, levels, adapterType, endTime, offset, limit);
+                resultLogs = getLogsWithLimit(accountId, adapters, levels, adapterType, endTime, offset, limit);
             }
         }
         catch (Exception e) {
@@ -149,74 +196,75 @@ public class Logger {
         }
         return resultLogs;
     }
+    
+    /**
+     * Fetches all the logs in the mongoDb.
+     * @return
+     */
+    public static List<Log> findAllLogs() {
+
+        ArrayList<Log> result = new ArrayList<Log>();
+        MongoCollection collection = getCollection();
+        MongoCursor<Log> logCursor = collection.find().as(Log.class);
+        while (logCursor.hasNext()) {
+            result.add(logCursor.next());
+        }
+        return result;
+    }
 
     /**
-     * fetches the logs based on the initial {@link Logger#adapter_chunk_size} adapters. <br>
-     *  creates a jongo aggregate query similar to: <br>
-     *  (
-          [
-            {
-              $match: {
-              adapterID: {$in: ["f9a398e0-ba5d-11e3-a019-08edb99eaa2d"]}, 
-              timestamp: {$lte: 1396449705737}
-              }
-            },
-            {
-              $group: {
-                _id: {level: "$level", id:"$logId", adapterId: "$adapterID", adapterType: "$adapterType", message:"$message", timestamp: "$timestamp"}
-              }
-            },
-            {
-              $sort : {timestamp: -1}
-            }, 
-            {
-              $skip: 0
-            }, 
-            {
-              $limit: 4
-            }
-          ]
-        )
-     * 
+     * fetches the logs based on the initial {@link Logger#adapter_chunk_size}
+     * adapters. AccountId is a mandatory field <br>
+     * creates a jongo aggregate query similar to: <br>
+     * ( [ { $match: { adapterID: {$in:
+     * ["f9a398e0-ba5d-11e3-a019-08edb99eaa2d"]}, timestamp: {$lte:
+     * 1396449705737} } }, { $group: { _id: {level: "$level", id:"$logId",
+     * adapterId: "$adapterID", adapterType: "$adapterType", message:"$message",
+     * timestamp: "$timestamp"} } }, { $sort : {timestamp: -1} }, { $skip: 0 },
+     * { $limit: 4 } ] )
      * 
      * @return
-     * @throws Exception 
+     * @throws Exception
      */
-    private List<Log> getLogsWithLimit(Collection<String> adapters, Collection<LogLevel> levels, String adapterType,
-                                       Long endTime, Integer offset, Integer limit) throws Exception {
+    private static List<Log> getLogsWithLimit(String accountId, Collection<String> adapters, Collection<LogLevel> levels,
+        String adapterType, Long endTime, Integer offset, Integer limit) throws Exception {
 
         //initially collect all the match queries
-        String matchQuery = null;
+        String matchQuery = "";
+        if (accountId != null) {
+            matchQuery += "accountId:\"" + accountId + "\"";
+        }
+        else {
+            throw new Exception("AccountId is not expected to be null.");
+        }
+        
         if (adapters != null) {
             int endIndex = adapters.size() <= adapter_chunk_size - 1 ? adapters.size() : adapter_chunk_size;
             List<String> subAdapterList = new ArrayList<String>(adapters).subList(0, endIndex);
             if (!subAdapterList.isEmpty()) {
-                matchQuery = "adapterID: {$in:" + ServerUtils.serialize(subAdapterList) + "}";
+                matchQuery += ", adapterID: {$in:" + ServerUtils.serialize(subAdapterList) + "}";
             }
         }
+
+        if (adapterType != null) {
+            matchQuery += ", adapterType:\"" + adapterType + "\"";
+        }
         
-        if (adapterType != null){
-            matchQuery = matchQuery != null ? ( matchQuery + "," ) : "";
-            matchQuery += "adapterType:\"" + adapterType + "\"";
+        if (endTime != null) {
+            matchQuery += ", timestamp:{$lte:" + endTime + "}";
         }
 
-        if (endTime != null) {
-            matchQuery = matchQuery != null ? ( matchQuery + "," ) : "";
-            matchQuery += "timestamp:{$lte:" + endTime + "}";
-        }
-        
-        if(levels != null) {
-            matchQuery = matchQuery != null ? ( matchQuery + "," ) : "";
-            matchQuery += "level:{$in:" + ServerUtils.serialize(levels) + "}";
+        if (levels != null) {
+            matchQuery += ", level:{$in:" + ServerUtils.serialize(levels) + "}";
         }
         offset = offset == null ? 0 : offset;
         limit = limit == null ? 50 : limit;
-        
+
         ArrayList<Log> resultLogs = new ArrayList<Log>();
         //fetch in batches of 5
-        for (; resultLogs.size() <= limit; ) {
-            ArrayList<Log> logs = fetchLogs(matchQuery, offset, 5, limit - resultLogs.size());
-            if(logs != null && !logs.isEmpty()) {
+        for (; resultLogs.size() <= limit;) {
+            ArrayList<Log> logs = fetchLogs(accountId, matchQuery, offset, 5, limit - resultLogs.size());
+            if (logs != null && !logs.isEmpty()) {
                 resultLogs.addAll(logs);
             }
             else {
@@ -227,31 +275,24 @@ public class Logger {
         return resultLogs;
     }
 
-    /**
+    /** Fetches the logs for a particular matchQuery and offset.
      * @param offset
      * @param trackingTokenFetchlimit
      * @param collection
      * @param aggregate
      * @return
      */
-    private ArrayList<Log> fetchLogs(String matchQuery, Integer offset, Integer trackingTokenFetchlimit,
-        Integer logLimit) {
+    private static ArrayList<Log> fetchLogs(String accountId, String matchQuery, Integer offset,
+        Integer trackingTokenFetchlimit, Integer logLimit) {
 
+        matchQuery = String.format("{$match: {%s}}", matchQuery);
+        log.info("Match query: " + matchQuery);
         MongoCollection collection = getCollection();
-        Aggregate aggregate = null;
-        //create an aggregate query with the matchQuery first
-        if (matchQuery != null) {
-            aggregate = collection.aggregate(String.format("{$match: {%s}}", matchQuery));
-        }
+        Aggregate aggregate = collection.aggregate(matchQuery);
 
         //update the aggregate query with groupQuery next. This includes all the fields to fetch
         String groupQuery = "{$group:{_id: \"$trackingToken\", timestamp:{$max: \"$timestamp\"}}}";
-        if (aggregate != null) {
-            aggregate = aggregate.and(groupQuery);
-        }
-        else {
-            aggregate = collection.aggregate(groupQuery);
-        }
+        aggregate = aggregate.and(groupQuery);
         //update the aggregate query with sort (on timestamp), offset and limit
         aggregate = aggregate.and("{$sort :{timestamp: -1}}").and(String.format("{$skip :%s}", offset))
                                         .and(String.format("{$limit :%s}", trackingTokenFetchlimit));
@@ -261,11 +302,12 @@ public class Logger {
         for (ObjectNode logByTrackingToken : logsByTrackingToken) {
             JsonNode trackingToken = logByTrackingToken.get("_id");
             MongoCursor<Log> logsCursor = collection
-                                            .find(String.format("{trackingToken: \"%s\"}", trackingToken.asText()))
+                                            .find(String.format("{trackingToken: \"%s\", accountId: \"%s\"}",
+                                                                trackingToken.asText(), accountId))
                                             .sort("{timestamp: -1}").as(Log.class);
             if (logsCursor != null) {
                 while (logsCursor.hasNext() && resultLogs.size() < logLimit) {
-                    resultLogs.add(logsCursor.next());
+                        resultLogs.add(logsCursor.next());
                 }
             }
         }

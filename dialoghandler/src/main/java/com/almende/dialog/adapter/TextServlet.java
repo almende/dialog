@@ -36,37 +36,42 @@ abstract public class TextServlet extends HttpServlet {
     protected static final int LOOP_DETECTION = 10;
     protected static final String DEMODIALOG = "/charlotte/";
     
+    /**
+     * @deprecated use
+     *             {@link TextServlet#broadcastMessage(String,String,String, String, String, Map, AdapterConfig)
+     *             broadcastMessage} instead.
+     */
+    @Deprecated
+    protected abstract int sendMessage(String message, String subject, String from, String fromName, String to,
+        String toName, Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception;
 	
-	/**
-	 * @deprecated use
-	 *             {@link TextServlet#broadcastMessage(String,String,String, String, String, Map, AdapterConfig)
-	 *             broadcastMessage} instead.
-	 */
-	@Deprecated
-	protected abstract int sendMessage(String message, String subject,
-			String from, String fromName, String to, String toName,
-			Map<String, Object> extras, AdapterConfig config) throws Exception;
-	
-	/**
-	 * update to the sendMessage function to cater broadcast functionality
-	 * 
-	 * @param addressNameMap
-	 *            Map with address (e.g. phonenumber or email) as Key and name
-	 *            as value
-	 * @throws Exception
-	 */
-	protected abstract int broadcastMessage(String message, String subject,
-			String from, String senderName, Map<String, String> addressNameMap,
-			Map<String, Object> extras, AdapterConfig config) throws Exception;
-	
-    protected abstract DDRRecord
-        createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception;
 
-    protected abstract DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
-                                                      Map<String, String> toAddress, String message) throws Exception;
-	
-	protected abstract TextMessage receiveMessage(HttpServletRequest req,
-			HttpServletResponse resp) throws Exception;
+    /**
+     * Overridden by all text based communication channel servlets for broadcasting the same message to multiple addresses
+     * @param message The message to be sent. This can be a url also
+     * @param subject This is used only by the email servlet 
+     * @param from This is the address from which a broadcast is sent
+     * @param senderName The sendername, used only by the email servlet, SMS
+     * @param addressNameMap 
+     *            Map with address (e.g. phonenumber or email) as Key and name
+     *            as value. The name is useful for email and not used for SMS etc
+     * @param extras Some extra properties that can be used for processing.
+     * @param Config the adapterConfig which is used to perform this broadcast
+     * @param accountId AccoundId initiating this broadcast
+     * @return
+     * @throws Exception
+     */
+    protected abstract int broadcastMessage(String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
+        throws Exception;
+
+    protected abstract DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId,
+        String fromAddress, String message) throws Exception;
+
+    protected abstract DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
+        Map<String, String> toAddress, String message) throws Exception;
+
+    protected abstract TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception;
 	
 	protected abstract String getServletPath();
 	
@@ -158,7 +163,7 @@ abstract public class TextServlet extends HttpServlet {
      *             startDialog} instead.
      */
     @Deprecated
-    public String startDialog(String address, String url, AdapterConfig config) throws Exception {
+    public String startDialog(String address, String url, AdapterConfig config, String accountId) throws Exception {
 
         String sessionKey = null;
         if (config.getAdapterType().equalsIgnoreCase("CM") ||
@@ -174,6 +179,9 @@ abstract public class TextServlet extends HttpServlet {
                 return "";
             }
             else {
+                session.setAccountId(accountId);
+                session.setDirection("outbound");
+                session.storeSession();
                 if (config.getAdapterType().equalsIgnoreCase("CM") ||
                     config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
                     PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(address);
@@ -185,8 +193,6 @@ abstract public class TextServlet extends HttpServlet {
                     }
                 }
             }
-            session.setAccountId(config.getOwner());
-            session.setDirection("outbound");
             String preferred_language = session.getLanguage();
             if (preferred_language == null) {
                 preferred_language = config.getPreferred_language();
@@ -208,7 +214,7 @@ abstract public class TextServlet extends HttpServlet {
                 Session.storeString("question_" + address + "_" + localaddress, res.question.toJSON());
             }
             sendMessageAndAttachCharge(res.reply, "Message from DH", localaddress, fromName, address, "", extras,
-                                       config);
+                                       config, accountId);
         }
         else {
             log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
@@ -218,14 +224,23 @@ abstract public class TextServlet extends HttpServlet {
     }
 	
     /**
-     * updated startDialog with Broadcast functionality
-     * 
+     * Method used to broadcast the same message to multiple addresses
+     * @param addressNameMap Map with address (e.g. phonenumber or email) as Key and name
+    *            as value. The name is useful for email and not used for SMS etc
+     * @param addressCcNameMap Cc list of the address to which this message is broadcasted. This is only used by the email servlet.
+     * @param addressBccNameMap Bcc list of the address to which this message is broadcasted. This is only used by the email servlet.
+     * @param url The URL on which a GET HTTPRequest is performed and expected a question JSON
+     * @param senderName The sendername, used only by the email servlet, SMS
+     * @param subject This is used only by the email servlet 
+     * @param config the adapterConfig which is used to perform this broadcast
+     * @param accountId AccoundId initiating this broadcast. All costs are applied to this accountId
+     * @return
      * @throws Exception
      */
     public HashMap<String, String> startDialog(Map<String, String> addressNameMap,
                                                Map<String, String> addressCcNameMap,
                                                Map<String, String> addressBccNameMap, String url, String senderName,
-                                               String subject, AdapterConfig config) throws Exception {
+                                               String subject, AdapterConfig config, String accountId) throws Exception {
 
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
         addressCcNameMap = addressCcNameMap != null ? addressCcNameMap : new HashMap<String, String>();
@@ -250,6 +265,8 @@ abstract public class TextServlet extends HttpServlet {
             //create a session if its only for one number
             if (loadAddress != null) {
                 session = Session.getOrCreateSession(Session.getSessionKey(config, loadAddress), config.getKeyword());
+                session.setAccountId(accountId);
+                session.storeSession();
             }
         }
 
@@ -281,7 +298,7 @@ abstract public class TextServlet extends HttpServlet {
             if (loadAddress != null && session != null) {
 
                 session.setDirection("outbound");
-                session.setAccountId(config.getOwner());
+                session.setAccountId(accountId);
                 session.setLocalName(senderName);
                 String preferred_language = session != null ? session.getLanguage() : null;
                 if (preferred_language == null) {
@@ -315,7 +332,7 @@ abstract public class TextServlet extends HttpServlet {
                         // store the session first
                         session = Session.getOrCreateSession(Session.getSessionKey(config, formattedAddress),
                                                              config.getKeyword());
-                        session.setAccountId(config.getOwner());
+                        session.setAccountId(accountId);
                         session.setDirection("outbound");
                         session.setQuestion(question);
                         session.setLocalName(senderName);
@@ -353,7 +370,7 @@ abstract public class TextServlet extends HttpServlet {
             // fix for bug: #15 https://github.com/almende/dialog/issues/15
             res.reply = URLDecoder.decode(res.reply, "UTF-8");
             int count = broadcastMessageAndAttachCharge(res.reply, subject, localaddress, senderName,
-                                                        formattedAddressNameToMap, extras, config);
+                                                        formattedAddressNameToMap, extras, config, accountId);
             if (count < 1) {
                 log.severe("Error generating XML");
             }
@@ -409,8 +426,8 @@ abstract public class TextServlet extends HttpServlet {
     }
 	
     /**
-     * processes any message (based on a Dialog) and takes actions like sending,
-     * broadcasting corresponding messages.
+     * Processes any incoming messages (based on a Dialog) and takes actions
+     * like sending, broadcasting corresponding messages.
      * 
      * @param msg
      * @return
@@ -433,9 +450,11 @@ abstract public class TextServlet extends HttpServlet {
             log.info("No session so retrieving config");
             config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress, keyword);
             count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress,
-                                               getSenderName(null, config, null), address, toName, extras, config);
+                                               getSenderName(null, config, null), address, toName, extras, config,
+                                               config.getOwner());
             // Create new session to store the send in the ddr.
-            session = Session.getOrCreateSession(config, address);
+            session = Session.createSession(config, address);
+            session.setAccountId(config.getOwner());
             session.setKeyword(keyword);
             session.setDirection("inbound");
             session.storeSession();
@@ -457,7 +476,7 @@ abstract public class TextServlet extends HttpServlet {
                     fromName = session.getLocalName() != null && !session.getLocalName().isEmpty() ? session
                                                     .getLocalName() : getSenderName(null, config, null);
                     count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress, fromName, address,
-                                                       toName, extras, config);
+                                                       toName, extras, config, session.getAccountId());
                 }
                 catch (Exception ex) {
                     log.severe(ex.getLocalizedMessage());
@@ -483,7 +502,7 @@ abstract public class TextServlet extends HttpServlet {
         escapeInput.reply = "I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
 
         if (!escapeInput.skip && escapeInput.body.toLowerCase().trim().charAt(0) == '/') {
-            count = processEscapeInputCommand(msg, fromName, config, escapeInput, session);
+            count = processEscapeInputCommand(msg, fromName, config, session.getAccountId(), escapeInput, session);
             log.info(escapeInput.toString());
         }
         Question question = session.getQuestion();
@@ -530,7 +549,7 @@ abstract public class TextServlet extends HttpServlet {
             session.setQuestion(question);
             session.storeSession();
             count = sendMessageAndAttachCharge(escapeInput.reply, subject, localaddress, fromName, address, toName,
-                                               extras, config);
+                                               extras, config, session.getAccountId());
             //flush the session is no more question is there
             if (question == null) {
                 //dont flush the session yet if its an sms. the DLR callback needs a session.
@@ -558,7 +577,7 @@ abstract public class TextServlet extends HttpServlet {
      * 
      * @return
      */
-    private int processEscapeInputCommand(TextMessage msg, String fromName, AdapterConfig config,
+    private int processEscapeInputCommand(TextMessage msg, String fromName, AdapterConfig config, String accountId,
                                           EscapeInputCommand escapeInput, Session session) throws Exception {
 
         log.info(String.format("escape charecter seen.. input %s", escapeInput.body));
@@ -578,7 +597,7 @@ abstract public class TextServlet extends HttpServlet {
             HashMap<String, String> addressNameMap = new HashMap<String, String>(1);
             addressNameMap.put(msg.getAddress(), msg.getRecipientName());
             result = broadcastMessageAndAttachCharge(escapeInput.reply, msg.getSubject(), msg.getLocalAddress(),
-                                                     fromName, addressNameMap, null, config);
+                                                     fromName, addressNameMap, null, config, accountId);
         }
         else if (cmd.startsWith("reset")) {
             session.drop();
@@ -652,14 +671,14 @@ abstract public class TextServlet extends HttpServlet {
 	 * @throws Exception
 	 */
     private int sendMessageAndAttachCharge( String message, String subject, String from, String fromName, String to,
-        String toName, Map<String, Object> extras, AdapterConfig config ) throws Exception
+        String toName, Map<String, Object> extras, AdapterConfig config, String accountId ) throws Exception
     {
         //attach costs
         HashMap<String, String> toAddressMap = new HashMap<String, String>();
         toAddressMap.put( to, toName );
         DDRRecord ddrRecord = null;
         try {
-            ddrRecord = createDDRForOutgoing( config, fromName, toAddressMap, message );
+            ddrRecord = createDDRForOutgoing(config, accountId, fromName, toAddressMap, message);
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -686,9 +705,10 @@ abstract public class TextServlet extends HttpServlet {
         }
         
         //send the message
-        int count = sendMessage( message, subject, from, fromName, to, toName, extras, config );
+        int count = sendMessage(message, subject, from, fromName, to, toName, extras, config, accountId);
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateCommunicationDDRCost( ddrRecord, true );
+        DDRUtils.publishDDREntryToQueue(accountId, totalCost);
         //attach cost to ddr is prepaid type
         if(ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
             ddrRecord.setTotalCost(totalCost);
@@ -713,8 +733,8 @@ abstract public class TextServlet extends HttpServlet {
      * @throws Exception
      */
     private int broadcastMessageAndAttachCharge(String message, String subject, String from, String senderName,
-                                                Map<String, String> addressNameMap, Map<String, Object> extras,
-                                                AdapterConfig config) throws Exception {
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
+        throws Exception {
 
         //create all the ddrRecords first
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
@@ -722,10 +742,10 @@ abstract public class TextServlet extends HttpServlet {
         //attach costs for all members (even in cc and bcc if any)
         extras = extras != null ? extras : new HashMap<String, Object>();
         copyOfAddressNameMap.putAll(addRecipientsInCCAndBCCToAddressMap(extras));
-        
+
         DDRRecord ddrRecord = null;
         try {
-            ddrRecord = createDDRForOutgoing(config, senderName, copyOfAddressNameMap, message);
+            ddrRecord = createDDRForOutgoing(config, accountId, senderName, copyOfAddressNameMap, message);
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -755,10 +775,10 @@ abstract public class TextServlet extends HttpServlet {
             extras.put(DDRRecord.DDR_RECORD_KEY, ddrRecord.getId());
         }
         //broadcast the message if its not a test environment
-        Integer count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config);
+        Integer count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId);
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
-        DDRUtils.publishDDREntryToQueue(config.getOwner(), totalCost);
+        DDRUtils.publishDDREntryToQueue(accountId, totalCost);
         //attach cost to ddr is prepaid type
         if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
             ddrRecord.setTotalCost(totalCost);
@@ -772,20 +792,27 @@ abstract public class TextServlet extends HttpServlet {
 
         TextMessage receiveMessage = receiveMessage(req, resp);
         try {
-            //create a session
+            //create a session if it does not exist
             Session session = Session.getOrCreateSession(getAdapterType(), receiveMessage.getLocalAddress(),
                                                          receiveMessage.getAddress());
             //update the current timestamp
             if (session != null) {
+                AdapterConfig adapterConfig = session.getAdapterConfig();
+                //update the owner accountId if its not an existing session. 
+                //So for pure inbound session. and not a reply on a closed/open question.
+                if (adapterConfig != null && !session.isExistingSession()) {
+                    session.setAccountId(adapterConfig.getOwner());
+                }
                 session.setCreationTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
-                logger.info(session.getAdapterConfig(), ServerUtils.serialize(receiveMessage), session);
                 session.storeSession();
+                logger.info(session.getAdapterConfig(), ServerUtils.serialize(receiveMessage), session);
             }
             //attach charges for incoming
             AdapterConfig config = AdapterConfig.findAdapterConfig(getAdapterType(), receiveMessage.getLocalAddress());
             DDRRecord ddrRecord = null;
             try {
-                ddrRecord = createDDRForIncoming(config, receiveMessage.getAddress(), receiveMessage.getBody());createDDRForIncoming(config, receiveMessage.getAddress(), receiveMessage.getBody());
+                ddrRecord = createDDRForIncoming(config, receiveMessage.getAddress(), receiveMessage.getBody(),
+                                                 session.getAccountId());
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -809,6 +836,7 @@ abstract public class TextServlet extends HttpServlet {
 
             //push the cost to hte queue
             Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
+            DDRUtils.publishDDREntryToQueue(session.getAccountId(), totalCost);
             //attach cost to ddr is prepaid type
             if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
                 ddrRecord.setTotalCost(totalCost);

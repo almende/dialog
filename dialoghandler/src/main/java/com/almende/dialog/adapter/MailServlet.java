@@ -215,16 +215,16 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
      */
     @Override
     protected int sendMessage( String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config ) throws Exception
+        Map<String, Object> extras, AdapterConfig config, String accountId ) throws Exception
     {
         HashMap<String, String> addressNameMap = new HashMap<>( 1 );
         addressNameMap.put( to, toName );
-        return broadcastMessage( message, subject, from, fromName, addressNameMap, extras, config );
+        return broadcastMessage(message, subject, from, fromName, addressNameMap, extras, config, accountId);
     }
 	
     @Override
     protected int broadcastMessage(String message, String subject, String from, String senderName,
-                         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config) throws Exception {
+                         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
 
         final String sendingHost = config.getProperties().get(SENDING_HOST_KEY) != null ? config.getProperties()
                                         .get(SENDING_HOST_KEY).toString() : GMAIL_SENDING_HOST;
@@ -625,15 +625,16 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
     }
 
     @Override
-    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress, String message ) throws Exception
-    {
-        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress, message );
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
+        String message) throws Exception {
+
+        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message);
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
-                                             Map<String, String> toAddress, String message) throws Exception {
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
+        Map<String, String> toAddress, String message) throws Exception {
 
-        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, toAddress, message);
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, toAddress, message);
     }
 }

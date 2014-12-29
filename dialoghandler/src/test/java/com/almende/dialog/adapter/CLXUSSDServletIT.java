@@ -33,7 +33,7 @@ public class CLXUSSDServletIT extends TestFramework{
         adapterConfig.setAccessTokenSecret("qMA3gBY5");
         adapterConfig.update();
 
-        Session.getOrCreateSession(adapterConfig, "31648901147");
+        Session.createSession(adapterConfig, "31648901147");
 
         //String sessionKey = createSessionKey(adapterConfig, remoteAdressVoice2);
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
@@ -51,7 +51,8 @@ public class CLXUSSDServletIT extends TestFramework{
         map.put("questionType", "comment");
         AdapterConfig adapterConfig = createAdapterConfig("ussd", TEST_PUBLIC_KEY, "31624107792", "");
         CLXUSSDServlet servlet = new CLXUSSDServlet();
-        servlet.sendMessage("hallo", "hey", "me", "vincent", "31624107792", "vincent", map, adapterConfig);
+        servlet.sendMessage("hallo", "hey", "me", "vincent", "31624107792", "vincent", map, adapterConfig,
+                            adapterConfig.getOwner());
     }
 	
 
@@ -79,7 +80,7 @@ public class CLXUSSDServletIT extends TestFramework{
 
         AdapterConfig adapterConfig = createAdapterConfig("ussd", TEST_PUBLIC_KEY, "", "");
 
-        Session.getOrCreateSession(adapterConfig, "31624107792");
+        Session.createSession(adapterConfig, "31624107792");
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());

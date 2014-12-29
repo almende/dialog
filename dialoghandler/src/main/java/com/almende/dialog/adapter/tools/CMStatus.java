@@ -66,8 +66,8 @@ public class CMStatus implements Serializable
      * @param extras
      * @throws Exception
      */
-    public static String storeSMSRelatedData(Set<String> addresses, AdapterConfig config, String smsText,
-                                             Question question) throws Exception {
+    public static String storeSMSRelatedData(Set<String> addresses, AdapterConfig config, String accountId,
+        String smsText, Question question) throws Exception {
 
         String smsStatusKey = null;
         // check if SMS delivery notification is requested
@@ -79,7 +79,7 @@ public class CMStatus implements Serializable
             cmStatus.setLocalAddress(config.getMyAddress());
             cmStatus.setRemoteAddresses(addresses);
             cmStatus.setReference(smsStatusKey);
-            cmStatus.setAccountId(config.getOwner());
+            cmStatus.setAccountId(accountId);
             cmStatus.setSms(smsText);
             EventCallback deliveryEventCallback = question != null ? question.getEventCallback("delivered") : null;
             if (deliveryEventCallback != null) {

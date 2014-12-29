@@ -41,72 +41,66 @@ public class CM {
 		this.password = password;
 	}
 	
-    public int sendMessage( String message, String subject, String from, String fromName,
-        String to, String toName, Map<String, Object> extras, AdapterConfig config ) throws Exception
-    {
+    public int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
+        Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
+
         String dcs = MESSAGE_TYPE_GSM7;
 
-        message = new String( message.getBytes(), "UTF-8" );
-        if ( !isGSMSeven( message ) )
-        {
+        message = new String(message.getBytes(), "UTF-8");
+        if (!isGSMSeven(message)) {
             dcs = MESSAGE_TYPE_UTF8;
         }
-        else
-        {
+        else {
             dcs = MESSAGE_TYPE_GSM7;
         }
-        
-        if(fromName==null)
+
+        if (fromName == null)
             fromName = from;
 
         // TODO: Check message for special chars, if so change dcs.		
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
-        addressNameMap.put( to, toName );
-        StringWriter sw = createXMLRequest( message, from, fromName, addressNameMap, dcs, config, extras );
+        addressNameMap.put(to, toName);
+        StringWriter sw = createXMLRequest(message, from, fromName, addressNameMap, dcs, config, accountId, extras);
 
-        if ( !ServerUtils.isInUnitTestingEnvironment() && sw != null )
-        {
+        if (!ServerUtils.isInUnitTestingEnvironment() && sw != null) {
             Client client = ParallelInit.getClient();
-            WebResource webResource = client.resource( url );
-            String result = webResource.type( "text/plain" ).post( String.class, sw.toString() );
-            if ( !result.equals( "" ) )
-            {
-                log.severe( "No result from CM!" );
-                log.severe( "Send from: " + from + " to: " + to );
-                throw new Exception( result );
+            WebResource webResource = client.resource(url);
+            String result = webResource.type("text/plain").post(String.class, sw.toString());
+            if (!result.equals("")) {
+                log.severe("No result from CM!");
+                log.severe("Send from: " + from + " to: " + to);
+                throw new Exception(result);
             }
-            log.info( "Result from CM: " + result );
+            log.info("Result from CM: " + result);
         }
-        int messagePartCount = countMessageParts( message, dcs );
+        int messagePartCount = countMessageParts(message, dcs);
         return messagePartCount;
     }
     
-    public int broadcastMessage( String message, String subject, String from, String fromName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
-    {
+    public int broadcastMessage(String message, String subject, String from, String fromName,
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
+        throws Exception {
+
         String dcs;
-        if ( !isGSMSeven( message ) )
-        {
+        if (!isGSMSeven(message)) {
             dcs = MESSAGE_TYPE_UTF8;
         }
-        else
-        {
+        else {
             dcs = MESSAGE_TYPE_GSM7;
         }
         //create an CM XML request based on the parameters
-        StringWriter sw = createXMLRequest( message, from, fromName, addressNameMap, dcs, config, extras );
+        StringWriter sw = createXMLRequest(message, from, fromName, addressNameMap, dcs, config, accountId, extras);
 
         //add an interceptor so that send Messages is not enabled for unit tests
-        if ( !ServerUtils.isInUnitTestingEnvironment() && sw != null )
-        {
+        if (!ServerUtils.isInUnitTestingEnvironment() && sw != null) {
             Client client = ParallelInit.getClient();
-            WebResource webResource = client.resource( url );
-            String result = webResource.type( "text/plain" ).post( String.class, sw.toString() );
-            if ( !result.equals( "" ) )
-                throw new Exception( result );
-            log.info( "Result from CM: " + result );
+            WebResource webResource = client.resource(url);
+            String result = webResource.type("text/plain").post(String.class, sw.toString());
+            if (!result.equals(""))
+                throw new Exception(result);
+            log.info("Result from CM: " + result);
         }
-        return countMessageParts( message, dcs );
+        return countMessageParts(message, dcs);
     }
 
     /**
@@ -116,44 +110,44 @@ public class CM {
      * @since 9/9/2013 for v0.4.0
      * @return
      */
-    private StringWriter createXMLRequest( String message, String from, String fromName, Map<String, String> addressNameMap, String dcs, AdapterConfig config, Map<String, Object> extras )
-    {
+    private StringWriter createXMLRequest(String message, String from, String fromName,
+        Map<String, String> addressNameMap, String dcs, AdapterConfig config, String accountId,
+        Map<String, Object> extras) {
+
         String type = "TEXT";
         // TODO: Check message for special chars, if so change dcs.             
         StringWriter sw = new StringWriter();
-        try
-        {
-            XMLOutputter outputter = new XMLOutputter( sw, "UTF-8" );
+        try {
+            XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
             outputter.declaration();
-            outputter.startTag( "MESSAGES" );
-            outputter.startTag( "CUSTOMER" );
-            outputter.attribute( "ID", userID );
+            outputter.startTag("MESSAGES");
+            outputter.startTag("CUSTOMER");
+            outputter.attribute("ID", userID);
             outputter.endTag();
 
-            outputter.startTag( "USER" );
-            outputter.attribute( "LOGIN", userName );
-            outputter.attribute( "PASSWORD", password );
+            outputter.startTag("USER");
+            outputter.attribute("LOGIN", userName);
+            outputter.attribute("PASSWORD", password);
             outputter.endTag();
-            
+
             String reference = null;
             //fetch the question from the session
             String firstAddress = null;
-            if(addressNameMap != null && !addressNameMap.isEmpty()) {
+            if (addressNameMap != null && !addressNameMap.isEmpty()) {
                 firstAddress = addressNameMap.keySet().iterator().next();
             }
             Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), firstAddress);
             if (session != null) {
-                reference = CMStatus.storeSMSRelatedData(addressNameMap.keySet(), config, message, session.getQuestion());
+                reference = CMStatus.storeSMSRelatedData(addressNameMap.keySet(), config, accountId, message,
+                                                         session.getQuestion());
             }
-            if(reference != null)
-            {
-                outputter.startTag( "REFERENCE" );
-                outputter.cdata( reference );
+            if (reference != null) {
+                outputter.startTag("REFERENCE");
+                outputter.cdata(reference);
                 outputter.endTag();
             }
             String senderId = fromName != null && !fromName.isEmpty() ? fromName : from;
-            for ( String to : addressNameMap.keySet() )
-            {
+            for (String to : addressNameMap.keySet()) {
                 //check if its a mobile number, if no ignore, log, drop session and continue
                 PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(to);
                 if (!PhoneNumberType.MOBILE.equals(numberType)) {
@@ -166,34 +160,34 @@ public class CM {
                     }
                     continue;
                 }
-                outputter.startTag( "MSG" );
-                outputter.startTag( "CONCATENATIONTYPE" );
-                outputter.cdata( type );
+                outputter.startTag("MSG");
+                outputter.startTag("CONCATENATIONTYPE");
+                outputter.cdata(type);
                 outputter.endTag();
 
-                outputter.startTag( "FROM" );
-                outputter.cdata( senderId );
+                outputter.startTag("FROM");
+                outputter.cdata(senderId);
                 outputter.endTag();
 
-                outputter.startTag( "BODY" );
-                outputter.attribute( "TYPE", type );
-                outputter.cdata( message );
+                outputter.startTag("BODY");
+                outputter.attribute("TYPE", type);
+                outputter.cdata(message);
                 outputter.endTag();
 
-                outputter.startTag( "TO" );
-                outputter.cdata( to );
+                outputter.startTag("TO");
+                outputter.cdata(to);
                 outputter.endTag();
 
-                outputter.startTag( "DCS" );
-                outputter.cdata( dcs );
+                outputter.startTag("DCS");
+                outputter.cdata(dcs);
                 outputter.endTag();
 
-                outputter.startTag( "MINIMUMNUMBEROFMESSAGEPARTS" );
-                outputter.cdata( MIN_MESSAGE_PARTS );
+                outputter.startTag("MINIMUMNUMBEROFMESSAGEPARTS");
+                outputter.cdata(MIN_MESSAGE_PARTS);
                 outputter.endTag();
 
-                outputter.startTag( "MAXIMUMNUMBEROFMESSAGEPARTS" );
-                outputter.cdata( MAX_MESSAGE_PARTS );
+                outputter.startTag("MAXIMUMNUMBEROFMESSAGEPARTS");
+                outputter.cdata(MAX_MESSAGE_PARTS);
                 outputter.endTag();
 
                 outputter.endTag(); //MSG
@@ -201,17 +195,15 @@ public class CM {
             outputter.endTag(); //MESSAGES
             outputter.endDocument();
         }
-        catch ( Exception ex )
-        {
-            log.severe( "Exception in creating question XML: " + ex.toString() + " xml: " + sw.toString() );
+        catch (Exception ex) {
+            log.severe("Exception in creating question XML: " + ex.toString() + " xml: " + sw.toString());
             return null;
         }
 
-        log.info( "XML created: " + sw.toString() );
+        log.info("XML created: " + sw.toString());
         //perform some unit by logging the XML generated
-        if ( ServerUtils.isInUnitTestingEnvironment() )
-        {
-            TestServlet.logForTest( sw.toString() );
+        if (ServerUtils.isInUnitTestingEnvironment()) {
+            TestServlet.logForTest(sw.toString());
         }
         return sw;
     }

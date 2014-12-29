@@ -43,30 +43,31 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
     private static final Logger dialogLog = new Logger();
 
     @Override
-    protected int sendMessage( String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config ) throws Exception
-    {
+    protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
+        Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
+
         XMPPConnection xmppConnection = null;
-        try
-        {
-            xmppConnection = getXMPPConnection( config, true );
+        try {
+            xmppConnection = getXMPPConnection(config, true);
             Roster xmppRooster = xmppConnection.getRoster();
-            Roster.setDefaultSubscriptionMode( SubscriptionMode.accept_all );
-            if( !xmppRooster.contains( to ))
-            {
-                xmppRooster.createEntry( to, toName, null );
-                String sessionKey = extras.containsKey(Session.SESSION_KEY) ? extras.get(Session.SESSION_KEY).toString() : null;
-                String ddrRecordId =  extras.containsKey(DDRRecord.DDR_RECORD_KEY) ? extras.get(DDRRecord.DDR_RECORD_KEY).toString() : null; 
-                dialogLog.warning(config.getConfigId(), config.getAdapterType(), String.format("Sending xmpp chat: %s to: %s might be incomplete. Contact just added in AddressBook",
-                                                        message, to), ddrRecordId, sessionKey);
+            Roster.setDefaultSubscriptionMode(SubscriptionMode.accept_all);
+            if (!xmppRooster.contains(to)) {
+                xmppRooster.createEntry(to, toName, null);
+                String sessionKey = extras.containsKey(Session.SESSION_KEY) ? extras.get(Session.SESSION_KEY)
+                                                .toString() : null;
+                String ddrRecordId = extras.containsKey(DDRRecord.DDR_RECORD_KEY) ? extras
+                                                .get(DDRRecord.DDR_RECORD_KEY).toString() : null;
+                dialogLog.warning(config.getConfigId(),
+                                  config.getAdapterType(),
+                                  String.format("Sending xmpp chat: %s to: %s might be incomplete. Contact just added in AddressBook",
+                                                message, to), ddrRecordId, sessionKey);
             }
-            if ( fromName != null && !fromName.isEmpty() )
-            {
-                Presence presence = new Presence( Type.available );
-                presence.setMode( Mode.chat );
-                presence.setStatus( "as: "+ fromName );
-                xmppConnection.sendPacket( presence );
-                message = "*" + fromName + ":* "+message;
+            if (fromName != null && !fromName.isEmpty()) {
+                Presence presence = new Presence(Type.available);
+                presence.setMode(Mode.chat);
+                presence.setStatus("as: " + fromName);
+                xmppConnection.sendPacket(presence);
+                message = "*" + fromName + ":* " + message;
             }
             if (!ServerUtils.isInUnitTestingEnvironment()) {
                 Chat chat = xmppConnection.getChatManager().createChat(to, this);
@@ -74,25 +75,23 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
             }
             return 1;
         }
-        catch ( Exception ex )
-        {
-            if(xmppConnection != null)
-            {
+        catch (Exception ex) {
+            if (xmppConnection != null) {
                 xmppConnection.disconnect();
             }
-            log.severe( "XMPP send message failed. Error:" + ex.getLocalizedMessage() );
+            log.severe("XMPP send message failed. Error:" + ex.getLocalizedMessage());
             throw ex;
         }
     }
-    
 
     @Override
-    protected int broadcastMessage( String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
-    {
-        for ( String address : addressNameMap.keySet() )
-        {
-            sendMessage( message, subject, from, senderName, address, addressNameMap.get( address ), extras, config );
+    protected int broadcastMessage(String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
+        throws Exception {
+
+        for (String address : addressNameMap.keySet()) {
+            sendMessage(message, subject, from, senderName, address, addressNameMap.get(address), extras, config,
+                        accountId);
         }
         return addressNameMap.size();
     }
@@ -210,17 +209,17 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
     }
     
     @Override
-    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress, String message) throws Exception {
 
-        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, fromAddress, message);
+        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message);
     }
 
 
     @Override
-    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
                                              Map<String, String> toAddress, String message) throws Exception {
 
-        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, toAddress, message);
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, toAddress, message);
     }
     
     public static void registerASKFastXMPPAccount( String username, String password, String name, String email )

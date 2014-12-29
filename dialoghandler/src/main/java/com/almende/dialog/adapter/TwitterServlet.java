@@ -251,97 +251,89 @@ public class TwitterServlet extends TextServlet implements Runnable {
         out.close();
     }
 	
-	@Override
-	protected int sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName,
-			Map<String, Object> extras, AdapterConfig config) {
-		
-		OAuthService service = new ServiceBuilder().provider(TwitterApi.class)
-				.apiKey(Twitter.OAUTH_KEY).apiSecret(Twitter.OAUTH_SECRET)
-				.build();
-		
-		int count = 0;
-        String formattedTwitterTo = to.startsWith( "@" ) ? to : "@" + to;
-		Token accessToken = new Token(config.getAccessToken(),
-				config.getAccessTokenSecret());
-		for (String messagepart : Splitter.fixedLength(140 - (formattedTwitterTo.length() + 1)).split(message)) {
-			try {
-			    formattedTwitterTo = URLEncoder.encode(formattedTwitterTo, "UTF-8");
-				String url = null;
-				String tweetType = null;
-				if (extras != null
-						&& extras.get(Question.MEDIA_PROPERTIES) != null
-						&& extras.get(Question.MEDIA_PROPERTIES) instanceof Collection) {
-					@SuppressWarnings("unchecked")
-					Collection<MediaProperty> mediaProperties = (Collection<MediaProperty>) extras
-							.get(Question.MEDIA_PROPERTIES);
-					tweetType = Question.getMediaPropertyValue(mediaProperties,
-							MediumType.TWITTER, MediaPropertyKey.TYPE);
-				}
-				if (tweetType != null && tweetType.equals("direct")) {
-					// make sure the user for whom the direct message is for, is
-					// followed
-					followUser(service, accessToken, formattedTwitterTo);
-					String directMessage = URLEncoder.encode(messagepart,
-							"UTF8").replace("+", "%20");
-					url = "https://api.twitter.com/1.1/direct_messages/new.json";
-                    url = ServerUtils.getURLWithQueryParams( url, "screen_name", formattedTwitterTo );
-                    url = ServerUtils.getURLWithQueryParams( url, "text", directMessage );
-				} else {
-					String inReptyTweetID = (extras != null && extras
-							.get(STATUS_ID_KEY) != null) ? extras.get(
-							STATUS_ID_KEY).toString() : "";
-                    String status = formattedTwitterTo
-                        + URLEncoder.encode( " " + messagepart, "UTF8" ).replace( "+", "%20" );
-					url = "https://api.twitter.com/1.1/statuses/update.json";
-					url = ServerUtils.getURLWithQueryParams(url, "status",
-							status);
-					url = ServerUtils.getURLWithQueryParams(url,
-							"in_reply_to_status_id", inReptyTweetID);
-				}
-				
-				OAuthRequest request = new OAuthRequest(Verb.POST, url);
-				service.signRequest(accessToken, request);
-				Response response = request.send();
-				//check if an error exists in hte reply 
-                TwitterErrorResponse twitterErrors = getIfTwitterErrorInResponse( response.getBody(), false );
-                if(twitterErrors != null)
-                {
-                    for ( Map<String, String> errors : twitterErrors.getErrors() )
-                    {
+    @Override
+    protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
+        Map<String, Object> extras, AdapterConfig config, String accountId) {
+
+        OAuthService service = new ServiceBuilder().provider(TwitterApi.class).apiKey(Twitter.OAUTH_KEY)
+                                        .apiSecret(Twitter.OAUTH_SECRET).build();
+
+        int count = 0;
+        String formattedTwitterTo = to.startsWith("@") ? to : "@" + to;
+        Token accessToken = new Token(config.getAccessToken(), config.getAccessTokenSecret());
+        for (String messagepart : Splitter.fixedLength(140 - (formattedTwitterTo.length() + 1)).split(message)) {
+            try {
+                formattedTwitterTo = URLEncoder.encode(formattedTwitterTo, "UTF-8");
+                String url = null;
+                String tweetType = null;
+                if (extras != null && extras.get(Question.MEDIA_PROPERTIES) != null &&
+                    extras.get(Question.MEDIA_PROPERTIES) instanceof Collection) {
+                    @SuppressWarnings("unchecked")
+                    Collection<MediaProperty> mediaProperties = (Collection<MediaProperty>) extras
+                                                    .get(Question.MEDIA_PROPERTIES);
+                    tweetType = Question.getMediaPropertyValue(mediaProperties, MediumType.TWITTER,
+                                                               MediaPropertyKey.TYPE);
+                }
+                if (tweetType != null && tweetType.equals("direct")) {
+                    // make sure the user for whom the direct message is for, is
+                    // followed
+                    followUser(service, accessToken, formattedTwitterTo);
+                    String directMessage = URLEncoder.encode(messagepart, "UTF8").replace("+", "%20");
+                    url = "https://api.twitter.com/1.1/direct_messages/new.json";
+                    url = ServerUtils.getURLWithQueryParams(url, "screen_name", formattedTwitterTo);
+                    url = ServerUtils.getURLWithQueryParams(url, "text", directMessage);
+                }
+                else {
+                    String inReptyTweetID = (extras != null && extras.get(STATUS_ID_KEY) != null) ? extras
+                                                    .get(STATUS_ID_KEY).toString() : "";
+                    String status = formattedTwitterTo +
+                                    URLEncoder.encode(" " + messagepart, "UTF8").replace("+", "%20");
+                    url = "https://api.twitter.com/1.1/statuses/update.json";
+                    url = ServerUtils.getURLWithQueryParams(url, "status", status);
+                    url = ServerUtils.getURLWithQueryParams(url, "in_reply_to_status_id", inReptyTweetID);
+                }
+
+                OAuthRequest request = new OAuthRequest(Verb.POST, url);
+                service.signRequest(accessToken, request);
+                Response response = request.send();
+                //check if an error exists in hte reply 
+                TwitterErrorResponse twitterErrors = getIfTwitterErrorInResponse(response.getBody(), false);
+                if (twitterErrors != null) {
+                    for (Map<String, String> errors : twitterErrors.getErrors()) {
                         //if the status is the same, add a timestamp
-                        if(errors.get( "code" ) != null && errors.get( "code" ).equals( "187" ) && retryCount < retryLimit)
-                        {
+                        if (errors.get("code") != null && errors.get("code").equals("187") && retryCount < retryLimit) {
                             retryCount++;
-                            message += "\nSent at: " + TimeUtils.getStringFormatFromDateTime(
-                                TimeUtils.getServerCurrentTimeInMillis(), "dd-MM-yyyy HH:mm:ss Z" ); 
-                            return sendMessage( message, subject, from, fromName, to, toName, extras, config );
+                            message += "\nSent at: " +
+                                       TimeUtils.getStringFormatFromDateTime(TimeUtils.getServerCurrentTimeInMillis(),
+                                                                             "dd-MM-yyyy HH:mm:ss Z");
+                            return sendMessage(message, subject, from, fromName, to, toName, extras, config, accountId);
                         }
                     }
                 }
-				log.info("Message send result: " + response.getBody());
-				count++;
-			} catch (Exception ex) {
-				log.warning("Failed to send message. Error: "+ ex.getLocalizedMessage());
-			}
-		}
-		retryCount = 0;
-		return count;
-	}
+                log.info("Message send result: " + response.getBody());
+                count++;
+            }
+            catch (Exception ex) {
+                log.warning("Failed to send message. Error: " + ex.getLocalizedMessage());
+            }
+        }
+        retryCount = 0;
+        return count;
+    }
 	
-	@Override
-	protected int broadcastMessage(String message, String subject, String from,
-			String senderName, Map<String, String> addressNameMap,
-			Map<String, Object> extras, AdapterConfig config) throws Exception {
-		int count = 0;
-		for (String toAddress : addressNameMap.keySet()) {
-			String toName = addressNameMap.get(toAddress);
-			count = count
-					+ sendMessage(message, subject, from, senderName,
-							toAddress, toName, extras, config);
-		}
-		return count;
-	}
+    @Override
+    protected int broadcastMessage(String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
+        throws Exception {
+
+        int count = 0;
+        for (String toAddress : addressNameMap.keySet()) {
+            String toName = addressNameMap.get(toAddress);
+            count = count +
+                    sendMessage(message, subject, from, senderName, toAddress, toName, extras, config, accountId);
+        }
+        return count;
+    }
 	
     /**
      * updates the corresponding adapter with the agent URL
@@ -409,14 +401,15 @@ public class TwitterServlet extends TextServlet implements Runnable {
 	}
 	
     @Override
-    protected DDRRecord createDDRForIncoming( AdapterConfig adapterConfig, String fromAddress, String message ) throws Exception
-    {
-        return DDRUtils.createDDRRecordOnIncomingCommunication( adapterConfig, fromAddress, message );
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
+        String message) throws Exception {
+
+        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message);
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
-                                             Map<String, String> toAddress, String message) throws Exception {
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
+        Map<String, String> toAddress, String message) throws Exception {
 
         int totalCount = 0;
         //calculate the total tweets been done!
@@ -425,7 +418,8 @@ public class TwitterServlet extends TextServlet implements Runnable {
             totalCount += Splitter.fixedLength(140 - (formattedTwitterTo.length() + 1)).splitToList(message).size();
         }
         //add costs with no.of messages * recipients
-        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, null, toAddress, totalCount, message);
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, null, toAddress, totalCount,
+                                                               message);
     }
 
     @Override

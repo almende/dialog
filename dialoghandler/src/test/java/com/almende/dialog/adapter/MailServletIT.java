@@ -43,7 +43,7 @@ public class MailServletIT extends TestFramework
         AdapterConfig adapterConfig = createEmailAdapter( "askfasttest@gmail.com", "askask2times", null, null, null,
             null, null, null, null, new UUID().toString(), null );
         //create session
-        Session.getOrCreateSession( adapterConfig, remoteAddressEmail );
+        Session.createSession( adapterConfig, remoteAddressEmail );
         
         //fetch and invoke the receieveMessage method
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
@@ -52,8 +52,8 @@ public class MailServletIT extends TestFramework
         url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
         
         MailServlet mailServlet = new MailServlet();
-        mailServlet.broadcastMessage( testMessage, "Test", adapterConfig.getXsiUser(), "Test message", addressNameMap,
-            null, adapterConfig );
+        mailServlet.broadcastMessage(testMessage, "Test", adapterConfig.getXsiUser(), "Test message", addressNameMap,
+                                     null, adapterConfig, adapterConfig.getOwner());
         Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, testMessage, "sendDummyMessageTest" );
         assertOutgoingTextMessage( message );
     }
@@ -72,7 +72,7 @@ public class MailServletIT extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
             localAddressMail, initialAgentURL );
         //create session
-        Session.getOrCreateSession( adapterConfig, remoteAddressEmail );
+        Session.createSession( adapterConfig, remoteAddressEmail );
         
         MimeMessage mimeMessage = new MimeMessage( javax.mail.Session.getDefaultInstance( new Properties(), null) );
         mimeMessage.setFrom( new InternetAddress( remoteAddressEmail ) );
@@ -108,7 +108,7 @@ public class MailServletIT extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
                                                            localAddressMail, initialAgentURL );
         //create session
-        Session.getOrCreateSession( adapterConfig, remoteAddressEmail );
+        Session.createSession( adapterConfig, remoteAddressEmail );
         TextMessage textMessage = mailAppointmentInteraction("hi");
         //update the question text in the textMessage
         Question question = Question.fromURL(initialAgentURL, adapterConfig.getConfigId(), null, null);
@@ -180,7 +180,7 @@ public class MailServletIT extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
             localAddressMail, "" );
         //create session
-        Session.getOrCreateSession( adapterConfig, remoteAddressEmail );
+        Session.createSession( adapterConfig, remoteAddressEmail );
 
         //fetch and invoke the receieveMessage method
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
@@ -189,7 +189,8 @@ public class MailServletIT extends TestFramework
             + URLEncoder.encode( textMessage, "UTF-8" );
         
         MailServlet mailServlet = new MailServlet();
-        mailServlet.startDialog( addressNameMap, null, null, url, "test", "sendDummyMessageTest", adapterConfig );
+        mailServlet.startDialog(addressNameMap, null, null, url, "test", "sendDummyMessageTest", adapterConfig,
+                                adapterConfig.getOwner());
 
         Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, textMessage,
             "sendDummyMessageTest" );

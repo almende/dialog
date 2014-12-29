@@ -34,28 +34,30 @@ public class AskSmsServlet extends TextServlet {
 	
 	private static final String servletPath = "/_ah/sms/ask/";
 	
-	@Override
-	protected int sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName, Map<String, Object> extras, AdapterConfig config) {
-		
-		try {
-			to = URLDecoder.decode(to, "UTF-8");
-		} catch(Exception ex) {
-			log.warning("Failed to parse phone number");
-		}
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		SmsMessage msg = new SmsMessage(Arrays.asList( to), message);
-		datastore.store(msg);
-		
-		// TODO: Build in message counter
-		log.info("Stored message: "+msg.getMessage()+ " for: "+ msg.toJson());
-		return 1;
-	}
+    @Override
+    protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
+        Map<String, Object> extras, AdapterConfig config, String accountId) {
+
+        try {
+            to = URLDecoder.decode(to, "UTF-8");
+        }
+        catch (Exception ex) {
+            log.warning("Failed to parse phone number");
+        }
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        SmsMessage msg = new SmsMessage(Arrays.asList(to), message);
+        datastore.store(msg);
+
+        // TODO: Build in message counter
+        log.info("Stored message: " + msg.getMessage() + " for: " + msg.toJson());
+        return 1;
+    }
 	
     @Override
-    protected int broadcastMessage( String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
-    {
+    protected int broadcastMessage(String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
+        throws Exception {
+
         //            try
         //            {
         //                for ( String to : toList )
@@ -188,14 +190,15 @@ public class AskSmsServlet extends TextServlet {
 	}
 
     @Override
-    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
+        String message) throws Exception {
 
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
-                                             Map<String, String> toAddress, String message) throws Exception {
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
+        Map<String, String> toAddress, String message) throws Exception {
 
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
     }

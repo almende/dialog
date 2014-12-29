@@ -10,6 +10,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import org.apache.commons.lang.NotImplementedException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -28,7 +29,7 @@ public class CLXUSSDServlet extends TextServlet {
 	
     @Override
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config) throws Exception {
+        Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
 
         //CLXUSSD clxussd = new CLXUSSD(config.getAccessToken(),
         //	config.getAccessTokenSecret(), config);
@@ -58,13 +59,13 @@ public class CLXUSSDServlet extends TextServlet {
 
     @Override
     protected int broadcastMessage(String message, String subject, String from, String senderName,
-                         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config)
-    throws Exception {
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
+        throws Exception {
 
         int count = 0;
         for (String address : addressNameMap.keySet()) {
             count += sendMessage(message, subject, from, senderName, address, addressNameMap.get(address), extras,
-                                 config);
+                                 config, accountId);
         }
         return count;
     }
@@ -213,17 +214,18 @@ public class CLXUSSDServlet extends TextServlet {
 	}
 
     @Override
-    protected DDRRecord
-        createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
+        String message) throws Exception {
 
-        return null;
+        throw new NotImplementedException("Incoming cost processing is not implemented for " +
+                                          this.getClass().getSimpleName());
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
-                                             Map<String, String> toAddress, String message) throws Exception {
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
+        Map<String, String> toAddress, String message) throws Exception {
 
-        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, null, toAddress, 1, message);
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, null, toAddress, 1, message);
     }
 }
 

@@ -110,7 +110,7 @@ public class WallFacebookServlet extends TextServlet {
 
     @Override
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config) {
+        Map<String, Object> extras, AdapterConfig config, String accountId) {
 
         if (!ServerUtils.isInUnitTestingEnvironment()) {
             Facebook fb = new Facebook(new Token(config.getAccessToken(), config.getAccessTokenSecret()));
@@ -120,14 +120,14 @@ public class WallFacebookServlet extends TextServlet {
     }
 
     @Override
-    protected int broadcastMessage( String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
-    {
+    protected int broadcastMessage(String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
+        throws Exception {
+
         int count = 0;
-        for ( String address : addressNameMap.keySet() )
-        {
-            String toName = addressNameMap.get( address );
-            count = count + sendMessage( message, subject, from, senderName, address, toName, extras, config );
+        for (String address : addressNameMap.keySet()) {
+            String toName = addressNameMap.get(address);
+            count = count + sendMessage(message, subject, from, senderName, address, toName, extras, config, accountId);
         }
         return count;
     }
@@ -156,16 +156,16 @@ public class WallFacebookServlet extends TextServlet {
     }
     
     @Override
-    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress, String message) throws Exception {
 
-        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, fromAddress, message);
+        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message);
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
                                              Map<String, String> toAddress, String message) throws Exception {
 
         //add costs with no.of messages * recipients
-        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, toAddress, message);
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, toAddress, message);
     }
 }

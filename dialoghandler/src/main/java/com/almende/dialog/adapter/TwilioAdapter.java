@@ -59,10 +59,32 @@ public class TwilioAdapter {
 	protected String TIMEOUT_URL="timeout";
 	//protected String EXCEPTION_URL="exception";
 	
-	public static HashMap<String, String> dial(Map<String, String> addressNameMap, String url, String senderName,
-	        AdapterConfig config, String applicationId) throws Exception {
-		
-		HashMap<String, String> resultSessionMap = new HashMap<String, String>();
+    /**
+     * Initiates a call to all the numbers in the addressNameMap and returns a
+     * Map of <adress, SessionKey>
+     * 
+     * @param addressNameMap
+     *            Map with address (e.g. phonenumber or email) as Key and name
+     *            as value. The name is useful for email and not used for SMS
+     *            etc
+     * @param url
+     *            The URL on which a GET HTTPRequest is performed and expected a
+     *            question JSON
+     * @param config
+     *            the adapterConfig which is used to perform this broadcast
+     * @param accountId
+     *            AccoundId initiating this broadcast. All costs are applied to
+     *            this accountId
+     * @param applicationId
+     *            This is set in the DialogAgent and should match that with the
+     *            applicationId of the twillo account
+     * @return A Map of <adress, SessionKey> 
+     * @throws Exception
+     */
+    public static HashMap<String, String> dial(Map<String, String> addressNameMap, String url, AdapterConfig config,
+        String accountId, String applicationId) throws Exception {
+
+        HashMap<String, String> resultSessionMap = new HashMap<String, String>();
         // If it is a broadcast don't provide the remote address because it is deceiving.
         String loadAddress = "";
         if (addressNameMap.size() == 1)
@@ -78,46 +100,45 @@ public class TwilioAdapter {
                 if (session != null) {
                     // recreate a fresh session
                     session.drop();
-                    session = Session.getOrCreateSession(config, formattedAddress);
                 }
-                else {
-                    session = Session.getOrCreateSession(config, formattedAddress);
-                }
+                session = Session.createSession(config, formattedAddress);
                 session.killed = false;
                 session.setStartUrl(url);
+                session.setAccountId(accountId);
                 session.setDirection("outbound");
                 session.setRemoteAddress(formattedAddress);
                 session.setType(AdapterAgent.ADAPTER_TYPE_TWILIO);
                 session.setAdapterID(config.getConfigId());
                 session.setQuestion(question);
-                dialogLog.log(LogLevel.INFO, session.getAdapterConfig(), String.format("Outgoing call requested from: %s to: %s",
-                                                                                       session.getLocalAddress(),
-                                                                                       formattedAddress), session);
+                session.storeSession();
+                dialogLog.log(LogLevel.INFO, session.getAdapterConfig(), String
+                                                .format("Outgoing call requested from: %s to: %s",
+                                                        session.getLocalAddress(), formattedAddress), session);
                 String extSession = "";
                 if (!ServerUtils.isInUnitTestingEnvironment()) {
-                	String accountSid = config.getAccessToken();
-                	String authToken = config.getAccessTokenSecret();
+                    String accountSid = config.getAccessToken();
+                    String authToken = config.getAccessTokenSecret();
                     TwilioRestClient twilio = new TwilioRestClient(accountSid, authToken);
-                    
+
                     // Get the main account (The one we used to authenticate the client)
-            		Account mainAccount = twilio.getAccount();
-                    
+                    Account mainAccount = twilio.getAccount();
+
                     // Make a call
-            		CallFactory callFactory = mainAccount.getCallFactory();
-            		Map<String, String> callParams = new HashMap<String, String>();
-            		callParams.put("To", formattedAddress); // Replace with a valid phone number
-            		callParams.put("From", config.getMyAddress()); // Replace with a valid phone
-            		// number in your account
-            		callParams.put("ApplicationSid", applicationId);
-            		//callParams.put("Url", "http://" + Settings.HOST + "/dialoghandler/rest/twilio/new");
-            		callParams.put("StatusCallback", "http://" + Settings.HOST + "/dialoghandler/rest/twilio/cc");
-            		callParams.put("StatusCallbackMethod", "GET");  
-            		callParams.put("IfMachine", "Hangup"); 
-            		callParams.put("Record", "false");
-            		
-            		Call call = callFactory.create(callParams);
-            		System.out.println(call.getSid());
-            		extSession = call.getSid();
+                    CallFactory callFactory = mainAccount.getCallFactory();
+                    Map<String, String> callParams = new HashMap<String, String>();
+                    callParams.put("To", formattedAddress); // Replace with a valid phone number
+                    callParams.put("From", config.getMyAddress()); // Replace with a valid phone
+                    // number in your account
+                    callParams.put("ApplicationSid", applicationId);
+                    //callParams.put("Url", "http://" + Settings.HOST + "/dialoghandler/rest/twilio/new");
+                    callParams.put("StatusCallback", "http://" + Settings.HOST + "/dialoghandler/rest/twilio/cc");
+                    callParams.put("StatusCallbackMethod", "GET");
+                    callParams.put("IfMachine", "Hangup");
+                    callParams.put("Record", "false");
+
+                    Call call = callFactory.create(callParams);
+                    System.out.println(call.getSid());
+                    extSession = call.getSid();
                 }
                 session.setExternalSession(extSession);
                 session.storeSession();
@@ -129,19 +150,18 @@ public class TwilioAdapter {
             }
         }
         return resultSessionMap;
-	}
+    }
 	
-	@Path("new")
+    @Path("new")
     @GET
     @Produces("application/xml")
-    public Response getNewDialog(@QueryParam("CallSid") String CallSid,
-    		@QueryParam("AccountSid") String AccountSid,
-    		@QueryParam("From") String localID,
-    		@QueryParam("To") String remoteID,
-    		@QueryParam("Direction") String direction) {
-		
-		log.info("call started:"+direction+":"+remoteID+":"+localID);
-        
+    public Response
+        getNewDialog(@QueryParam("CallSid") String CallSid, @QueryParam("AccountSid") String AccountSid,
+            @QueryParam("From") String localID, @QueryParam("To") String remoteID,
+            @QueryParam("Direction") String direction) {
+
+        log.info("call started:" + direction + ":" + remoteID + ":" + localID);
+
         if (direction.equals("inbound")) {
             String tmpLocalId = new String(localID);
             localID = new String(remoteID);
@@ -149,169 +169,170 @@ public class TwilioAdapter {
         }
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_TWILIO, localID);
         String formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ formattedRemoteId;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localID + "|" + formattedRemoteId;
         Session session = Session.getSession(sessionKey);
-        
+
         String url = "";
-        if ( session != null && direction.startsWith("outbound")) {
-                url = session.getStartUrl();
+        if (session != null && direction.startsWith("outbound")) {
+            url = session.getStartUrl();
             dialogLog.log(LogLevel.INFO, config, String
                                             .format("Trying to fetch dialog for %s, due to outgoing Call from: %s ",
                                                     formattedRemoteId, config.getMyAddress()), session);
         }
-        else if(direction.equals("inbound")) {
-            //create a session for incoming only
-            session = Session.getSession(Session.getSessionKey(config, formattedRemoteId));
-            if(session != null) {
+        else if (direction.equals("inbound")) {
+            //create a session for incoming only, flush any existing one
+            if (session != null) {
                 session.drop();
             }
-            session = Session.getOrCreateSession(config, formattedRemoteId);
+            session = Session.createSession(config, formattedRemoteId);
+            session.setAccountId(config.getOwner());
+            session.storeSession();
         }
-        
-        if(session != null) {
-            session.setStartUrl( url );
-            session.setDirection( direction );
-            session.setRemoteAddress( formattedRemoteId );
-            session.setType( AdapterAgent.ADAPTER_TYPE_TWILIO );
-            session.setAccountId( config.getOwner() );
-            session.setAdapterID( config.getConfigId() );
+
+        if (session != null) {
+            session.setStartUrl(url);
+            session.setDirection(direction);
+            session.setRemoteAddress(formattedRemoteId);
+            session.setType(AdapterAgent.ADAPTER_TYPE_TWILIO);
+            session.setAdapterID(config.getConfigId());
         }
         else {
             log.severe(String.format("Session %s not found", sessionKey));
             return null;
         }
-        
+
         Question question = session.getQuestion();
-        if(question == null) {
+        if (question == null) {
             question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), formattedRemoteId, localID,
                                         session.getDdrRecordId(), session.getKey());
         }
         session.setQuestion(question);
-        
+
         if (session.getQuestion() != null) {
 
             //create ddr record
             DDRRecord ddrRecord = null;
             try {
                 if (direction.contains("outbound")) {
-                    ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedRemoteId, 1, url);
+                    ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, session.getAccountId(),
+                                                                                formattedRemoteId, 1, url);
                 }
                 else {
-                    ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, formattedRemoteId, 1, url);
+                    ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, session.getAccountId(),
+                                                                                formattedRemoteId, 1, url);
                 }
-                session.setDdrRecordId( ddrRecord != null ? ddrRecord.getId() : null);
+                session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
                 ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
             }
             catch (Exception e) {
                 String errorMessage = String.format("Creating DDR records failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
-                                                    direction, config.getConfigId(), config.getMyAddress(), formattedRemoteId,
-                                                    localID);
+                                                    direction, config.getConfigId(), config.getMyAddress(),
+                                                    formattedRemoteId, localID);
                 log.severe(errorMessage);
                 dialogLog.severe(config.getConfigId(), errorMessage, ddrRecord != null ? ddrRecord.getId() : null,
                                  sessionKey);
             }
             finally {
-            	ddrRecord.createOrUpdate();
+                ddrRecord.createOrUpdate();
                 session.storeSession();
             }
-            return handleQuestion( question, config, formattedRemoteId, sessionKey );
+            return handleQuestion(question, config, formattedRemoteId, sessionKey);
         }
         else {
             return Response.ok().build();
         }
-	}
+    }
 	
-	@Path("new")
+    @Path("new")
     @POST
     @Produces("application/xml")
-    public Response getNewDialogPost(@FormParam("CallSid") String CallSid,
-    		@FormParam("AccountSid") String AccountSid,
-    		@FormParam("From") String localID,
-    		@FormParam("To") String remoteID,
-    		@FormParam("Direction") String direction) {
-		
-		log.info("call started:"+direction+":"+remoteID+":"+localID);
-        
+    public Response getNewDialogPost(@FormParam("CallSid") String CallSid, @FormParam("AccountSid") String AccountSid,
+        @FormParam("From") String localID, @FormParam("To") String remoteID, @FormParam("Direction") String direction) {
+
+        log.info("call started:" + direction + ":" + remoteID + ":" + localID);
+
         //swap the remote and the local numbers if its inbound
-        if(direction.equals("inbound")) {
-        	String tmpLocalId = new String(localID);
-        	localID = new String(remoteID);
-        	remoteID = tmpLocalId;        			
+        if (direction.equals("inbound")) {
+            String tmpLocalId = new String(localID);
+            localID = new String(remoteID);
+            remoteID = tmpLocalId;
         }
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_TWILIO, localID);
         String formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ formattedRemoteId;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localID + "|" + formattedRemoteId;
         Session session = Session.getSession(sessionKey);
-        
+
         String url = "";
-        if ( session != null && direction.startsWith("outbound")) {
-                url = session.getStartUrl();
+        if (session != null && direction.startsWith("outbound")) {
+            url = session.getStartUrl();
             dialogLog.log(LogLevel.INFO, config, String
                                             .format("Trying to fetch dialog for %s, due to outgoing Call from: %s ",
                                                     formattedRemoteId, config.getMyAddress()), session);
         }
-        else if(direction.equals("inbound")) {
-            //create a session for incoming only
-            session = Session.getSession(Session.getSessionKey(config, formattedRemoteId));
-            if(session != null) {
+        else if (direction.equals("inbound")) {
+            //create a session for incoming only. Flush any existing one
+            if (session != null) {
                 session.drop();
             }
-            session = Session.getOrCreateSession(config, formattedRemoteId);
+            session = Session.createSession(config, formattedRemoteId);
+            session.setAccountId(config.getOwner());
+            session.storeSession();
             url = config.getURLForInboundScenario();
         }
-        
-        if(session != null) {
-            session.setStartUrl( url );
-            session.setDirection( direction );
-            session.setRemoteAddress( formattedRemoteId );
-            session.setType( AdapterAgent.ADAPTER_TYPE_TWILIO );
-            session.setAccountId( config.getOwner() );
-            session.setAdapterID( config.getConfigId() );
+
+        if (session != null) {
+            session.setStartUrl(url);
+            session.setDirection(direction);
+            session.setRemoteAddress(formattedRemoteId);
+            session.setType(AdapterAgent.ADAPTER_TYPE_TWILIO);
+            session.setAdapterID(config.getConfigId());
         }
         else {
             log.severe(String.format("Session %s not found", sessionKey));
             return null;
         }
-        
+
         Question question = session.getQuestion();
-        if(question == null) {
+        if (question == null) {
             question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), formattedRemoteId, localID,
                                         session.getDdrRecordId(), session.getKey());
         }
         session.setQuestion(question);
-        
+
         if (session.getQuestion() != null) {
 
             //create ddr record
             DDRRecord ddrRecord = null;
             try {
                 if (direction.contains("outbound")) {
-                    ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, formattedRemoteId, 1, url);
+                    ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, session.getAccountId(),
+                                                                                formattedRemoteId, 1, url);
                 }
                 else {
-                    ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, formattedRemoteId, 1, url);
+                    ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, session.getAccountId(),
+                                                                                formattedRemoteId, 1, url);
                 }
-                session.setDdrRecordId( ddrRecord != null ? ddrRecord.getId() : null);
+                session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
                 ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
             }
             catch (Exception e) {
                 String errorMessage = String.format("Creating DDR records failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
-                                                    direction, config.getConfigId(), config.getMyAddress(), formattedRemoteId,
-                                                    localID);
+                                                    direction, config.getConfigId(), config.getMyAddress(),
+                                                    formattedRemoteId, localID);
                 log.severe(errorMessage);
                 dialogLog.severe(config.getConfigId(), errorMessage, ddrRecord != null ? ddrRecord.getId() : null,
                                  sessionKey);
             }
             finally {
-            	ddrRecord.createOrUpdate();
+                ddrRecord.createOrUpdate();
                 session.storeSession();
             }
-            return handleQuestion( question, config, formattedRemoteId, sessionKey );
+            return handleQuestion(question, config, formattedRemoteId, sessionKey);
         }
         else {
             return Response.ok().build();
         }
-	}
+    }
 	
     @Path("answer")
     @GET
@@ -1019,100 +1040,114 @@ public class TwilioAdapter {
         }
     }
     
-	private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, String sessionKey) {
+    private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, String sessionKey) {
 
-		String result = (new TwiMLResponse()).toXML();
-		Return res = formQuestion(question, adapterConfig.getConfigId(),remoteID, null, sessionKey);
-		if (question != null && !question.getType().equalsIgnoreCase("comment"))
-			question = res.question;
-		Session session = Session.getSession(sessionKey);
-		// if the adapter is a trial adapter, add a introductory node
-		log.info("question formed at handleQuestion is: "+ ServerUtils.serializeWithoutException(question));
-		log.info("prompts formed at handleQuestion is: " + res.prompts);
+        String result = (new TwiMLResponse()).toXML();
+        Return res = formQuestion(question, adapterConfig.getConfigId(), remoteID, null, sessionKey);
+        if (question != null && !question.getType().equalsIgnoreCase("comment"))
+            question = res.question;
+        Session session = Session.getSession(sessionKey);
+        // if the adapter is a trial adapter, add a introductory node
+        log.info("question formed at handleQuestion is: " + ServerUtils.serializeWithoutException(question));
+        log.info("prompts formed at handleQuestion is: " + res.prompts);
 
-		if (question != null) {
-			question.generateIds();
-			session.setQuestion(question);
-			session.setRemoteAddress(remoteID);
-			session.storeSession();
+        if (question != null) {
+            question.generateIds();
+            session.setQuestion(question);
+            session.setRemoteAddress(remoteID);
+            session.storeSession();
 
-			if (question.getType().equalsIgnoreCase("closed")) {
-				result = renderClosedQuestion(question, res.prompts, sessionKey);
-			} else if (question.getType().equalsIgnoreCase("open")) {
-				result = renderOpenQuestion(question, res.prompts, sessionKey);
-			} else if (question.getType().equalsIgnoreCase("referral")) {
-				if (question.getUrl() != null
-						&& question.getUrl().startsWith("tel:")) {
-					// added for release0.4.2 to store the question in the
-					// session,
-					// for triggering an answered event
-					
-					// Check with remoteID we are going to use for the call
-					String externalCallerId = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.USE_EXTERNAL_CALLERID );
-		            Boolean callerId = false;
-		            if(externalCallerId!=null) {
-		            	callerId = Boolean.parseBoolean(externalCallerId);
-		            }
-		    		if(!callerId) {
-		    			remoteID = adapterConfig.getMyAddress();
-		    		}
-		    		
-		    		log.info(String.format("current session key before referral is: %s and remoteId %s", sessionKey, remoteID));
-					
-					String redirectedId = PhoneNumberUtils.formatNumber(question.getUrl().replace("tel:", ""), null);
-					if (redirectedId != null) {
-						// update url with formatted redirecteId. RFC3966
-						// returns format tel:<blabla> as expected
-						question.setUrl(redirectedId);
-						// store the remoteId as its lost while trying to
-						// trigger the answered event
-						HashMap<String, String> extras = new HashMap<String, String>();
-						extras.put("referredCalledId", redirectedId);
-						session.getExtras().putAll(extras);
-						session.setQuestion(question);
-						session.setRemoteAddress(remoteID);
-						
-						// create a new ddr record and session to catch the
-						// redirect
-						Session referralSession = Session.getOrCreateSession(adapterConfig, remoteID, redirectedId);
-						if (session.getDirection() != null) {
-							DDRRecord ddrRecord = null;
-							try {
-								ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, redirectedId, 1,question.getUrl());
-								if (ddrRecord != null) {
-									ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY,session.getTrackingToken());
-									ddrRecord.createOrUpdate();
-									referralSession.setDdrRecordId(ddrRecord.getId());
-								}
-							} catch (Exception e) {
-								e.printStackTrace();
-								log.severe(String.format("Continuing without DDR. Error: %s",e.toString()));
-							}
-							referralSession.setDirection(session.getDirection());
-							referralSession.setTrackingToken(session.getTrackingToken());
-						}
-						referralSession.setQuestion(session.getQuestion());
-						referralSession.getExtras().put("referralSessionKey", session.getKey());
-						referralSession.storeSession();
-						session.storeSession();
-					} else {
-						log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ",question.getUrl().replace("tel:", "")));
-					}
-					result = renderReferral(question, res.prompts, sessionKey, remoteID);
-				}
-			} else if (question.getType().equalsIgnoreCase("exit")) {
-				result = renderExitQuestion(question, res.prompts, sessionKey);
-			} else if (res.prompts.size() > 0) {
-				result = renderComment(question, res.prompts, sessionKey);
-			}
-		} else if (res.prompts.size() > 0) {
-			result = renderComment(null, res.prompts, sessionKey);
-		} else {
-			log.info("Going to hangup? So clear Session?");
-		}
-		log.info("Sending xml: " + result);
-		return Response.status(Status.OK).type(MediaType.APPLICATION_XML).entity(result).build();
-	}
+            if (question.getType().equalsIgnoreCase("closed")) {
+                result = renderClosedQuestion(question, res.prompts, sessionKey);
+            }
+            else if (question.getType().equalsIgnoreCase("open")) {
+                result = renderOpenQuestion(question, res.prompts, sessionKey);
+            }
+            else if (question.getType().equalsIgnoreCase("referral")) {
+                if (question.getUrl() != null && question.getUrl().startsWith("tel:")) {
+                    // added for release0.4.2 to store the question in the
+                    // session,
+                    // for triggering an answered event
+
+                    // Check with remoteID we are going to use for the call
+                    String externalCallerId = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                             MediaPropertyKey.USE_EXTERNAL_CALLERID);
+                    Boolean callerId = false;
+                    if (externalCallerId != null) {
+                        callerId = Boolean.parseBoolean(externalCallerId);
+                    }
+                    if (!callerId) {
+                        remoteID = adapterConfig.getMyAddress();
+                    }
+
+                    log.info(String.format("current session key before referral is: %s and remoteId %s", sessionKey,
+                                           remoteID));
+
+                    String redirectedId = PhoneNumberUtils.formatNumber(question.getUrl().replace("tel:", ""), null);
+                    if (redirectedId != null) {
+                        // update url with formatted redirecteId. RFC3966
+                        // returns format tel:<blabla> as expected
+                        question.setUrl(redirectedId);
+                        // store the remoteId as its lost while trying to
+                        // trigger the answered event
+                        HashMap<String, String> extras = new HashMap<String, String>();
+                        extras.put("referredCalledId", redirectedId);
+                        session.getExtras().putAll(extras);
+                        session.setQuestion(question);
+                        session.setRemoteAddress(remoteID);
+
+                        // create a new ddr record and session to catch the
+                        // redirect
+                        Session referralSession = Session.createSession(adapterConfig, remoteID, redirectedId);
+                        referralSession.setAccountId(session.getAccountId());
+                        if (session.getDirection() != null) {
+                            DDRRecord ddrRecord = null;
+                            try {
+                                ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
+                                                                                            referralSession.getAccountId(),
+                                                                                            redirectedId, 1,
+                                                                                            question.getUrl());
+                                if (ddrRecord != null) {
+                                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+                                    ddrRecord.createOrUpdate();
+                                    referralSession.setDdrRecordId(ddrRecord.getId());
+                                }
+                            }
+                            catch (Exception e) {
+                                e.printStackTrace();
+                                log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
+                            }
+                            referralSession.setDirection(session.getDirection());
+                            referralSession.setTrackingToken(session.getTrackingToken());
+                        }
+                        referralSession.setQuestion(session.getQuestion());
+                        referralSession.getExtras().put("referralSessionKey", session.getKey());
+                        referralSession.storeSession();
+                        session.storeSession();
+                    }
+                    else {
+                        log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ", question.getUrl()
+                                                        .replace("tel:", "")));
+                    }
+                    result = renderReferral(question, res.prompts, sessionKey, remoteID);
+                }
+            }
+            else if (question.getType().equalsIgnoreCase("exit")) {
+                result = renderExitQuestion(question, res.prompts, sessionKey);
+            }
+            else if (res.prompts.size() > 0) {
+                result = renderComment(question, res.prompts, sessionKey);
+            }
+        }
+        else if (res.prompts.size() > 0) {
+            result = renderComment(null, res.prompts, sessionKey);
+        }
+        else {
+            log.info("Going to hangup? So clear Session?");
+        }
+        log.info("Sending xml: " + result);
+        return Response.status(Status.OK).type(MediaType.APPLICATION_XML).entity(result).build();
+    }
     
     protected String getAnswerUrl() {
         return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/answer";

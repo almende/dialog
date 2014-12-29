@@ -9,6 +9,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import org.apache.commons.lang.NotImplementedException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import com.almende.dialog.Settings;
@@ -37,23 +38,24 @@ public class CMSmsServlet extends TextServlet {
 	private static final String adapterType = "CM";
 	private static final String deliveryStatusPath = "/dialoghandler/sms/cm/deliveryStatus";
 	
-	@Override
-	protected int sendMessage(String message, String subject, String from,
-			String fromName, String to, String toName, Map<String, Object> extras, AdapterConfig config) throws Exception {
-		
-		String[] tokens = config.getAccessToken().split("\\|");
-		CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
-		return cm.sendMessage(message, subject, from, fromName, to, toName, extras, config);
-	}
+    @Override
+    protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
+        Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
+
+        String[] tokens = config.getAccessToken().split("\\|");
+        CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
+        return cm.sendMessage(message, subject, from, fromName, to, toName, extras, config, accountId);
+    }
 	
     @Override
-    protected int broadcastMessage( String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config ) throws Exception
-    {
-        String[] tokens = config.getAccessToken().split( "\\|" );
+    protected int broadcastMessage(String message, String subject, String from, String senderName,
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
+        throws Exception {
 
-        CM cm = new CM( tokens[0], tokens[1], config.getAccessTokenSecret() );
-        return cm.broadcastMessage( message, subject, from, senderName, addressNameMap, extras, config );
+        String[] tokens = config.getAccessToken().split("\\|");
+
+        CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
+        return cm.broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId);
     }
     
     @Override
@@ -153,18 +155,19 @@ public class CMSmsServlet extends TextServlet {
 			throws IOException {}
 	
     @Override
-    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String fromAddress, String message) throws Exception {
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
+        String message) throws Exception {
 
         // Needs implementation, but service not available at CM
-        return null;
+        throw new NotImplementedException("Attaching cost not implemented for this Adapter");
     }
 
     @Override
-    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String senderName,
-                                             Map<String, String> toAddress, String message) throws Exception {
+    protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
+        Map<String, String> toAddress, String message) throws Exception {
 
         //add costs with no.of messages * recipients
-        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, senderName, toAddress,
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, senderName, toAddress,
                                                                CM.countMessageParts(message) * toAddress.size(),
                                                                message);
     }

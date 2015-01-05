@@ -10,9 +10,11 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DefaultValue;
@@ -27,9 +29,11 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
+
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -744,10 +748,23 @@ public class VoiceXMLRESTProxy {
                                 if (addressArray.length > 1) {
                                     address += "@" + addressArray[1];
                                 }
-
+                                
                                 String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT + "|" + config.getMyAddress() +
-                                                    "|" + formattedAddress;
-                                Session session = Session.getSession(sessionKey);
+                                "|" + formattedAddress;
+                                
+                                Session session = null;
+                                // if formattedAddress is empty (probably anonymous caller)
+                                // (Expensive query)
+                                if(formattedAddress.isEmpty()) {
+                                    List<Session> sessions = Session.findSessionByLocalAddress( config.getMyAddress() );
+                                   
+                                    if(sessions.size() == 1) {
+                                        session = sessions.get(0);
+                                    }
+                                } else {
+                                    // find the session based on the active call on the 
+                                    session = Session.getSession(sessionKey);
+                                }
                                 if (session != null) {
 
                                     log.info("Session key: " + sessionKey);

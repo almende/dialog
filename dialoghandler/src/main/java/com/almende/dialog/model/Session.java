@@ -239,13 +239,15 @@ public class Session{
         return datastore.load(Session.class, sessionKey);
     }
     
-    public static List<Session> findSessionByLocalAddress(String localAddress) {
+    public static List<Session> findSessionByLocalAndRemoteAddress(String localAddress, String remoteAddress) {
         
         List<Session> sessions = new ArrayList<Session>(); 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         Iterator<Session> config = datastore.find()
                         .type(Session.class)
                         .addFilter("localAddress", FilterOperator.EQUAL, localAddress)
+                        .addFilter("remoteAddress", FilterOperator.EQUAL, remoteAddress)
+                        .addFilter("releaseTimestamp", FilterOperator.EQUAL, null)
                         .now();
         if (config.hasNext()) {
             sessions.add(config.next());

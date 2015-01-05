@@ -756,8 +756,7 @@ public class VoiceXMLRESTProxy {
                                 // if formattedAddress is empty (probably anonymous caller)
                                 // (Expensive query)
                                 if(formattedAddress.isEmpty()) {
-                                    List<Session> sessions = Session.findSessionByLocalAddress( config.getMyAddress() );
-                                   
+                                    List<Session> sessions = Session.findSessionByLocalAndRemoteAddress( config.getMyAddress(), formattedAddress );
                                     if(sessions.size() == 1) {
                                         session = sessions.get(0);
                                     }

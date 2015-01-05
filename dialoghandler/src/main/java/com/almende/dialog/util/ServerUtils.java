@@ -98,7 +98,7 @@ public class ServerUtils
     public static String serialize( Object objectToBeSerialized ) throws Exception
     {
         oMapper.setSerializationInclusion( Include.NON_NULL );
-        oMapper.setSerializationInclusion( Include.NON_EMPTY );
+        //oMapper.setSerializationInclusion( Include.NON_EMPTY );
         String result = null;
         if(objectToBeSerialized != null )
         {

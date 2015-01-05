@@ -325,6 +325,7 @@ public class VoiceXMLRESTProxy {
             }
             session = Session.createSession(config, formattedRemoteId);
             session.setAccountId(config.getOwner());
+            session.setRemoteAddress( externalRemoteID );
             session.storeSession();
             url = config.getURLForInboundScenario();
             Broadsoft bs = new Broadsoft( config );
@@ -337,7 +338,7 @@ public class VoiceXMLRESTProxy {
         if(session != null) {
             session.setStartUrl( url );
             session.setDirection( direction );
-            session.setRemoteAddress( formattedRemoteId );
+            session.setRemoteAddress( externalRemoteID );
             session.setType( AdapterAgent.ADAPTER_TYPE_BROADSOFT );
             session.setAdapterID( config.getConfigId() );
         }
@@ -426,7 +427,7 @@ public class VoiceXMLRESTProxy {
                     log.severe("Session not found. Not expected to be null here!!");
                 }
             }
-            return handleQuestion( question, config, formattedRemoteId, sessionKey );
+            return handleQuestion( question, config, externalRemoteID, sessionKey );
         }
         else {
             return Response.ok().build();

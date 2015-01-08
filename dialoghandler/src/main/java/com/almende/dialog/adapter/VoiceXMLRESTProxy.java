@@ -10,9 +10,11 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DefaultValue;
@@ -27,9 +29,11 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
+
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -287,7 +291,11 @@ public class VoiceXMLRESTProxy {
     @Path("new")
     @GET
     @Produces("application/voicexml")
-    public Response getNewDialog(@QueryParam("direction") String direction,@QueryParam("remoteID") String remoteID,@QueryParam("localID") String localID, @Context UriInfo ui)
+    public Response getNewDialog(@QueryParam("direction") String direction,
+                                 @QueryParam("remoteID") String remoteID,
+                                 @QueryParam("externalRemoteID") String externalRemoteID,
+                                 @QueryParam("localID") String localID,
+                                 @Context UriInfo ui)
     {
         log.info("call started:"+direction+":"+remoteID+":"+localID);
         this.host=ui.getBaseUri().toString().replace(":80/", "/");
@@ -296,6 +304,7 @@ public class VoiceXMLRESTProxy {
         String formattedRemoteId = remoteID;
         //format the remote number
         formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID.split("@")[0], PhoneNumberFormat.E164);
+        externalRemoteID = PhoneNumberUtils.formatNumber(externalRemoteID.split("@")[0], PhoneNumberFormat.E164);
 
         if (formattedRemoteId == null) {
             log.severe(String.format("RemoveId address is invalid: %s. Ignoring.. ", remoteID));
@@ -320,6 +329,7 @@ public class VoiceXMLRESTProxy {
             }
             session = Session.createSession(config, formattedRemoteId);
             session.setAccountId(config.getOwner());
+            session.setRemoteAddress( externalRemoteID );
             session.storeSession();
             url = config.getURLForInboundScenario();
             Broadsoft bs = new Broadsoft( config );
@@ -332,7 +342,7 @@ public class VoiceXMLRESTProxy {
         if(session != null) {
             session.setStartUrl( url );
             session.setDirection( direction );
-            session.setRemoteAddress( formattedRemoteId );
+            session.setRemoteAddress( externalRemoteID );
             session.setType( AdapterAgent.ADAPTER_TYPE_BROADSOFT );
             session.setAdapterID( config.getConfigId() );
         }
@@ -343,7 +353,7 @@ public class VoiceXMLRESTProxy {
         
         Question question = session.getQuestion();
         if(question == null) {
-            question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), formattedRemoteId, localID,
+            question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), externalRemoteID, localID,
                                         session.getDdrRecordId(), session.getKey());
         }
         session.setQuestion(question);
@@ -421,7 +431,7 @@ public class VoiceXMLRESTProxy {
                     log.severe("Session not found. Not expected to be null here!!");
                 }
             }
-            return handleQuestion( question, config, formattedRemoteId, sessionKey );
+            return handleQuestion( question, config, externalRemoteID, sessionKey );
         }
         else {
             return Response.ok().build();
@@ -738,10 +748,22 @@ public class VoiceXMLRESTProxy {
                                 if (addressArray.length > 1) {
                                     address += "@" + addressArray[1];
                                 }
-
+                                
                                 String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT + "|" + config.getMyAddress() +
-                                                    "|" + formattedAddress;
-                                Session session = Session.getSession(sessionKey);
+                                "|" + formattedAddress;
+                                
+                                Session session = null;
+                                // if formattedAddress is empty (probably anonymous caller)
+                                // (Expensive query)
+                                if(formattedAddress.isEmpty()) {
+                                    List<Session> sessions = Session.findSessionByLocalAndRemoteAddress( config.getMyAddress(), formattedAddress );
+                                    if(sessions.size() == 1) {
+                                        session = sessions.get(0);
+                                    }
+                                } else {
+                                    // find the session based on the active call on the 
+                                    session = Session.getSession(sessionKey);
+                                }
                                 if (session != null) {
 
                                     log.info("Session key: " + sessionKey);

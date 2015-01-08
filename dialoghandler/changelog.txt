@@ -1,6 +1,12 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+5-1-2015 version 1.5.6
+- fix: Hide the callerID when a caller calls in anonymous
+
+29-12-2014, version 1.5.5
+- fix: add accountID to all the logs
+
 5-12-2014, version 1.5.4
 - fix: issue with fetching session for timeout events
 

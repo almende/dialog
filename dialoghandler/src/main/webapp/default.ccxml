@@ -3,6 +3,7 @@
   <var name="test" expr="''"/>
   
   <var name="remoteID" expr="''"/>
+  <var name="externalRemoteID" expr="''"/>
   <var name="localID" expr="''"/>
   <var name="direction" expr="'inbound'"/>
   <var name="timeout" expr="'60s'" />
@@ -23,8 +24,15 @@
           var remote = event$.connection.remote;
           var strings = remote.split('@');
 
+          var from = event$.info.sip.headers['from'];
+
           localID = event$.connection.local;
           remoteID = strings[0];
+          externalRemoteID = remoteID;
+          if(from.indexOf('Anonymous')!=-1) {
+            externalRemoteID = '';
+          }
+          
           var domain   = strings[1];
           if (domain.substring(0,8) == "outbound") {
             direction = "outbound";
@@ -44,7 +52,7 @@
 
     <transition state="initial" event="connection.connected">
       <if cond="inConn == event$.connectionid">
-	    <dialogstart src="vxmlScript" connectionid="inConn" dialogid="dialogID" namelist="direction localID remoteID"/>
+	    <dialogstart src="vxmlScript" connectionid="inConn" dialogid="dialogID" namelist="direction localID remoteID externalRemoteID"/>
 	    <if cond="ctdConn != ''">
 	        <disconnect connectionid="ctdConn"/>
 	    </if>

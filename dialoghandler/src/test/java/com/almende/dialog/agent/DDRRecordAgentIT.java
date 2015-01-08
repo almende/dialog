@@ -205,7 +205,7 @@ public class DDRRecordAgentIT extends TestFramework {
         Mockito.when( uri.getBaseUri() ).thenReturn( new URI( "http://localhost:8082/dialoghandler/vxml/new" ) );
         //-----------------------------------------------------------------------
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        voiceXMLRESTProxy.getNewDialog( "outbound", remoteAddressVoice, localAddressBroadsoft + "@ask.ask.voipit.nl", uri );
+        voiceXMLRESTProxy.getNewDialog( "outbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft + "@ask.ask.voipit.nl", uri );
         allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
         for ( DDRRecord ddrRecord : allDdrRecords )
         {
@@ -356,7 +356,7 @@ public class DDRRecordAgentIT extends TestFramework {
         Mockito.when( uri.getBaseUri() ).thenReturn( new URI( "http://localhost:8082/dialoghandler/vxml/new" ) );
         //-----------------------------------------------------------------------
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        voiceXMLRESTProxy.getNewDialog( "outbound", formattedRemoteAddressVoice, localAddressBroadsoft + "@ask.ask.voipit.nl", uri );
+        voiceXMLRESTProxy.getNewDialog( "outbound", formattedRemoteAddressVoice, formattedRemoteAddressVoice, localAddressBroadsoft + "@ask.ask.voipit.nl", uri );
         allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
         for ( DDRRecord ddrRecord : allDdrRecords )
         {

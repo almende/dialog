@@ -2,9 +2,12 @@ package com.almende.dialog.model;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.TextServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
@@ -234,6 +237,34 @@ public class Session{
     public static Session getSession(String sessionKey) {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         return datastore.load(Session.class, sessionKey);
+    }
+    
+    public static List<Session> findSessionByLocalAndRemoteAddress(String localAddress, String remoteAddress) {
+        
+        List<Session> sessions = new ArrayList<Session>(); 
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        Iterator<Session> config = datastore.find()
+                        .type(Session.class)
+                        .addFilter("localAddress", FilterOperator.EQUAL, localAddress)
+                        .addFilter("remoteAddress", FilterOperator.EQUAL, remoteAddress)
+                        .addFilter("releaseTimestamp", FilterOperator.EQUAL, null)
+                        .now();
+        if (config.hasNext()) {
+            sessions.add(config.next());
+        }
+        return sessions;
+    }
+    
+    public static Session findSessionByExternalId(String externalSessionId) {
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        Iterator<Session> config = datastore.find()
+                        .type(Session.class)
+                        .addFilter("externalSession", FilterOperator.EQUAL, externalSessionId)
+                        .now();
+        if (config.hasNext()) {
+            return config.next();
+        }
+        return null;
     }
     
     @JsonIgnore

@@ -98,18 +98,28 @@ public class Broadsoft {
         }
         return null;
     }
+    
+    public String restartSubscription(String subscriptionId) {
+        if(config.getXsiSubscription().equals( subscriptionId )) {
+            return startSubscription();
+        }
+        
+        log.warning( "terminated subscriptionId " + subscriptionId + " doesn't match registered one: "+ config.getXsiSubscription() + " NOT Restarting");
+        return null;
+    }
 	
     public String startSubscription()
     {
 		// Extend the current subscription
         if ( config.getXsiSubscription() != null && !config.getXsiSubscription().equals( "" ) )
         {
-			String subId = updateSubscription();
-            if ( subId != null )
-				return subId;
-		}
+            String subId = updateSubscription();
+            if ( subId != null ) {
+                return subId;
+            }
+	}
 
-		// If there is no subscription or the extending failed, create a new one.
+        // If there is no subscription or the extending failed, create a new one.
         WebResource webResource = client.resource( XSI_URL + XSI_EVENTS + "user/" + user );
         webResource.addFilter( this.auth );
         final String EVENT_LEVEL = "Advanced Call 2";
@@ -124,32 +134,29 @@ public class Broadsoft {
         }
         HashMap<String, String> queryKeyValue = new HashMap<String, String>();
 
-        while ( retryCounter.get( webResource.toString() ) != null
-            && retryCounter.get( webResource.toString() ) < MAX_RETRY_COUNT )
-        {
-            try
-            {
-                String result = sendRequestWithRetry( webResource, queryKeyValue, HTTPMethod.POST, xml );
+        while ( retryCounter.get( webResource.toString() ) != null &&
+                retryCounter.get( webResource.toString() ) < MAX_RETRY_COUNT ) {
+            try {
+                String result = sendRequestWithRetry( webResource, queryKeyValue, 
+                                                      HTTPMethod.POST, xml );
                 log.info( "Subscription result from BroadSoft: " + result );
                 //flush retryCount
                 retryCounter.remove( webResource.toString() );
                 String subId = getSubscriptionId( result );
-                if ( subId != null )
-                {
+                if ( subId != null ) {
                     if ( AdapterConfig.updateSubscription( config.getConfigId(), subId ) )
-					return subId;
-			}
+                        return subId;
+                }
                 break;
             }
-            catch ( Exception ex )
-            {
+            catch ( Exception ex ) {
                 log.severe( "Problems dialing out:" + ex.getMessage() );
                 Integer retry = retryCounter.get( webResource.toString() );
                 retryCounter.put( webResource.toString(), ++retry );
             }
-		}
-		return null;
-	}
+        }
+        return null;
+    }
 	
     public String updateSubscription()
     {
@@ -174,7 +181,6 @@ public class Broadsoft {
                 log.info( "Subscription result from BroadSoft: " + result );
                 //flush retryCount
                 retryCounter.remove( webResource.toString() );
-                log.info( "Subscription result from BroadSoft: " + result );
 
                 String subId = getSubscriptionId( result );
                 if ( subId != null )

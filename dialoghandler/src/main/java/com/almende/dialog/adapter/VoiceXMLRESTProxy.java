@@ -677,8 +677,14 @@ public class VoiceXMLRESTProxy {
 
             Document dom = db.parse(new ByteArrayInputStream(xml.getBytes("UTF-8")));
             Node subscriberId = dom.getElementsByTagName("subscriberId").item(0);
+            Node subscriptionId = dom.getElementsByTagName("subscriptionId").item(0);
 
             AdapterConfig config = AdapterConfig.findAdapterConfigByUsername(subscriberId.getTextContent());
+            
+            if(config.getXsiSubscription().equals( subscriptionId.getTextContent() )) {
+                log.warning("Ignoring because of unknown subscriptionId");
+                return Response.ok().build();
+            }
 
             Node eventData = dom.getElementsByTagName("eventData").item(0);
             // check if incall event
@@ -929,11 +935,14 @@ public class VoiceXMLRESTProxy {
             }
             else {
                 Node eventName = dom.getElementsByTagName("eventName").item(0);
+                log.info("EventName: "+eventName.getTextContent());
                 if (eventName != null && eventName.getTextContent().equals("SubscriptionTerminatedEvent")) {
 
                     Broadsoft bs = new Broadsoft(config);
-                    bs.startSubscription();
-                    log.info("Start a new dialog");
+                    String newId = bs.restartSubscription(subscriptionId.getTextContent());
+                    if(newId!=null) {
+                        log.info("Start a new dialog");
+                    }
                 }
                 log.info("Received a subscription update!");
             }

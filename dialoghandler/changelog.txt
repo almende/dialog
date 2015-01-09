@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+9-1-2015 version 1.5.6
+- fix: Play error message when first question is not properly loaded
+
 5-1-2015 version 1.5.6
 - fix: Hide the callerID when a caller calls in anonymous
 

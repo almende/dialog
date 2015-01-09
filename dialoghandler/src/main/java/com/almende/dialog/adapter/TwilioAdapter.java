@@ -206,6 +206,11 @@ public class TwilioAdapter {
             question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), formattedRemoteId, localID,
                                         session.getDdrRecordId(), session.getKey());
         }
+     // Check if we were able to load a question
+        if(question==null) {
+            //If not load a default error message
+            question = Question.getError( config.getPreferred_language() );
+        }
         session.setQuestion(question);
 
         if (session.getQuestion() != null) {
@@ -296,6 +301,11 @@ public class TwilioAdapter {
         if (question == null) {
             question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), formattedRemoteId, localID,
                                         session.getDdrRecordId(), session.getKey());
+        }
+        // Check if we were able to load a question
+        if(question==null) {
+            //If not load a default error message
+            question = Question.getError( config.getPreferred_language() );
         }
         session.setQuestion(question);
 

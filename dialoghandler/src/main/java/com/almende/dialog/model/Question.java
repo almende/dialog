@@ -140,6 +140,32 @@ public class Question implements QuestionIntf {
         }
         return question;
     }
+    
+    public static Question getError(String language) {
+        
+        if(!language.contains( "-" )) {
+            language = "nl-NL";
+        }
+        
+        String message = "";
+        switch (language) {
+            case "nl-NL":
+                message = "Er is iets mis gegaan met het ophalen van uw dialoog";
+                break;
+                
+             default: // Default is en-US
+                 language = "en-US";
+                 message = "Something went wrong retrieving your dialog";
+                 break;
+        }
+        
+        Question question = new Question();
+        question.setPreferred_language( language );
+        question.setType("comment");
+        question.setQuestion_text( "text://" + message );
+        question.generateIds();
+        return question;
+    }
 
     @JsonIgnore
     public String toJSON() {

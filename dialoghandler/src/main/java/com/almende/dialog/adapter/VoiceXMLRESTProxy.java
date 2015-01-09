@@ -356,6 +356,11 @@ public class VoiceXMLRESTProxy {
             question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), externalRemoteID, localID,
                                         session.getDdrRecordId(), session.getKey());
         }
+        // Check if we were able to load a question
+        if(question==null) {
+            //If not load a default error message
+            question = Question.getError( config.getPreferred_language() );
+        }
         session.setQuestion(question);
         
         log.info("Current session info: "+ ServerUtils.serializeWithoutException(session));

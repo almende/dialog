@@ -265,13 +265,14 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
      * @return AdapterId
      * @throws Exception
      */
-    public String createTwilioAdapter(@Name("address") String address, @Name("accountSid") @Optional String accountSid,
+    public String createTwilioAdapter(@Name("address") String address, @Name("accountSid") String accountSid,
                                          @Name("authToken") String authToken,
                                          @Name("preferredLanguage") @Optional String preferredLanguage,
                                          @Name("accountId") @Optional String accountId,
-                                         @Name("anonymous") boolean anonymous) throws Exception {
+                                         @Name("anonymous") @Optional Boolean anonymous) throws Exception {
 
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
+        anonymous = (anonymous == null ? false : anonymous);
 
         String normAddress = address.replaceFirst("^0", "").replace("+31", "");
         String externalAddress = "+31" + normAddress;

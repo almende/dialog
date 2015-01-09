@@ -386,7 +386,7 @@ public class TwilioAdapter {
             
             Map<String, String> extras = session.getExtras();
             extras.put("requester", session.getLocalAddress());
-            Question noAnswerQuestion = session.getQuestion().event("hangup", "Call rejected", extras, remoteID);
+            Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected", extras, remoteID);
             AdapterConfig config = session.getAdapterConfig();
             finalizeCall(config, null, dialCallSid, null);
             return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, sessionKey);

@@ -1080,6 +1080,7 @@ public class TwilioAdapter {
                     // for triggering an answered event
 
                     // Check with remoteID we are going to use for the call
+                    String newRemoteID = remoteID;
                     String externalCallerId = question.getMediaPropertyValue(MediumType.BROADSOFT,
                                                                              MediaPropertyKey.USE_EXTERNAL_CALLERID);
                     Boolean callerId = false;
@@ -1087,7 +1088,7 @@ public class TwilioAdapter {
                         callerId = Boolean.parseBoolean(externalCallerId);
                     }
                     if (!callerId) {
-                        remoteID = adapterConfig.getMyAddress();
+                        newRemoteID = adapterConfig.getMyAddress();
                     }
 
                     log.info(String.format("current session key before referral is: %s and remoteId %s", sessionKey,
@@ -1104,11 +1105,15 @@ public class TwilioAdapter {
                         extras.put("referredCalledId", redirectedId);
                         session.getExtras().putAll(extras);
                         session.setQuestion(question);
-                        session.setRemoteAddress(remoteID);
+                        session.setRemoteAddress(newRemoteID);
 
                         // create a new ddr record and session to catch the
                         // redirect
-                        Session referralSession = Session.createSession(adapterConfig, remoteID, redirectedId);
+                        Session referralSession = Session.createSession(adapterConfig, newRemoteID, redirectedId);
+                        HashMap<String, String> referralExtras = new HashMap<String, String>();
+                        referralExtras.put("originalRemoteId", remoteID);
+                        referralExtras.put("subscription", "true");
+                        referralSession.getExtras().putAll( referralExtras );
                         referralSession.setAccountId(session.getAccountId());
                         if (session.getDirection() != null) {
                             DDRRecord ddrRecord = null;
@@ -1139,7 +1144,7 @@ public class TwilioAdapter {
                         log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ", question.getUrl()
                                                         .replace("tel:", "")));
                     }
-                    result = renderReferral(question, res.prompts, sessionKey, remoteID);
+                    result = renderReferral(question, res.prompts, sessionKey, newRemoteID);
                 }
             }
             else if (question.getType().equalsIgnoreCase("exit")) {

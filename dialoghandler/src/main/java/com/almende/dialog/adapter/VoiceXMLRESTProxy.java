@@ -1549,6 +1549,10 @@ public class VoiceXMLRESTProxy {
                         //create a new ddr record and session to catch the redirect
                         Session referralSession = Session.createSession(adapterConfig, redirectedId);
                         referralSession.setAccountId(session.getAccountId());
+                        HashMap<String, String> referralExtras = new HashMap<String, String>();
+                        referralExtras.put("orignalRemoteId", remoteID);
+                        referralExtras.put("redirect", "true");
+                        referralSession.getExtras().putAll(referralExtras);
                         referralSession.storeSession();
                         if (session.getDirection() != null) {
                             DDRRecord ddrRecord = null;

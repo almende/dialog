@@ -1550,7 +1550,7 @@ public class VoiceXMLRESTProxy {
                         Session referralSession = Session.createSession(adapterConfig, redirectedId);
                         referralSession.setAccountId(session.getAccountId());
                         HashMap<String, String> referralExtras = new HashMap<String, String>();
-                        referralExtras.put("orignalRemoteId", remoteID);
+                        referralExtras.put("originalRemoteId", remoteID);
                         referralExtras.put("redirect", "true");
                         referralSession.getExtras().putAll(referralExtras);
                         referralSession.storeSession();

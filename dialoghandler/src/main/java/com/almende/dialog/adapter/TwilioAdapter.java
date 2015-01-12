@@ -1112,7 +1112,7 @@ public class TwilioAdapter {
                         Session referralSession = Session.createSession(adapterConfig, newRemoteID, redirectedId);
                         HashMap<String, String> referralExtras = new HashMap<String, String>();
                         referralExtras.put("originalRemoteId", remoteID);
-                        referralExtras.put("subscription", "true");
+                        referralExtras.put("redirect", "true");
                         referralSession.getExtras().putAll( referralExtras );
                         referralSession.setAccountId(session.getAccountId());
                         if (session.getDirection() != null) {

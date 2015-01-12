@@ -682,7 +682,7 @@ public class VoiceXMLRESTProxy {
 
             AdapterConfig config = AdapterConfig.findAdapterConfigByUsername(subscriberId.getTextContent());
             
-            if(config.getXsiSubscription().equals( subscriptionId )) {
+            if(!config.getXsiSubscription().equals( subscriptionId )) {
                 log.warning("Ignoring because of subscriptionId: "+ subscriptionId + " doesn't match :" + config.getXsiSubscription());
                 return Response.ok().build();
             }

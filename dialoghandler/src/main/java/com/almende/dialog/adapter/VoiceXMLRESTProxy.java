@@ -677,12 +677,13 @@ public class VoiceXMLRESTProxy {
 
             Document dom = db.parse(new ByteArrayInputStream(xml.getBytes("UTF-8")));
             Node subscriberId = dom.getElementsByTagName("subscriberId").item(0);
-            Node subscriptionId = dom.getElementsByTagName("subscriptionId").item(0);
+            Node subscriptionIdNode = dom.getElementsByTagName("subscriptionId").item(0);
+            String subscriptionId = subscriptionIdNode.getTextContent();
 
             AdapterConfig config = AdapterConfig.findAdapterConfigByUsername(subscriberId.getTextContent());
             
-            if(config.getXsiSubscription().equals( subscriptionId.getTextContent() )) {
-                log.warning("Ignoring because of unknown subscriptionId");
+            if(config.getXsiSubscription().equals( subscriptionId )) {
+                log.warning("Ignoring because of subscriptionId: "+ subscriptionId + " doesn't match :" + config.getXsiSubscription());
                 return Response.ok().build();
             }
 
@@ -939,7 +940,7 @@ public class VoiceXMLRESTProxy {
                 if (eventName != null && eventName.getTextContent().equals("SubscriptionTerminatedEvent")) {
 
                     Broadsoft bs = new Broadsoft(config);
-                    String newId = bs.restartSubscription(subscriptionId.getTextContent());
+                    String newId = bs.restartSubscription(subscriptionId);
                     if(newId!=null) {
                         log.info("Start a new dialog");
                     }

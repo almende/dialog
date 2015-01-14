@@ -510,16 +510,19 @@ abstract public class TextServlet extends HttpServlet {
             if (escapeInput.preferred_language == null) {
                 escapeInput.preferred_language = "nl";
             }
+            
+            // Here we can add extra parameters in the future
+            Map<String, String> extraParams = new HashMap<String, String>();
 
             boolean start = false;
             if (question == null) {
                 if (config.getURLForInboundScenario() != null && config.getURLForInboundScenario().equals("")) {
                     question = Question.fromURL(this.host + DEMODIALOG, config.getConfigId(), address, localaddress,
-                                                session.getDdrRecordId(), session.getKey());
+                                                session.getDdrRecordId(), session.getKey(), extraParams);
                 }
                 else {
                     question = Question.fromURL(config.getURLForInboundScenario(), config.getConfigId(), address,
-                                                localaddress, session.getDdrRecordId(), session.getKey());
+                                                localaddress, session.getDdrRecordId(), session.getKey(), extraParams);
                 }
                 session.setDirection("inbound");
                 start = true;

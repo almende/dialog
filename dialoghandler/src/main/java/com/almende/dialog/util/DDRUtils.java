@@ -389,7 +389,7 @@ public class DDRUtils
             DDRType ddrType = ddrRecord.getDdrType();
             config = ddrRecord.getAdapter();
             List<DDRPrice> communicationDDRPrices = null;
-            if(AdapterType.getByValue( config.getAdapterType()).equals( AdapterType.CALL ))
+            if(AdapterType.isCallAdapter( config.getAdapterType()))
             {
                 String toAddress = null;
                 //for a calling ddr record, it must always have one address in the toList

@@ -53,10 +53,14 @@ public class Question implements QuestionIntf {
 
     public static Question fromURL(String url, String adapterID, String remoteID, String ddrRecordId, String sessionKey) {
 
+        return fromURL(url, adapterID, remoteID, ddrRecordId, sessionKey, null);
+    }
+    
+    public static Question fromURL(String url, String adapterID, String remoteID, String ddrRecordId, String sessionKey, Map<String, String> extraParams) {
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
         String fromID = adapterConfig != null && adapterConfig.getMyAddress() != null ? adapterConfig.getMyAddress()
                                                                                      : null;
-        return fromURL(url, adapterID, remoteID, fromID, ddrRecordId, sessionKey);
+        return fromURL(url, adapterID, remoteID, fromID, ddrRecordId, sessionKey, extraParams);
     }
 
     public static String getJSONFromURL(String url, String adapterID, String remoteID, String fromID,
@@ -77,12 +81,15 @@ public class Question implements QuestionIntf {
     }
 
     public static Question fromURL(String url, String adapterID, String remoteID, String fromID, 
-                                   String ddrRecordId, String sessionKey) {
+                                   String ddrRecordId, String sessionKey, Map<String, String> extraParams) {
 
         log.info(String.format("Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID,
                                fromID));
         if (remoteID == null)
             remoteID = "";
+        if(extraParams==null) {
+            extraParams = new HashMap<String, String>();
+        }
         String json = "";
         if (url != null && !url.trim().isEmpty()) {
             Client client = ParallelInit.getClient();
@@ -90,6 +97,9 @@ public class Question implements QuestionIntf {
             try {
                 webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8"))
                                                 .queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
+                for(String key : extraParams.keySet()) {
+                    webResource = webResource.queryParam(key, URLEncoder.encode(extraParams.get( key ), "UTF-8"));
+                }
                 dialogLog.info(adapterID, "Loading new question from: " + webResource.toString(), ddrRecordId, sessionKey);
                 json = webResource.type("text/plain").get(String.class);
                 dialogLog.info(adapterID, "Received new question: " + json, ddrRecordId, sessionKey);

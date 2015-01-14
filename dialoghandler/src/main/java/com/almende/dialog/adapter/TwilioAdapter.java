@@ -534,6 +534,8 @@ public class TwilioAdapter {
                           session.getAdapterConfig(),
                           String.format("Wrong answer received from: %s for question: %s", responder,
                                         question.getQuestion_expandedtext()), session);
+            
+            answered( direction, remoteID, localID );
 
             HashMap<String, String> extras = new HashMap<String, String>();
             extras.put("sessionKey", sessionKey);
@@ -575,13 +577,33 @@ public class TwilioAdapter {
             if ( status.equals( "completed" ) ) {
                 finalizeCall( config, session, callSid, remoteID );
             }
-		}
-		
-		log.info("Session key: " + sessionKey);
-        
-		
-		return Response.ok("").build();
-	}
+        }
+
+        log.info( "Session key: " + sessionKey );
+
+        return Response.ok( "" ).build();
+    }
+    
+    public void answered( String direction, String remoteID, String localID ) {
+        log.info( "call answered with:" + direction + "_" + remoteID + "_" +
+                  localID );
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" +
+                            localID + "|" + remoteID.split( "@outbound" )[0]; //ignore the @outbound suffix
+        Session session = Session.getSession( sessionKey );
+        //for direction = transfer (redirect event), json should not be null        
+        //make sure that the answered call is not triggered twice
+        if ( session != null && session.getQuestion() != null && !isEventTriggered( "answered", session ) ) {
+            String responder = session.getRemoteAddress();
+            String referredCalledId = session.getExtras().get( "referredCalledId" );
+            HashMap<String, Object> timeMap = new HashMap<String, Object>();
+            timeMap.put( "referredCalledId", referredCalledId );
+            timeMap.put( "sessionKey", sessionKey );
+            timeMap.put( "requester", session.getLocalAddress() );
+            session.getQuestion().event( "answered","Answered",timeMap, responder );
+            dialogLog.log( LogLevel.INFO, session.getAdapterConfig(), 
+                           String.format( "Call from: %s answered by: %s",session.getLocalAddress(),responder ), session );
+        }
+    }
 	
 	/**
 	 * Retrieve call information and with that:
@@ -805,45 +827,42 @@ public class TwilioAdapter {
     }
     
     protected String renderReferral(Question question,ArrayList<String> prompts, String sessionKey, String remoteID){
-    	TwiMLResponse twiml = new TwiMLResponse();
-    	
-    	try {
-    		addPrompts(prompts, question.getPreferred_language(), twiml);
-    		
-    		String redirectTimeoutProperty = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT );
-                String redirectTimeout = redirectTimeoutProperty != null ? redirectTimeoutProperty.replace("s", "") : "30";
-    		int timeout = 30;
+        TwiMLResponse twiml = new TwiMLResponse();
+
+        try {
+            addPrompts( prompts, question.getPreferred_language(), twiml );
+
+            String redirectTimeoutProperty = question
+                .getMediaPropertyValue( MediumType.BROADSOFT,
+                                        MediaPropertyKey.TIMEOUT );
+            String redirectTimeout = redirectTimeoutProperty != null ? redirectTimeoutProperty.replace( "s", "" ) : "30";
+            int timeout = 30;
             try {
-                timeout = Integer.parseInt(redirectTimeout);
+                timeout = Integer.parseInt( redirectTimeout );
             }
-            catch (NumberFormatException e) {
+            catch ( NumberFormatException e ) {
                 e.printStackTrace();
             }
 
-            com.twilio.sdk.verbs.Number number = new com.twilio.sdk.verbs.Number(question.getUrl());
-            
-            String usePreconnect = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.USE_PRECONNECT );
-    		usePreconnect = usePreconnect != null ? usePreconnect : "false";
-    		boolean preconnect = Boolean.parseBoolean(usePreconnect);
-    		
-    		if(preconnect) {
-    			number.setMethod("GET");
-    			number.setUrl(getPreconnectUrl());
-    		}
-    		
-    		Dial dial = new Dial();
-    		dial.setCallerId(remoteID);
-    		dial.append(number);
-    		dial.setTimeout(timeout);
-    		
-    		dial.setMethod("GET");
-    		dial.setAction(getAnswerUrl());
-    		
-    		twiml.append(dial);
-    	}catch(TwiMLException e ) {
-    		log.warning("Failed to create referal");
-    	}
-    	return twiml.toXML();
+            com.twilio.sdk.verbs.Number number = new com.twilio.sdk.verbs.Number( question.getUrl() );
+
+            number.setMethod( "GET" );
+            number.setUrl( getPreconnectUrl() );
+
+            Dial dial = new Dial();
+            dial.setCallerId( remoteID );
+            dial.append( number );
+            dial.setTimeout( timeout );
+
+            dial.setMethod( "GET" );
+            dial.setAction( getAnswerUrl() );
+
+            twiml.append( dial );
+        }
+        catch ( TwiMLException e ) {
+            log.warning( "Failed to create referal" );
+        }
+        return twiml.toXML();
     }
 	
     protected String renderClosedQuestion(Question question, ArrayList<String> prompts, String sessionKey) {

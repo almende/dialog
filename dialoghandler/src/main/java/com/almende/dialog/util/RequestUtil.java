@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.wink.common.model.wadl.HTTPMethods;
 
 import com.almende.util.ParallelInit;
@@ -29,51 +30,49 @@ public class RequestUtil {
 		return serverURL.toString();
 	}
 	
-	    /**
-	     * fetches the response in string format.
-	     * @param httpMethod GET/PUT/POST
-	     * @param url
-	     * @param queryParams Map<queryKey, paramValue> ?queryKey="paramValue"
-	     * @param type text/plain application/json
-	     * @return
-	     */
-	    public static String fromURL( HTTPMethods httpMethod,  String url, Map<String, String> queryParams, String type, String json_payload )
-	    {
-	        Client client = ParallelInit.getClient();
-	        WebResource webResource = client.resource( url );
-	        type = type == null || type.isEmpty() ? "text/plain" : type; 
-	        String json = "";
-	        try
-	        {
-	            if ( queryParams != null )
-	            {
-	                for ( String key : queryParams.keySet() )
-	                {
-	                    webResource = webResource.queryParam( key,
-	                                                          URLEncoder.encode( queryParams.get( key ),
-	                                                                             "UTF-8" ) );
-	                }
-	            }
-	            switch ( httpMethod )
-	            {
-	                case GET:
-	                    json = webResource.type( type ).get( String.class );
-	                    break;
-	                case POST:
-	                    json = webResource.type( type ).post( String.class, json_payload != null ? json_payload : "");
-	                    break;
-	                case PUT:
-	                    json = webResource.type( type ).put( String.class, json_payload != null ? json_payload : "" );
-	                    break;
-	                default:
-	                    throw new Exception( "Unsupported http" +
-	                    		"Method Type" );
-	            }
-	        }
-	        catch ( Exception e )
-	        {
-	            log.severe( e.toString() );
-	        }
-	        return json;
-	    }
+    /**
+     * fetches the response in string format.
+     * 
+     * @param httpMethod
+     *            GET/PUT/POST
+     * @param url
+     * @param queryParams
+     *            Map<queryKey, paramValue> ?queryKey="paramValue"
+     * @param type
+     *            text/plain application/json
+     * @return
+     */
+    public static String fromURL( HTTPMethods httpMethod, String url,Map<String, String> queryParams, String type,String json_payload ) {
+
+        AFHttpClient client = ParallelInit.getAFHttpClient();
+        
+        type = type == null || type.isEmpty() ? "text/plain" : type;
+        String json = "";
+        try {
+            URIBuilder builder = new URIBuilder(url);
+            if ( queryParams != null ) {
+                for ( String key : queryParams.keySet() ) {
+                    builder.addParameter( key, queryParams.get( key ) );
+                }
+            }
+            url = builder.build().toString();
+            switch ( httpMethod ) {
+                case GET:
+                    json = client.get(url);
+                    break;
+                case POST:
+                    json = client.post( (json_payload != null ? json_payload : "" ), url, type);
+                    break;
+                case PUT:
+                    json = client.put( (json_payload != null ? json_payload : "" ), url, type);
+                    break;
+                default:
+                    throw new Exception( "Unsupported http" + "Method Type" );
+            }
+        }
+        catch ( Exception e ) {
+            log.severe( e.toString() );
+        }
+        return json;
+    }
 }

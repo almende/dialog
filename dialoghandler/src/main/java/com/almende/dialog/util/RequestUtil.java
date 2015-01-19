@@ -2,7 +2,6 @@ package com.almende.dialog.util;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -12,8 +11,6 @@ import org.apache.http.client.utils.URIBuilder;
 import org.apache.wink.common.model.wadl.HTTPMethods;
 
 import com.almende.util.ParallelInit;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
 
 public class RequestUtil {
     

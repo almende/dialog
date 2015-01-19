@@ -114,7 +114,7 @@ public class VoiceXMLRESTProxy {
             session.setAccountId(accountId);
             session.storeSession();
             Question question = Question.fromURL(url, config.getConfigId(), formattedAddress, config.getMyAddress(),
-                                                 session.getDdrRecordId(), session.getKey());
+                                                 session.getDdrRecordId(), session.getKey(), new HashMap<String, String>());
             session.setQuestion(question);
             session.storeSession();
 
@@ -300,6 +300,8 @@ public class VoiceXMLRESTProxy {
         log.info("call started:"+direction+":"+remoteID+":"+localID);
         this.host=ui.getBaseUri().toString().replace(":80/", "/");
         
+        Map<String, String> extraParams = new HashMap<String, String>();
+        
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localID);
         String formattedRemoteId = remoteID;
         //format the remote number
@@ -354,7 +356,7 @@ public class VoiceXMLRESTProxy {
         Question question = session.getQuestion();
         if(question == null) {
             question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), externalRemoteID, localID,
-                                        session.getDdrRecordId(), session.getKey());
+                                        session.getDdrRecordId(), session.getKey(), extraParams);
         }
         // Check if we were able to load a question
         if(question==null) {
@@ -612,7 +614,7 @@ public class VoiceXMLRESTProxy {
             if (session.getQuestion() == null) {
                 Question question = Question.fromURL(session.getStartUrl(), session.getAdapterConfig().getConfigId(),
                                                      session.getRemoteAddress(), session.getLocalAddress(),
-                                                     session.getDdrRecordId(), session.getKey());
+                                                     session.getDdrRecordId(), session.getKey(), new HashMap<String, String>());
                 session.setQuestion(question);
             }
             if (session.getQuestion() != null && !isEventTriggered("hangup", session)) {
@@ -1549,6 +1551,10 @@ public class VoiceXMLRESTProxy {
                         //create a new ddr record and session to catch the redirect
                         Session referralSession = Session.createSession(adapterConfig, redirectedId);
                         referralSession.setAccountId(session.getAccountId());
+                        HashMap<String, String> referralExtras = new HashMap<String, String>();
+                        referralExtras.put("originalRemoteId", remoteID);
+                        referralExtras.put("redirect", "true");
+                        referralSession.getExtras().putAll(referralExtras);
                         referralSession.storeSession();
                         if (session.getDirection() != null) {
                             DDRRecord ddrRecord = null;

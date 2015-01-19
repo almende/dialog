@@ -39,6 +39,7 @@
 		<jongo.version>1.1</jongo.version>
 		<smack.version>3.1.0</smack.version>
 		<twilio.version>3.4.5</twilio.version>
+		<okhttp.version>2.2.0</okhttp.version>
 	</properties>
 
 	<organization>
@@ -185,6 +186,11 @@
 			<groupId>com.twilio.sdk</groupId>
 			<artifactId>twilio-java-sdk</artifactId>
 			<version>${twilio.version}</version>
+		</dependency>
+		<dependency>
+		  <groupId>com.squareup.okhttp</groupId>
+		  <artifactId>okhttp</artifactId>
+		  <version>${okhttp.version}</version>
 		</dependency>
 	</dependencies>
 

@@ -2,12 +2,16 @@ package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.logging.Logger;
+
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.TwilioAdapter.Return;
@@ -353,33 +357,33 @@ public class TwilioAdapterTest extends TestFramework {
         return question;
     }
 	
-	private String renderQuestion(Question question, AdapterConfig adapter, String sessionKey) throws Exception {
+    private String renderQuestion(Question question, AdapterConfig adapter, String sessionKey) throws Exception {
 
-		TwilioAdapter servlet = new TwilioAdapter();
-        Return res = servlet.formQuestion(question, adapter.getConfigId(), remoteAddressVoice, null, sessionKey);
+        TwilioAdapter servlet = new TwilioAdapter();
+        Return res = servlet.formQuestion(question, adapter.getConfigId(), remoteAddressVoice, null, sessionKey, new HashMap<String, String>());
 
         if (question.getType().equalsIgnoreCase("comment")) {
             return servlet.renderComment(res.question, res.prompts, sessionKey);
         }
         else if (question.getType().equalsIgnoreCase("referral")) {
         	
-        	String remoteID = remoteAddressVoice;
-        	String externalCallerId = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.USE_EXTERNAL_CALLERID );
+            String remoteID = remoteAddressVoice;
+            String externalCallerId = question.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.USE_EXTERNAL_CALLERID );
             Boolean callerId = false;
-            if(externalCallerId!=null) {
-            	callerId = Boolean.parseBoolean(externalCallerId);
+            if ( externalCallerId != null ) {
+                callerId = Boolean.parseBoolean( externalCallerId );
             }
-    		if(!callerId) {
-    			remoteID = adapter.getMyAddress();
-    		}
+            if ( !callerId ) {
+                remoteID = adapter.getMyAddress();
+            }
 
-        	String redirectedId = PhoneNumberUtils.formatNumber(question.getUrl().replace("tel:", ""), null);
-			if (redirectedId != null) {
-				// update url with formatted redirecteId. RFC3966
-				// returns format tel:<blabla> as expected
-				question.setUrl(redirectedId);
-			}
-			return servlet.renderReferral(res.question, res.prompts, sessionKey, remoteID);
+            String redirectedId = PhoneNumberUtils.formatNumber( question.getUrl().replace( "tel:", "" ), null );
+            if ( redirectedId != null ) {
+                // update url with formatted redirecteId. RFC3966
+                // returns format tel:<blabla> as expected
+                question.setUrl( redirectedId );
+            }
+            return servlet.renderReferral( res.question, res.prompts, sessionKey, remoteID );
         }
         else if (question.getType().equalsIgnoreCase("open")) {
             return servlet.renderOpenQuestion(res.question, res.prompts, sessionKey);

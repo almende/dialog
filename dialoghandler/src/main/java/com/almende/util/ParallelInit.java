@@ -1,5 +1,6 @@
 package com.almende.util;
 
+import com.almende.dialog.util.AFHttpClient;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.DB;
@@ -12,6 +13,10 @@ public class ParallelInit {
 	public static boolean clientActive = false;
 	public static boolean isTest = false;
 	public static Thread conThread = new ClientConThread();
+	
+	public static AFHttpClient afhttpClient = null;
+	public static boolean afclientActive = false;
+	public static Thread afconThread = new AFHttpClientConThread();
 
 	public static DB datastore = null;
 	public static boolean datastoreActive = false;
@@ -29,6 +34,9 @@ public class ParallelInit {
 		synchronized(conThread){
 			if (!clientActive && !conThread.isAlive()) conThread.start();
 		}
+		synchronized(afconThread){
+                    if (!afclientActive && !afconThread.isAlive()) afconThread.start();
+                }
 		synchronized(datastoreThread){
 			if (!datastoreActive && !datastoreThread.isAlive()) datastoreThread.start();
 		}
@@ -51,6 +59,17 @@ public class ParallelInit {
 		}
 		return client;
 	}
+	
+	public static AFHttpClient getAFHttpClient(){
+            startThreads();
+            while (!afclientActive){
+                    try {
+                            Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                    }
+            }
+            return afhttpClient;
+        }
 	
 	public static DB getDatastore(){
 		startThreads();

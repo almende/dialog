@@ -1,6 +1,13 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+19-1-2015 version 1.5.9
+- feature: Added the forwardedForm parameter in the Twilio Adapter
+- fix: Use the okhttpclient because the jetty client doesn't handle status codes properly. Forexmple
+	   redirect weren't processed properly.
+- fix: Twilio Adapter always set a preconnect url, but only load if the preconnect if is set in dialog. 
+       When the preconnect function is called always trigger the answered event.
+
 12-1-2015 version 1.5.8
 - fix: Twilio adapter call the timeout event when someone doesn't answer instead of hangup.
 - fix: Added a filter on receiveCC to check if the subscription is active one. Also in the

@@ -1,5 +1,6 @@
 package com.almende.dialog.adapter;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Map;
 import javax.servlet.ServletException;
@@ -71,7 +72,13 @@ public class RouteSmsServlet extends TextServlet {
                             host += deliveryStatusPath;
                             log.info("Route-SMS delivery status is being redirect to: " + host);
                             host += ("?" + (req.getQueryString() != null ? req.getQueryString() : ""));
-                            responseText = forwardToHost(host, HTTPMethod.GET, null);
+                            StringBuffer jb = new StringBuffer();
+                            String line = null;
+                            BufferedReader reader = req.getReader();
+                            while ((line = reader.readLine()) != null) {
+                                jb.append(line);
+                            }
+                            responseText = forwardToHost(host, HTTPMethod.POST, jb.toString());
                         }
                         else {
                             SMSDeliveryStatus routeSMSStatus = handleDeliveryStatusReport(req.getParameter("messageid"),

@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.TextServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
@@ -285,6 +284,20 @@ public class Session{
     {
         this.extras = extras;
     }
+
+    /**
+     * Adds an extra info into this session. Doesnt persist it to the DB. 
+     * Additional methodcall needed.
+     * @param key
+     * @param value
+     */
+    public void addExtras(String key, String value) {
+
+        if (extras != null) {
+            extras.put(key, value);
+        }
+    }
+    
     /**
      * used to mimick the String store entity. 
      * @return the first value found in the {@link Session#extras}

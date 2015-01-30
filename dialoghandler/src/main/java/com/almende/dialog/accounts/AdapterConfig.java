@@ -88,6 +88,7 @@ public class AdapterConfig {
             newConfig.status = "OPEN";
 
             newConfig = om.readerForUpdating(newConfig).readValue(json);
+            newConfig.adapterType = newConfig.adapterType.toLowerCase();
             if (adapterExists(newConfig.getAdapterType(), newConfig.getMyAddress(), newConfig.getKeyword())) {
                 return Response.status(Status.CONFLICT).build();
             }

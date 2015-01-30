@@ -24,6 +24,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
@@ -166,8 +167,7 @@ abstract public class TextServlet extends HttpServlet {
     public String startDialog(String address, String url, AdapterConfig config, String accountId) throws Exception {
 
         String sessionKey = null;
-        if (config.getAdapterType().equalsIgnoreCase("CM") ||
-            config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+        if (AdapterType.isSMSAdapter(config.getAdapterType())) {
             address = PhoneNumberUtils.formatNumber(address, null);
         }
         if (address != null) {
@@ -182,8 +182,7 @@ abstract public class TextServlet extends HttpServlet {
                 session.setAccountId(accountId);
                 session.setDirection("outbound");
                 session.storeSession();
-                if (config.getAdapterType().equalsIgnoreCase("CM") ||
-                    config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                if (AdapterType.isSMSAdapter(config.getAdapterType())) {
                     PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(address);
                     if (!PhoneNumberType.MOBILE.equals(numberType)) {
                         String errorMessage = String.format("Ignoring SMS request to: %s from: %s, as it is not of type MOBILE",
@@ -258,8 +257,7 @@ abstract public class TextServlet extends HttpServlet {
         if (addressNameMap.size() + addressCcNameMap.size() + addressBccNameMap.size() == 1) {
             
             loadAddress = addressNameMap.keySet().iterator().next();
-            if (config.getAdapterType().equals("CM") ||
-                config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+            if (AdapterType.isSMSAdapter(config.getAdapterType())) {
                 loadAddress = PhoneNumberUtils.formatNumber(loadAddress, null);
             }
             //create a session if its only for one number
@@ -324,8 +322,7 @@ abstract public class TextServlet extends HttpServlet {
                 res = formQuestion(question, config.getConfigId(), null, null, null);
                 for (String address : fullAddressMap.keySet()) {
                     String formattedAddress = address; //initialize formatted address to be the original one
-                    if (config.getAdapterType().equals("CM") ||
-                                                    config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                    if (AdapterType.isSMSAdapter(config.getAdapterType())) {
                         formattedAddress = PhoneNumberUtils.formatNumber(address, null);
                     }
                     if (formattedAddress != null) {

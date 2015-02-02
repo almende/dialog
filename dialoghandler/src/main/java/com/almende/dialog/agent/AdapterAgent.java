@@ -479,6 +479,29 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 
         return newConfig.getConfigId();
     }
+    
+    public String createRouteSMSAdapter(@Name("address") String address, @Name("keyword") @Optional String keyword,
+        @Name("username") String username, @Name("password") String password,
+        @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
+        @Name("accountType") @Optional String accountType) throws Exception {
+
+        preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
+
+        AdapterConfig config = new AdapterConfig();
+        config.setAdapterType(AdapterType.ROUTE_SMS.getName());
+        config.setMyAddress(address);
+        config.setKeyword(keyword);
+        config.setPreferred_language(preferredLanguage);
+        config.setPublicKey(accountId);
+        config.setOwner(accountId);
+        config.addAccount(accountId);
+        config.setAnonymous(false);
+        config.setAccessToken(username);
+        config.setAccessTokenSecret(password);
+        config.setAccountType(AccountType.fromJson(accountType));
+        AdapterConfig newConfig = createAdapter(config);
+        return newConfig.getConfigId();
+    }
 	
 	public String createNexmoAdapter(@Name("address") String address,
 			@Name("keyword") @Optional String keyword,

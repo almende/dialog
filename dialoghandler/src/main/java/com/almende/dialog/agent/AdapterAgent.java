@@ -456,31 +456,29 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
     }
 	
     public String createMBAdapter(@Name("address") String address, @Name("keyword") @Optional String keyword,
-                                  @Name("username") String username, @Name("password") String password,
-                                  @Name("preferredLanguage") @Optional String preferredLanguage,
-                                  @Name("accountId") @Optional String accountId,
-                                  @Name("accountType") @Optional String accountType) throws Exception {
+        @Name("username") String username, @Name("password") String password,
+        @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
+        @Name("accountType") @Optional String accountType) throws Exception {
 
-        preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
-
-        AdapterConfig config = new AdapterConfig();
-        config.setAdapterType(ADAPTER_TYPE_SMS);
-        config.setMyAddress(address);
-        config.setKeyword(keyword);
-        config.setPreferred_language(preferredLanguage);
-        config.setPublicKey(accountId);
-        config.setOwner(accountId);
-        config.addAccount(accountId);
-        config.setAnonymous(false);
-        config.setAccessToken(username);
-        config.setAccessTokenSecret(password);
-        config.setAccountType(AccountType.fromJson(accountType));
-        AdapterConfig newConfig = createAdapter(config);
-
-        return newConfig.getConfigId();
+        return createGenericSMSAdapter(address, ADAPTER_TYPE_SMS, keyword, username, password, preferredLanguage,
+                                       accountId, accountType);
     }
     
-    public String createRouteSMSAdapter(@Name("address") String address, @Name("keyword") @Optional String keyword,
+    /**
+     * Creates a generic SMS adapter. Based on the adapterType, username and password, this can 
+     * be assigned to a unique provider.  
+     * @param address The address of the sender
+     * @param adapterType The type of the SMS provider used
+     * @param keyword 
+     * @param username Username of the provider account
+     * @param password 
+     * @param preferredLanguage
+     * @param accountId
+     * @param accountType
+     * @return
+     * @throws Exception
+     */
+    public String createGenericSMSAdapter(@Name("address") String address, @Name("adapterType") String adapterType, @Name("keyword") @Optional String keyword,
         @Name("username") String username, @Name("password") String password,
         @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
         @Name("accountType") @Optional String accountType) throws Exception {
@@ -488,7 +486,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
 
         AdapterConfig config = new AdapterConfig();
-        config.setAdapterType(AdapterType.ROUTE_SMS.getName());
+        config.setAdapterType(AdapterType.getByValue(adapterType).getName());
         config.setMyAddress(address);
         config.setKeyword(keyword);
         config.setPreferred_language(preferredLanguage);

@@ -327,7 +327,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                     resultSessionMap = new CMSmsServlet().startDialog(addressMap, null, null, url, senderName, subject,
                                                                       config, accountId);
                 }
-                else if (adapterType.equalsIgnoreCase("RouteSMS")) {
+                else if (AdapterType.ROUTE_SMS.equals(AdapterType.getByValue(adapterType))) {
                     resultSessionMap = new RouteSmsServlet().startDialog(addressMap, null, null, url, senderName,
                                                                          subject, config, accountId);
                 }

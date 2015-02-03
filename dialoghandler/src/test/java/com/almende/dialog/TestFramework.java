@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Properties;
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
@@ -19,6 +20,7 @@ import org.w3c.dom.Document;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DDRRecordAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
@@ -28,6 +30,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.TypeUtil;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.meterware.servletunit.ServletRunner;
@@ -66,6 +69,9 @@ public class TestFramework
         {
             servletRunner.set( setupTestServlet() );
         }
+        DialogAgent.DEFAULT_PROVIDERS = new HashMap<AdapterType, AdapterProviders>();
+        DialogAgent.DEFAULT_PROVIDERS.put(AdapterType.SMS, AdapterProviders.CM);
+        DialogAgent.DEFAULT_PROVIDERS.put(AdapterType.CALL, AdapterProviders.BROADSOFT);
     }
     
     @After
@@ -130,7 +136,8 @@ public class TestFramework
         adapterConfig.addAccount(accountId);
         String adapterConfigString = adapterConfig.createConfig(ServerUtils.serialize(adapterConfig)).getEntity()
                                         .toString();
-        return ServerUtils.deserialize(adapterConfigString, AdapterConfig.class);
+        adapterConfig = ServerUtils.deserialize(adapterConfigString, AdapterConfig.class);
+        return adapterConfig;
     }
     
     public static AdapterConfig createAdapterConfig(String adapterType, String owner,

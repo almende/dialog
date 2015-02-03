@@ -389,7 +389,7 @@ public class DDRUtils
             DDRType ddrType = ddrRecord.getDdrType();
             config = ddrRecord.getAdapter();
             List<DDRPrice> communicationDDRPrices = null;
-            if(AdapterType.isCallAdapter( config.getAdapterType()))
+            if(config.isCallAdapter())
             {
                 String toAddress = null;
                 //for a calling ddr record, it must always have one address in the toList
@@ -609,7 +609,7 @@ public class DDRUtils
                         session.setDdrRecordId(ddrRecord.getId());
                     }
                 }
-                if (AdapterType.isCallAdapter(adapterConfig.getAdapterType())) {
+                if (adapterConfig.isCallAdapter()) {
                     if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
                         session.getDirection() != null) {
                         ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(), adapterConfig, 
@@ -627,9 +627,11 @@ public class DDRUtils
                             dialogLog.severe(adapterConfig, errorMessage, session);
                             candidateToBePushedToQueue = true;
                         }
-                        else if (ddrRecord != null && session.getAnswerTimestamp() == null) {
-                            String warningMessage = String.format("No costs added. Looks like a hangup! for session: %s",
-                                                                  session.getKey());
+                        else if (ddrRecord != null && session.getAnswerTimestamp() == null &&
+                                 session.getReleaseTimestamp() != null) {
+
+                            String warningMessage = String.format("No costs added. Looks like a immediate hangup! Hangup timestamp: %s found. But answerTimestamp not found for session: %s",
+                                                                  session.getReleaseTimestamp(), session.getKey());
                             log.warning(warningMessage);
                             candidateToBePushedToQueue = true;
                         }
@@ -705,7 +707,7 @@ public class DDRUtils
      */
     protected static double applyStartUpCost(double result, AdapterConfig config, String direction) throws Exception {
 
-        if (config != null && AdapterType.isCallAdapter(config.getAdapterType()) && result > 0.0 &&
+        if (config != null && config.isCallAdapter() && result > 0.0 &&
             "outbound".equalsIgnoreCase(direction)) {
             DDRPrice startUpPrice = fetchDDRPrice(DDRTypeCategory.START_UP_COST,
                                                   AdapterType.getByValue(config.getAdapterType()),
@@ -735,7 +737,7 @@ public class DDRUtils
             boolean applyServiceCharge = true;
 
             //dont apply service charge if its a missed call or call ignroed (call duration is 0)
-            if (ddrRecord.getAdapter() != null && AdapterType.isCallAdapter(ddrRecord.getAdapter().getAdapterType()) &&
+            if (ddrRecord.getAdapter() != null && ddrRecord.getAdapter().isCallAdapter() &&
                 (ddrRecord.getDuration() == null || ddrRecord.getDuration() <= 0)) {
                 applyServiceCharge = false;
             }

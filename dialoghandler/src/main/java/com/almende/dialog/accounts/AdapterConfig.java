@@ -29,6 +29,8 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.almende.util.uuid.UUID;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +42,7 @@ public class AdapterConfig {
 	static final Logger log = Logger.getLogger(AdapterConfig.class.getName());
 	static final ObjectMapper om = new ObjectMapper();
 	public static final String ADAPTER_CREATION_TIME_KEY = "ADAPTER_CREATION_TIME";
+	public static final String ADAPTER_PROVIDER_KEY = "PROVIDER";
 	public static final String DIALOG_ID_KEY = "DIALOG_ID";
 
 	@Id
@@ -313,7 +316,7 @@ public class AdapterConfig {
 		Iterator<AdapterConfig> config = datastore.find()
 				.type(AdapterConfig.class)
 				.addFilter("myAddress", FilterOperator.EQUAL, localAddress)
-				.addFilter("adapterType", FilterOperator.EQUAL, adapterType)
+				.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase())
 				.addFilter("keyword", FilterOperator.EQUAL, keyword)
 				.now();
 		if (config.hasNext()) {
@@ -856,5 +859,58 @@ public class AdapterConfig {
             }
         }
         return adapters;
+    }
+    
+    @JsonIgnore
+    public boolean isCallAdapter() {
+
+        AdapterType type = AdapterType.getByValue(adapterType);
+
+        //check the adapter type
+        if (type != null) {
+            if (AdapterType.CALL.equals(type) || AdapterType.TWILIO.equals(type)) {
+                return true;
+            }
+            return false;
+        }
+        //check if the adapterType has the provider value itself
+        else if(AdapterProviders.getByValue(adapterType) != null){
+            return AdapterProviders.isCallAdapter(adapterType);
+        }
+        //check the properties
+        else if(properties != null && properties.get(ADAPTER_PROVIDER_KEY) != null){
+            Object provider = properties.get(ADAPTER_PROVIDER_KEY);
+            return AdapterProviders.isCallAdapter(provider.toString());
+        }
+        return false;
+    }
+    
+    @JsonIgnore    
+    public boolean isSMSAdapter() {
+
+        AdapterType type = AdapterType.getByValue(adapterType);
+
+        //check the adapter type
+        if (type != null) {
+            if (AdapterType.SMS.equals(type)) {
+                return true;
+            }
+            return false;
+        }
+        //check if the adapterType has the provider value itself
+        else if(AdapterProviders.getByValue(adapterType) != null){
+            return AdapterProviders.isSMSAdapter(adapterType);
+        }
+        //check the properties
+        else if(properties != null && properties.get(ADAPTER_PROVIDER_KEY) != null){
+            Object provider = properties.get(ADAPTER_PROVIDER_KEY);
+            return AdapterProviders.isSMSAdapter(provider.toString());
+        }
+        return false;
+    }
+    
+    public void addMediaProperties(String key, Object value) {
+        properties = properties != null ? properties : new HashMap<String, Object>();
+        properties.put(key, value);
     }
 }

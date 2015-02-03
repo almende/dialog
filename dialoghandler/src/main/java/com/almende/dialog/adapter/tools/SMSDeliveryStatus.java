@@ -10,7 +10,6 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.annotations.Id;
-import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -78,7 +77,7 @@ public class SMSDeliveryStatus implements Serializable {
         String smsStatusKey = referenceKey != null ? referenceKey : generateSMSReferenceKey(config.getConfigId(),
                                                                                             config.getMyAddress());
         // check if SMS delivery notification is requested
-        if (AdapterType.isSMSAdapter(config.getAdapterType())) {
+        if (config.isSMSAdapter()) {
             SMSDeliveryStatus smsStatus = new SMSDeliveryStatus();
             smsStatus.setAdapterID(config.getConfigId());
             smsStatus.setLocalAddress(config.getMyAddress());

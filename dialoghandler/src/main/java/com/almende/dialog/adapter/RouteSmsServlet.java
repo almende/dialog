@@ -33,7 +33,6 @@ public class RouteSmsServlet extends TextServlet {
     private static final long serialVersionUID = 408503132941968804L;
     protected static final com.almende.dialog.Logger dialogLog = new com.almende.dialog.Logger();
     private static final String servletPath = "/_ah/sms/";
-    private static final String adapterType = AdapterType.ROUTE_SMS.getName();
     private static final String deliveryStatusPath = "/dialoghandler/sms/route-sms/deliveryStatus";
 
     @Override
@@ -126,7 +125,7 @@ public class RouteSmsServlet extends TextServlet {
     @Override
     protected String getAdapterType() {
 
-        return adapterType;
+        return AdapterType.SMS.getName();
     }
 
     @Override

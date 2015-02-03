@@ -38,6 +38,7 @@ import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.TypeUtil;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.askfast.commons.agent.intf.DialogAgentInterface;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DialogRequestDetails;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -55,7 +56,13 @@ import com.rabbitmq.client.QueueingConsumer.Delivery;
 public class DialogAgent extends Agent implements DialogAgentInterface {
 
     private static final Logger log = Logger.getLogger(DialogAgent.class.getName());
-
+    private static final String ADAPTER_PROVIDER_MAPPING_KEY = "ADAPTER_PROVIDER_MAPPING";
+    /**
+     * Used by the Tests to store any default communication providers. Usually 
+     * saved in this agent state. 
+     */
+    public static Map<AdapterType, AdapterProviders> DEFAULT_PROVIDERS;
+    
     //create a single static connection for collecting dialog requests
     private static ConnectionFactory rabbitMQConnectionFactory;
     private static final String DIALOG_PROCESS_QUEUE_NAME = "DIALOG_PUBLISH_QUEUE";
@@ -292,44 +299,67 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                 log.info(String.format("recepients of question at: %s are: %s", url, ServerUtils.serialize(addressMap)));
                 log.info(String.format("cc recepients are: %s", ServerUtils.serialize(addressCcMap)));
                 log.info(String.format("bcc recepients are: %s", ServerUtils.serialize(addressBccMap)));
-
+                
+                AdapterProviders provider = getProvider(adapterType, config);
                 if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_XMPP)) {
                     resultSessionMap = new XMPPServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
                                                                      senderName, subject, config, accountId);
                 }
-                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
-                    // fetch the first address in the map
-                    if (!addressMap.keySet().isEmpty()) {
-                        resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, url, config, accountId);
-                    }
-                    else {
-                        throw new Exception("Address should not be empty to setup a call");
-                    }
-                }
-                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWILIO)) {
-                    // fetch the first address in the map
-                    if (!addressMap.keySet().isEmpty() && getApplicationId() != null) {
-                        resultSessionMap = TwilioAdapter.dial(addressMap, url, config, accountId, getApplicationId());
-                    }
-                    else {
-                        throw new Exception("Address should not be empty to setup a call");
+                else if(config.isCallAdapter() && provider != null) {
+                    
+                    switch (provider) {
+                        case BROADSOFT: {
+                            // fetch the first address in the map
+                            if (!addressMap.keySet().isEmpty()) {
+                                resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, url, config, accountId);
+                            }
+                            else {
+                                throw new Exception("Address should not be empty to setup a call");
+                            }
+                        }
+                        break;
+                        case TWILIO: {
+                            // fetch the first address in the map
+                            if (!addressMap.keySet().isEmpty() && getApplicationId() != null) {
+                                resultSessionMap = TwilioAdapter.dial(addressMap, url, config, accountId,
+                                                                      getApplicationId());
+                            }
+                            else {
+                                throw new Exception("Address should not be empty to setup a call");
+                            }
+                            break;
+                        }
+                        default:
+                            throw new Exception("No calling provider found for "+ provider);
                     }
                 }
                 else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_EMAIL)) {
                     resultSessionMap = new MailServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
                                                                      senderName, subject, config, accountId);
                 }
-                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                    resultSessionMap = new MBSmsServlet().startDialog(addressMap, null, null, url, senderName, subject,
-                                                                      config, accountId);
-                }
-                else if (adapterType.equalsIgnoreCase("CM")) {
-                    resultSessionMap = new CMSmsServlet().startDialog(addressMap, null, null, url, senderName, subject,
-                                                                      config, accountId);
-                }
-                else if (AdapterType.ROUTE_SMS.equals(AdapterType.getByValue(adapterType))) {
-                    resultSessionMap = new RouteSmsServlet().startDialog(addressMap, null, null, url, senderName,
-                                                                         subject, config, accountId);
+                else if (config.isSMSAdapter()) {
+                    
+                    if (provider != null) {
+                        switch (provider) {
+                            case MB:
+                                resultSessionMap = new MBSmsServlet().startDialog(addressMap, null, null, url,
+                                                                                  senderName, subject, config,
+                                                                                  accountId);
+                                break;
+                            case CM:
+                                resultSessionMap = new CMSmsServlet().startDialog(addressMap, null, null, url,
+                                                                                  senderName, subject, config,
+                                                                                  accountId);
+                                break;
+                            case ROUTE_SMS:
+                                resultSessionMap = new RouteSmsServlet().startDialog(addressMap, null, null, url,
+                                                                                     senderName, subject, config,
+                                                                                     accountId);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
                 }
                 else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_USSD)) {
                     resultSessionMap = new CLXUSSDServlet().startDialog(addressMap, null, null, url, senderName,
@@ -366,7 +396,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         }
         return resultSessionMap;
     }
-	
+
     public String changeAgent(@Name("url") String url, @Name("adapterType") @Optional String adapterType,
                               @Name("adapterID") @Optional String adapterID, @Name("accountId") String accountId,
                               @Name("bearerToken") String bearerToken) throws Exception {
@@ -546,14 +576,11 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                                                    new String(delivery.getBody())));
                             HashMap<String, String> sessionTriggered = outboundCall(dialogDetails);
                             boolean isCallAdapter = false;
-                            if (AdapterType.isCallAdapter(dialogDetails.getAdapterType())) {
-                                isCallAdapter = true;
-                            }
-                            else if (dialogDetails.getAdapterID() != null) {
+                            if (dialogDetails.getAdapterID() != null) {
                                 AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(dialogDetails
                                                                 .getAdapterID());
                                 if (adapterConfig != null) {
-                                    isCallAdapter = AdapterType.isCallAdapter(adapterConfig.getAdapterType());
+                                    isCallAdapter = adapterConfig.isCallAdapter();
                                 }
                             }
                             //only add it to the process queue only for a phone call. 
@@ -635,6 +662,41 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
         getState().put("max_sessionsInQueue", maxSessionsInQueue);
         return getMaxSessionsAllowedInQueue();
+    }
+    
+    /**
+     * Get the default providers for channels
+     * 
+     * @return
+     */
+    public Map<AdapterType, AdapterProviders> getDefaultProviders() {
+
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            return getState().get(ADAPTER_PROVIDER_MAPPING_KEY, new TypeUtil<Map<AdapterType, AdapterProviders>>() {});
+        }
+        else {
+            return DEFAULT_PROVIDERS;
+        }
+    }
+    
+    /**
+     * Set the default provider for a particular channel
+     * 
+     * @return
+     */
+    public Map<AdapterType, AdapterProviders> setDefaultProvider(
+        @Name("adapterType") @Optional AdapterType adapterType,
+        @Name("adapterProvider") AdapterProviders adapterProvider) {
+
+        Map<AdapterType, AdapterProviders> adapterProviderMapping = getDefaultProviders();
+        adapterProviderMapping = adapterProviderMapping != null ? adapterProviderMapping
+                                                               : new HashMap<AdapterType, AdapterProviders>();
+        if(adapterType == null) {
+            adapterType = adapterProvider.getAdapterType();
+        }
+        adapterProviderMapping.put(adapterType, adapterProvider);
+        getState().put(ADAPTER_PROVIDER_MAPPING_KEY, adapterProviderMapping);
+        return getDefaultProviders();
     }
     
 //    /**
@@ -765,6 +827,31 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         }
         return result;
     }
+    
+    /** Get the provider attached to this adapter by checking the adapterProperties and adapterType
+     * @param adapterType
+     * @param config
+     * @return
+     */
+    private AdapterProviders getProvider(String adapterType, AdapterConfig config) {
+
+        //see if there is a default provider in the adapter
+        Map<AdapterType, AdapterProviders> defaultProviders = getDefaultProviders();
+        AdapterProviders provider = null; 
+        if (defaultProviders == null &&
+            config.getProperties().get(AdapterConfig.ADAPTER_PROVIDER_KEY) != null) {
+            Object adapterProvider = config.getProperties().get(AdapterConfig.ADAPTER_PROVIDER_KEY);
+            provider = AdapterProviders.getByValue(adapterProvider.toString());
+        }
+        else if (defaultProviders != null) {
+            provider = defaultProviders.get((AdapterType.getByValue(adapterType)));
+        }
+        else {
+            provider = AdapterProviders.getByValue(adapterType);
+        }
+        return provider;
+    }
+    
 
 //    /** Count of all the addresses in this dialogDetails
 //     * @param dialogDetails

@@ -115,6 +115,7 @@ public class VoiceXMLServletIT extends TestFramework {
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_BROADSOFT, TEST_PUBLIC_KEY,
                                                           localAddressBroadsoft, url);
         adapterConfig.setXsiUser(localAddressBroadsoft + "@ask.ask.voipit.nl");
+        adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
         adapterConfig.update();
 
         //setup some ddrPrices
@@ -147,15 +148,23 @@ public class VoiceXMLServletIT extends TestFramework {
         //hangup the call after 5 mins
         //send hangup ccxml with an answerTime
         String hangupXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
-                                        "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" + localAddressBroadsoft +"@ask.ask.voipit.nl</subscriberId>" +
-                                        "<applicationId>cc</applicationId><subscriptionId>200fc376-e154-4930-a289-ae0da816707c</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
-                                        "\"http://schema.broadsoft.com/xsi-events\"><eventName>CallSessionEvent</eventName><call><callId>callhalf-12914560105:1</callId><extTrackingId>" +
-                                        "10669651:1</extTrackingId><personality>Originator</personality><callState>Released</callState><releaseCause>Temporarily Unavailable</releaseCause>" +
-                                        "<remoteParty><address>tel:" + remoteAddressVoice + "</address><callType>Network</callType></remoteParty><startTime>1401809063943</startTime>" +
-                                        "<answerTime>1401809070192</answerTime><releaseTime>1401809370000</releaseTime></call></eventData></Event>";
+                           "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" +
+                           localAddressBroadsoft +
+                           "@ask.ask.voipit.nl</subscriberId>" +
+                           "<applicationId>cc</applicationId><subscriptionId>" +
+                           TEST_PUBLIC_KEY +
+                           "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
+                           "\"http://schema.broadsoft.com/xsi-events\"><eventName>CallSessionEvent</eventName><call><callId>callhalf-12914560105:1</callId><extTrackingId>" +
+                           "10669651:1</extTrackingId><personality>Originator</personality><callState>Released</callState><releaseCause>Temporarily Unavailable</releaseCause>" +
+                           "<remoteParty><address>tel:" +
+                           remoteAddressVoice +
+                           "</address><callType>Network</callType></remoteParty><startTime>1401809063943</startTime>" +
+                           "<answerTime>1401809070192</answerTime><releaseTime>1401809370000</releaseTime></call></eventData></Event>";
         voiceXMLRESTProxy.receiveCCMessage(hangupXML);
         //fetch the ddrRecord again
         DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+        ddrRecord.setShouldGenerateCosts(true);
+        ddrRecord.setShouldIncludeServiceCosts(true);
         assertThat(ddrRecord, Matchers.notNullValue());
         assertThat(ddrRecord.getDuration(), Matchers.greaterThan(0L));
         assertThat(ddrRecord.getStart(), Matchers.is(1401809070192L));

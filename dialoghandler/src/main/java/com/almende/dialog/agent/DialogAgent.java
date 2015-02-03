@@ -67,6 +67,12 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     private static ConnectionFactory rabbitMQConnectionFactory;
     private static final String DIALOG_PROCESS_QUEUE_NAME = "DIALOG_PUBLISH_QUEUE";
     private static final Integer MAXIMUM_DEFAULT_DIALOG_ALLOWED = 2;
+
+    static {
+        DEFAULT_PROVIDERS = new HashMap<AdapterType, AdapterProviders>();
+        DEFAULT_PROVIDERS.put(AdapterType.SMS, AdapterProviders.CM);
+        DEFAULT_PROVIDERS.put(AdapterType.CALL, AdapterProviders.BROADSOFT);
+    };
     
     @Override
     protected void onInit() {
@@ -665,14 +671,18 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     }
     
     /**
-     * Get the default providers for channels
+     * Get the default providers for channels. Doesnt return null, returns the
+     * {@link DialogAgent#DEFAULT_PROVIDERS} in case the agent info is null
      * 
      * @return
      */
     public Map<AdapterType, AdapterProviders> getDefaultProviders() {
 
         if (!ServerUtils.isInUnitTestingEnvironment()) {
-            return getState().get(ADAPTER_PROVIDER_MAPPING_KEY, new TypeUtil<Map<AdapterType, AdapterProviders>>() {});
+            Map<AdapterType, AdapterProviders> adapterMappings = getState()
+                                            .get(ADAPTER_PROVIDER_MAPPING_KEY,
+                                                 new TypeUtil<Map<AdapterType, AdapterProviders>>() {});
+            return adapterMappings != null ? adapterMappings : DEFAULT_PROVIDERS;
         }
         else {
             return DEFAULT_PROVIDERS;
@@ -838,16 +848,16 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         //see if there is a default provider in the adapter
         Map<AdapterType, AdapterProviders> defaultProviders = getDefaultProviders();
         AdapterProviders provider = null; 
-        if (defaultProviders == null &&
-            config.getProperties().get(AdapterConfig.ADAPTER_PROVIDER_KEY) != null) {
+        if (config.getProperties().get(AdapterConfig.ADAPTER_PROVIDER_KEY) != null) {
             Object adapterProvider = config.getProperties().get(AdapterConfig.ADAPTER_PROVIDER_KEY);
             provider = AdapterProviders.getByValue(adapterProvider.toString());
         }
-        else if (defaultProviders != null) {
-            provider = defaultProviders.get((AdapterType.getByValue(adapterType)));
+        //check if the adapter type has the provider info in it
+        else if (AdapterProviders.getByValue(adapterType) != null) {
+            provider = AdapterProviders.getByValue(adapterType);
         }
         else {
-            provider = AdapterProviders.getByValue(adapterType);
+            provider = defaultProviders.get((AdapterType.getByValue(adapterType)));
         }
         return provider;
     }

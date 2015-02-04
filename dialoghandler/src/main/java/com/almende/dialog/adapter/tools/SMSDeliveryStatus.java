@@ -85,8 +85,8 @@ public class SMSDeliveryStatus implements Serializable {
      * @throws Exception
      */
     public static SMSDeliveryStatus storeSMSRelatedData(String referenceKey, String remoteAddress,
-        AdapterConfig config, String accountId, Question question, String code, String description, String ddrRecordId)
-        throws Exception {
+        AdapterConfig config, String accountId, Question question, String code, String description, String ddrRecordId,
+        String provider) throws Exception {
 
         String smsStatusKey = referenceKey != null ? referenceKey : generateSMSReferenceKey(config.getConfigId(),
                                                                                             config.getMyAddress());
@@ -101,7 +101,7 @@ public class SMSDeliveryStatus implements Serializable {
             String smsText = question != null ? question.getQuestion_expandedtext() : null;
             smsStatus.setSms(smsText);
             smsStatus.setHost(Settings.HOST);
-            smsStatus.setProvider(config.getAdapterType());
+            smsStatus.setProvider(provider);
             smsStatus.setCode(code);
             smsStatus.setDescription(description);
             EventCallback deliveryEventCallback = question != null ? question.getEventCallback("delivered") : null;

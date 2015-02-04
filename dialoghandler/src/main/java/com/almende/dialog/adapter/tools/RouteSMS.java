@@ -88,7 +88,8 @@ public class RouteSMS {
             for (String address : addressNameMap.keySet()) {
                 Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_SMS, config.getMyAddress(), address);
                 SMSDeliveryStatus.storeSMSRelatedData(UUID.randomUUID().toString(), address, config, accountId, null,
-                                                      "1701", "Successfully Sent", session.getDdrRecordId());
+                                                      "1701", "Successfully Sent", session.getDdrRecordId(),
+                                                      session.getExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY));
             }
         }
         return countMessageParts(message, dcs);
@@ -153,10 +154,10 @@ public class RouteSMS {
                             session.addExtras(SMS_STATUS_KEY, returnResult);
                             session.storeSession();
                             //save the status 
-                            SMSDeliveryStatus.storeSMSRelatedData(messageReference, session.getRemoteAddress(), config,
-                                                                  session.getAccountId(), session.getQuestion(),
-                                                                  resultPerAddress[0], returnResult,
-                                                                  session.getDdrRecordId());
+                            SMSDeliveryStatus.storeSMSRelatedData(messageReference, session.getRemoteAddress(),
+                                                                  config, session.getAccountId(), session.getQuestion(),
+                                                                  resultPerAddress[0], returnResult, session.getDdrRecordId(),
+                                                                  session.getExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY));
                         }
                     }
                 }

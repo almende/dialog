@@ -24,6 +24,7 @@ import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.ParallelInit;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.sun.jersey.api.client.Client;
@@ -351,5 +352,11 @@ public class RouteSmsServlet extends TextServlet {
                 break;
         }
         return true;
+    }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterProviders.ROUTE_SMS.getName();
     }
 }

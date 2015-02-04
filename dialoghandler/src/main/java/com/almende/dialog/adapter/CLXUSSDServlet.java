@@ -227,5 +227,11 @@ public class CLXUSSDServlet extends TextServlet {
 
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, null, toAddress, 1, message);
     }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterAgent.ADAPTER_TYPE_USSD;
+    }
 }
 

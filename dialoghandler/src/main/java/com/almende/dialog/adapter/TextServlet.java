@@ -77,6 +77,8 @@ abstract public class TextServlet extends HttpServlet {
 	
 	protected abstract String getAdapterType();
 	
+	protected abstract String getProviderType();
+	
 	protected abstract void doErrorPost(HttpServletRequest req,
 			HttpServletResponse res) throws IOException;
 	
@@ -262,6 +264,7 @@ abstract public class TextServlet extends HttpServlet {
             //create a session if its only for one number
             if (loadAddress != null) {
                 session = Session.getOrCreateSession(Session.getSessionKey(config, loadAddress), config.getKeyword());
+                session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, getProviderType());
                 session.setAccountId(accountId);
                 session.storeSession();
             }
@@ -332,6 +335,7 @@ abstract public class TextServlet extends HttpServlet {
                         session.setDirection("outbound");
                         session.setQuestion(question);
                         session.setLocalName(senderName);
+                        session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, getProviderType());
                         //check if session can be killed??
                         if (res == null || res.question == null) {
                             session.setKilled(true);

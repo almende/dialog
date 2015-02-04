@@ -131,4 +131,10 @@ public class NotificareServlet extends TextServlet {
 
     }
 
+    @Override
+    protected String getProviderType() {
+
+        return AdapterAgent.ADAPTER_TYPE_PUSH;
+    }
+
 }

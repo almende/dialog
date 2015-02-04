@@ -202,4 +202,10 @@ public class AskSmsServlet extends TextServlet {
 
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
     }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterAgent.ADAPTER_TYPE_SMS;
+    }
 }

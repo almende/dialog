@@ -11,6 +11,7 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
 
 public class NexmoSmsServlet extends TextServlet {
@@ -96,5 +97,11 @@ public class NexmoSmsServlet extends TextServlet {
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, senderName, toAddress,
                                                                CM.countMessageParts(message) * toAddress.size(),
                                                                message);
+    }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterProviders.NEXMO.getName();
     }
 }

@@ -15,6 +15,7 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
 
 public class MBSmsServlet extends TextServlet {
@@ -151,4 +152,10 @@ public class MBSmsServlet extends TextServlet {
 	protected String getNoConfigMessage() {
 		return "U dient het juiste keyword mee te geven.";
 	}
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterProviders.MB.getName();
+    }
 }

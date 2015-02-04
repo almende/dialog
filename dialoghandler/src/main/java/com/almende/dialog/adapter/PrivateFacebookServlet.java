@@ -143,4 +143,10 @@ public class PrivateFacebookServlet extends TextServlet {
         //add costs with no.of messages * recipients
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, toAddress, message);
     }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterAgent.ADAPTER_TYPE_FACEBOOK;
+    }
 }

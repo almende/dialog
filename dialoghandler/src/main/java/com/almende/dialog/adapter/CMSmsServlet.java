@@ -26,6 +26,7 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -482,5 +483,11 @@ public class CMSmsServlet extends TextServlet {
                 break;
         }
         return result;
+    }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterProviders.CM.getName();
     }
 }

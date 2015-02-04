@@ -1,6 +1,7 @@
 package com.almende.dialog.adapter.tools;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.logging.Logger;
 import org.bson.types.ObjectId;
 import com.almende.dialog.Settings;
@@ -26,7 +27,7 @@ public class SMSDeliveryStatus implements Serializable {
     public static final String SMS_REFERENCE_KEY = "SMS_REFERENCE";
     
     @Id
-    public String messageId;
+    public String reference;
     private String sms = "";
     private String adapterID = "";
     private String callback = "";
@@ -39,6 +40,7 @@ public class SMSDeliveryStatus implements Serializable {
     private String description = "";
     private String accountId = null;
     private String provider = "";
+    private String ddrRecordId = "";
     private Object extraInfos = null;
     
     
@@ -47,7 +49,7 @@ public class SMSDeliveryStatus implements Serializable {
 
     public void store() {
 
-        if (messageId != null) {
+        if (reference != null) {
             TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
             sentTimeStamp = sentTimeStamp == null ? TimeUtils.getServerCurrentTime().toString() : sentTimeStamp;
             datastore.storeOrUpdate(this);
@@ -60,19 +62,31 @@ public class SMSDeliveryStatus implements Serializable {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         return datastore.load(SMSDeliveryStatus.class, messageId);
     }
+    
+    /**
+     * Fetch all the SMS delivery status
+     * @return
+     */
+    public static List<SMSDeliveryStatus> fetchAll() {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        return datastore.find().type(SMSDeliveryStatus.class).now().toArray();
+    }
 
     /**
      * Stores the sms related data in the CMStatus entity
      * 
      * @param address
      * @param config
+     * @param ddrRecordId 
      * @param localaddress
      * @param res
      * @param extras
      * @throws Exception
      */
     public static SMSDeliveryStatus storeSMSRelatedData(String referenceKey, String remoteAddress,
-        AdapterConfig config, String accountId, Question question, String code, String description) throws Exception {
+        AdapterConfig config, String accountId, Question question, String code, String description, String ddrRecordId)
+        throws Exception {
 
         String smsStatusKey = referenceKey != null ? referenceKey : generateSMSReferenceKey(config.getConfigId(),
                                                                                             config.getMyAddress());
@@ -94,6 +108,7 @@ public class SMSDeliveryStatus implements Serializable {
             if (deliveryEventCallback != null) {
                 smsStatus.setCallback(deliveryEventCallback.getCallback());
             }
+            smsStatus.setDdrRecordId(ddrRecordId);
             smsStatus.store();
             return smsStatus;
         }
@@ -114,12 +129,12 @@ public class SMSDeliveryStatus implements Serializable {
 
     public String getReference() {
 
-        return messageId;
+        return reference;
     }
 
     public void setReference(String reference) {
 
-        this.messageId = reference;
+        this.reference = reference;
     }
 
     public String getSentTimeStamp() {
@@ -278,5 +293,15 @@ public class SMSDeliveryStatus implements Serializable {
     public void setExtraInfos(Object extraInfos) {
 
         this.extraInfos = extraInfos;
+    }
+
+    public String getDdrRecordId() {
+
+        return ddrRecordId;
+    }
+
+    public void setDdrRecordId(String ddrRecordId) {
+
+        this.ddrRecordId = ddrRecordId;
     }
 }

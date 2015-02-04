@@ -2,9 +2,11 @@ package com.almende.dialog.adapter.tools;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Logger;
 import org.apache.http.client.utils.URIBuilder;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.ServerUtils;
@@ -82,6 +84,13 @@ public class RouteSMS {
                 throw new Exception(validateResult);
             log.info("Result from RouteSMS: " + result);
         }
+        else {
+            for (String address : addressNameMap.keySet()) {
+                Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_SMS, config.getMyAddress(), address);
+                SMSDeliveryStatus.storeSMSRelatedData(UUID.randomUUID().toString(), address, config, accountId, null,
+                                                      "1701", "Successfully Sent", session.getDdrRecordId());
+            }
+        }
         return countMessageParts(message, dcs);
     }
 
@@ -146,7 +155,8 @@ public class RouteSMS {
                             //save the status 
                             SMSDeliveryStatus.storeSMSRelatedData(messageReference, session.getRemoteAddress(), config,
                                                                   session.getAccountId(), session.getQuestion(),
-                                                                  resultPerAddress[0], returnResult);
+                                                                  resultPerAddress[0], returnResult,
+                                                                  session.getDdrRecordId());
                         }
                     }
                 }

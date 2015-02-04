@@ -16,6 +16,7 @@ import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.CMStatus;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.exception.NotFoundException;
@@ -35,7 +36,6 @@ public class CMSmsServlet extends TextServlet {
 	private static final long serialVersionUID = 408503132941968804L;
 	protected static final com.almende.dialog.Logger dialogLog =  new com.almende.dialog.Logger();
 	private static final String servletPath = "/_ah/sms/";
-	private static final String adapterType = "CM";
 	private static final String deliveryStatusPath = "/dialoghandler/sms/cm/deliveryStatus";
 	
     @Override
@@ -147,7 +147,7 @@ public class CMSmsServlet extends TextServlet {
 
 	@Override
 	protected String getAdapterType() {
-		return adapterType;
+		return AdapterAgent.ADAPTER_TYPE_SMS;
 	}
 
 	@Override
@@ -248,7 +248,8 @@ public class CMSmsServlet extends TextServlet {
             CMStatus cmStatus = CMStatus.fetch(reference);
             to = PhoneNumberUtils.formatNumber(to, null);
             if (cmStatus != null && to != null) {
-                Session session = Session.getSession(Session.getSessionKey(cmStatus.getAdapterConfig(), to));
+                Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_SMS, cmStatus.getAdapterConfig()
+                                                .getMyAddress(), to);
                 if (sent != null) {
                     cmStatus.setSentTimeStamp(sent);
                 }

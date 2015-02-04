@@ -12,6 +12,7 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.RouteSMS;
 import com.almende.dialog.adapter.tools.SMSDeliveryStatus;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.exception.NotFoundException;
@@ -21,9 +22,10 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.ParallelInit;
-import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import com.thetransactioncompany.cors.HTTPMethod;
@@ -59,33 +61,31 @@ public class RouteSmsServlet extends TextServlet {
             if (req.getMethod().equals("POST")) {
                 try {
                     String responseText = "No result fetched";
-                    String messageId = req.getParameter("messageid");
+                    StringBuffer jb = new StringBuffer();
+                    String line = null;
+                    BufferedReader reader = req.getReader();
+                    while ((line = reader.readLine()) != null) {
+                        jb.append(line);
+                    }
+                    JsonNode dltPayload = JOM.getInstance().readTree(jb.toString());
+                    String messageId = dltPayload.get("messageid").asText();
                     //check the host in the CMStatus
                     if (messageId != null) {
                         //fetch the session
-
                         String host = SMSDeliveryStatus.getHostFromReference(messageId);
-                        log.info(String.format("Host from reference: %s and actual host: %s",
-                                               host + "?" + req.getQueryString(), Settings.HOST));
+                        log.info(String.format("Host from reference: %s and actual host: %s", host, Settings.HOST));
                         if (host != null && !ifHostNamesMatch(host)) {
                             host += deliveryStatusPath;
                             log.info("Route-SMS delivery status is being redirect to: " + host);
                             host += ("?" + (req.getQueryString() != null ? req.getQueryString() : ""));
-                            StringBuffer jb = new StringBuffer();
-                            String line = null;
-                            BufferedReader reader = req.getReader();
-                            while ((line = reader.readLine()) != null) {
-                                jb.append(line);
-                            }
                             responseText = forwardToHost(host, HTTPMethod.POST, jb.toString());
                         }
                         else {
-                            SMSDeliveryStatus routeSMSStatus = handleDeliveryStatusReport(req.getParameter("messageid"),
-                                                                                          req.getParameter("sentdate"),
-                                                                                          req.getParameter("donedate"),
-                                                                                          req.getParameter("destination"),
-                                                                                          req.getParameter("source"),
-                                                                                          req.getParameter("status"));
+                            SMSDeliveryStatus routeSMSStatus = handleDeliveryStatusReport(dltPayload.get("messageid")
+                                                            .asText(), dltPayload.get("sentdate").asText(), dltPayload
+                                                            .get("donedate").asText(), dltPayload.get("destination")
+                                                            .asText(), dltPayload.get("source").asText(), dltPayload
+                                                            .get("status").asText());
                             responseText = ServerUtils.serializeWithoutException(routeSMSStatus);
                         }
                     }
@@ -125,7 +125,7 @@ public class RouteSmsServlet extends TextServlet {
     @Override
     protected String getAdapterType() {
 
-        return AdapterType.SMS.getName();
+        return AdapterAgent.ADAPTER_TYPE_SMS;
     }
 
     @Override
@@ -185,7 +185,7 @@ public class RouteSmsServlet extends TextServlet {
                     routeSMSStatus.setRemoteAddress(to);
                 }
                 if (statusCode != null) {
-                    routeSMSStatus.setCode(statusCode);
+                    routeSMSStatus.setDescription(statusCode);
                 }
                 if (routeSMSStatus.getCallback() != null && routeSMSStatus.getCallback().startsWith("http")) {
                     AFHttpClient client = ParallelInit.getAFHttpClient();

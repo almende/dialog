@@ -31,24 +31,25 @@ import com.almende.util.uuid.UUID;
 import com.askfast.commons.agent.intf.AdapterAgentInterface;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 @Access(AccessType.PUBLIC)
 public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	
-	public static final String ADAPTER_TYPE_BROADSOFT = AdapterType.CALL.getName();
-	public static final String ADAPTER_TYPE_TWILIO = AdapterType.TWILIO.getName();
-	public static final String ADAPTER_TYPE_SMS = AdapterType.SMS.getName();
-	public static final String ADAPTER_TYPE_FACEBOOK = AdapterType.FACEBOOK.getName();
-	public static final String ADAPTER_TYPE_EMAIL = AdapterType.EMAIL.getName();
-	public static final String ADAPTER_TYPE_XMPP = AdapterType.XMPP.getName();
-	public static final String ADAPTER_TYPE_TWITTER = AdapterType.TWITTER.getName();	
-	public static final String ADAPTER_TYPE_USSD = AdapterType.USSD.getName();
-	public static final String ADAPTER_TYPE_PUSH = AdapterType.NOTIFICARE.getName();
-	public static final int EMAIL_SCHEDULER_INTERVAL = 30 * 1000; //30seconds
-	public static final int TWITTER_SCHEDULER_INTERVAL = 61 * 1000; //61seconds
-	private static final Logger log = Logger.getLogger( AdapterAgent.class.getSimpleName() );
+    public static final String ADAPTER_TYPE_BROADSOFT = AdapterType.CALL.getName();
+    public static final String ADAPTER_TYPE_TWILIO = AdapterType.TWILIO.getName();
+    public static final String ADAPTER_TYPE_SMS = AdapterType.SMS.getName();
+    public static final String ADAPTER_TYPE_FACEBOOK = AdapterType.FACEBOOK.getName();
+    public static final String ADAPTER_TYPE_EMAIL = AdapterType.EMAIL.getName();
+    public static final String ADAPTER_TYPE_XMPP = AdapterType.XMPP.getName();
+    public static final String ADAPTER_TYPE_TWITTER = AdapterType.TWITTER.getName();
+    public static final String ADAPTER_TYPE_USSD = AdapterType.USSD.getName();
+    public static final String ADAPTER_TYPE_PUSH = AdapterType.NOTIFICARE.getName();
+    public static final int EMAIL_SCHEDULER_INTERVAL = 30 * 1000; //30seconds
+    public static final int TWITTER_SCHEDULER_INTERVAL = 61 * 1000; //61seconds
+    private static final Logger log = Logger.getLogger(AdapterAgent.class.getSimpleName());
 	
     @Override
     protected void onCreate()
@@ -460,8 +461,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
         @Name("accountType") @Optional String accountType) throws Exception {
 
-        return createGenericSMSAdapter(address, ADAPTER_TYPE_SMS, keyword, username, password, preferredLanguage,
-                                       accountId, accountType);
+        return createGenericSMSAdapter(address, ADAPTER_TYPE_SMS, AdapterProviders.MB, keyword, username, password,
+                                       preferredLanguage, accountId, accountType);
     }
     
     /**
@@ -478,7 +479,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
      * @return
      * @throws Exception
      */
-    public String createGenericSMSAdapter(@Name("address") String address, @Name("adapterType") String adapterType, @Name("keyword") @Optional String keyword,
+    public String createGenericSMSAdapter(@Name("address") String address, @Name("adapterType") String adapterType,
+        @Name("provider") @Optional AdapterProviders provider, @Name("keyword") @Optional String keyword,
         @Name("username") String username, @Name("password") String password,
         @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
         @Name("accountType") @Optional String accountType) throws Exception {
@@ -497,6 +499,9 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.setAccessToken(username);
         config.setAccessTokenSecret(password);
         config.setAccountType(AccountType.fromJson(accountType));
+        if (provider != null) {
+            config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, provider);
+        }
         AdapterConfig newConfig = createAdapter(config);
         return newConfig.getConfigId();
     }
@@ -730,12 +735,13 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         return JOM.getInstance().convertValue(ownedAdapters, ArrayNode.class);
     }
 	
-	public ArrayNode findFreeAdapters(@Name("adapterType") @Optional String adapterType,
-			@Name("address") @Optional String address) {
-		ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapterByAccount(null, adapterType, address);
-		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
-	}
-	
+    public ArrayNode findFreeAdapters(@Name("adapterType") @Optional String adapterType,
+        @Name("address") @Optional String address) {
+
+        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapterByAccount(null, adapterType, address);
+        return JOM.getInstance().convertValue(adapters, ArrayNode.class);
+    }
+    
     /**
      * saves the AdapterConfig in the datastore
      * 

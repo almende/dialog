@@ -11,6 +11,7 @@ import org.joda.time.DateTime;
 import org.scribe.model.Token;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Facebook;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
@@ -146,7 +147,7 @@ public class WallFacebookServlet extends TextServlet {
 
     @Override
     protected String getAdapterType() {
-        return "FACEBOOK";
+        return AdapterAgent.ADAPTER_TYPE_FACEBOOK;
     }
 
     @Override

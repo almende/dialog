@@ -378,7 +378,8 @@ public class DDRRecordAgentIT extends TestFramework {
         }
         //assert that a session exists
         Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localAddressBroadsoft +
-                                                                                  "@ask.ask.voipit.nl", formattedRemoteAddressVoice);
+                                                                                  "@ask.ask.voipit.nl",
+                                             formattedRemoteAddressVoice);
         assertThat(session, Matchers.notNullValue());
         assertThat(session.getStartTimestamp(), Matchers.nullValue());
         assertThat(session.getAnswerTimestamp(), Matchers.nullValue());

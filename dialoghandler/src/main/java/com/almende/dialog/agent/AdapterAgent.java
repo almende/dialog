@@ -734,6 +734,23 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         ArrayList<AdapterConfig> ownedAdapters = AdapterConfig.findAdapterByOwner(ownerId, type, address);
         return JOM.getInstance().convertValue(ownedAdapters, ArrayNode.class);
     }
+    
+    /**
+     * Set provider for a particular adapter
+     * 
+     * @param type
+     * @param address
+     * @param keyword
+     * @return
+     */
+    public Object setProviderForAdapters(@Name("adapterId") String adapterId,
+        @Name("provider") AdapterProviders provider) {
+
+        AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
+        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, provider);
+        adapterConfig.update();
+        return adapterConfig;
+    }
 	
     public ArrayNode findFreeAdapters(@Name("adapterType") @Optional String adapterType,
         @Name("address") @Optional String address) {

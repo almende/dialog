@@ -541,14 +541,11 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                                                    new String(delivery.getBody())));
                             HashMap<String, String> sessionTriggered = outboundCall(dialogDetails);
                             boolean isCallAdapter = false;
-                            if (AdapterType.isCallAdapter(dialogDetails.getAdapterType())) {
-                                isCallAdapter = true;
-                            }
-                            else if (dialogDetails.getAdapterID() != null) {
+                            if (dialogDetails.getAdapterID() != null) {
                                 AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(dialogDetails
                                                                 .getAdapterID());
                                 if (adapterConfig != null) {
-                                    isCallAdapter = AdapterType.isCallAdapter(adapterConfig.getAdapterType());
+                                    isCallAdapter = adapterConfig.isCallAdapter();
                                 }
                             }
                             //only add it to the process queue only for a phone call. 

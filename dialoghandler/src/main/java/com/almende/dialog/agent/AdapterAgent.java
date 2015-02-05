@@ -635,6 +635,14 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         }
     }
 	
+    public void setAllAdapterAccountType(@Name("accountId") String accountId, @Name("accountType") AccountType type) {
+        ArrayList<AdapterConfig> ownedAdapters = AdapterConfig.findAdapterByOwner(accountId, null, null);
+        for(AdapterConfig adapter : ownedAdapters) {
+            adapter.setAccountType( type );
+            adapter.update();
+        }
+    }
+    
     /**
      * detach an adapter from this account. if adapter is: <br> 
      * 1. XMPP: then this also deregisters him (if its an ask-fast account) <br>

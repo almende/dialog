@@ -3,6 +3,7 @@ package com.almende.dialog.agent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.XMPPException;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -749,6 +750,25 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
         if (adapterConfig != null) {
             adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, provider);
+            adapterConfig.update();
+        }
+        return adapterConfig;
+    }
+    
+    /**
+     * Set provider for a particular adapter
+     * 
+     * @param type
+     * @param address
+     * @param keyword
+     * @return
+     */
+    public Object removeProviderForAdapters(@Name("adapterId") String adapterId) {
+
+        AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
+        if (adapterConfig != null) {
+            Map<String, Object> properties = adapterConfig.getProperties();
+            properties.remove(AdapterConfig.ADAPTER_PROVIDER_KEY);
             adapterConfig.update();
         }
         return adapterConfig;

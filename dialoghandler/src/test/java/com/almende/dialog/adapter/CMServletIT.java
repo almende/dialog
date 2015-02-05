@@ -10,6 +10,7 @@ import java.lang.reflect.Method;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -29,7 +30,7 @@ import com.almende.dialog.Log;
 import com.almende.dialog.Logger;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.adapter.tools.CMStatus;
+import com.almende.dialog.adapter.tools.SMSDeliveryStatus;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -229,6 +230,57 @@ public class CMServletIT extends TestFramework {
     }
     
     /**
+     * Send an SMS to multiple ppl and check if equal number of status entities
+     * are created. All are linked to the first reference entity
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void MultipleAddressStatusEntiryTest() throws Exception {
+
+        String myAddress = "Ask-Fast";
+        String secondTestResponder = "0614567890";
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), TEST_PUBLIC_KEY, myAddress,
+                                                          TEST_PRIVATE_KEY);
+
+        HashMap<String, String> addressMap = new LinkedHashMap<String, String>();
+        addressMap.put(remoteAddressVoice, null);
+        addressMap.put(secondTestResponder, "Test");
+        outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, null, null,
+                               TEST_PUBLIC_KEY);
+        assertXMLGeneratedFromOutBoundCall(addressMap, adapterConfig, simpleQuestion, myAddress);
+        //check that multiple SMSDeliveryNotifications are created.
+        List<SMSDeliveryStatus> allSMSStatus = SMSDeliveryStatus.fetchAll();
+        assertEquals(2, allSMSStatus.size());
+        //check that the leading status entity has a reference to other ones corresponding to the address
+        boolean linkedStatusEntityChecked = false;
+        SMSDeliveryStatus linkeDeliveryStatus = null;
+        for (SMSDeliveryStatus smsDeliveryStatus : allSMSStatus) {
+
+            Object linkedDeliveryStatusId = smsDeliveryStatus.getExtraInfos()
+                                            .get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+            linkedDeliveryStatusId = linkedDeliveryStatusId != null ? linkedDeliveryStatusId : smsDeliveryStatus
+                                            .getExtraInfos().get(PhoneNumberUtils.formatNumber(secondTestResponder,
+                                                                                               null));
+            if (linkedDeliveryStatusId != null) {
+                SMSDeliveryStatus linkedStatus = SMSDeliveryStatus.fetch(linkedDeliveryStatusId.toString());
+
+                //if unlinked status is not loaded yet.. fetch the next item in the list
+                if (linkeDeliveryStatus == null) {
+                    linkeDeliveryStatus = allSMSStatus.get(1);
+                }
+                assertEquals(linkedStatus.getReference(), linkeDeliveryStatus.getReference());
+                linkedStatusEntityChecked = true;
+            }
+            else {
+                linkeDeliveryStatus = smsDeliveryStatus;
+            }
+        }
+        assertTrue(linkedStatusEntityChecked);
+    }
+    
+    /**
      * tests if an outbound call works when the sender name is null. In this
      * case it should pick up the adapter.Myaddress as the senderName. <br>
      * 
@@ -289,7 +341,7 @@ public class CMServletIT extends TestFramework {
         Node referenceNode = parse.getElementsByTagName("REFERENCE").item(0);
 
         assertTrue(referenceNode != null);
-        CMStatus cmStatus = CMStatus.fetch(referenceNode.getTextContent());
+        SMSDeliveryStatus cmStatus = SMSDeliveryStatus.fetch(referenceNode.getTextContent());
         assertTrue(cmStatus != null);
         assertEquals(TestServlet.TEST_SERVLET_PATH, cmStatus.getCallback());
 
@@ -306,16 +358,15 @@ public class CMServletIT extends TestFramework {
         cmSmsServlet.service(httpServletRequest, httpServletResponse);
 
         //assert that a POST call was performd on the callback
-        assertTrue(TestServlet.getLogObject() instanceof CMStatus);
-        CMStatus smsPayload = (CMStatus) TestServlet.getLogObject();
+        assertTrue(TestServlet.getLogObject() instanceof SMSDeliveryStatus);
+        SMSDeliveryStatus smsPayload = (SMSDeliveryStatus) TestServlet.getLogObject();
         assertTrue(smsPayload != null);
         assertEquals("Are you available today?\n[ Yup | Nope ]", smsPayload.getSms());
         assertEquals("2009-06-15T13:45:30", smsPayload.getSentTimeStamp());
         assertEquals("2009-06-15T13:45:30", smsPayload.getDeliveredTimeStamp());
-        assertTrue(cmStatus.getRemoteAddresses().contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
-        assertEquals("200", smsPayload.getCode());
-        assertEquals("0", smsPayload.getErrorCode());
-        assertEquals("No Error", smsPayload.getErrorDescription());
+        assertTrue(cmStatus.getRemoteAddress().equals(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+        assertEquals("0", smsPayload.getCode());
+        assertEquals("No Error", smsPayload.getDescription());
     }
     
     /**
@@ -362,23 +413,22 @@ public class CMServletIT extends TestFramework {
     }
     
     @Test
-    public void parseSMSDeliveryStatusPayloadTest() throws Exception
-    {
+    public void parseSMSDeliveryStatusPayloadTest() throws Exception {
+
         String remoteNumber = PhoneNumberUtils.formatNumber(remoteAddressVoice, null);
         ReceiveAppointmentNewSessionMessageTest();
         String testXml = getTestSMSStatusXML(remoteNumber, reference);
-        Method handleStatusReport = fetchMethodByReflection( "handleDeliveryStatusReport", CMSmsServlet.class,
-            String.class );
+        Method handleStatusReport = fetchMethodByReflection("handleDeliveryStatusReport", CMSmsServlet.class,
+                                                            String.class);
         CMSmsServlet cmSmsServlet = new CMSmsServlet();
-        Object reportReply = invokeMethodByReflection( handleStatusReport, cmSmsServlet, testXml );
-        assertTrue( reportReply instanceof String );
-        CMStatus cmStatus = ServerUtils.deserialize(reportReply.toString(), false, CMStatus.class);
-        assertEquals( "2009-06-15T13:45:30", cmStatus.getSentTimeStamp() );
-        assertTrue(cmStatus.getRemoteAddresses().contains(remoteNumber));
-        assertEquals( "2009-06-15T13:45:30", cmStatus.getDeliveredTimeStamp() );
-        assertEquals( "200", cmStatus.getCode() );
-        assertEquals( "0", cmStatus.getErrorCode() );
-        assertEquals( "No Error", cmStatus.getErrorDescription() );
+        Object reportReply = invokeMethodByReflection(handleStatusReport, cmSmsServlet, testXml);
+        assertTrue(reportReply instanceof String);
+        SMSDeliveryStatus cmStatus = ServerUtils.deserialize(reportReply.toString(), false, SMSDeliveryStatus.class);
+        assertEquals("2009-06-15T13:45:30", cmStatus.getSentTimeStamp());
+        assertTrue(cmStatus.getRemoteAddress().equals(remoteNumber));
+        assertEquals("2009-06-15T13:45:30", cmStatus.getDeliveredTimeStamp());
+        assertEquals("0", cmStatus.getCode());
+        assertEquals("No Error", cmStatus.getDescription());
     }
 
     private void outBoundSMSCallXMLTest(Map<String, String> addressNameMap, AdapterConfig adapterConfig, String simpleQuestion,

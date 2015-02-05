@@ -3,6 +3,7 @@ package com.almende.dialog.adapter.tools;
 import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Logger;
 import org.znerd.xmlenc.XMLOutputter;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -10,6 +11,7 @@ import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import com.sun.jersey.api.client.Client;
@@ -130,28 +132,18 @@ public class CM {
             outputter.attribute("PASSWORD", password);
             outputter.endTag();
 
-            String reference = null;
-            //fetch the question from the session
-            String firstAddress = null;
-            if (addressNameMap != null && !addressNameMap.isEmpty()) {
-                firstAddress = addressNameMap.keySet().iterator().next();
-            }
-            Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), firstAddress);
-            if (session != null) {
-                reference = CMStatus.storeSMSRelatedData(addressNameMap.keySet(), config, accountId, message,
-                                                         session.getQuestion());
-            }
-            if (reference != null) {
-                outputter.startTag("REFERENCE");
-                outputter.cdata(reference);
-                outputter.endTag();
-            }
+            String reference = UUID.randomUUID().toString();
+            outputter.startTag("REFERENCE");
+            outputter.cdata(reference);
+            outputter.endTag();
+            
             String senderId = fromName != null && !fromName.isEmpty() ? fromName : from;
+            SMSDeliveryStatus storeSMSRelatedData = null;
             for (String to : addressNameMap.keySet()) {
                 //check if its a mobile number, if no ignore, log, drop session and continue
                 PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(to);
+                Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), to);
                 if (!PhoneNumberType.MOBILE.equals(numberType)) {
-                    session = Session.getSession(config.getAdapterType(), config.getMyAddress(), to);
                     String errorMessage = String.format("Ignoring SMS request to: %s from: %s, as it is not of type MOBILE",
                                                         to, config.getMyAddress());
                     logger.warning(config, errorMessage, session);
@@ -159,6 +151,24 @@ public class CM {
                         session.drop();
                     }
                     continue;
+                }
+                
+                if (storeSMSRelatedData != null) {
+                    reference = UUID.randomUUID().toString();
+                    SMSDeliveryStatus linkedSMSRelatedData = SMSDeliveryStatus
+                                                    .storeSMSRelatedData(reference, to, config, accountId,
+                                                                         session.getQuestion(), null, "SENT",
+                                                                         session.getDdrRecordId(),
+                                                                         AdapterProviders.CM.getName());
+                    storeSMSRelatedData.addExtraInfo(linkedSMSRelatedData.getRemoteAddress(),
+                                                     linkedSMSRelatedData.getReference());
+                    storeSMSRelatedData.store();
+                }
+                else {
+                    storeSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to, config, accountId,
+                                                                                session.getQuestion(), null, "SENT",
+                                                                                session.getDdrRecordId(),
+                                                                                AdapterProviders.CM.getName());
                 }
                 outputter.startTag("MSG");
                 outputter.startTag("CONCATENATIONTYPE");

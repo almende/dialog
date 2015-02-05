@@ -8,9 +8,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import org.apache.http.client.utils.URIBuilder;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
@@ -1053,11 +1051,15 @@ public class Question implements QuestionIntf {
     @JsonIgnore
     public String getTextWithAnswerTexts() {
 
-        String reply = getQuestion_expandedtext() + "\n[";
-        for (Answer ans : question.getAnswers()) {
-            reply += " " + ans.getAnswer_expandedtext(getPreferred_language()) + " |";
+        String reply = getQuestion_expandedtext();
+        if (question.getAnswers() != null && !question.getAnswers().isEmpty()) {
+            reply += "\n[";
+            for (Answer ans : question.getAnswers()) {
+                reply += " " + ans.getAnswer_expandedtext(getPreferred_language()) + " |";
+            }
+
+            reply = reply.substring(0, reply.length() - 1) + "]";
         }
-        reply = reply.substring(0, reply.length() - 1) + "]";
         return reply;
     }
 

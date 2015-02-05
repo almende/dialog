@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+5-2-2015 version 1.5.10
+- feature: Upgrade an account to POST_PAID or PRE_PAID type functionality
+
 19-1-2015 version 1.5.9
 - feature: Added the forwardedForm parameter in the Twilio Adapter
 - fix: Use the okhttpclient because the jetty client doesn't handle status codes properly. Forexmple

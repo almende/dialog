@@ -747,8 +747,10 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         @Name("provider") AdapterProviders provider) {
 
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
-        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, provider);
-        adapterConfig.update();
+        if (adapterConfig != null) {
+            adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, provider);
+            adapterConfig.update();
+        }
         return adapterConfig;
     }
 	

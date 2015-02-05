@@ -51,6 +51,7 @@ public class CMServletIT extends TestFramework {
 
     private static final String simpleQuestion = "How are you?";
     private String reference = null;
+    String secondTestResponder = "0614567890";
 
     @Test
     public void outBoundSMSCallSenderNameNotNullTest() throws Exception
@@ -236,10 +237,9 @@ public class CMServletIT extends TestFramework {
      * @throws Exception
      */
     @Test
-    public void MultipleAddressStatusEntiryTest() throws Exception {
+    public void MultipleAddressStatusEntityTest() throws Exception {
 
         String myAddress = "Ask-Fast";
-        String secondTestResponder = "0614567890";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), TEST_PUBLIC_KEY, myAddress,
                                                           TEST_PRIVATE_KEY);
@@ -272,12 +272,59 @@ public class CMServletIT extends TestFramework {
                 }
                 assertEquals(linkedStatus.getReference(), linkeDeliveryStatus.getReference());
                 linkedStatusEntityChecked = true;
+                //save the parent sms delivery notification in the buffer
+                TestServlet.logForTest(smsDeliveryStatus.getReference() + "|" + smsDeliveryStatus.getRemoteAddress());
             }
             else {
                 linkeDeliveryStatus = smsDeliveryStatus;
             }
         }
         assertTrue(linkedStatusEntityChecked);
+    }
+    
+    /**
+     * Send an SMS to multiple ppl and check if equal number of status entities
+     * are created. Also check if the delivery status callback works accordingly
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void MultipleAddressStatusEntityDLRNOtificationTest() throws Exception {
+
+        //initiate multiple address sms
+        MultipleAddressStatusEntityTest();
+        String[] parentStatusDetails = TestServlet.getLogObject().toString().split("\\|");
+        //check if the DLR acceptance works properly for both numbers
+
+        String testXml = getTestSMSStatusXML(parentStatusDetails[1], parentStatusDetails[0]);
+        Method handleStatusReport = fetchMethodByReflection("handleDeliveryStatusReport", CMSmsServlet.class,
+                                                            String.class);
+        CMSmsServlet cmSmsServlet = new CMSmsServlet();
+        Object reportReply = invokeMethodByReflection(handleStatusReport, cmSmsServlet, testXml);
+        assertTrue(reportReply instanceof String);
+        SMSDeliveryStatus cmStatus = ServerUtils.deserialize(reportReply.toString(), false, SMSDeliveryStatus.class);
+        assertEquals("2009-06-15T13:45:30", cmStatus.getSentTimeStamp());
+        assertEquals(cmStatus.getRemoteAddress(), PhoneNumberUtils.formatNumber(parentStatusDetails[1], null));
+        assertEquals("2009-06-15T13:45:30", cmStatus.getDeliveredTimeStamp());
+        assertEquals("0", cmStatus.getCode());
+        assertEquals("No Error", cmStatus.getDescription());
+
+        //test the status for the second number
+        String remoteAddress = parentStatusDetails[1].equals(remoteAddressVoice) ? secondTestResponder
+                                                                                : remoteAddressVoice;
+        testXml = getTestSMSStatusXML(remoteAddress, parentStatusDetails[0]);
+        reportReply = invokeMethodByReflection(handleStatusReport, cmSmsServlet, testXml);
+        assertTrue(reportReply instanceof String);
+        SMSDeliveryStatus linkeDeliveryStatus = ServerUtils.deserialize(reportReply.toString(), false,
+                                                                        SMSDeliveryStatus.class);
+
+        assertEquals(cmStatus.getLinkedSmsDeliveryStatus(remoteAddress).getReference(),
+                     linkeDeliveryStatus.getReference());
+        assertEquals("2009-06-15T13:45:30", cmStatus.getSentTimeStamp());
+        assertEquals(linkeDeliveryStatus.getRemoteAddress(), PhoneNumberUtils.formatNumber(remoteAddress, null));
+        assertEquals("2009-06-15T13:45:30", linkeDeliveryStatus.getDeliveredTimeStamp());
+        assertEquals("0", linkeDeliveryStatus.getCode());
+        assertEquals("No Error", linkeDeliveryStatus.getDescription());
     }
     
     /**

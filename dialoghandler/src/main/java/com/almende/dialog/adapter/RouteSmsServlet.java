@@ -1,12 +1,16 @@
 package com.almende.dialog.adapter;
 
-import java.io.BufferedReader;
 import java.io.IOException;
+import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang.NotImplementedException;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.joda.time.DateTimeZone;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
@@ -22,13 +26,10 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
 import com.thetransactioncompany.cors.HTTPMethod;
 
 public class RouteSmsServlet extends TextServlet {
@@ -62,14 +63,41 @@ public class RouteSmsServlet extends TextServlet {
             if (req.getMethod().equals("POST")) {
                 try {
                     String responseText = "No result fetched";
-                    StringBuffer jb = new StringBuffer();
-                    String line = null;
-                    BufferedReader reader = req.getReader();
-                    while ((line = reader.readLine()) != null) {
-                        jb.append(line);
+                    String requestData = ServerUtils.getRequestData(req);
+                    String thisHost = "http://" + Settings.HOST + "?" + requestData;
+                    List<NameValuePair> nameValuePairs = URLEncodedUtils.parse(new URI(thisHost), "UTF-8");
+                    String messageId = null;
+                    String source = null;
+                    String destination = null;
+                    String status = null;
+                    String sentDate = null;
+                    String doneDate = null;
+
+                    for (NameValuePair nameValuePair : nameValuePairs) {
+                        String name = nameValuePair.getName();
+                        switch (name) {
+                            case "messageid":
+                                messageId = nameValuePair.getValue();
+                                break;
+                            case "source":
+                                source = nameValuePair.getValue();
+                                break;
+                            case "destination":
+                                destination = nameValuePair.getValue();
+                                break;
+                            case "status":
+                                status = nameValuePair.getValue();
+                                break;
+                            case "sentdate":
+                                sentDate = nameValuePair.getValue();
+                                break;
+                            case "donedate":
+                                doneDate = nameValuePair.getValue();
+                                break;
+                            default:
+                                break;
+                        }
                     }
-                    JsonNode dltPayload = JOM.getInstance().readTree(jb.toString());
-                    String messageId = dltPayload.get("messageid").asText();
                     //check the host in the CMStatus
                     if (messageId != null) {
                         //fetch the session
@@ -79,15 +107,18 @@ public class RouteSmsServlet extends TextServlet {
                             host += deliveryStatusPath;
                             log.info("Route-SMS delivery status is being redirect to: " + host);
                             host += ("?" + (req.getQueryString() != null ? req.getQueryString() : ""));
-                            responseText = forwardToHost(host, HTTPMethod.POST, jb.toString());
+                            responseText = forwardToHost(host, HTTPMethod.POST, requestData);
                         }
                         else {
-                            SMSDeliveryStatus routeSMSStatus = handleDeliveryStatusReport(dltPayload.get("messageid")
-                                                            .asText(), dltPayload.get("sentdate").asText(), dltPayload
-                                                            .get("donedate").asText(), dltPayload.get("destination")
-                                                            .asText(), dltPayload.get("source").asText(), dltPayload
-                                                            .get("status").asText());
-                            responseText = ServerUtils.serializeWithoutException(routeSMSStatus);
+                            SMSDeliveryStatus routeSMSStatus = handleDeliveryStatusReport(messageId, sentDate,
+                                                                                          doneDate, destination,
+                                                                                          source, status);
+                            if (routeSMSStatus == null) {
+                                responseText = "No Route-SMS status entity found for messageId: " + messageId;
+                            }
+                            else {
+                                responseText = ServerUtils.serializeWithoutException(routeSMSStatus);
+                            }
                         }
                     }
                     res.getWriter().println(responseText);
@@ -153,7 +184,7 @@ public class RouteSmsServlet extends TextServlet {
     }
 
     /**
-     * handles the status report based on string values of the parameters sent
+     * Handles the status report based on string values of the parameters sent
      * by CM. used by both POST and GET method. See {@link http
      * ://docs.cm.nl/http_SR.pdf} for more info.
      * 
@@ -169,18 +200,24 @@ public class RouteSmsServlet extends TextServlet {
     private SMSDeliveryStatus handleDeliveryStatusReport(String messageId, String sent, String received, String to,
         String from, String statusCode) throws Exception {
 
-        log.info(String.format("CM SR: reference: %s, sent: %s, received: %s, to: %s, statusCode: %s", messageId, sent,
-                               received, to, statusCode));
+        log.info(String.format("RouteSMS Servlet SR: reference: %s, sent: %s, received: %s, to: %s, statusCode: %s",
+                               messageId, sent, received, to, statusCode));
         if (messageId != null && !messageId.isEmpty()) {
             SMSDeliveryStatus routeSMSStatus = SMSDeliveryStatus.fetch(messageId);
             to = PhoneNumberUtils.formatNumber(to, null);
             if (routeSMSStatus != null && to != null) {
                 Session session = Session.getSession(Session.getSessionKey(routeSMSStatus.getAdapterConfig(), to));
                 if (sent != null) {
-                    routeSMSStatus.setSentTimeStamp(sent);
+                    routeSMSStatus.setSentTimeStamp(String.valueOf(TimeUtils
+                                                    .getTimeWithFormat(sent, "yyyy-mm-dd hh:mm:ss",
+                                                                       DateTimeZone.forID("Asia/Kolkata"), null)
+                                                    .getMillis()));
                 }
                 if (received != null) {
-                    routeSMSStatus.setDeliveredTimeStamp(received);
+                    routeSMSStatus.setDeliveredTimeStamp(String.valueOf(TimeUtils
+                                                    .getTimeWithFormat(received, "yyyy-mm-dd hh:mm:ss",
+                                                                       DateTimeZone.forID("Asia/Kolkata"), null)
+                                                    .getMillis()));
                 }
                 if (to != null) {
                     routeSMSStatus.setRemoteAddress(to);
@@ -287,14 +324,13 @@ public class RouteSmsServlet extends TextServlet {
      */
     private String forwardToHost(String host, HTTPMethod method, String payload) {
 
-        Client client = ParallelInit.getClient();
-        WebResource webResource = client.resource(host);
         try {
+            AFHttpClient client = ParallelInit.getAFHttpClient();
             switch (method) {
                 case GET:
-                    return webResource.type("text/plain").get(String.class);
+                    return client.get(host);
                 case POST:
-                    return webResource.type("text/plain").post(String.class, payload);
+                    return client.post(payload, host);
                 default:
                     throw new NotFoundException(String.format("METHOD %s not implemented", method));
             }
@@ -329,13 +365,15 @@ public class RouteSmsServlet extends TextServlet {
         }
         return false;
     }
-    
+
     /**
-     * Specific for RouteSMS, returns a true if the delivery code is erronous. 
+     * Specific for RouteSMS, returns a true if the delivery code is erronous.
+     * 
      * @param smsStatus
      * @return
      */
     public static boolean isErrorInDelivery(String smsStatus) {
+
         switch (smsStatus) {
             case "UNKNOWN":
             case "EXPIRED":

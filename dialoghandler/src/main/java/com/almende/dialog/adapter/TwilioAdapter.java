@@ -264,6 +264,8 @@ public class TwilioAdapter {
         @FormParam("ForwardedFrom") String forwardedFrom) {
 
         log.info("call started:" + direction + ":" + remoteID + ":" + localID);
+
+        localID = checkAnonymousCallerId(localID);
         
         Map<String, String> extraParams = new HashMap<String, String>();
         if(forwardedFrom!=null) {
@@ -368,6 +370,8 @@ public class TwilioAdapter {
 
         TwiMLResponse twiml = new TwiMLResponse();
         
+        localID = checkAnonymousCallerId(localID);
+        
         try {
             answer_input = answer_input != null ? URLDecoder.decode(answer_input, "UTF-8") : answer_input;
         }
@@ -462,6 +466,8 @@ public class TwilioAdapter {
     @Produces("application/xml")
     public Response timeout(@QueryParam("From") String localID, @QueryParam("To") String remoteID,
         @QueryParam("Direction") String direction) throws Exception {
+        
+        localID = checkAnonymousCallerId(localID);
 
         //swap local and remote ids if its an incoming call
         if (direction.equals("inbound")) {
@@ -557,6 +563,8 @@ public class TwilioAdapter {
                                       @QueryParam( "To" ) String remoteID,
                                       @QueryParam( "Direction" ) String direction,
                                       @QueryParam( "CallStatus" ) String status ) {
+        
+        localID = checkAnonymousCallerId(localID);
         
         log.info("Received twiliocc status: "+status);
 
@@ -1206,5 +1214,13 @@ public class TwilioAdapter {
     
     protected String getPreconnectUrl() {
     	return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/preconnect";
+    }
+    
+    private String checkAnonymousCallerId(String callerId) {
+        if(callerId.contains( "+266696687" )) {
+            return "";
+        }
+        
+        return callerId;
     }
 }

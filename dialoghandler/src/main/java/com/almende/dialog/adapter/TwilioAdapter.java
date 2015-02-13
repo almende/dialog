@@ -265,6 +265,10 @@ public class TwilioAdapter {
 
         log.info("call started:" + direction + ":" + remoteID + ":" + localID);
         
+        if(remoteID.contains( "+266696687" )) {
+            remoteID = "";
+        }
+        
         Map<String, String> extraParams = new HashMap<String, String>();
         if(forwardedFrom!=null) {
             extraParams.put("forwardedFrom", forwardedFrom);

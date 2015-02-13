@@ -264,9 +264,9 @@ public class TwilioAdapter {
         @FormParam("ForwardedFrom") String forwardedFrom) {
 
         log.info("call started:" + direction + ":" + remoteID + ":" + localID);
-        
-        if(remoteID.contains( "+266696687" )) {
-            remoteID = "";
+
+        if(localID.contains( "+266696687" )) {
+            localID = "";
         }
         
         Map<String, String> extraParams = new HashMap<String, String>();

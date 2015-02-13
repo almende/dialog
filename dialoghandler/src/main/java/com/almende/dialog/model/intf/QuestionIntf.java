@@ -3,7 +3,6 @@ package com.almende.dialog.model.intf;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
-
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -19,17 +18,17 @@ public interface QuestionIntf extends Serializable {
 	public String getTrackingToken();
 	
 	@JsonIgnore
-	public HashMap<String,String> getExpandedRequester();
+	public HashMap<String,String> getExpandedRequester(String sessionKey);
 	@JsonIgnore
-	public HashMap<String,String> getExpandedRequester(String language);
+	public HashMap<String,String> getExpandedRequester(String language, String sessionKey);
 	
 	public ArrayList<Answer> getAnswers();
 	public ArrayList<EventCallback> getEvent_callbacks();
 	
 	@JsonIgnore
-	public String getQuestion_expandedtext();
+	public String getQuestion_expandedtext(String sessionKey);
 	@JsonIgnore
-	public String getQuestion_expandedtext(String language);
+	public String getQuestion_expandedtext(String language, String sessionKey);
 	
 	public void setQuestion_id(String question_id);
 	public void setQuestion_text(String question_text);

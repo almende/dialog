@@ -1,23 +1,47 @@
 package com.almende.dialog.accounts;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Logger;
+import org.apache.http.client.utils.URIBuilder;
+import com.almende.dialog.Settings;
+import com.almende.dialog.model.Question;
+import com.almende.dialog.model.Session;
+import com.almende.dialog.util.AFHttpClient;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
+import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.askfast.commons.intf.DialogInterface;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.squareup.okhttp.Credentials;
+import com.sun.research.ws.wadl.HTTPMethods;
 
 public class Dialog implements DialogInterface {
 
+    static final Logger log = Logger.getLogger(Dialog.class.getName());
+    private static final String DIALOG_BASIC_AUTH_HEADER_KEY = "DIALOG_BASIC_AUTH_HEADER";
+    
     @Id
     public String id = null;
     String name = null;
     String url = null;
     String owner = null;
     Long creationTime; 
-
+    String userName = null;
+    String password = null;
+    Boolean useBasicAuth = false;
+    private HTTPMethods method = HTTPMethods.GET;
+    
     public Dialog() {
 
     }
@@ -83,6 +107,36 @@ public class Dialog implements DialogInterface {
 
         this.owner = owner;
     }
+    
+    public String getUserName() {
+    
+        return userName;
+    }
+    
+    public void setUserName(String userName) {
+    
+        this.userName = userName;
+    }
+
+    public String getPassword() {
+    
+        return password;
+    }
+
+    public void setPassword(String password) {
+    
+        this.password = password;
+    }
+    
+    public Boolean getUseBasicAuth() {
+    
+        return useBasicAuth;
+    }
+    
+    public void setUseBasicAuth(Boolean useBasicAuth) {
+    
+        this.useBasicAuth = useBasicAuth;
+    }
 
     /**
      * stores or updates the dialog object
@@ -124,9 +178,8 @@ public class Dialog implements DialogInterface {
      * @param id
      * @param accountId
      * @return
-     * @throws Exception
      */
-    public static Dialog getDialog(String id, String accountId) throws Exception {
+    public static Dialog getDialog(String id, String accountId) {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         Dialog dialog = datastore.load(Dialog.class, id);
@@ -136,7 +189,7 @@ public class Dialog implements DialogInterface {
                 return dialog;
             }
             else {
-                throw new Exception(String.format("AccountId: %s does not own Dialog: %s", accountId, dialog.getId()));
+                log.severe(String.format("AccountId: %s does not own Dialog: %s", accountId, dialog.getId()));
             }
         }
         return dialog;
@@ -190,16 +243,132 @@ public class Dialog implements DialogInterface {
             }
         }
     }
-
     
     public Long getCreationTime() {
     
         return creationTime;
     }
-
     
     public void setCreationTime(Long creationTime) {
     
         this.creationTime = creationTime;
+    }
+    
+    /**
+     * Fetches the question from the dialog url. Uses basic authentication if
+     * {@link Dialog#useBasicAuth} is turned on
+     * @param queryParams
+     * @param encodeParams
+     * @return
+     * @throws IOException
+     * @throws URISyntaxException 
+     */
+    @JsonIgnore
+    public String getQuestionFromDialog(Map<String, String> queryParams) throws IOException, URISyntaxException {
+
+        AFHttpClient client = ParallelInit.getAFHttpClient();
+        if (Boolean.TRUE.equals(useBasicAuth)) {
+            client.authorizeClient(userName, password);
+        }
+        URIBuilder uriBuilder = new URIBuilder(url);
+        if (queryParams != null) {
+            for (String query : queryParams.keySet()) {
+                uriBuilder.addParameter(query, queryParams.get(query));
+            }
+        }
+        return client.get(uriBuilder.build().toString());
+    }
+
+    @JsonIgnore
+    public HTTPMethods getMethod() {
+
+        return method;
+    }
+    @JsonIgnore
+    public void setMethod(HTTPMethods method) {
+
+        this.method = method;
+    }
+    @JsonProperty("method")
+    public String getMethodString() {
+
+        return method != null ? method.name() : null;
+    }
+    @JsonProperty("method")
+    public void setMethod(String method) {
+
+        try {
+            this.method = HTTPMethods.valueOf(method.toUpperCase());
+        }
+        catch (Exception e) {
+            log.severe(String.format("Could not deserialize method: %s", method));
+            this.method = null;
+        }
+    }
+    
+    /**
+     * Gets the URL of the given dialogId or just returns the url encoded.
+     * 
+     * @param dialogIdOrUrl
+     * @param accountId
+     *            used to fetch the dialog from the mongo db
+     * @param session
+     *            if not null, and a dialogId is fetched, stores the
+     *            authorization token in the session
+     * @return
+     * @throws UnsupportedEncodingException
+     */
+    public static String getDialogURL(String dialogIdOrUrl, String accountId, Session session)
+        throws UnsupportedEncodingException {
+
+        if (dialogIdOrUrl.startsWith("http")) {
+            return ServerUtils.encodeURLParams(dialogIdOrUrl);
+        }
+        else if (dialogIdOrUrl.startsWith("text://")) {
+            return "http://" + Settings.HOST + "/question/comment?" +
+                   URLEncoder.encode(dialogIdOrUrl.replace("text://", ""), "UTF-8");
+        }
+        else {
+            Dialog dialog = Dialog.getDialog(dialogIdOrUrl, accountId);
+            if (dialog != null) {
+                addDialogCredentialsToSession(dialog, session);
+                return dialog.getUrl();
+            }
+            String errorText = Question.getError(session != null ? session.getLanguage() : null).getQuestion_text()
+                                            .replace("text://", "");
+            return "http://" + Settings.HOST + "/question/comment?" + URLEncoder.encode(errorText, "UTF-8");
+        }
+    }
+    
+    /**
+     * Simply stores the Dialog credentials in the session extras 
+     * @param dialog
+     * @param session
+     */
+    public static void addDialogCredentialsToSession(Dialog dialog, Session session) {
+
+        if (dialog != null && session != null && dialog.getUseBasicAuth()) {
+            String credential = Credentials.basic(dialog.getUserName(), dialog.getPassword());
+            session.getExtras().put(DIALOG_BASIC_AUTH_HEADER_KEY, credential);
+            session.storeSession();
+        }
+    }
+    
+    /**
+     * Returns the credentials that is stored in the session corresponding to
+     * {@link Dialog#DIALOG_BASIC_AUTH_HEADER_KEY}
+     * 
+     * @param sessionKey
+     * @return
+     */
+    public static String getCredentialsFromSession(String sessionKey) {
+
+        if (sessionKey != null) {
+            Session session = Session.getSession(sessionKey);
+            if (session != null) {
+                return session.getExtras().get(DIALOG_BASIC_AUTH_HEADER_KEY);
+            }
+        }
+        return null;
     }
 }

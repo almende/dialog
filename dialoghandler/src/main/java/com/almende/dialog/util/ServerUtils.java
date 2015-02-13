@@ -4,6 +4,8 @@ package com.almende.dialog.util;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Collection;
 import java.util.HashMap;
@@ -176,5 +178,18 @@ public class ServerUtils
             mapToBePopulated.put( key, value );
         }
         return mapToBePopulated;
+    }
+    
+    public static String encodeURLParams(String url) {
+
+        try {
+            URL remoteURL = new URL(url);
+            return new URI(remoteURL.getProtocol(), remoteURL.getUserInfo(), remoteURL.getHost(), remoteURL.getPort(),
+                           remoteURL.getPath(), remoteURL.getQuery(), remoteURL.getRef()).toString();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        return url;
     }
 }

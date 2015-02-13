@@ -22,6 +22,7 @@ import javax.ws.rs.core.Response.Status;
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
@@ -546,11 +547,11 @@ public class AdapterConfig {
      * Fetchs the initialAgentURL by looking up if there is any dialogId
      * configured in {@link AdapterConfig#properties} If it is not found.
      * returns the initialAgentURL
-     * 
+     * @param session if not null, stores the authorization credentials in this instance
      * @return
      */
     @JsonIgnore
-    public String getURLForInboundScenario() {
+    public String getURLForInboundScenario(Session session) {
 
         if (getProperties().get(DIALOG_ID_KEY) != null) {
             try {
@@ -558,6 +559,7 @@ public class AdapterConfig {
                     cachedDialog = Dialog.getDialog(getProperties().get(DIALOG_ID_KEY).toString(), null);
                 }
                 if (cachedDialog != null) {
+                    Dialog.addDialogCredentialsToSession(cachedDialog, session);
                     return cachedDialog.getUrl();
                 }
                 else { //remove the key tag if the dialog is not found
@@ -594,22 +596,21 @@ public class AdapterConfig {
     }
     
     /**
-     * Gets the dialog that is linked to the owner of this adapter. 
+     * Gets the dialog that is linked to the owner of this adapter.
+     * 
      * @return
+     * @throws Exception
      */
     @JsonIgnore
     public Dialog getDialog() {
+
         Object dialogId = properties != null ? properties.get(DIALOG_ID_KEY) : null;
-        if(dialogId != null) {
-            try {
-                return Dialog.getDialog(dialogId.toString(), owner);
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-                log.severe("Dialog fetch failed. Reason: " + e.getMessage());
+        if (dialogId != null) {
+            if (cachedDialog == null || !cachedDialog.getId().equals(dialogId.toString())) {
+                cachedDialog = Dialog.getDialog(dialogId.toString(), null);
             }
         }
-        return null;
+        return cachedDialog;
     }
     
 	public String getAddress() {

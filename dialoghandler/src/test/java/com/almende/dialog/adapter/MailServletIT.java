@@ -108,12 +108,12 @@ public class MailServletIT extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
                                                            localAddressMail, initialAgentURL );
         //create session
-        Session.createSession( adapterConfig, remoteAddressEmail );
+        Session session = Session.createSession( adapterConfig, remoteAddressEmail );
         TextMessage textMessage = mailAppointmentInteraction("hi");
         //update the question text in the textMessage
         Question question = Question.fromURL(initialAgentURL, adapterConfig.getConfigId(), null, null);
         if(question != null) {
-            textMessage.setBody(question.getTextWithAnswerTexts());
+            textMessage.setBody(question.getTextWithAnswerTexts(session.getKey()));
         }
         assertOutgoingTextMessage(textMessage);
     }

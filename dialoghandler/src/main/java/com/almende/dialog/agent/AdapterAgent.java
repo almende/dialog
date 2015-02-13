@@ -739,9 +739,9 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             config.setMyAddress(config.getMyAddress().toLowerCase());
         }
         //check if there is an initialAgent url given. Create a dialog if it is
-        if(config.getURLForInboundScenario() != null && !config.getURLForInboundScenario().isEmpty()) {
-            Dialog dialog = Dialog.createDialog("Dialog created on adapter creation", config.getURLForInboundScenario(),
-                                                config.getOwner());
+        if (config.getURLForInboundScenario(null) != null && !config.getURLForInboundScenario(null).isEmpty()) {
+            Dialog dialog = Dialog.createDialog("Dialog created on adapter creation",
+                                                config.getURLForInboundScenario(null), config.getOwner());
             config.getProperties().put(AdapterConfig.DIALOG_ID_KEY, dialog.getId());
         }
 

@@ -8,6 +8,8 @@ import static org.junit.Assert.assertTrue;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
@@ -21,6 +23,7 @@ import com.almende.dialog.IntegrationTest;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
@@ -31,12 +34,15 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
 
 @Category(IntegrationTest.class)
 public class VoiceXMLServletIT extends TestFramework {
 
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio.wav";
+    private DialogAgent dialogAgent = null;
     
     /**
      * this test is to check the bug which rethrows the same question when an
@@ -98,7 +104,7 @@ public class VoiceXMLServletIT extends TestFramework {
             assertEquals(new Integer(Question.DEFAULT_MAX_QUESTION_LOAD), retryCount);
         }
     }
-
+    
     /**
      * This test is used to simulate the situation when an outbound call is triggered, but the 
      * corresponding ddrRecord is missing from the session
@@ -168,6 +174,120 @@ public class VoiceXMLServletIT extends TestFramework {
         assertThat(ddrRecord, Matchers.notNullValue());
         assertThat(ddrRecord.getDuration(), Matchers.greaterThan(0L));
         assertThat(ddrRecord.getStart(), Matchers.is(1401809070192L));
+    }
+    
+    /**
+     * Performs an outbound call request with Broadsoft. Test it with a switch to Voxeo
+     * and test if everything works normally 
+     */
+    @Test
+    public void outboundWithGlobalSwitchOnTest() throws Exception {
+
+        dialogAgent = Mockito.mock(DialogAgent.class);
+        Mockito.when(dialogAgent.getGlobalSwitchProviderCredentials()).thenReturn(null);
+        
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.OPEN_QUESTION.name());
+
+        url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_BROADSOFT, TEST_PUBLIC_KEY,
+                                                          localAddressBroadsoft, url);
+        adapterConfig.setXsiUser(localAddressBroadsoft + "@ask.ask.voipit.nl");
+        adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
+        adapterConfig.update();
+
+        //perform an outbound call
+        HashMap<String, String> addressMap = new HashMap<String, String>();
+        addressMap.put(remoteAddressVoice, "");
+        Mockito.when(dialogAgent.outboundCallWithMap(addressMap, null, null, null, null, url, null,
+                                                     adapterConfig.getConfigId(), adapterConfig.getOwner(), ""))
+                                        .thenCallRealMethod();
+        HashMap<String, String> result = dialogAgent.outboundCallWithMap(addressMap, null, null, null, null, url, null,
+                                                                         adapterConfig.getConfigId(),
+                                                                         adapterConfig.getOwner(), "");
+        assertTrue(result != null);
+        assertTrue(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)) != null);
+        Session.drop(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+        
+        //set switch related test info
+        String testMyAddress = "0854881001";
+        
+        Map<AdapterProviders, Map<String, Map<String, Object>>> globalAdapterCredentials = new HashMap<AdapterProviders, Map<String, Map<String, Object>>>();
+        HashMap<String, Map<String, Object>> credentials = new HashMap<String, Map<String, Object>>();
+        HashMap<String, Object> actualCredentials = new HashMap<String, Object>();
+        actualCredentials.put("accessToken", "testTest");
+        actualCredentials.put("myAddress", testMyAddress);
+        actualCredentials.put("address", testMyAddress);
+        actualCredentials.put("accessTokenSecret", "testTestSecret");
+        actualCredentials.put("adapterType", "voxeo");
+        credentials.put(DialogAgent.ADAPTER_CREDENTIALS_GLOBAL_KEY, actualCredentials);
+        globalAdapterCredentials.put(AdapterProviders.TWILIO, credentials);
+        
+        //mock the Context
+        Mockito.when(dialogAgent.getGlobalSwitchProviderCredentials()).thenReturn(globalAdapterCredentials);
+        //switch calling adapter globally
+        Mockito.when(dialogAgent.getGlobalAdapterSwitchSettings(AdapterType.CALL)).thenReturn(AdapterProviders.TWILIO);
+        Mockito.when(dialogAgent.getApplicationId()).thenReturn(UUID.randomUUID().toString());
+        
+        //initiate outbound request again
+        
+        result = dialogAgent.outboundCallWithMap(addressMap, null, null, null, null, url, null,
+                                                       adapterConfig.getConfigId(), adapterConfig.getOwner(), "");
+        assertTrue(result != null);
+        assertTrue(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)) != null);
+        Session session = Session.getSession(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+        assertTrue(session != null);
+        assertEquals(testMyAddress, session.getLocalAddress());
+        assertEquals(AdapterProviders.TWILIO.getName(), session.getType());
+    }
+    
+    /**
+     * Performs an outbound call request with Broadsoft. Test it with a switch
+     * to Voxeo and test if everything works normally
+     */
+    @Test
+    public void outboundWithSpecificAdapterSwitchOnTest() throws Exception {
+
+        //perform a global switch test
+        outboundWithGlobalSwitchOnTest();
+        
+        //fetch the session
+        Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_TWILIO, "0854881001",
+                                             PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        //add a specific adapter switch
+        String testMyAddress = "0854881002";
+        Map<AdapterProviders, Map<String, Map<String, Object>>> globalSwitchProviderCredentials = dialogAgent
+                                        .getGlobalSwitchProviderCredentials();
+        Map<String, Map<String, Object>> credentials = globalSwitchProviderCredentials.get(AdapterProviders.TWILIO);
+        HashMap<String, Object> actualCredentials = new HashMap<String, Object>();
+        actualCredentials.put("accessToken", "testTest");
+        actualCredentials.put("myAddress", testMyAddress);
+        actualCredentials.put("address", testMyAddress);
+        actualCredentials.put("accessTokenSecret", "testTestSecret");
+        actualCredentials.put("adapterType", "voxeo");
+        credentials.put(session.getAdapterID(), actualCredentials);
+        globalSwitchProviderCredentials.put(AdapterProviders.TWILIO, credentials);
+
+        //mock the Context
+        Mockito.when(dialogAgent.getGlobalSwitchProviderCredentials()).thenReturn(globalSwitchProviderCredentials);
+
+        //initiate outbound request again
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.OPEN_QUESTION.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
+
+        HashMap<String, String> addressMap = new HashMap<String, String>();
+        addressMap.put(remoteAddressVoice, "");
+        HashMap<String, String> result = dialogAgent.outboundCallWithMap(addressMap, null, null, null, null, url, null,
+                                                                         session.getAdapterID(),
+                                                                         session.getAdapterConfig().getOwner(), "");
+        assertTrue(result != null);
+        assertTrue(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)) != null);
+        session = Session.getSession(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+        assertTrue(session != null);
+        assertEquals(testMyAddress, session.getLocalAddress());
+        assertEquals(AdapterProviders.TWILIO.getName(), session.getType());
     }
     
     /**

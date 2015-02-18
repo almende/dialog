@@ -293,9 +293,8 @@ public class Session{
      */
     public void addExtras(String key, String value) {
 
-        if (extras != null) {
-            extras.put(key, value);
-        }
+        extras = extras != null ? extras : new HashMap<String, String>();
+        extras.put(key, value);
     }
     
     /**

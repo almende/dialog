@@ -19,9 +19,12 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.codehaus.plexus.util.StringInputStream;
 import org.codehaus.plexus.util.StringOutputStream;
+import org.hamcrest.Matchers;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.mockito.internal.util.MockUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -42,6 +45,7 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
 
@@ -52,6 +56,7 @@ public class CMServletIT extends TestFramework {
     private static final String simpleQuestion = "How are you?";
     private String reference = null;
     String secondTestResponder = "0614567890";
+    private DialogAgent dialogAgent = null;
 
     @Test
     public void outBoundSMSCallSenderNameNotNullTest() throws Exception
@@ -477,22 +482,82 @@ public class CMServletIT extends TestFramework {
         assertEquals("0", cmStatus.getCode());
         assertEquals("No Error", cmStatus.getDescription());
     }
+    
+    /**
+     * Perform an outbound sms request first. Switch the adapter details with a global switch
+     * @throws Exception
+     */
+    @Test
+    public void outBoundSMSCallWithGlobalSwitch() throws Exception {
 
-    private void outBoundSMSCallXMLTest(Map<String, String> addressNameMap, AdapterConfig adapterConfig, String simpleQuestion,
-            QuestionInRequest questionInRequest, String senderName, String subject, String accountId) throws Exception {
+        dialogAgent = Mockito.mock(DialogAgent.class);
+        Mockito.when(dialogAgent.getGlobalSwitchProviderCredentials()).thenReturn(null);
+        outBoundSMSCallSenderNameNotNullTest();
+
+        //set switch related test info
+        Map<AdapterProviders, Map<String, Map<String, Object>>> globalAdapterCredentials = new HashMap<AdapterProviders, Map<String, Map<String, Object>>>();
+        HashMap<String, Map<String, Object>> credentials = new HashMap<String, Map<String, Object>>();
+        HashMap<String, Object> actualCredentials = new HashMap<String, Object>();
+        actualCredentials.put("accessToken", "testTest");
+        actualCredentials.put("accessTokenSecret", "testTestSecret");
+        actualCredentials.put("adapterType", "sms");
+        HashMap<String, Object> properties = new HashMap<String, Object>();
+        properties.put(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
+        actualCredentials.put("properties", properties);
+        credentials.put(DialogAgent.ADAPTER_CREDENTIALS_GLOBAL_KEY, actualCredentials);
+        globalAdapterCredentials.put(AdapterProviders.ROUTE_SMS, credentials);
+        
+        //mock the Context
+        Mockito.when(dialogAgent.getGlobalSwitchProviderCredentials()).thenReturn(globalAdapterCredentials);
+        
+        //fetch the session
+        Session session = Session.getSession("sms", "ASK", PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        //switch sms adapter globally
+        Mockito.when(dialogAgent.getGlobalAdapterSwitchSettings(AdapterType.SMS)).thenReturn(AdapterProviders.ROUTE_SMS);
+        
+        //perform outbound request
+        HashMap<String, String> addressMap = new HashMap<String, String>();
+        addressMap.put(remoteAddressVoice, null);
+        outBoundSMSCallXMLTest(addressMap, session.getAdapterConfig(), simpleQuestion,
+                               QuestionInRequest.SIMPLE_COMMENT, "", "outBoundSMSCallSenderNameNotNullTest", session
+                                                               .getAdapterConfig().getOwner());
+        //fetch the sms delivery status reports
+        List<SMSDeliveryStatus> smsStatues = SMSDeliveryStatus.fetchAll();
+        Assert.assertThat(smsStatues, Matchers.notNullValue());
+        Assert.assertThat(smsStatues.size(), Matchers.is(2));
+        boolean smsSentFromRouteSMS = false;
+        for (SMSDeliveryStatus smsDeliveryStatus : smsStatues) {
+            if(smsDeliveryStatus.getCode() != null) {
+                Assert.assertThat(smsDeliveryStatus.getCode(), Matchers.is("1701"));
+                Assert.assertThat(smsDeliveryStatus.getDescription(), Matchers.is("Successfully Sent"));
+                smsSentFromRouteSMS = true;
+            }
+        }
+        assertTrue(smsSentFromRouteSMS);
+        session = Session.getSession("sms", "ASK", PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        assertTrue(session != null);
+        assertEquals("ASK", session.getLocalAddress());
+        assertEquals(AdapterAgent.ADAPTER_TYPE_SMS, session.getType());
+    }
+
+    private HashMap<String, String> outBoundSMSCallXMLTest(Map<String, String> addressNameMap,
+        AdapterConfig adapterConfig, String simpleQuestion, QuestionInRequest questionInRequest, String senderName,
+        String subject, String accountId) throws Exception {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        questionInRequest.name());
+        HashMap<String, String> result = null;
         url = ServerUtils.getURLWithQueryParams(url, "question", URLEncoder.encode(simpleQuestion, "UTF-8"));
-        DialogAgent dialogAgent = new DialogAgent();
-        if (addressNameMap.size() > 1) {
-            dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                                            adapterConfig.getConfigId(), accountId, "");
+        dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
+
+        if (new MockUtil().isMock(dialogAgent)) {
+            Mockito.when(dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
+                                                         adapterConfig.getConfigId(), accountId, ""))
+                                            .thenCallRealMethod();
         }
-        else {
-            dialogAgent.outboundCall(addressNameMap.keySet().iterator().next(), senderName, subject, url, null,
-                                     adapterConfig.getConfigId(), accountId, "");
-        }
+        result = dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
+                                                 adapterConfig.getConfigId(), accountId, "");
+        return result;
     }
 
     private String assertXMLGeneratedFromOutBoundCall(Map<String, String> addressNameMap, AdapterConfig adapterConfig,

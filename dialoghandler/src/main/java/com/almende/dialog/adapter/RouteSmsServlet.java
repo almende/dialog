@@ -247,32 +247,27 @@ public class RouteSmsServlet extends TextServlet {
                                                                       messageId, session);
                 }
                 //fetch ddr corresponding to this
-                if (session != null) {
-                    DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(),
-                                                                 routeSMSStatus.getAccountId());
-                    if (ddrRecord != null) {
-                        if (isErrorInDelivery(statusCode)) {
-                            ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
-                            ddrRecord.addAdditionalInfo("ERROR", routeSMSStatus.getDescription());
-                        }
-                        else if (statusCode.equalsIgnoreCase("DELIVRD")) {
-                            ddrRecord.addStatusForAddress(to, CommunicationStatus.DELIVERED);
-                        }
-                        else {
-                            ddrRecord.addStatusForAddress(to, CommunicationStatus.SENT);
-                        }
-                        ddrRecord.createOrUpdate();
+                DDRRecord ddrRecord = DDRRecord.getDDRRecord(routeSMSStatus.getDdrRecordId(),
+                                                             routeSMSStatus.getAccountId());
+                if (ddrRecord != null) {
+                    if (isErrorInDelivery(statusCode)) {
+                        ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
+                        ddrRecord.addAdditionalInfo("ERROR", routeSMSStatus.getDescription());
+                    }
+                    else if (statusCode.equalsIgnoreCase("DELIVRD")) {
+                        ddrRecord.addStatusForAddress(to, CommunicationStatus.DELIVERED);
                     }
                     else {
-                        log.warning(String.format("No ddr record found for id: %s", session.getDdrRecordId()));
+                        ddrRecord.addStatusForAddress(to, CommunicationStatus.SENT);
                     }
-                    //check if session is killed. if so drop it :)
-                    if (session.isKilled() && isSMSsDelivered(ddrRecord)) {
-                        session.drop();
-                    }
+                    ddrRecord.createOrUpdate();
                 }
                 else {
-                    log.warning(String.format("No session attached for cm status: %s", routeSMSStatus.getReference()));
+                    log.warning(String.format("No ddr record found for id: %s", routeSMSStatus.getDdrRecordId()));
+                }
+                //check if session is killed. if so drop it :)
+                if (session.isKilled() && isSMSsDelivered(ddrRecord)) {
+                    session.drop();
                 }
                 routeSMSStatus.store();
             }

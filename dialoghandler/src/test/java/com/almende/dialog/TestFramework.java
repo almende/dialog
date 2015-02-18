@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Properties;
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
@@ -69,9 +68,9 @@ public class TestFramework
         {
             servletRunner.set( setupTestServlet() );
         }
-        DialogAgent.DEFAULT_PROVIDERS = new HashMap<AdapterType, AdapterProviders>();
-        DialogAgent.DEFAULT_PROVIDERS.put(AdapterType.SMS, AdapterProviders.CM);
-        DialogAgent.DEFAULT_PROVIDERS.put(AdapterType.CALL, AdapterProviders.BROADSOFT);
+        DialogAgent dialogAgent = new DialogAgent();
+        dialogAgent.setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.CM);
+        dialogAgent.setDefaultProviderSettings(AdapterType.CALL, AdapterProviders.BROADSOFT);
     }
     
     @After
@@ -82,6 +81,7 @@ public class TestFramework
             ParallelInit.datastore.dropDatabase();
         }
         servletRunner.remove();
+        TestServlet.clearLogObject();
     }
     
     public static String fetchResponse( String httpMethods, String url, String payload )

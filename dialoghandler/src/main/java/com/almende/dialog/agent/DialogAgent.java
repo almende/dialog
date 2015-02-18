@@ -1,5 +1,6 @@
 package com.almende.dialog.agent;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -7,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.almende.dialog.Settings;
@@ -41,6 +43,7 @@ import com.askfast.commons.agent.intf.DialogAgentInterface;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DialogRequestDetails;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -56,23 +59,28 @@ import com.rabbitmq.client.QueueingConsumer.Delivery;
 public class DialogAgent extends Agent implements DialogAgentInterface {
 
     private static final Logger log = Logger.getLogger(DialogAgent.class.getName());
-    private static final String ADAPTER_PROVIDER_MAPPING_KEY = "ADAPTER_PROVIDER_MAPPING";
+    private static final String GLOBAL_ADAPTER_SWITCH_MAPPING_KEY = "GLOBAL_ADAPTER_SWITCH_MAPPING";
+    private static final String DEFAULT_ADAPTER_PROVIDER_MAPPING_KEY = "ADAPTER_PROVIDER_MAPPING";
+    public static final String ADAPTER_PROVIDER_CREDENTIALS_KEY = "ADAPTER_PROVIDER_CREDENTIALS";
+    public static final String ADAPTER_CREDENTIALS_GLOBAL_KEY = "GLOBAL";
+    
     /**
      * Used by the Tests to store any default communication providers. Usually 
      * saved in this agent state. 
      */
-    public static Map<AdapterType, AdapterProviders> DEFAULT_PROVIDERS;
+    private static Map<AdapterType, AdapterProviders> DEFAULT_PROVIDERS = null;
+    static {
+        if (DEFAULT_PROVIDERS == null) {
+            DEFAULT_PROVIDERS = new HashMap<AdapterType, AdapterProviders>();
+            DEFAULT_PROVIDERS.put(AdapterType.CALL, AdapterProviders.BROADSOFT);
+            DEFAULT_PROVIDERS.put(AdapterType.SMS, AdapterProviders.CM);
+        }
+    }
     
     //create a single static connection for collecting dialog requests
     private static ConnectionFactory rabbitMQConnectionFactory;
     private static final String DIALOG_PROCESS_QUEUE_NAME = "DIALOG_PUBLISH_QUEUE";
     private static final Integer MAXIMUM_DEFAULT_DIALOG_ALLOWED = 2;
-
-    static {
-        DEFAULT_PROVIDERS = new HashMap<AdapterType, AdapterProviders>();
-        DEFAULT_PROVIDERS.put(AdapterType.SMS, AdapterProviders.CM);
-        DEFAULT_PROVIDERS.put(AdapterType.CALL, AdapterProviders.BROADSOFT);
-    };
     
     @Override
     protected void onInit() {
@@ -147,17 +155,15 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 		return "ok";
 	}
 	
-	public HashMap<String, String> outboundCall(
-			@Name("address") String address,
-			@Name("senderName") @Optional String senderName,
-			@Name("subject") @Optional String subject, @Name("url") String url,
-			@Name("adapterType") @Optional String adapterType,
-			@Name("adapterID") @Optional String adapterID,
-			@Name("accountID") String accountID,
-			@Name("bearerToken") String bearerToken) throws Exception {
-		return outboundCallWithList(Arrays.asList(address), senderName,
-				subject, url, adapterType, adapterID, accountID, bearerToken);
-	}
+        public HashMap<String, String> outboundCall(@Name("address") String address,
+            @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
+            @Name("url") String url, @Name("adapterType") @Optional String adapterType,
+            @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountID,
+            @Name("bearerToken") String bearerToken) throws Exception {
+    
+            return outboundCallWithList(Arrays.asList(address), senderName, subject, url, adapterType, adapterID,
+                                        accountID, bearerToken);
+        }
 	
 	/**
 	 * updated the outboundCall functionality to support broadcast functionality
@@ -257,6 +263,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
         @Name("bearerToken") String bearerToken) throws Exception {
 
+        log.info("outbound call with map");
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
         if (adapterType != null && !adapterType.equals("") && adapterID != null && !adapterID.equals("")) {
             throw new JSONRPCException("Choose adapterType or adapterID not both");
@@ -268,7 +275,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         }
         log.info(String.format("accountId: %s bearer %s adapterType %s", accountId, bearerToken, adapterType));
         // Check accountID/bearer Token against OAuth KeyServer
-        if (Settings.KEYSERVER != null) {
+        if (Settings.KEYSERVER != null && !ServerUtils.isInUnitTestingEnvironment()) {
             if (!KeyServerLib.checkAccount(accountId, bearerToken)) {
                 throw new JSONRPCException(CODE.INVALID_REQUEST, "Invalid token given");
             }
@@ -299,20 +306,27 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
             log.info(String.format("Config found: %s of Type: %s with address: %s", config.getConfigId(),
                                    config.getAdapterType(), config.getMyAddress()));
-            adapterType = config.getAdapterType();
             try {
+                
+                adapterType = adapterType != null ? adapterType : config.getAdapterType();
                 //log all addresses 
                 log.info(String.format("recepients of question at: %s are: %s", url, ServerUtils.serialize(addressMap)));
                 log.info(String.format("cc recepients are: %s", ServerUtils.serialize(addressCcMap)));
                 log.info(String.format("bcc recepients are: %s", ServerUtils.serialize(addressBccMap)));
                 
+                AdapterProviders globalSwitchAdapter = getGlobalAdapterSwitchSettings(AdapterType.getByValue(adapterType));
+                Map<AdapterProviders, Map<String, Map<String, Object>>> globalSwitchProviderCredentials = getGlobalSwitchProviderCredentials();
+                
+                switchAdapterIfGlobalSettingsFound(adapterType, config, globalSwitchAdapter,
+                                                   globalSwitchProviderCredentials);
+                
+                adapterType = config.getAdapterType();
                 AdapterProviders provider = getProvider(adapterType, config);
                 if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_XMPP)) {
                     resultSessionMap = new XMPPServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
                                                                      senderName, subject, config, accountId);
                 }
                 else if(config.isCallAdapter() && provider != null) {
-                    
                     switch (provider) {
                         case BROADSOFT: {
                             // fetch the first address in the map
@@ -537,7 +551,13 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     }
     
     public String getApplicationId() {
-    	return getState().get("applicationId", String.class);
+
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            return getState().get("applicationId", String.class);
+        }
+        else {
+            return UUID.randomUUID().toString();
+        }
     }
     
     public void setApplicationId(@Name("applicationId") String applicationId) {
@@ -672,41 +692,132 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     
     /**
      * Get the default providers for channels. Doesnt return null, returns the
-     * {@link DialogAgent#DEFAULT_PROVIDERS} in case the agent info is null
+     * {@link DialogAgent#DEFAULT_PROVIDERS} in case the agent info is null. 
      * 
      * @return
      */
-    public Map<AdapterType, AdapterProviders> getDefaultProviders() {
+    public Map<AdapterType, AdapterProviders> getDefaultProviderSettings() {
 
         if (!ServerUtils.isInUnitTestingEnvironment()) {
-            Map<AdapterType, AdapterProviders> adapterMappings = getState()
-                                            .get(ADAPTER_PROVIDER_MAPPING_KEY,
-                                                 new TypeUtil<Map<AdapterType, AdapterProviders>>() {});
-            return adapterMappings != null ? adapterMappings : DEFAULT_PROVIDERS;
+            Map<AdapterType, AdapterProviders> defaultProviders = getState()
+                                            .get(DEFAULT_ADAPTER_PROVIDER_MAPPING_KEY,
+                                                 new TypeUtil<Map<AdapterType, AdapterProviders>>() {
+                                                 });
+            return defaultProviders != null ? defaultProviders : DEFAULT_PROVIDERS;
         }
         else {
             return DEFAULT_PROVIDERS;
         }
     }
+   
+    /**
+     * Set the default provider for a particular channel
+     * @return
+     */
+    public Map<AdapterType, AdapterProviders> setDefaultProviderSettings(
+        @Name("adapterType") @Optional AdapterType adapterType,
+        @Name("adapterProvider") AdapterProviders adapterProvider) {
+
+        Map<AdapterType, AdapterProviders> defaultProviderSettings = getDefaultProviderSettings();
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            defaultProviderSettings = defaultProviderSettings != null ? defaultProviderSettings
+                                                                     : new HashMap<AdapterType, AdapterProviders>();
+            defaultProviderSettings.put(adapterType, adapterProvider);
+            getState().put(DEFAULT_ADAPTER_PROVIDER_MAPPING_KEY, defaultProviderSettings);
+            return getDefaultProviderSettings();
+        }
+        else {
+            DEFAULT_PROVIDERS = DEFAULT_PROVIDERS != null ? DEFAULT_PROVIDERS
+                                                         : new HashMap<AdapterType, AdapterProviders>();
+            DEFAULT_PROVIDERS.put(adapterType, adapterProvider);
+            return DEFAULT_PROVIDERS;
+        }
+    }
     
+    public AdapterProviders getGlobalAdapterSwitchSettings(@Name("adapterType") AdapterType adapterType) {
+
+        Map<AdapterType, AdapterProviders> globalAdapterSwitchSettings = getGlobalAdapterSwitchSettings();
+        return globalAdapterSwitchSettings != null ? globalAdapterSwitchSettings.get(adapterType) : null;
+    }
+    
+    public Map<AdapterType, AdapterProviders> getGlobalAdapterSwitchSettings() {
+
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            return getState().get(GLOBAL_ADAPTER_SWITCH_MAPPING_KEY,
+                                  new TypeUtil<Map<AdapterType, AdapterProviders>>() {
+                                  });
+        }
+        else {
+            return DEFAULT_PROVIDERS;
+        }
+    }
+   
     /**
      * Set the default provider for a particular channel
      * 
      * @return
      */
-    public Map<AdapterType, AdapterProviders> setDefaultProvider(
+    public Map<AdapterType, AdapterProviders> setGlobalAdapterSwitchSettings(
         @Name("adapterType") @Optional AdapterType adapterType,
         @Name("adapterProvider") AdapterProviders adapterProvider) {
 
-        Map<AdapterType, AdapterProviders> adapterProviderMapping = getDefaultProviders();
+        Map<AdapterType, AdapterProviders> adapterProviderMapping = getGlobalAdapterSwitchSettings();
         adapterProviderMapping = adapterProviderMapping != null ? adapterProviderMapping
                                                                : new HashMap<AdapterType, AdapterProviders>();
-        if(adapterType == null) {
+        if (adapterType == null) {
             adapterType = adapterProvider.getAdapterType();
         }
         adapterProviderMapping.put(adapterType, adapterProvider);
-        getState().put(ADAPTER_PROVIDER_MAPPING_KEY, adapterProviderMapping);
-        return getDefaultProviders();
+        getState().put(GLOBAL_ADAPTER_SWITCH_MAPPING_KEY, adapterProviderMapping);
+        return getGlobalAdapterSwitchSettings();
+    }
+    
+    /**
+     * Get the default provider credentils for channels.
+     * 
+     * @return
+     */
+    public Map<AdapterProviders, Map<String, Map<String, Object>>> getGlobalSwitchProviderCredentials() {
+
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            return getState().get(ADAPTER_PROVIDER_CREDENTIALS_KEY,
+                                  new TypeUtil<Map<AdapterProviders, Map<String, Map<String, Object>>>>() {
+                                  });
+        }
+        return null;
+    }
+
+    /**
+     * Set the default credentials for the channels used. This enables a global
+     * switch on which provider to user.
+     * 
+     * @return
+     * @throws IOException
+     */
+    public Map<AdapterProviders, Map<String, Map<String, Object>>> setGlobalSwitchProviderCredentials(
+        @Name("adapterProvider") AdapterProviders adapterProviders,
+        @Name("specificAdapterId") @Optional String adapterId, @Name("credentials") Map<String, String> credentials)
+        throws IOException {
+
+        Object defaultProviderCredentials = getGlobalSwitchProviderCredentials();
+        if (defaultProviderCredentials == null) {
+            defaultProviderCredentials = new HashMap<AdapterProviders, Map<String, Map<String, String>>>();
+        }
+        String defaultCredentials = JOM.getInstance().writeValueAsString(defaultProviderCredentials);
+        Map<AdapterProviders, Map<String, Map<String, String>>> defaultCredentialsAsMap = JOM
+                                        .getInstance()
+                                        .readValue(defaultCredentials,
+                                                   new TypeReference<Map<AdapterProviders, Map<String, Map<String, String>>>>() {
+                                                   });
+        Map<String, Map<String, String>> defaultCredentialForProvider = defaultCredentialsAsMap.get(adapterProviders);
+        if (defaultCredentialForProvider == null) {
+            defaultCredentialForProvider = new HashMap<String, Map<String, String>>();
+        }
+        String credentialsKey = adapterId != null ? adapterId : ADAPTER_CREDENTIALS_GLOBAL_KEY;
+        defaultCredentialForProvider.put(credentialsKey, credentials);
+        defaultCredentialsAsMap.put(adapterProviders, defaultCredentialForProvider);
+        getState().put(ADAPTER_PROVIDER_CREDENTIALS_KEY, defaultCredentialsAsMap);
+        return getGlobalSwitchProviderCredentials();
     }
     
 //    /**
@@ -845,8 +956,6 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      */
     private AdapterProviders getProvider(String adapterType, AdapterConfig config) {
 
-        //see if there is a default provider in the adapter
-        Map<AdapterType, AdapterProviders> defaultProviders = getDefaultProviders();
         AdapterProviders provider = null; 
         if (config.getProperties().get(AdapterConfig.ADAPTER_PROVIDER_KEY) != null) {
             Object adapterProvider = config.getProperties().get(AdapterConfig.ADAPTER_PROVIDER_KEY);
@@ -857,9 +966,80 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             provider = AdapterProviders.getByValue(adapterType);
         }
         else {
-            provider = defaultProviders.get((AdapterType.getByValue(adapterType)));
+            provider = DEFAULT_PROVIDERS != null ? DEFAULT_PROVIDERS.get(AdapterType.getByValue(adapterType)) : null;
         }
         return provider;
+    }
+    
+    /**
+     * Updates the Adapter with globally configured adapter credentials. Useful
+     * when a particular provider goes down. Gives an option to switch globally.
+     * Generally applicable to SMS and CALL type channels only
+     * 
+     * @param adapterType
+     * @param config
+     * @param globalSwitchAdapter
+     * @param globalSwitchProviderCredentials
+     */
+    private void switchAdapterIfGlobalSettingsFound(String adapterType, AdapterConfig config,
+        AdapterProviders globalSwitchAdapter,
+        Map<AdapterProviders, Map<String, Map<String, Object>>> globalSwitchProviderCredentials) {
+
+        //check if there is a global switch on adapters
+        if (globalSwitchAdapter != null && !globalSwitchAdapter.equals(getProvider(adapterType, config)) &&
+            globalSwitchProviderCredentials != null && globalSwitchProviderCredentials.get(globalSwitchAdapter) != null) {
+
+            Map<String, Map<String, Object>> credentialsForSelectedAdapter = globalSwitchProviderCredentials
+                                            .get(globalSwitchAdapter);
+            //check if there is specific credentials for the given adapter
+            Map<String, Object> switchAdapterCredentials = credentialsForSelectedAdapter.get(config.getConfigId());
+            switchAdapterCredentials = switchAdapterCredentials != null ? switchAdapterCredentials
+                                                                       : credentialsForSelectedAdapter.get(ADAPTER_CREDENTIALS_GLOBAL_KEY);
+
+            log.info(String.format("PERFORMING GLOBAL SWITCH FOR ADAPTER: %s ID: %s WITH CREDENTIALS: %s",
+                                   config.getMyAddress(), config.getConfigId(),
+                                   ServerUtils.serializeWithoutException(switchAdapterCredentials)));
+
+            if (switchAdapterCredentials != null) {
+                if (switchAdapterCredentials.get("accessToken") != null) {
+                    config.setAccessToken(switchAdapterCredentials.get("accessToken").toString());
+                }
+                if (switchAdapterCredentials.get("accessTokenSecret") != null) {
+                    config.setAccessTokenSecret(switchAdapterCredentials.get("accessTokenSecret").toString());
+                }
+                if (switchAdapterCredentials.get("address") != null) {
+                    config.setAddress(switchAdapterCredentials.get("address").toString());
+                }
+                if (switchAdapterCredentials.get("myAddress") != null) {
+                    config.setMyAddress(switchAdapterCredentials.get("myAddress").toString());
+                }
+                if (switchAdapterCredentials.get("xsiUser") != null) {
+                    config.setXsiUser(switchAdapterCredentials.get("xsiUser").toString());
+                }
+                if (switchAdapterCredentials.get("xsiPasswd") != null) {
+                    config.setXsiPasswd(switchAdapterCredentials.get("xsiPasswd").toString());
+                }
+                if (switchAdapterCredentials.get("status") != null) {
+                    config.setStatus(switchAdapterCredentials.get("status").toString());
+                }
+                if (switchAdapterCredentials.get("xsiURL") != null) {
+                    config.setXsiURL(switchAdapterCredentials.get("xsiURL").toString());
+                }
+                if (switchAdapterCredentials.get("publicKey") != null) {
+                    config.setPublicKey(switchAdapterCredentials.get("publicKey").toString());
+                }
+                if (switchAdapterCredentials.get("adapterType") != null) {
+                    config.setAdapterType(switchAdapterCredentials.get("adapterType").toString());
+                }
+                if (switchAdapterCredentials.get("properties") != null) {
+                    Map<String, Object> properties = JOM.getInstance()
+                                                    .convertValue(switchAdapterCredentials.get("properties"),
+                                                                  new TypeReference<Map<String, Object>>() {
+                                                                  });
+                    config.setProperties(properties);
+                }
+            }
+        }
     }
     
 

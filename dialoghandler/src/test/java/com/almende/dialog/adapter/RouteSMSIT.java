@@ -33,7 +33,7 @@ public class RouteSMSIT extends TestFramework {
     public void setup() {
 
         super.setup();
-        DialogAgent.DEFAULT_PROVIDERS.put(AdapterType.SMS, AdapterProviders.ROUTE_SMS);
+        new DialogAgent().setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.ROUTE_SMS);
     }
 
     @Test
@@ -57,7 +57,7 @@ public class RouteSMSIT extends TestFramework {
         Assert.assertThat(smsStatues.iterator().next().getCode(), Matchers.is("1701"));
         Assert.assertThat(smsStatues.iterator().next().getDescription(), Matchers.is("Successfully Sent"));
     }
-
+    
     @Test
     public void outBoundSMSCallDeliveryNotificationTest() throws Exception {
 
@@ -76,8 +76,10 @@ public class RouteSMSIT extends TestFramework {
                                                                           RouteSmsServlet.class, argumentList);
         Collection<Object> parameterList = new ArrayList<Object>();
         parameterList.add(smsStatues.iterator().next().getReference());
-        parameterList.add(String.valueOf(TimeUtils.getServerCurrentTimeInMillis() - 10000));
-        parameterList.add(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
+        parameterList.add(TimeUtils.getStringFormatFromDateTime(TimeUtils.getServerCurrentTimeInMillis() - 10000,
+                                                                "yyyy-mm-dd hh:mm:ss"));
+        parameterList.add(TimeUtils.getStringFormatFromDateTime(TimeUtils.getServerCurrentTimeInMillis(),
+                                                                "yyyy-mm-dd hh:mm:ss"));
         parameterList.add(remoteAddressVoice);
         parameterList.add(TEST_PUBLIC_KEY);
         parameterList.add("DELIVRD");

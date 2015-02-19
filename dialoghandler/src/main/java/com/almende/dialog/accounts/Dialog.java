@@ -325,7 +325,7 @@ public class Dialog implements DialogInterface {
             return ServerUtils.encodeURLParams(dialogIdOrUrl);
         }
         else if (dialogIdOrUrl.startsWith("text://")) {
-            return "http://" + Settings.HOST + "/question/comment?" +
+            return "http://" + Settings.HOST + "/question/comment?message=" +
                    URLEncoder.encode(dialogIdOrUrl.replace("text://", ""), "UTF-8");
         }
         else {

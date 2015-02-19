@@ -89,4 +89,20 @@ public class AFHttpClient{
         }
         return builder;
     }
+
+    /**
+     * Flush the authentication credentials
+     */
+    public void flushCredentials() {
+
+        this.basicAuthCredentials = null;
+    }
+    
+    /**
+     * Returns the basic authentication credentials
+     * @return
+     */
+    public String getCredentials() {
+        return this.basicAuthCredentials;
+    }
 }

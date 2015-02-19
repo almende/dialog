@@ -6,16 +6,21 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+import org.hamcrest.Matchers;
+import org.junit.Assert;
 import org.junit.Test;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.util.AFHttpClient;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.squareup.okhttp.Credentials;
 
 public class AdapterConfigTest extends TestFramework
 {
@@ -282,6 +287,22 @@ public class AdapterConfigTest extends TestFramework
         assertTrue(AdapterProviders.isSMSAdapter(adapter.getProvider().toString()));
         assertTrue(AdapterProviders.CM.equals(adapter.getProvider()));
         assertTrue(adapter.isSMSAdapter());
+    }
+    
+    /**
+     * Check if the basic authentication credentials are flushed for a new client fetch 
+     * @throws Exception
+     */
+    @Test
+    public void emptyCredentialsTest() throws Exception {
+
+        String credentials = Credentials.basic("test", "test");
+        AFHttpClient afHttpClient = ParallelInit.getAFHttpClient();
+        Assert.assertThat(afHttpClient.getCredentials(), Matchers.nullValue());
+        afHttpClient.addBasicAuthorizationHeader(credentials);
+        Assert.assertThat(afHttpClient.getCredentials(), Matchers.is(credentials));
+        afHttpClient = ParallelInit.getAFHttpClient();
+        Assert.assertThat(afHttpClient.getCredentials(), Matchers.nullValue());
     }
     
     /** Create a dummy adapter with the given owner id and the accoundId

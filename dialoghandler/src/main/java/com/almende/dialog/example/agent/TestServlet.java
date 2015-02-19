@@ -201,6 +201,11 @@ public class TestServlet extends HttpServlet
         return logObject;
     }
     
+    public static void clearLogObject() {
+
+        logObject = null;
+    }
+    
     private String getJsonSimpleOpenQuestionWithoutAnswers( String questionText )
     {
         Question question = new Question();

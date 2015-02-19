@@ -455,4 +455,10 @@ public class TwitterServlet extends TextServlet implements Runnable {
             return null;
         }
     }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterAgent.ADAPTER_TYPE_TWITTER;
+    }
 }

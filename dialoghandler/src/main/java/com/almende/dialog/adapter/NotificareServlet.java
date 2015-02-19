@@ -14,6 +14,7 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.entity.AdapterProviders;
 import com.google.common.io.CharStreams;
 
 public class NotificareServlet extends TextServlet {
@@ -129,6 +130,12 @@ public class NotificareServlet extends TextServlet {
 
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterProviders.NOTIFICARE.toString();
     }
 
 }

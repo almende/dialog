@@ -77,6 +77,8 @@ abstract public class TextServlet extends HttpServlet {
 	
 	protected abstract String getAdapterType();
 	
+	protected abstract String getProviderType();
+	
 	protected abstract void doErrorPost(HttpServletRequest req,
 			HttpServletResponse res) throws IOException;
 	
@@ -166,8 +168,7 @@ abstract public class TextServlet extends HttpServlet {
     public String startDialog(String address, String url, AdapterConfig config, String accountId) throws Exception {
 
         String sessionKey = null;
-        if (config.getAdapterType().equalsIgnoreCase("CM") ||
-            config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+        if (config.isSMSAdapter()) {
             address = PhoneNumberUtils.formatNumber(address, null);
         }
         if (address != null) {
@@ -182,8 +183,7 @@ abstract public class TextServlet extends HttpServlet {
                 session.setAccountId(accountId);
                 session.setDirection("outbound");
                 session.storeSession();
-                if (config.getAdapterType().equalsIgnoreCase("CM") ||
-                    config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                if (config.isSMSAdapter()) {
                     PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(address);
                     if (!PhoneNumberType.MOBILE.equals(numberType)) {
                         String errorMessage = String.format("Ignoring SMS request to: %s from: %s, as it is not of type MOBILE",
@@ -258,13 +258,13 @@ abstract public class TextServlet extends HttpServlet {
         if (addressNameMap.size() + addressCcNameMap.size() + addressBccNameMap.size() == 1) {
             
             loadAddress = addressNameMap.keySet().iterator().next();
-            if (config.getAdapterType().equals("CM") ||
-                config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+            if (config.isSMSAdapter()) {
                 loadAddress = PhoneNumberUtils.formatNumber(loadAddress, null);
             }
             //create a session if its only for one number
             if (loadAddress != null) {
                 session = Session.getOrCreateSession(Session.getSessionKey(config, loadAddress), config.getKeyword());
+                session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, getProviderType());
                 session.setAccountId(accountId);
                 session.storeSession();
             }
@@ -324,8 +324,7 @@ abstract public class TextServlet extends HttpServlet {
                 res = formQuestion(question, config.getConfigId(), null, null, null);
                 for (String address : fullAddressMap.keySet()) {
                     String formattedAddress = address; //initialize formatted address to be the original one
-                    if (config.getAdapterType().equals("CM") ||
-                                                    config.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
+                    if (config.isSMSAdapter()) {
                         formattedAddress = PhoneNumberUtils.formatNumber(address, null);
                     }
                     if (formattedAddress != null) {
@@ -336,6 +335,7 @@ abstract public class TextServlet extends HttpServlet {
                         session.setDirection("outbound");
                         session.setQuestion(question);
                         session.setLocalName(senderName);
+                        session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, getProviderType());
                         //check if session can be killed??
                         if (res == null || res.question == null) {
                             session.setKilled(true);
@@ -534,7 +534,8 @@ abstract public class TextServlet extends HttpServlet {
                 // comment or referral anyway.
                 if (!(start && (question.getType().equalsIgnoreCase("comment") || question.getType()
                                                 .equalsIgnoreCase("referral")))) {
-                    question = question.answer(address, config.getConfigId(), null, escapeInput.body, null);
+                    question = question.answer(address, config.getConfigId(), null, escapeInput.body,
+                                               session != null ? session.getKey() : null);
                 }
                 Return replystr = formQuestion(question, config.getConfigId(), address, null,
                                                session != null ? session.getKey() : null);

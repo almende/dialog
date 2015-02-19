@@ -22,8 +22,11 @@ import javax.ws.rs.core.Response.Status;
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.util.TimeUtils;
+import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.twigmongo.FilterOperator;
+import com.almende.util.twigmongo.QueryResultIterator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
@@ -32,6 +35,7 @@ import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -42,8 +46,8 @@ public class AdapterConfig {
 	static final Logger log = Logger.getLogger(AdapterConfig.class.getName());
 	static final ObjectMapper om = new ObjectMapper();
 	public static final String ADAPTER_CREATION_TIME_KEY = "ADAPTER_CREATION_TIME";
-	public static final String DIALOG_ID_KEY = "DIALOG_ID";
 	public static final String ADAPTER_PROVIDER_KEY = "PROVIDER";
+	public static final String DIALOG_ID_KEY = "DIALOG_ID";
 
 	@Id
 	public String configId;
@@ -91,6 +95,7 @@ public class AdapterConfig {
             newConfig.status = "OPEN";
 
             newConfig = om.readerForUpdating(newConfig).readValue(json);
+            newConfig.adapterType = newConfig.adapterType.toLowerCase();
             if (adapterExists(newConfig.getAdapterType(), newConfig.getMyAddress(), newConfig.getKeyword())) {
                 return Response.status(Status.CONFLICT).build();
             }
@@ -107,7 +112,7 @@ public class AdapterConfig {
             TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
             datastore.store(newConfig);
 
-            if (newConfig.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
+            if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(newConfig.getAdapterType(), newConfig))) {
                 Broadsoft bs = new Broadsoft(newConfig);
                 bs.hideCallerId(newConfig.isAnonymous());
             }
@@ -215,7 +220,7 @@ public class AdapterConfig {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         datastore.update(this);
-        if (this.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
+        if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(getAdapterType(), this))) {
             Broadsoft bs = new Broadsoft(this);
             bs.hideCallerId(this.isAnonymous());
         }
@@ -293,21 +298,19 @@ public class AdapterConfig {
         return findAdaptersByList(adapterIDs);
     }
 
-	public static AdapterConfig findAdapterConfig(String adapterType,
-			String lookupKey) {
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		Iterator<AdapterConfig> config = datastore.find()
-				.type(AdapterConfig.class)
-				.addFilter("myAddress", FilterOperator.EQUAL, lookupKey)
-				.addFilter("adapterType", FilterOperator.EQUAL, adapterType)
-				.now();
-		if (config.hasNext()) {
-			return config.next();
-		}
-		log.severe("AdapterConfig not found:'" + adapterType + "':'"
-				+ lookupKey + "'");
-		return null;
-	}
+    public static AdapterConfig findAdapterConfig(String adapterType, String lookupKey) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
+                                        .addFilter("myAddress", FilterOperator.EQUAL, lookupKey)
+                                        .addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase())
+                                        .now();
+        if (config.hasNext()) {
+            return config.next();
+        }
+        log.severe("AdapterConfig not found:'" + adapterType + "':'" + lookupKey + "'");
+        return null;
+    }
 	
 	public static AdapterConfig findAdapterConfig(String adapterType,
 			String localAddress, String keyword) {
@@ -315,7 +318,7 @@ public class AdapterConfig {
 		Iterator<AdapterConfig> config = datastore.find()
 				.type(AdapterConfig.class)
 				.addFilter("myAddress", FilterOperator.EQUAL, localAddress)
-				.addFilter("adapterType", FilterOperator.EQUAL, adapterType)
+				.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase())
 				.addFilter("keyword", FilterOperator.EQUAL, keyword)
 				.now();
 		if (config.hasNext()) {
@@ -340,36 +343,44 @@ public class AdapterConfig {
 		return null;
 	}
 
-	public static ArrayList<AdapterConfig> findAdapters(String adapterType,
-			String myAddress, String keyword) {
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		
-		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
-				AdapterConfig.class);
+	/**
+	 * Fetches all adapters for the given matching filters
+	 * @param adapterType Lowercased and queried
+	 * @param myAddress case insensitive query is performed
+	 * @param keyword if "null" then a search for null is performed. 
+	 * @return
+	 */
+    public static ArrayList<AdapterConfig> findAdapters(String adapterType, String myAddress, String keyword) {
 
-		if (adapterType != null)
-			cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        RootFindCommand<AdapterConfig> cmd = datastore.find().type(AdapterConfig.class);
 
-		if (myAddress != null)
-			cmd.addFilter("myAddress", FilterOperator.EQUAL, myAddress);
-		
-		if (keyword != null) {
-			if(keyword.equals("null")) {
-				cmd.addFilter("keyword", FilterOperator.EQUAL, null);
-			} else {
-				cmd.addFilter("keyword", FilterOperator.EQUAL, keyword);
-			}
-		}
+        if (adapterType != null)
+            cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
 
-		Iterator<AdapterConfig> config = cmd.now();
-
-		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
-		while (config.hasNext()) {
-			adapters.add(config.next());
-		}
-
-		return adapters;
-	}
+        if (keyword != null) {
+            if (keyword.equals("null")) {
+                cmd.addFilter("keyword", FilterOperator.EQUAL, null);
+            }
+            else {
+                cmd.addFilter("keyword", FilterOperator.EQUAL, keyword);
+            }
+        }
+        QueryResultIterator<AdapterConfig> resultIterator = cmd.now();
+        ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+        while (resultIterator.hasNext()) {
+            AdapterConfig adapterConfig = resultIterator.next();
+            if(myAddress != null) {
+                if(adapterConfig.getMyAddress().equalsIgnoreCase(myAddress)) {
+                    adapters.add(adapterConfig);
+                }
+            }
+            else {
+                adapters.add(adapterConfig);
+            }
+        }
+        return adapters;
+    }
 	
 	/**
 	 * Fetches all the adapters where the accountId only matches that of the owner of the adapter. Doesnt 
@@ -759,6 +770,15 @@ public class AdapterConfig {
         properties = properties != null ? properties : new HashMap<String, Object>(); 
         return properties;
     }
+    
+    public <T> T getProperties(String key, TypeReference<T> type) {
+
+        Object value = getProperties().get(key);
+        if (value != null) {
+            return JOM.getInstance().convertValue(value, type);
+        }
+        return null;
+    }
 
     public void setProperties( Map<String, Object> properties )
     {
@@ -867,7 +887,7 @@ public class AdapterConfig {
 
         //check the adapter type
         if (type != null) {
-            if (AdapterType.CALL.equals(type) || AdapterType.TWILIO.equals(type)) {
+            if (AdapterType.CALL.equals(type)) {
                 return true;
             }
             return false;
@@ -906,5 +926,22 @@ public class AdapterConfig {
             return AdapterProviders.isSMSAdapter(provider.toString());
         }
         return false;
+    }
+
+    @JsonIgnore
+    public AdapterProviders getProvider() {
+
+        AdapterProviders providers = AdapterProviders.getByValue(adapterType);
+        //check the adapter type
+        if (providers == null && getProperties().get(ADAPTER_PROVIDER_KEY) != null) {
+            providers = getProperties(ADAPTER_PROVIDER_KEY, new TypeReference<AdapterProviders>() {
+            });
+        }
+        return providers;
+    }
+    
+    public void addMediaProperties(String key, Object value) {
+        properties = properties != null ? properties : new HashMap<String, Object>();
+        properties.put(key, value);
     }
 }

@@ -273,4 +273,10 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
         }
         throw new Exception( "Invalid XMPP address for ASK-Fast" );
     }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterAgent.ADAPTER_TYPE_XMPP;
+    }
 }

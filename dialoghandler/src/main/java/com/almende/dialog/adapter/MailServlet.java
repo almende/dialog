@@ -637,4 +637,10 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
 
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, toAddress, message);
     }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterAgent.ADAPTER_TYPE_EMAIL;
+    }
 }

@@ -12,6 +12,7 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -220,6 +221,67 @@ public class AdapterConfigTest extends TestFramework
         ArrayNode freeAdapters = adapterAgent.findFreeAdapters(null, null);
         allAdapters = JOM.getInstance().convertValue(freeAdapters, new TypeReference<Collection<AdapterConfig>>() {});
         assertTrue(allAdapters.size() == 1);
+    }
+    
+    /**
+     * Check if an BROADSOFT adapter is correctly recognized as a calling adapter
+     * @throws Exception 
+     */
+    @Test
+    public void broadsoftAdapterProviderMatchTest() throws Exception {
+
+        AdapterConfig adapter = createAdapterConfig(AdapterType.CALL.getName(), AdapterProviders.BROADSOFT,
+                                                    TEST_PUBLIC_KEY, localAddressBroadsoft, "");
+        assertTrue(adapter.isCallAdapter());
+        assertTrue(AdapterProviders.isCallAdapter(adapter.getProvider().toString()));
+    }
+    
+    /**
+     * Check if a call adapter with broadsoft as a provider in the mediaproperty
+     * is correctly recognized as a calling adapter
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void broadsoftInMediaPropertiesMatchTest() throws Exception {
+
+        AdapterConfig adapter = createAdapterConfig(AdapterType.CALL.getName(), AdapterProviders.BROADSOFT,
+                                                    TEST_PUBLIC_KEY, localAddressBroadsoft, "");
+        assertTrue(AdapterProviders.isCallAdapter(adapter.getAdapterType()));
+        adapter.setAdapterType(AdapterType.CALL.toString());
+        adapter.update();
+        assertTrue(adapter.isCallAdapter());
+    }
+    
+    /**
+     * Check if an CM adapter is correctly recognized as a SMS adapter
+     * @throws Exception 
+     */
+    @Test
+    public void smsAdapterProviderMatchTest() throws Exception {
+
+        AdapterConfig adapter = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM, TEST_PUBLIC_KEY,
+                                                    localAddressBroadsoft, null);
+        assertTrue(adapter.isSMSAdapter());
+        assertTrue(AdapterProviders.isSMSAdapter(adapter.getProvider().toString()));
+    }
+    
+    /**
+     * Check if a call adapter with broadsoft as a provider in the mediaproperty
+     * is correctly recognized as a calling adapter
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void routeSMSInMediaPropertiesMatchTest() throws Exception {
+
+        AdapterConfig adapter = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM, TEST_PUBLIC_KEY,
+                                                    localAddressBroadsoft, "");
+        adapter.setAdapterType(AdapterType.SMS.toString());
+        adapter.update();
+        assertTrue(AdapterProviders.isSMSAdapter(adapter.getProvider().toString()));
+        assertTrue(AdapterProviders.CM.equals(adapter.getProvider()));
+        assertTrue(adapter.isSMSAdapter());
     }
     
     /** Create a dummy adapter with the given owner id and the accoundId

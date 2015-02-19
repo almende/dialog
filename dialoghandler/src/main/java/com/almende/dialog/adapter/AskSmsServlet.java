@@ -20,6 +20,7 @@ import com.almende.sms.SmsMessage;
 import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.QueryResultIterator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -201,5 +202,11 @@ public class AskSmsServlet extends TextServlet {
         Map<String, String> toAddress, String message) throws Exception {
 
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
+    }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterProviders.ASK_SMS.toString();
     }
 }

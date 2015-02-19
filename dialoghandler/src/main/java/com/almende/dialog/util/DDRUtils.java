@@ -627,9 +627,11 @@ public class DDRUtils
                             dialogLog.severe(adapterConfig, errorMessage, session);
                             candidateToBePushedToQueue = true;
                         }
-                        else if (ddrRecord != null && session.getAnswerTimestamp() == null) {
-                            String warningMessage = String.format("No costs added. Looks like a hangup! for session: %s",
-                                                                  session.getKey());
+                        else if (ddrRecord != null && session.getAnswerTimestamp() == null &&
+                                 session.getReleaseTimestamp() != null) {
+
+                            String warningMessage = String.format("No costs added. Looks like a immediate hangup! Hangup timestamp: %s found. But answerTimestamp not found for session: %s",
+                                                                  session.getReleaseTimestamp(), session.getKey());
                             log.warning(warningMessage);
                             candidateToBePushedToQueue = true;
                         }

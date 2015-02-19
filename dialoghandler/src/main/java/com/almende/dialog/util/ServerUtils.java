@@ -177,4 +177,16 @@ public class ServerUtils
         }
         return mapToBePopulated;
     }
+    
+    /**
+     * Simple check to see if the string is empty or null
+     * @param stringToCheck
+     * @return
+     */
+    public static boolean isNullOrEmpty(String stringToCheck) {
+        if(stringToCheck == null || stringToCheck.isEmpty()) {
+            return true;
+        }
+        return false;
+    }
 }

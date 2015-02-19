@@ -7,9 +7,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
 
 public class NexmoSmsServlet extends TextServlet {
@@ -20,7 +22,6 @@ public class NexmoSmsServlet extends TextServlet {
 	
 	// Info of MessageBird
 	private static final String servletPath = "/sms/nm/";
-	private static final String adapterType = "SMS";
 	private static final boolean USE_KEYWORDS = true;
 	
     @Override
@@ -69,7 +70,7 @@ public class NexmoSmsServlet extends TextServlet {
 
 	@Override
 	protected String getAdapterType() {
-		return adapterType;
+		return AdapterAgent.ADAPTER_TYPE_SMS;
 	}
 
 	@Override
@@ -96,5 +97,11 @@ public class NexmoSmsServlet extends TextServlet {
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, senderName, toAddress,
                                                                CM.countMessageParts(message) * toAddress.size(),
                                                                message);
+    }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterProviders.NEXMO.toString();
     }
 }

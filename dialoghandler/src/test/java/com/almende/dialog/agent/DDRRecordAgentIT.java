@@ -233,7 +233,7 @@ public class DDRRecordAgentIT extends TestFramework {
         //send hangup ccxml with an answerTime
         String hangupXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
                                         "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" + localAddressBroadsoft +"@ask.ask.voipit.nl</subscriberId>" +
-                                        "<applicationId>cc</applicationId><subscriptionId>200fc376-e154-4930-a289-ae0da816707c</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
+                                        "<applicationId>cc</applicationId><subscriptionId>" + TEST_PUBLIC_KEY + "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
                                         "\"http://schema.broadsoft.com/xsi-events\"><eventName>CallSessionEvent</eventName><call><callId>callhalf-12914560105:1</callId><extTrackingId>" +
                                         "10669651:1</extTrackingId><personality>Originator</personality><callState>Released</callState><releaseCause>Temporarily Unavailable</releaseCause>" +
                                         "<remoteParty><address>tel:" + remoteAddressVoice + "</address><callType>Network</callType></remoteParty><startTime>1401809063943</startTime>" +
@@ -377,8 +377,8 @@ public class DDRRecordAgentIT extends TestFramework {
             }
         }
         //assert that a session exists
-        Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localAddressBroadsoft +
-                                                                                  "@ask.ask.voipit.nl", formattedRemoteAddressVoice);
+        Session session = Session.getSession(AdapterType.CALL.toString(), localAddressBroadsoft + "@ask.ask.voipit.nl",
+                                             formattedRemoteAddressVoice);
         assertThat(session, Matchers.notNullValue());
         assertThat(session.getStartTimestamp(), Matchers.nullValue());
         assertThat(session.getAnswerTimestamp(), Matchers.nullValue());
@@ -393,7 +393,7 @@ public class DDRRecordAgentIT extends TestFramework {
         String hangupXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
                            "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257" +
                            "</sequenceNumber><subscriberId>" + localAddressBroadsoft + "@ask.ask.voipit.nl</subscriberId>" +
-                           "<applicationId>cc</applicationId><subscriptionId>200fc376-e154-4930-a289-ae0da816707c" +
+                           "<applicationId>cc</applicationId><subscriptionId>" + TEST_PUBLIC_KEY + 
                            "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=\"http://schema.broadsoft.com/xsi-events\">" +
                            "<eventName>CallSessionEvent</eventName><call><callId>callhalf-12914560105:1</callId>" +
                            "<extTrackingId>10669651:1</extTrackingId><personality>Originator</personality><callState>Released" +
@@ -402,7 +402,7 @@ public class DDRRecordAgentIT extends TestFramework {
                            "<startTime>1401809063943</startTime><releaseTime>1401809070192</releaseTime></call></eventData></Event>";
         voiceXMLRESTProxy.receiveCCMessage(hangupXML);
         //assert that a session still exists
-        session = Session.getSession(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localAddressBroadsoft + "@ask.ask.voipit.nl",
+        session = Session.getSession(AdapterAgent.ADAPTER_TYPE_CALL, localAddressBroadsoft + "@ask.ask.voipit.nl",
                                      formattedRemoteAddressVoice);
         assertThat(session, Matchers.notNullValue());
         assertThat(session.getStartTimestamp(), Matchers.notNullValue());
@@ -412,7 +412,20 @@ public class DDRRecordAgentIT extends TestFramework {
         String ddrRecordId = session.getDdrRecordId();
 
         //send answer ccxml
-        String answerXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>246</sequenceNumber><subscriberId>0854881000@ask.ask.voipit.nl</subscriberId><applicationId>cc</applicationId><subscriptionId>200fc376-e154-4930-a289-ae0da816707c</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=\"http://schema.broadsoft.com/xsi-events\"><eventName>CallSessionEvent</eventName><call><callId>callhalf-12914431715:1</callId><extTrackingId>10668830:1</extTrackingId><personality>Originator</personality><callState>Active</callState><remoteParty><address>tel:0031614765800</address><callType>Network</callType></remoteParty><addressOfRecord>0854881000@ask.ask.voipit.nl</addressOfRecord><endPoint xsi1:type=\"xsi:AccessEndpoint\"><addressOfRecord>0854881000@ask.ask.voipit.nl</addressOfRecord></endPoint><appearance>2</appearance><startTime>1401809063943</startTime><answerTime>1401809061002</answerTime></call></eventData></Event>";
+        String answerXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
+                                        "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>246" +
+                                        "</sequenceNumber><subscriberId>" + localAddressBroadsoft + 
+                                        "@ask.ask.voipit.nl</subscriberId><applicationId>cc</applicationId><subscriptionId>" +
+                                        TEST_PUBLIC_KEY + "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
+                                        "\"http://schema.broadsoft.com/xsi-events\"><eventName>" +
+                                        "CallSessionEvent</eventName><call><callId>callhalf-12914431715:1</callId>" +
+                                        "<extTrackingId>10668830:1</extTrackingId><personality>Originator</personality>" +
+                                        "<callState>Active</callState><remoteParty><address>tel:0031614765800</address>" +
+                                        "<callType>Network</callType></remoteParty><addressOfRecord>0854881000@ask.ask.voipit.nl" +
+                                        "</addressOfRecord><endPoint xsi1:type=\"xsi:AccessEndpoint\"><addressOfRecord>" +
+                                        "0854881000@ask.ask.voipit.nl</addressOfRecord></endPoint><appearance>2</appearance>" +
+                                        "<startTime>1401809063943</startTime><answerTime>1401809061002</answerTime></call>" +
+                                        "</eventData></Event>";
         voiceXMLRESTProxy.receiveCCMessage(answerXML);
         
         //force start the processing of Session
@@ -424,9 +437,11 @@ public class DDRRecordAgentIT extends TestFramework {
         
         //check that all ddrs are processed
         DDRRecord ddrRecord = DDRRecord.getDDRRecord(ddrRecordId, resultMap.get( ACCOUNT_ID_KEY ));
+        ddrRecord.setShouldGenerateCosts(true);
         assertThat(ddrRecord, Matchers.notNullValue());
         assertThat(ddrRecord.getStart(), Matchers.notNullValue());
         assertThat(ddrRecord.getDuration(), Matchers.notNullValue());
+        assertThat(ddrRecord.getTotalCost(), Matchers.notNullValue());
         assertThat(ddrRecord.getStatusForAddress(formattedRemoteAddressVoice), Matchers.is(CommunicationStatus.FINISHED));
     }
 
@@ -480,6 +495,8 @@ public class DDRRecordAgentIT extends TestFramework {
                                                                 TEST_ACCOUNTID, false, null);
                 updateAdapterAsTrial(adapterId);
                 adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
+                adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
+                adapterConfig.update();
                 VoiceXMLRESTProxy.dial(addressNameMap, message, adapterConfig, adapterConfig.getOwner());
                 break;
             default:

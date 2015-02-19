@@ -20,6 +20,7 @@ import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.entity.AdapterProviders;
 
 public class CLXUSSDServlet extends TextServlet {
 
@@ -226,6 +227,12 @@ public class CLXUSSDServlet extends TextServlet {
         Map<String, String> toAddress, String message) throws Exception {
 
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, null, toAddress, 1, message);
+    }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterProviders.CLX.toString();
     }
 }
 

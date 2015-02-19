@@ -2,6 +2,7 @@ package com.almende.dialog.agent;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -758,6 +759,61 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 
         ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapterByAccount(null, adapterType, address);
         return JOM.getInstance().convertValue(adapters, ArrayNode.class);
+    }
+    
+    /**
+     * Updates all adapters with the generic format
+     * 
+     * @return
+     * @throws Exception
+     */
+    public HashMap<String, String> updateAllAdaptersWithProviders() throws Exception {
+
+        HashMap<String, String> warnings = new HashMap<String, String>();
+        ArrayList<AdapterConfig> allAdapters = AdapterConfig.findAdapters(null, null, null);
+        if (allAdapters != null) {
+            for (AdapterConfig adapterConfig : allAdapters) {
+                switch (adapterConfig.getAdapterType().toLowerCase()) {
+                    case "broadsoft":
+                        adapterConfig.setAdapterType(ADAPTER_TYPE_CALL);
+                        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT);
+                        break;
+                    case "voxeo":
+                        adapterConfig.setAdapterType(ADAPTER_TYPE_CALL);
+                        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO);
+                        break;
+                    case "cm":
+                    case "sms":
+                        adapterConfig.setAdapterType(ADAPTER_TYPE_SMS);
+                        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.CM);
+                        break;
+                    case "route-sms":
+                        adapterConfig.setAdapterType(ADAPTER_TYPE_SMS);
+                        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
+                        break;
+                    case "mb":
+                        adapterConfig.setAdapterType(ADAPTER_TYPE_SMS);
+                        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
+                        break;
+                    case "ussd":
+                        adapterConfig.setAdapterType(ADAPTER_TYPE_USSD);
+                        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.CLX);
+                        break;
+                    case "notificare":
+                        adapterConfig.setAdapterType(ADAPTER_TYPE_PUSH);
+                        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY,
+                                                         AdapterProviders.NOTIFICARE);
+                        break;
+                    default:
+                        warnings.put(adapterConfig.getConfigId(), String.format("Not updated. type: %s address: %s",
+                                                                                adapterConfig.getAdapterType(),
+                                                                                adapterConfig.getMyAddress()));
+                        break;
+                }
+                adapterConfig.update();
+            }
+        }
+        return warnings;
     }
     
     /**

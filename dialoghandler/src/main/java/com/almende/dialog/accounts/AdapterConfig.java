@@ -220,6 +220,7 @@ public class AdapterConfig {
     public void update() {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        adapterType = adapterType.toLowerCase();
         datastore.update(this);
         if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(getAdapterType(), this))) {
             Broadsoft bs = new Broadsoft(this);
@@ -550,9 +551,11 @@ public class AdapterConfig {
 		return adapterType;
 	}
 
-	public void setAdapterType(String adapterType) {
-		this.adapterType = adapterType;
-	}
+    public void setAdapterType(String adapterType) {
+
+        adapterType = adapterType != null ? adapterType.toLowerCase() : null;
+        this.adapterType = adapterType;
+    }
 
     /**
      * Fetchs the initialAgentURL by looking up if there is any dialogId

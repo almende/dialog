@@ -89,7 +89,8 @@ public class RouteSMS {
                 Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_SMS, config.getMyAddress(), address);
                 SMSDeliveryStatus.storeSMSRelatedData(UUID.randomUUID().toString(), address, config, accountId, null,
                                                       "1701", "Successfully Sent", session.getDdrRecordId(),
-                                                      session.getExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY));
+                                                      session.getExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY),
+                                                      session.getKey());
             }
         }
         return countMessageParts(message, dcs);
@@ -157,7 +158,8 @@ public class RouteSMS {
                             SMSDeliveryStatus.storeSMSRelatedData(messageReference, session.getRemoteAddress(),
                                                                   config, session.getAccountId(), session.getQuestion(),
                                                                   resultPerAddress[0], returnResult, session.getDdrRecordId(),
-                                                                  session.getExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY));
+                                                                  session.getExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY), 
+                                                                  session.getKey());
                         }
                     }
                 }

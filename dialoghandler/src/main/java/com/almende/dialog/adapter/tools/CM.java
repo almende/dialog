@@ -159,7 +159,8 @@ public class CM {
                                                     .storeSMSRelatedData(reference, to, config, accountId,
                                                                          session.getQuestion(), null, "SENT",
                                                                          session.getDdrRecordId(),
-                                                                         AdapterProviders.CM.getName());
+                                                                         AdapterProviders.CM.getName(),
+                                                                         session.getKey());
                     storeSMSRelatedData.addExtraInfo(linkedSMSRelatedData.getRemoteAddress(),
                                                      linkedSMSRelatedData.getReference());
                     storeSMSRelatedData.store();
@@ -168,7 +169,8 @@ public class CM {
                     storeSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to, config, accountId,
                                                                                 session.getQuestion(), null, "SENT",
                                                                                 session.getDdrRecordId(),
-                                                                                AdapterProviders.CM.getName());
+                                                                                AdapterProviders.CM.getName(),
+                                                                                session.getKey());
                 }
                 outputter.startTag("MSG");
                 outputter.startTag("CONCATENATIONTYPE");
@@ -206,6 +208,7 @@ public class CM {
             outputter.endDocument();
         }
         catch (Exception ex) {
+            ex.printStackTrace();
             log.severe("Exception in creating question XML: " + ex.toString() + " xml: " + sw.toString());
             return null;
         }

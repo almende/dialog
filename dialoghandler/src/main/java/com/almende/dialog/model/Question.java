@@ -1078,13 +1078,16 @@ public class Question implements QuestionIntf {
     @JsonIgnore
     public String getTextWithAnswerTexts(String sessionKey) {
 
-        String reply = getQuestion_expandedtext(sessionKey) + "\n[";
-        for (Answer ans : question.getAnswers()) {
-            reply += " " +
-                     ans.getAnswer_expandedtext(getPreferred_language(), Dialog.getCredentialsFromSession(sessionKey)) +
-                     " |";
+        String reply = getQuestion_expandedtext(sessionKey);
+        if (question.getAnswers() != null) {
+            reply += "\n[";
+            for (Answer ans : question.getAnswers()) {
+                reply += " " +
+                         ans.getAnswer_expandedtext(getPreferred_language(),
+                                                    Dialog.getCredentialsFromSession(sessionKey)) + " |";
+            }
+            reply = reply.substring(0, reply.length() - 1) + "]";
         }
-        reply = reply.substring(0, reply.length() - 1) + "]";
         return reply;
     }
 

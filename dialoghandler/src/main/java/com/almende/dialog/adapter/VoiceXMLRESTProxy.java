@@ -1718,7 +1718,7 @@ public class VoiceXMLRESTProxy {
 
         log.warning(String.format("Existing session %s. Will check with provider if its actually true",
                                   session.getKey()));
-        if (config != null) {
+        if (!ServerUtils.isInUnitTestingEnvironment() && config != null) {
             Broadsoft broadsoft = new Broadsoft(config);
             ArrayList<String> activeCallsXML = broadsoft.getActiveCallsInfo();
             try {

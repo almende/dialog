@@ -34,6 +34,7 @@ import org.znerd.xmlenc.XMLOutputter;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.Answer;
@@ -81,9 +82,10 @@ public class VoiceXMLRESTProxy {
      * @param url
      * @param config
      * @return
+     * @throws UnsupportedEncodingException 
      */
     @Deprecated
-    public static String dial(String address, String url, AdapterConfig config, String accountId) {
+    public static String dial(String address, String dialogIdOrUrl, AdapterConfig config, String accountId) throws UnsupportedEncodingException {
 
         String formattedAddress = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
 
@@ -104,16 +106,18 @@ public class VoiceXMLRESTProxy {
             else {
                 session = Session.createSession(config, formattedAddress);
             }
+            dialogIdOrUrl = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
             session.killed = false;
-            session.setStartUrl(url);
+            session.setStartUrl(dialogIdOrUrl);
             session.setDirection("outbound");
             session.setRemoteAddress(formattedAddress);
             session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
             session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
             session.setAccountId(accountId);
             session.storeSession();
-            Question question = Question.fromURL(url, config.getConfigId(), formattedAddress, config.getMyAddress(),
-                                                 session.getDdrRecordId(), session.getKey(), new HashMap<String, String>());
+            Question question = Question.fromURL(dialogIdOrUrl, config.getConfigId(), formattedAddress,
+                                                 config.getMyAddress(), session.getDdrRecordId(), session.getKey(),
+                                                 new HashMap<String, String>());
             session.setQuestion(question);
             session.storeSession();
 
@@ -127,7 +131,8 @@ public class VoiceXMLRESTProxy {
             //create a ddrRecord
             try {
                 DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId,
-                                                                                      formattedAddress, 1, url);
+                                                                                      formattedAddress, 1,
+                                                                                      dialogIdOrUrl);
                 if (ddrRecord != null) {
                     session.setDdrRecordId(ddrRecord.getId());
                 }
@@ -153,88 +158,114 @@ public class VoiceXMLRESTProxy {
      * Map of <adress, SessionKey>
      * 
      * @param addressNameMap Map with address (e.g. phonenumber or email) as Key and name
-    *            as value. The name is useful for email and not used for SMS etc
-     * @param url
-     *            The URL on which a GET HTTPRequest is performed and expected a
-     *            question JSON
+     *            as value. The name is useful for email and not used for SMS etc
+     * @param dialogIdOrUrl
+     *            if a String with leading "http" is found its considered as a
+     *            url. Else a Dialog of this id is tried t The URL on which a
+     *            GET HTTPRequest is performed and expected a question JSON
      * @param config the adapterConfig which is used to perform this broadcast
      * @param accountId AccoundId initiating this broadcast. All costs are applied to this accountId
      * @return
      * @throws Exception
      */
-    public static HashMap<String, String> dial(Map<String, String> addressNameMap, String url, AdapterConfig config,
-        String accountId) throws Exception {
+    public static HashMap<String, String> dial(Map<String, String> addressNameMap, String dialogIdOrUrl,
+        AdapterConfig config, String accountId) throws Exception {
 
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
         // If it is a broadcast don't provide the remote address because it is deceiving.
-        String loadAddress = "";
-        if (addressNameMap.size() == 1)
+        String loadAddress = null;
+        Session session = null;
+        if (addressNameMap.size() == 1) {
             loadAddress = addressNameMap.keySet().iterator().next();
+            loadAddress = PhoneNumberUtils.formatNumber(loadAddress, null);
+            session = Session.getOrCreateSession(Session.getSessionKey(config, loadAddress), config.getKeyword());
+            session.setAccountId(accountId);
+            session.storeSession();
+        }
+        //create a session for the first remote address
+        else {
+            String firstRemoteAddress = addressNameMap.keySet().iterator().next();
+            firstRemoteAddress = PhoneNumberUtils.formatNumber(firstRemoteAddress, null);
+            session = Session.getOrCreateSession(Session.getSessionKey(config, firstRemoteAddress), config.getKeyword());
+            session.setAccountId(accountId);
+            session.storeSession();
+        }
+        String url = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
 
         //fetch the question
-        Question question = Question.fromURL(url, config.getConfigId(), loadAddress, config.getMyAddress(), null, null);
-        for (String address : addressNameMap.keySet()) {
-            String formattedAddress = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
-            if (formattedAddress != null) {
-                //avoid multiple calls to be made to the same number, from the same adapter. 
-                Session session = Session.getSession(Session.getSessionKey(config, formattedAddress));
-                if (session != null) {
-                    String responseMessage = checkIfCallAlreadyInSession(formattedAddress, config, session);
-                    if (responseMessage != null) {
-                        resultSessionMap.put(formattedAddress, responseMessage);
-                        continue;
+        Question question = Question.fromURL(url, config.getConfigId(), loadAddress, null,
+                                             session != null ? session.getKey() : null);
+        if (question != null) {
+            for (String address : addressNameMap.keySet()) {
+                String formattedAddress = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
+                if (formattedAddress != null) {
+                    //avoid multiple calls to be made to the same number, from the same adapter. 
+                    session = Session.getSession(Session.getSessionKey(config, formattedAddress));
+                    if (session != null) {
+                        String responseMessage = checkIfCallAlreadyInSession(formattedAddress, config, session);
+                        if (responseMessage != null) {
+                            resultSessionMap.put(formattedAddress, responseMessage);
+                            continue;
+                        }
+                        else {
+                            //recreate a fresh session
+                            session.drop();
+                            session = Session.createSession(config, formattedAddress);
+                        }
                     }
                     else {
-                        //recreate a fresh session
-                        session.drop();
                         session = Session.createSession(config, formattedAddress);
                     }
+                    session.killed = false;
+                    session.setStartUrl(url);
+                    session.setDirection("outbound");
+                    session.setRemoteAddress(formattedAddress);
+                    session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
+                    session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
+                    session.setAdapterID(config.getConfigId());
+                    session.setQuestion(question);
+                    session.setAccountId(accountId);
+                    session.storeSession();
+                    dialogLog.log(LogLevel.INFO, session.getAdapterConfig(), String
+                                                    .format("Outgoing call requested from: %s to: %s",
+                                                            session.getLocalAddress(), formattedAddress), session);
+                    String extSession = "";
+                    if (!ServerUtils.isInUnitTestingEnvironment()) {
+                        Broadsoft bs = new Broadsoft(config);
+                        String subscriptiion = bs.startSubscription();
+                        log.info(String.format("Calling subscription complete. Message: %s. Starting call.. ",
+                                               subscriptiion));
+                        extSession = bs.startCall(formattedAddress + "@outbound", session);
+                    }
+                    //create a ddrRecord
+                    try {
+                        DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId,
+                                                                                              formattedAddress, 1, url);
+                        if (ddrRecord != null) {
+                            session.setDdrRecordId(ddrRecord.getId());
+                        }
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                        log.severe(String.format("DDR creation failed for session: %s. Reason: %s", session.getKey(),
+                                                 e.getMessage()));
+                    }
+                    session.setExternalSession(extSession);
+                    session.storeSession();
+                    resultSessionMap.put(formattedAddress, session.getKey());
                 }
                 else {
-                    session = Session.createSession(config, formattedAddress);
+                    resultSessionMap.put(address, "Invalid address");
+                    log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
                 }
-                session.killed = false;
-                session.setStartUrl(url);
-                session.setDirection("outbound");
-                session.setRemoteAddress(formattedAddress);
-                session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
-                session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
-                session.setAdapterID(config.getConfigId());
-                session.setQuestion(question);
-                session.setAccountId(accountId);
-                session.storeSession();
-                dialogLog.log(LogLevel.INFO, session.getAdapterConfig(), String
-                                                .format("Outgoing call requested from: %s to: %s",
-                                                        session.getLocalAddress(), formattedAddress), session);
-                String extSession = "";
-                if (!ServerUtils.isInUnitTestingEnvironment()) {
-                    Broadsoft bs = new Broadsoft(config);
-                    String subscriptiion = bs.startSubscription();
-                    log.info(String.format("Calling subscription complete. Message: %s. Starting call.. ",
-                                           subscriptiion));
-                    extSession = bs.startCall(formattedAddress + "@outbound", session);
-                }
-                //create a ddrRecord
-                try {
-                    DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId,
-                                                                                          formattedAddress, 1, url);
-                    if (ddrRecord != null) {
-                        session.setDdrRecordId(ddrRecord.getId());
-                    }
-                }
-                catch (Exception e) {
-                    e.printStackTrace();
-                    log.severe(String.format("DDR creation failed for session: %s. Reason: %s", session.getKey(),
-                                             e.getMessage()));
-                }
-                session.setExternalSession(extSession);
-                session.storeSession();
-                resultSessionMap.put(formattedAddress, session.getKey());
             }
-            else {
-                resultSessionMap.put(address, "Invalid address");
-                log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
-            }
+        }
+        else {
+            log.severe(String.format("Question not fetched from: %s. Request for outbound call rejected ",
+                                     dialogIdOrUrl));
+            dialogLog.log(LogLevel.SEVERE, session.getAdapterConfig(),
+                          String.format("Question not fetched from: %s. Request for outbound call rejected ",
+                                        dialogIdOrUrl), session);
         }
         return resultSessionMap;
     }
@@ -318,7 +349,14 @@ public class VoiceXMLRESTProxy {
         
         String url = "";
         if ( session != null && direction.equalsIgnoreCase("outbound")) {
-                url = session.getStartUrl();
+            try {
+                url = Dialog.getDialogURL(session.getStartUrl(), session.getAccountId(), session);
+            }
+            catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+                dialogLog.log(LogLevel.WARNING, config,
+                              String.format("Dialog url encoding failed. Error: %s ", e.toString()), session);
+            }
             dialogLog.log(LogLevel.INFO, config, String
                                             .format("Trying to fetch dialog for %s, due to outgoing Call from: %s ",
                                                     formattedRemoteId, config.getMyAddress()), session);
@@ -333,7 +371,7 @@ public class VoiceXMLRESTProxy {
             session.setAccountId(config.getOwner());
             session.setRemoteAddress( externalRemoteID );
             session.storeSession();
-            url = config.getURLForInboundScenario();
+            url = config.getURLForInboundScenario(session);
             Broadsoft bs = new Broadsoft( config );
             bs.startSubscription();
             dialogLog.log(LogLevel.INFO, config,
@@ -479,10 +517,10 @@ public class VoiceXMLRESTProxy {
                     dialogLog.log(LogLevel.INFO,
                                   session.getAdapterConfig(),
                                   String.format("Answer input: %s from: %s to question: %s", answer_input,
-                                                session.getRemoteAddress(), question.getQuestion_expandedtext()),
-                                  session);
+                                                session.getRemoteAddress(),
+                                                question.getQuestion_expandedtext(session.getKey())), session);
                 }
-                String answerForQuestion = question.getQuestion_expandedtext();
+                String answerForQuestion = question.getQuestion_expandedtext(session.getKey());
                 question = question.answer( responder, session.getAdapterConfig().getConfigId(), answer_id,
                     answer_input, sessionKey );
                 //reload the session
@@ -534,11 +572,11 @@ public class VoiceXMLRESTProxy {
             dialogLog.log(LogLevel.INFO,
                           session.getAdapterConfig(),
                           String.format("Timeout from: %s for question: %s", responder,
-                                        question.getQuestion_expandedtext()), session);
+                                        question.getQuestion_expandedtext(session.getKey())), session);
             HashMap<String,Object> extras = new HashMap<String, Object>();
             extras.put( "sessionKey", sessionKey );
             extras.put("requester", session.getLocalAddress());
-            question = question.event( "timeout", "No answer received", extras, responder );
+            question = question.event( "timeout", "No answer received", extras, responder, session.getKey() );
             session.setQuestion( question );
             if (question != null) {
                 String retryLimit = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT);
@@ -583,12 +621,12 @@ public class VoiceXMLRESTProxy {
             dialogLog.log(LogLevel.INFO,
                           session.getAdapterConfig(),
                           String.format("Wrong answer received from: %s for question: %s", responder,
-                                        question.getQuestion_expandedtext()), session);
+                                        question.getQuestion_expandedtext(session.getKey())), session);
 
             HashMap<String, String> extras = new HashMap<String, String>();
             extras.put("sessionKey", sessionKey);
             extras.put("requester", session.getLocalAddress());
-            question = question.event("exception", "Wrong answer received", extras, responder);
+            question = question.event("exception", "Wrong answer received", extras, responder, session.getKey());
             //reload the session
             session = Session.getSession(sessionKey);
             session.setQuestion(question);
@@ -630,7 +668,7 @@ public class VoiceXMLRESTProxy {
                 Response hangupResponse = handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(),
                                                          session.getKey());
                 timeMap.put("requester", session.getLocalAddress());
-                session.getQuestion().event("hangup", "Hangup", timeMap, session.getRemoteAddress());
+                session.getQuestion().event("hangup", "Hangup", timeMap, session.getRemoteAddress(), session.getKey());
                 dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
                               String.format("Call hungup from: %s", session.getRemoteAddress()), session);
                 return hangupResponse;
@@ -662,7 +700,7 @@ public class VoiceXMLRESTProxy {
             timeMap.put("referredCalledId", referredCalledId);
             timeMap.put("sessionKey", sessionKey);
             timeMap.put("requester", session.getLocalAddress());
-            session.getQuestion().event("answered", "Answered", timeMap, responder);
+            session.getQuestion().event("answered", "Answered", timeMap, responder, session.getKey());
             dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
                           String.format("Call from: %s answered by: %s", session.getLocalAddress(), responder), session);
         }

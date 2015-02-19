@@ -1,6 +1,5 @@
 package com.almende.dialog.model;
 
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
@@ -10,6 +9,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 import org.apache.http.client.utils.URIBuilder;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.impl.Q_fields;
@@ -19,6 +19,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.TypeUtil;
 import com.almende.util.uuid.UUID;
+import com.askfast.commons.entity.Language;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,125 +57,48 @@ public class Question implements QuestionIntf {
         return fromURL(url, adapterID, remoteID, ddrRecordId, sessionKey, null);
     }
     
-    public static Question fromURL(String url, String adapterID, String remoteID, String ddrRecordId, String sessionKey, Map<String, String> extraParams) {
+    public static Question fromURL(String url, String adapterID, String remoteID, String ddrRecordId,
+        String sessionKey, Map<String, String> extraParams) {
+
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
-        String fromID = adapterConfig != null && adapterConfig.getMyAddress() != null ? adapterConfig.getMyAddress()
-                                                                                     : null;
+        String fromID = adapterConfig != null ? adapterConfig.getMyAddress() : null;
         return fromURL(url, adapterID, remoteID, fromID, ddrRecordId, sessionKey, extraParams);
     }
 
-    /*public static String getJSONFromURL(String url, String adapterID, String remoteID, String fromID,
-                                        String ddrRecordId, String sessionKey) {
-
-        Client client = ParallelInit.getClient();
-        WebResource webResource;
-        try {
-            webResource = client.resource(url).queryParam("responder", URLEncoder.encode(remoteID, "UTF-8"))
-                                            .queryParam("requester", fromID);
-            return webResource.type("text/plain").get(String.class);
-        }
-        catch (UnsupportedEncodingException e) {
-            log.severe(e.toString());
-            dialogLog.severe(adapterID, "ERROR loading question: " + e.toString(), ddrRecordId, sessionKey);
-        }
-        return null;
-    }*/
-    
-    public static String getJSONFromURL(String url, String adapterID, String remoteID, String fromID,
-                                        String ddrRecordId, String sessionKey) {
-        AFHttpClient client = ParallelInit.getAFHttpClient();
-        try {
-            return client.get(url);
-        }
-        catch ( IOException e ) {
-            log.severe(e.toString());
-            dialogLog.severe(adapterID, "ERROR loading question: " + e.toString(), ddrRecordId, sessionKey);
-        }
-        return null;
-    }
-
-    /*public static Question fromURL(String url, String adapterID, String remoteID, String fromID, 
-                                   String ddrRecordId, String sessionKey, Map<String, String> extraParams) {
+    public static Question fromURL(String url, String adapterID, String remoteID, String fromID, String ddrRecordId,
+        String sessionKey, Map<String, String> extraParams) {
 
         log.info(String.format("Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID,
                                fromID));
-        if (remoteID == null)
+        if (remoteID == null) {
             remoteID = "";
-        if(extraParams==null) {
+        }
+        if (fromID == null) {
+            fromID = "";
+        }
+        if (extraParams == null) {
             extraParams = new HashMap<String, String>();
         }
         String json = "";
         if (url != null && !url.trim().isEmpty()) {
-            Client client = ParallelInit.getClient();
-            WebResource webResource = client.resource(url);
-            try {
-                webResource = webResource.queryParam("responder", URLEncoder.encode(remoteID, "UTF-8"))
-                                                .queryParam("requester", URLEncoder.encode(fromID, "UTF-8"));
-                for(String key : extraParams.keySet()) {
-                    webResource = webResource.queryParam(key, URLEncoder.encode(extraParams.get( key ), "UTF-8"));
-                }
-                dialogLog.info(adapterID, "Loading new question from: " + webResource.toString(), ddrRecordId, sessionKey);
-                json = webResource.type("text/plain").get(String.class);
-                dialogLog.info(adapterID, "Received new question: " + json, ddrRecordId, sessionKey);
-            }
-            catch (Exception e) {
-                log.severe(e.toString());
-                dialogLog.severe(adapterID,
-                                 String.format("ERROR loading question from: %s. Error: %s", url, e.toString()),
-                                 ddrRecordId, sessionKey);
-                if (questionReloadCounter.get(url) == null) {
-                    questionReloadCounter.put(url, 0);
-                }
-                while (questionReloadCounter.get(url) != null &&
-                       questionReloadCounter.get(url) < DEFAULT_MAX_QUESTION_LOAD) {
-                    try {
-                        dialogLog.info(adapterID,
-                                       String.format("Fetch question from URL: %s failed. Trying again (Count: %s) ",
-                                                     webResource.toString(), questionReloadCounter.get(url)), ddrRecordId, sessionKey);
-                        json = webResource.type("text/plain").get(String.class);
-                        dialogLog.info(adapterID, "Received new question: " + json, ddrRecordId, sessionKey);
-                        break;
-                    }
-                    catch (Exception ex) {
-                        Integer retryCount = questionReloadCounter.get(url);
-                        questionReloadCounter.put(url, ++retryCount);
-                    }
-                }
-            }
-            questionReloadCounter.remove(url);
-            return fromJSON(json, adapterID, ddrRecordId, sessionKey);
-        }
-        else {
-            return null;
-        }
-    }*/
-    
-    public static Question fromURL(String url, String adapterID, String remoteID, String fromID, 
-                                   String ddrRecordId, String sessionKey, Map<String, String> extraParams) {
 
-        log.info(String.format("Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID,
-                               fromID));
-        if (remoteID == null)
-            remoteID = "";
-        if(extraParams==null) {
-            extraParams = new HashMap<String, String>();
-        }
-        String json = "";
-        if (url != null && !url.trim().isEmpty()) {
-            
             AFHttpClient client = ParallelInit.getAFHttpClient();
             try {
                 URIBuilder uriBuilder = new URIBuilder(url);
-                uriBuilder.addParameter( "responder", remoteID );
-                uriBuilder.addParameter( "requester", fromID );
-                
-                for(String key : extraParams.keySet()) {
-                    uriBuilder.addParameter( key, extraParams.get( key ) );
+                uriBuilder.addParameter("responder", remoteID);
+                uriBuilder.addParameter("requester", fromID);
+
+                for (String key : extraParams.keySet()) {
+                    uriBuilder.addParameter(key, extraParams.get(key));
                 }
-                
+
                 url = uriBuilder.build().toString();
-                
+
                 dialogLog.info(adapterID, "Loading new question from: " + url, ddrRecordId, sessionKey);
+                String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
+                if (credentialsFromSession != null) {
+                    client.addBasicAuthorizationHeader(credentialsFromSession);
+                }
                 json = client.get(url);
                 dialogLog.info(adapterID, "Received new question: " + json, ddrRecordId, sessionKey);
             }
@@ -209,6 +133,104 @@ public class Question implements QuestionIntf {
             return null;
         }
     }
+    
+//    public static Question fromDialog(String adapterId, Session session, String remoteID) {
+//
+//        AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
+//        if (adapterConfig != null) {
+//            return fromDialog(adapterConfig, session, remoteID);
+//        }
+//        return null;
+//    }
+//    
+//    public static Question fromDialog(AdapterConfig adapterConfig, Session session, String remoteID) {
+//
+//        String ddrRecordId = null;
+//        String sessionKey = null;
+//        if (session != null) {
+//            ddrRecordId = session.getDdrRecordId();
+//            sessionKey = session.getKey();
+//        }
+//        return fromDialog(adapterConfig.getDialog(), adapterConfig.getConfigId(), remoteID,
+//                          adapterConfig.getMyAddress(), ddrRecordId, sessionKey, null);
+//    }
+//    
+//    public static Question fromDialog(AdapterConfig adapterConfig, String remoteID, String ddrRecordId,
+//        String sessionKey, Map<String, String> extraParams) {
+//
+//        return fromDialog(adapterConfig.getDialog(), adapterConfig.getConfigId(), remoteID,
+//                          adapterConfig.getMyAddress(), ddrRecordId, sessionKey, extraParams);
+//    }
+//    
+//    /**
+//     * Gets the question from the linked dialog.
+//     * @param dialog
+//     * @param adapterID
+//     * @param remoteID
+//     * @param fromID
+//     * @param ddrRecordId
+//     * @param sessionKey
+//     * @param extraParams
+//     * @return
+//     */
+//    public static Question fromDialog(Dialog dialog, String adapterID, String remoteID, String fromID,
+//        String ddrRecordId, String sessionKey, Map<String, String> extraParams) {
+//
+//        log.info(String.format("Trying to parse dialog: %s with remoteId: %s and fromId: %s", dialog.getName(),
+//                               remoteID, fromID));
+//        if (remoteID == null)
+//            remoteID = "";
+//        if (extraParams == null) {
+//            extraParams = new HashMap<String, String>();
+//        }
+//        String json = "";
+//        if (dialog.getUrl() != null && !dialog.getUrl().trim().isEmpty()) {
+//
+//            HashMap<String, String> queryParams = new HashMap<String, String>();
+//            try {
+//                queryParams.put("responder", remoteID);
+//                queryParams.put("requester", fromID);
+//
+//                for (String key : extraParams.keySet()) {
+//                    queryParams.put(key, extraParams.get(key));
+//                }
+//
+//                dialogLog.info(adapterID, "Loading new question from: " + dialog.getName(), ddrRecordId, sessionKey);
+//                json = dialog.getQuestionFromDialog(queryParams);
+//                dialogLog.info(adapterID, "Received new question: " + json, ddrRecordId, sessionKey);
+//            }
+//            catch (Exception e) {
+//                log.severe(e.toString());
+//                dialogLog.severe(adapterID,
+//                                 String.format("ERROR loading question from: %s. Error: %s", dialog.getUrl(),
+//                                               e.toString()), ddrRecordId, sessionKey);
+//                if (questionReloadCounter.get(dialog.getId()) == null) {
+//                    questionReloadCounter.put(dialog.getId(), 0);
+//                }
+//                while (questionReloadCounter.get(dialog.getId()) != null &&
+//                       questionReloadCounter.get(dialog.getId()) < DEFAULT_MAX_QUESTION_LOAD) {
+//                    try {
+//                        dialogLog.info(adapterID,
+//                                       String.format("Fetch question from URL: %s failed. Trying again (Count: %s) ",
+//                                                     dialog.getUrl(), questionReloadCounter.get(dialog.getId())),
+//                                       ddrRecordId, sessionKey);
+//                        json = dialog.getQuestionFromDialog(queryParams);
+//                        dialogLog.info(adapterID, "Received new question: " + json, ddrRecordId, sessionKey);
+//                        break;
+//                    }
+//                    catch (Exception ex) {
+//                        Integer retryCount = questionReloadCounter.get(dialog.getId());
+//                        questionReloadCounter.put(dialog.getId(), ++retryCount);
+//                    }
+//                }
+//            }
+//            questionReloadCounter.remove(dialog.getId());
+//            return fromJSON(json, adapterID, ddrRecordId, sessionKey);
+//        }
+//        else {
+//            return null;
+//        }
+//    }
 
     public static Question fromJSON(String json, String adapterID, String ddrRecordId, String sessionKey) {
 
@@ -226,27 +248,24 @@ public class Question implements QuestionIntf {
     }
     
     public static Question getError(String language) {
-        
-        if(!language.contains( "-" )) {
-            language = "nl-NL";
-        }
-        
+
+        Language lang = Language.getByValue(language);
+
         String message = "";
-        switch (language) {
-            case "nl-NL":
+        switch (lang) {
+            case DUTCH:
                 message = "Er is iets mis gegaan met het ophalen van uw dialoog";
                 break;
-                
-             default: // Default is en-US
-                 language = "en-US";
-                 message = "Something went wrong retrieving your dialog";
-                 break;
+            default: // Default is en-US
+                language = Language.ENGLISH_UNITEDSTATES.getCode();
+                message = "Something went wrong retrieving your dialog";
+                break;
         }
-        
+
         Question question = new Question();
-        question.setPreferred_language( language );
+        question.setPreferred_language(language);
         question.setType("comment");
-        question.setQuestion_text( "text://" + message );
+        question.setQuestion_text("text://" + message);
         question.generateIds();
         return question;
     }
@@ -512,7 +531,9 @@ public class Question implements QuestionIntf {
             }
             if (answer == null) {
                 for (Answer ans : answers) {
-                    if (ans.getAnswer_expandedtext(this.preferred_language).equalsIgnoreCase(answer_input)) {
+                    if (ans.getAnswer_expandedtext(this.preferred_language,
+                                                   Dialog.getCredentialsFromSession(sessionKey))
+                                                    .equalsIgnoreCase(answer_input)) {
                         answer = ans;
                         break;
                     }
@@ -527,11 +548,13 @@ public class Question implements QuestionIntf {
                 }
                 catch (NumberFormatException ex) {
                     log.severe(ex.getLocalizedMessage());
-                    if(answer_input.equals("#") && answers.size() > 11) {
-                        
-                    } else if(answer_input.equals("*") && answers.size() > 10) {
-                        
-                    } else {
+                    if (answer_input.equals("#") && answers.size() > 11) {
+
+                    }
+                    else if (answer_input.equals("*") && answers.size() > 10) {
+
+                    }
+                    else {
                         for (Answer ans : answers) {
                             if (ans.getAnswer_text() != null && ans.getAnswer_text().contains(answer_input)) {
                                 answer = ans;
@@ -539,7 +562,7 @@ public class Question implements QuestionIntf {
                             }
                         }
                     }
-                    
+
                 }
             }
         }
@@ -554,14 +577,14 @@ public class Question implements QuestionIntf {
             // error handling?
             if (answered) {
                 HashMap<String, Object> extras = null;
-                if(adapterID != null) {
+                if (adapterID != null) {
                     String localAddress = AdapterConfig.getAdapterConfig(adapterID).getMyAddress();
-                    if(localAddress != null) {
+                    if (localAddress != null) {
                         extras = new HashMap<String, Object>();
                         extras.put("requester", localAddress);
                     }
                 }
-                newQ = this.event("exception", "Wrong answer received", extras, responder);
+                newQ = this.event("exception", "Wrong answer received", extras, responder, sessionKey);
             }
             if (newQ != null) {
                 return newQ;
@@ -574,55 +597,56 @@ public class Question implements QuestionIntf {
         }
 
         // Send answer to answer.callback.
-
-        AFHttpClient client = ParallelInit.getAFHttpClient();
         AnswerPost ans = new AnswerPost(this.getQuestion_id(), answer.getAnswer_id(), answer_input, responder);
         ans.getExtras().put("adapterId", adapterID);
         String requester = null;
-        if(adapterID != null) {
+        if (adapterID != null) {
             requester = AdapterConfig.getAdapterConfig(adapterID).getMyAddress();
         }
-        if(requester != null) {
+        if (requester != null) {
             ans.getExtras().put("requester", requester);
         }
-        
+
         String url = answer.getCallback();
         URIBuilder builder = null;
         // Check if answer.callback gives new question for this dialog
-        if(url!=null) {
+        if (url != null) {
             try {
                 log.info(String.format("answerText: %s and answer: %s", answer_input, om.writeValueAsString(answer)));
-                
+
                 builder = new URIBuilder(url);
-    
                 String post = om.writeValueAsString(ans);
                 log.info("Going to send: " + post);
                 String newQuestionJSON = null;
-                newQuestionJSON = client.post( post, builder.build().toString() );
-    
+                AFHttpClient client = ParallelInit.getAFHttpClient();
+                String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
+                if (credentialsFromSession != null) {
+                    client.addBasicAuthorizationHeader(credentialsFromSession);
+                }
+                newQuestionJSON = client.post(post, builder.build().toString());
+
                 log.info("Received new question (answer): " + newQuestionJSON);
                 dialogLog.info(adapterID, "Received new question (answer): " + newQuestionJSON, null, sessionKey);
-    
+
                 newQ = om.readValue(newQuestionJSON, Question.class);
                 newQ.setPreferred_language(preferred_language);
             }
-            catch ( URISyntaxException use ) {
+            catch (URISyntaxException use) {
                 dialogLog.severe(adapterID, "Invalid url given: " + use.getMessage(), null, sessionKey);
                 log.severe(use.toString());
-                newQ = this.event("exception", "Invalid url given:", null, responder);
+                newQ = this.event("exception", "Invalid url given:", null, responder, sessionKey);
             }
             catch (ClientHandlerException ioe) {
-                dialogLog.severe(adapterID,
-                                 String.format("Unable to load question from: %s. \n Error: %s", answer.getCallback(),
-                                               ioe.getMessage()), null, sessionKey);
+                dialogLog.severe(adapterID, String.format("Unable to load question from: %s. \n Error: %s",
+                                                          answer.getCallback(), ioe.getMessage()), null, sessionKey);
                 log.severe(ioe.toString());
                 ioe.printStackTrace();
-                newQ = this.event("exception", "Unable to load question", null, responder);
+                newQ = this.event("exception", "Unable to load question", null, responder, sessionKey);
             }
             catch (Exception e) {
                 dialogLog.severe(adapterID, "Unable to parse question json: " + e.getMessage(), null, sessionKey);
                 log.severe(e.toString());
-                newQ = this.event("exception", "Unable to parse question json", null, responder);
+                newQ = this.event("exception", "Unable to parse question json", null, responder, sessionKey);
             }
         }
         return newQ;
@@ -684,11 +708,10 @@ public class Question implements QuestionIntf {
         return newQ;
     }*/
     
-    public Question event(String eventType, String message, Object extras, String responder) {
+    public Question event(String eventType, String message, Object extras, String responder, String sessionKey) {
 
         log.info(String.format("Received: %s Message: %s Responder: %s Extras: %s", eventType, message, responder,
                                ServerUtils.serializeWithoutException(extras)));
-        AFHttpClient client = ParallelInit.getAFHttpClient();
         ArrayList<EventCallback> events = this.getEvent_callbacks();
         EventCallback eventCallback = null;
         if (events != null) {
@@ -725,9 +748,13 @@ public class Question implements QuestionIntf {
         if(url!=null) {
             EventPost event = new EventPost(responder, this.getQuestion_id(), eventType, message, extras);
             try {
+                AFHttpClient client = ParallelInit.getAFHttpClient();
                 String post = om.writeValueAsString(event);
+                String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
+                if (credentialsFromSession != null) {
+                    client.addBasicAuthorizationHeader(credentialsFromSession);
+                }
                 String s = client.post(post, url);
-    
                 log.info("Received new question (event): " + s);
     
                 if (s != null && !s.equals("")) {
@@ -775,17 +802,17 @@ public class Question implements QuestionIntf {
 
     @Override
     @JsonIgnore
-    public HashMap<String, String> getExpandedRequester() {
+    public HashMap<String, String> getExpandedRequester(String sessionKey) {
 
-        return question.getExpandedRequester(this.preferred_language);
+        return question.getExpandedRequester(this.preferred_language, sessionKey);
     }
 
     @Override
     @JsonIgnore
-    public HashMap<String, String> getExpandedRequester(String language) {
+    public HashMap<String, String> getExpandedRequester(String language, String sessionKey) {
 
         this.preferred_language = language;
-        return question.getExpandedRequester(language);
+        return question.getExpandedRequester(language, sessionKey);
     }
 
     @Override
@@ -802,17 +829,17 @@ public class Question implements QuestionIntf {
 
     @Override
     @JsonIgnore
-    public String getQuestion_expandedtext() {
+    public String getQuestion_expandedtext(String sessionKey) {
 
-        return question.getQuestion_expandedtext(this.preferred_language);
+        return question.getQuestion_expandedtext(this.preferred_language, sessionKey);
     }
 
     @Override
     @JsonIgnore
-    public String getQuestion_expandedtext(String language) {
+    public String getQuestion_expandedtext(String language, String sessionKey) {
 
         this.preferred_language = language;
-        return question.getQuestion_expandedtext(language);
+        return question.getQuestion_expandedtext(language, sessionKey);
     }
 
     @Override
@@ -1049,17 +1076,15 @@ public class Question implements QuestionIntf {
      * @return
      */
     @JsonIgnore
-    public String getTextWithAnswerTexts() {
+    public String getTextWithAnswerTexts(String sessionKey) {
 
-        String reply = getQuestion_expandedtext();
-        if (question.getAnswers() != null && !question.getAnswers().isEmpty()) {
-            reply += "\n[";
-            for (Answer ans : question.getAnswers()) {
-                reply += " " + ans.getAnswer_expandedtext(getPreferred_language()) + " |";
-            }
-
-            reply = reply.substring(0, reply.length() - 1) + "]";
+        String reply = getQuestion_expandedtext(sessionKey) + "\n[";
+        for (Answer ans : question.getAnswers()) {
+            reply += " " +
+                     ans.getAnswer_expandedtext(getPreferred_language(), Dialog.getCredentialsFromSession(sessionKey)) +
+                     " |";
         }
+        reply = reply.substring(0, reply.length() - 1) + "]";
         return reply;
     }
 

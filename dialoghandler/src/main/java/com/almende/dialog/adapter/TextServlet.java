@@ -1,8 +1,6 @@
 package com.almende.dialog.adapter;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,6 +10,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
@@ -114,50 +113,51 @@ abstract public class TextServlet extends HttpServlet {
 		}
 	}
 	
-	public Return formQuestion(Question question, String adapterID,	String address, String ddrRecordId, String sessionKey) {
-    
-            String reply = "";
-    
-            String preferred_language = "nl"; // TODO: Change to null??
-            if (question != null)
-                preferred_language = question.getPreferred_language();
-    
-            for (int count = 0; count <= LOOP_DETECTION; count++) {
-                if (question == null)
-                    break;
-                question.setPreferred_language(preferred_language);
-    
-                if (!reply.equals(""))
-                    reply += "\n";
-                String qText = question.getQuestion_expandedtext();
-                if (qText != null && !qText.equals(""))
-                    reply += qText;
-    
-                if (question.getType().equalsIgnoreCase("closed")) {
-                    reply += "\n[";
-                    for (Answer ans : question.getAnswers()) {
-                        reply += " " + ans.getAnswer_expandedtext(question.getPreferred_language()) + " |";
-                    }
-                    reply = reply.substring(0, reply.length() - 1) + "]";
-                    break; // Jump from forloop
+    public Return formQuestion(Question question, String adapterID, String address, String ddrRecordId,
+        String sessionKey) {
+
+        String reply = "";
+
+        String preferred_language = "nl"; // TODO: Change to null??
+        if (question != null)
+            preferred_language = question.getPreferred_language();
+
+        for (int count = 0; count <= LOOP_DETECTION; count++) {
+            if (question == null)
+                break;
+            question.setPreferred_language(preferred_language);
+
+            if (!reply.equals(""))
+                reply += "\n";
+            String qText = question.getQuestion_expandedtext(sessionKey);
+            if (qText != null && !qText.equals(""))
+                reply += qText;
+
+            if (question.getType().equalsIgnoreCase("closed")) {
+                reply += "\n[";
+                for (Answer ans : question.getAnswers()) {
+                    reply += " " + ans.getAnswer_expandedtext(question.getPreferred_language(), sessionKey) + " |";
                 }
-                else if (question.getType().equalsIgnoreCase("comment")) {
-                    // Always returns null!
-                    // So no need, but maybe in future?
-                    question = question.answer(null, adapterID, null, null, null);
-                }
-                else if (question.getType().equalsIgnoreCase("referral")) {
-                    question = Question.fromURL(question.getUrl(), adapterID, address, ddrRecordId, sessionKey);
-                }
-                else if (question.getType().equalsIgnoreCase("exit")) {
-                	break;
-                }
-                else {
-                    break; // Jump from forloop (open questions, etc.)
-                }
+                reply = reply.substring(0, reply.length() - 1) + "]";
+                break; // Jump from forloop
             }
-            return new Return(reply, question);
-	}
+            else if (question.getType().equalsIgnoreCase("comment")) {
+                // Always returns null!
+                // So no need, but maybe in future?
+                question = question.answer(null, adapterID, null, null, null);
+            }
+            else if (question.getType().equalsIgnoreCase("referral")) {
+                question = Question.fromURL(question.getUrl(), adapterID, address, ddrRecordId, sessionKey, null);
+            }
+            else if (question.getType().equalsIgnoreCase("exit")) {
+                break;
+            }
+            else {
+                break; // Jump from forloop (open questions, etc.)
+            }
+        }
+        return new Return(reply, question);
+    }
 	
     /**
      * @deprecated use
@@ -198,16 +198,17 @@ abstract public class TextServlet extends HttpServlet {
                 preferred_language = config.getPreferred_language();
                 session.setLanguage(preferred_language);
             }
-            url = encodeURLParams(url);
+            url = ServerUtils.encodeURLParams(url);
+            url = Dialog.getDialogURL(url, accountId, session);
             Question question = Question.fromURL(url, config.getConfigId(), address, null, sessionKey);
 
             question.setPreferred_language(preferred_language);
             Return res = formQuestion(question, config.getConfigId(), address, null, sessionKey);
             //store the question in the session
             session.setQuestion(res.question);
-            session.setLocalName(getSenderName(question, config, null));
+            session.setLocalName(getSenderName(question, config, null, session.getKey()));
             session.storeSession();
-            String fromName = getSenderName(question, config, null);
+            String fromName = getSenderName(question, config, null, session.getKey());
 
             Map<String, Object> extras = null;
             if (res.question != null) {
@@ -225,38 +226,50 @@ abstract public class TextServlet extends HttpServlet {
 	
     /**
      * Method used to broadcast the same message to multiple addresses
-     * @param addressNameMap Map with address (e.g. phonenumber or email) as Key and name
-    *            as value. The name is useful for email and not used for SMS etc
-     * @param addressCcNameMap Cc list of the address to which this message is broadcasted. This is only used by the email servlet.
-     * @param addressBccNameMap Bcc list of the address to which this message is broadcasted. This is only used by the email servlet.
-     * @param url The URL on which a GET HTTPRequest is performed and expected a question JSON
-     * @param senderName The sendername, used only by the email servlet, SMS
-     * @param subject This is used only by the email servlet 
-     * @param config the adapterConfig which is used to perform this broadcast
-     * @param accountId AccoundId initiating this broadcast. All costs are applied to this accountId
+     * 
+     * @param addressNameMap
+     *            Map with address (e.g. phonenumber or email) as Key and name
+     *            as value. The name is useful for email and not used for SMS
+     *            etc
+     * @param addressCcNameMap
+     *            Cc list of the address to which this message is broadcasted.
+     *            This is only used by the email servlet.
+     * @param addressBccNameMap
+     *            Bcc list of the address to which this message is broadcasted.
+     *            This is only used by the email servlet.
+     * @param dialogIdOrUrl
+     *            if a String with leading "http" is found its considered as a
+     *            url. Else a Dialog of this id is tried t The URL on which a
+     *            GET HTTPRequest is performed and expected a question JSON
+     * @param senderName
+     *            The sendername, used only by the email servlet, SMS
+     * @param subject
+     *            This is used only by the email servlet
+     * @param config
+     *            the adapterConfig which is used to perform this broadcast
+     * @param accountId
+     *            AccoundId initiating this broadcast. All costs are applied to
+     *            this accountId
      * @return
      * @throws Exception
      */
     public HashMap<String, String> startDialog(Map<String, String> addressNameMap,
-                                               Map<String, String> addressCcNameMap,
-                                               Map<String, String> addressBccNameMap, String url, String senderName,
-                                               String subject, AdapterConfig config, String accountId) throws Exception {
+        Map<String, String> addressCcNameMap, Map<String, String> addressBccNameMap, String dialogIdOrUrl,
+        String senderName, String subject, AdapterConfig config, String accountId) throws Exception {
 
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
         addressCcNameMap = addressCcNameMap != null ? addressCcNameMap : new HashMap<String, String>();
         addressBccNameMap = addressBccNameMap != null ? addressBccNameMap : new HashMap<String, String>();
         String localaddress = config.getMyAddress();
-        url = encodeURLParams(url);
 
         HashMap<String, String> sessionKeyMap = new HashMap<String, String>();
         ArrayList<Session> sessions = new ArrayList<Session>();
 
-        // If it is a broadcast don't provide the remote address because it is
-        // deceiving.
         String loadAddress = null;
         Session session = null;
+        // If it is a broadcast don't provide the remote address because it is deceiving.
         if (addressNameMap.size() + addressCcNameMap.size() + addressBccNameMap.size() == 1) {
-            
+
             loadAddress = addressNameMap.keySet().iterator().next();
             if (config.isSMSAdapter()) {
                 loadAddress = PhoneNumberUtils.formatNumber(loadAddress, null);
@@ -269,13 +282,24 @@ abstract public class TextServlet extends HttpServlet {
                 session.storeSession();
             }
         }
+        //create a session for the first remote address
+        if (session == null) {
+            String firstRemoteAddress = addressNameMap.keySet().iterator().next();
+            session = Session.getOrCreateSession(Session.getSessionKey(config, firstRemoteAddress), config.getKeyword());
+            session.setAccountId(accountId);
+            session.storeSession();
+        }
+        dialogIdOrUrl = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
 
         // fetch question
-        Question question = Question.fromURL(url, config.getConfigId(), loadAddress, null,
-                                             session != null ? session.getKey() : null);
+        // If it is a broadcast don't provide the remote address because it is deceiving.
+        Question question = Question.fromURL(dialogIdOrUrl, config.getConfigId(), loadAddress, config.getMyAddress(),
+                                             null, session != null ? session.getKey() : null, null);
+
         if (question != null) {
+            
             //fetch the senderName
-            senderName = getSenderName(question, config, senderName);
+            senderName = getSenderName(question, config, senderName, session != null ? session.getKey() : null);
             // store the extra information
             Map<String, Object> extras = new HashMap<String, Object>();
             if (question.getMedia_properties() != null) {
@@ -309,7 +333,7 @@ abstract public class TextServlet extends HttpServlet {
                 res = formQuestion(question, config.getConfigId(), loadAddress, null, session.getKey());
 
                 //check if session can be killed??
-                if(res == null || res.question == null) {
+                if (res == null || res.question == null) {
                     session.setKilled(true);
                 }
                 session.storeSession();
@@ -340,6 +364,7 @@ abstract public class TextServlet extends HttpServlet {
                         if (res == null || res.question == null) {
                             session.setKilled(true);
                         }
+                        dialogIdOrUrl = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
                         //save this session
                         session.storeSession();
                         //put the formatted address to that a text can be broadcasted to it
@@ -354,7 +379,7 @@ abstract public class TextServlet extends HttpServlet {
                     }
                 }
             }
-            
+
             subject = subject != null && !subject.isEmpty() ? subject : "Message from Ask-Fast";
             //play trial account audio if the account is trial
             if (config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)) {
@@ -376,7 +401,7 @@ abstract public class TextServlet extends HttpServlet {
             }
         }
         else {
-            sessionKeyMap.put("Error", "Question JSON not found in url: " + url);
+            sessionKeyMap.put("Error", "Question JSON not found in dialog/url: " + dialogIdOrUrl);
         }
         return sessionKeyMap;
     }
@@ -450,8 +475,8 @@ abstract public class TextServlet extends HttpServlet {
             log.info("No session so retrieving config");
             config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress, keyword);
             count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress,
-                                               getSenderName(null, config, null), address, toName, extras, config,
-                                               config.getOwner());
+                                               getSenderName(null, config, null, null), address, toName, extras,
+                                               config, config.getOwner());
             // Create new session to store the send in the ddr.
             session = Session.createSession(config, address);
             session.setAccountId(config.getOwner());
@@ -461,10 +486,8 @@ abstract public class TextServlet extends HttpServlet {
             return count;
         }
         config = session.getAdapterConfig();
-        String fromName = session.getLocalName() != null && !session.getLocalName().isEmpty() ? session.getLocalName()
-                                                                                             : getSenderName(null,
-                                                                                                             config,
-                                                                                                             null);
+        String fromName = session.getLocalName() != null && !session.getLocalName().isEmpty() ? 
+                                        session.getLocalName() : getSenderName(null, config, null, null);
         // TODO: Remove this check, this is now to support backward
         // compatibility (write patch)
         if (config == null) {
@@ -474,7 +497,8 @@ abstract public class TextServlet extends HttpServlet {
                 config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress);
                 try {
                     fromName = session.getLocalName() != null && !session.getLocalName().isEmpty() ? session
-                                                    .getLocalName() : getSenderName(null, config, null);
+                                                    .getLocalName() : getSenderName(null, config, null,
+                                                                                    session.getKey());
                     count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress, fromName, address,
                                                        toName, extras, config, session.getAccountId());
                 }
@@ -516,13 +540,14 @@ abstract public class TextServlet extends HttpServlet {
 
             boolean start = false;
             if (question == null) {
-                if (config.getURLForInboundScenario() != null && config.getURLForInboundScenario().equals("")) {
+                if (config.getDialog() != null && "".equals(config.getDialog().getUrl())) {
                     question = Question.fromURL(this.host + DEMODIALOG, config.getConfigId(), address, localaddress,
                                                 session.getDdrRecordId(), session.getKey(), extraParams);
                 }
                 else {
-                    question = Question.fromURL(config.getURLForInboundScenario(), config.getConfigId(), address,
-                                                localaddress, session.getDdrRecordId(), session.getKey(), extraParams);
+                    question = Question.fromURL(config.getURLForInboundScenario(session), config.getConfigId(),
+                                                address, localaddress, session.getDdrRecordId(), session.getKey(),
+                                                extraParams);
                 }
                 session.setDirection("inbound");
                 start = true;
@@ -545,7 +570,7 @@ abstract public class TextServlet extends HttpServlet {
             }
             else {
                 log.severe(String.format("Question is null. Couldnt fetch Question from session, nor initialAgentURL: %s nor from demoDialog",
-                                         config.getURLForInboundScenario(), this.host + DEMODIALOG));
+                                         config.getURLForInboundScenario(session), this.host + DEMODIALOG));
             }
         }
 
@@ -633,47 +658,39 @@ abstract public class TextServlet extends HttpServlet {
         return result;
     }
 	
-	protected String getNoConfigMessage() {
-		return "Sorry, I can't find the account associated with this chat address...";
-	}
-	
-	private String getNickname(Question question) {
-		
-		String nickname = null;
-		if (question != null) {
-			HashMap<String, String> id = question.getExpandedRequester();
-			nickname = id.get("nickname");
-		}
-		
-		return nickname;
-	}
-	
-	private String encodeURLParams(String url) {
-		try {
-			URL remoteURL = new URL(url);
-			return new URI(remoteURL.getProtocol(), remoteURL.getUserInfo(),
-					remoteURL.getHost(), remoteURL.getPort(),
-					remoteURL.getPath(), remoteURL.getQuery(),
-					remoteURL.getRef()).toString();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return url;
-	}
+    protected String getNoConfigMessage() {
 
-	/**
-	 * sends a message and charges the owner of the adapter for outbound communication
-	 * @param message message to be sent
-	 * @param subject
-	 * @param from
-	 * @param fromName
-	 * @param to
-	 * @param toName
-	 * @param extras
-	 * @param config
-	 * @return the number of messages sent. Can be more than 1 when sending special charecters in SMS
-	 * @throws Exception
-	 */
+        return "Sorry, I can't find the account associated with this chat address...";
+    }
+	
+    private String getNickname(Question question, String sessionKey) {
+
+        String nickname = null;
+        if (question != null) {
+            HashMap<String, String> id = question.getExpandedRequester(sessionKey);
+            nickname = id.get("nickname");
+        }
+
+        return nickname;
+    }
+	
+    /**
+     * sends a message and charges the owner of the adapter for outbound
+     * communication
+     * 
+     * @param message
+     *            message to be sent
+     * @param subject
+     * @param from
+     * @param fromName
+     * @param to
+     * @param toName
+     * @param extras
+     * @param config
+     * @return the number of messages sent. Can be more than 1 when sending
+     *         special charecters in SMS
+     * @throws Exception
+     */
     private int sendMessageAndAttachCharge( String message, String subject, String from, String fromName, String to,
         String toName, Map<String, Object> extras, AdapterConfig config, String accountId ) throws Exception
     {
@@ -901,9 +918,9 @@ abstract public class TextServlet extends HttpServlet {
      * @param config
      * @return
      */
-    private String getSenderName(Question question, AdapterConfig config, String senderName) {
+    private String getSenderName(Question question, AdapterConfig config, String senderName, String sessionKey) {
 
-        String nameFromQuestion = getNickname(question);
+        String nameFromQuestion = getNickname(question, sessionKey);
         if (nameFromQuestion != null && !nameFromQuestion.isEmpty()) {
             return nameFromQuestion;
         }

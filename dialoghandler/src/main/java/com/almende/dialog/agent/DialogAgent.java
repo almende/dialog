@@ -240,17 +240,37 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
     /**
      * Method used to broadcast the same message to multiple addresses
-     * @param addressNameMap Map with address (e.g. phonenumber or email) as Key and name
-    *            as value. The name is useful for email and not used for SMS etc
-     * @param addressCcNameMap Cc list of the address to which this message is broadcasted. This is only used by the email servlet.
-     * @param addressBccNameMap Bcc list of the address to which this message is broadcasted. This is only used by the email servlet.
-     * @param senderName The sendername, used only by the email servlet, SMS
-     * @param subject This is used only by the email servlet
-     * @param url The URL on which a GET HTTPRequest is performed and expected a question JSON
-     * @param adapterType Either an adapterType must be given (in which case it will fetch the first adapter on this type), if null an adapterId is expected
-     * @param adapterID AdapterId for a channel configuration. This configuration is used to perform this outbound communication 
-     * @param accountId This accountId is charged with the costs for this communication
-     * @param bearerToken Secure token used for verifying this communication request
+     * 
+     * @param addressNameMap
+     *            Map with address (e.g. phonenumber or email) as Key and name
+     *            as value. The name is useful for email and not used for SMS
+     *            etc
+     * @param addressCcNameMap
+     *            Cc list of the address to which this message is broadcasted.
+     *            This is only used by the email servlet.
+     * @param addressBccNameMap
+     *            Bcc list of the address to which this message is broadcasted.
+     *            This is only used by the email servlet.
+     * @param senderName
+     *            The sendername, used only by the email servlet, SMS
+     * @param subject
+     *            This is used only by the email servlet
+     * @param dialogIdOrUrl
+     *            if a String with leading "http" is found its considered as a
+     *            url. Else a Dialog of this id is tried t The URL on which a
+     *            GET HTTPRequest is performed and expected a question JSON
+     * @param adapterType
+     *            Either an adapterType must be given (in which case it will
+     *            fetch the first adapter on this type), if null an adapterId is
+     *            expected
+     * @param adapterID
+     *            AdapterId for a channel configuration. This configuration is
+     *            used to perform this outbound communication
+     * @param accountId
+     *            This accountId is charged with the costs for this
+     *            communication
+     * @param bearerToken
+     *            Secure token used for verifying this communication request
      * @return
      * @throws JSONRPCException
      */
@@ -258,7 +278,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("addressCcMap") @Optional Map<String, String> addressCcMap,
         @Name("addressBccMap") @Optional Map<String, String> addressBccMap,
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
-        @Name("url") String url, @Name("adapterType") @Optional String adapterType,
+        @Name("dialogIdOrUrl") String dialogIdOrUrl, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
         @Name("bearerToken") String bearerToken) throws Exception {
 
@@ -309,7 +329,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                 
                 adapterType = adapterType != null ? adapterType : config.getAdapterType();
                 //log all addresses 
-                log.info(String.format("recepients of question at: %s are: %s", url, ServerUtils.serialize(addressMap)));
+                log.info(String.format("recepients of question at: %s are: %s", dialogIdOrUrl, ServerUtils.serialize(addressMap)));
                 log.info(String.format("cc recepients are: %s", ServerUtils.serialize(addressCcMap)));
                 log.info(String.format("bcc recepients are: %s", ServerUtils.serialize(addressBccMap)));
                 
@@ -331,15 +351,16 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                 }
                 
                 if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_XMPP)) {
-                    resultSessionMap = new XMPPServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
-                                                                     senderName, subject, config, accountId);
+                    resultSessionMap = new XMPPServlet().startDialog(addressMap, addressCcMap, addressBccMap,
+                                                                     dialogIdOrUrl, senderName, subject, config,
+                                                                     accountId);
                 }
                 else if(config.isCallAdapter() && provider != null) {
                     switch (provider) {
                         case BROADSOFT: {
                             // fetch the first address in the map
                             if (!addressMap.keySet().isEmpty()) {
-                                resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, url, config, accountId);
+                                resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, dialogIdOrUrl, config, accountId);
                             }
                             else {
                                 throw new Exception("Address should not be empty to setup a call");
@@ -349,7 +370,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         case TWILIO: {
                             // fetch the first address in the map
                             if (!addressMap.keySet().isEmpty() && getApplicationId() != null) {
-                                resultSessionMap = TwilioAdapter.dial(addressMap, url, config, accountId,
+                                resultSessionMap = TwilioAdapter.dial(addressMap, dialogIdOrUrl, config, accountId,
                                                                       getApplicationId());
                             }
                             else {
@@ -363,25 +384,24 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                     }
                 }
                 else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_EMAIL)) {
-                    resultSessionMap = new MailServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
-                                                                     senderName, subject, config, accountId);
+                    resultSessionMap = new MailServlet().startDialog(addressMap, addressCcMap, addressBccMap,
+                                                                     dialogIdOrUrl, senderName, subject, config,
+                                                                     accountId);
                 }
                 else if (config.isSMSAdapter()) {
                     
                     if (provider != null) {
                         switch (provider) {
                             case MB:
-                                resultSessionMap = new MBSmsServlet().startDialog(addressMap, null, null, url,
-                                                                                  senderName, subject, config,
-                                                                                  accountId);
+                                resultSessionMap = new MBSmsServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
+                                                                                  senderName, subject, config, accountId);
                                 break;
                             case CM:
-                                resultSessionMap = new CMSmsServlet().startDialog(addressMap, null, null, url,
-                                                                                  senderName, subject, config,
-                                                                                  accountId);
+                                resultSessionMap = new CMSmsServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
+                                                                                  senderName, subject, config, accountId);
                                 break;
                             case ROUTE_SMS:
-                                resultSessionMap = new RouteSmsServlet().startDialog(addressMap, null, null, url,
+                                resultSessionMap = new RouteSmsServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
                                                                                      senderName, subject, config,
                                                                                      accountId);
                                 break;
@@ -396,12 +416,12 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                     }
                 }
                 else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_USSD)) {
-                    resultSessionMap = new CLXUSSDServlet().startDialog(addressMap, null, null, url, senderName,
-                                                                        subject, config, accountId);
+                    resultSessionMap = new CLXUSSDServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
+                                                                        senderName, subject, config, accountId);
                 }
                 else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_PUSH)) {
-                    resultSessionMap = new NotificareServlet().startDialog(addressMap, null, null, url, senderName,
-                                                                           subject, config, accountId);
+                    resultSessionMap = new NotificareServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
+                                                                           senderName, subject, config, accountId);
                 }
                 else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWITTER)) {
                     HashMap<String, String> formattedTwitterAddresses = new HashMap<String, String>(addressMap.size());
@@ -410,8 +430,9 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         String formattedTwitterAddress = address.startsWith("@") ? address : ("@" + address);
                         formattedTwitterAddresses.put(formattedTwitterAddress, addressMap.get(address));
                     }
-                    resultSessionMap = new TwitterServlet().startDialog(formattedTwitterAddresses, null, null, url,
-                                                                        senderName, subject, config, accountId);
+                    resultSessionMap = new TwitterServlet().startDialog(formattedTwitterAddresses, null, null,
+                                                                        dialogIdOrUrl, senderName, subject, config,
+                                                                        accountId);
                 }
                 else {
                     throw new Exception("Unknown type given: either broadsoft or phone or mail:" +
@@ -468,15 +489,15 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
             log.info("Config found: " + config.getConfigId());
             TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-            Dialog dialog = Dialog.createDialog("Dialog created on agent update", config.getURLForInboundScenario(),
-                                                config.getOwner());
+            Dialog dialog = Dialog.createDialog("Dialog created on agent update",
+                                                config.getURLForInboundScenario(null), config.getOwner());
             config.getProperties().put(AdapterConfig.DIALOG_ID_KEY, dialog.getId());
             datastore.store(config);
 
             ObjectNode result = JOM.createObjectNode();
             result.put("id", config.getConfigId());
             result.put("type", config.getAdapterType());
-            result.put("url", config.getURLForInboundScenario());
+            result.put("url", config.getURLForInboundScenario(null));
             return result.toString();
         }
         else {

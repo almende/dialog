@@ -3,14 +3,14 @@ package com.almende.dialog.model.impl;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.logging.Logger;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.intf.QuestionIntf;
+import com.almende.dialog.util.AFHttpClient;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
 
 public class Q_fields implements QuestionIntf {
 	private static final long serialVersionUID = 748817624285821262L;
@@ -51,31 +51,46 @@ public class Q_fields implements QuestionIntf {
 	public String getRequester() {
 		return requester;
 	}
-	@Override
-	public HashMap<String,String> getExpandedRequester(String language) {
-		Client client = ParallelInit.getClient();
-		HashMap<String,String> result = new HashMap<String,String>(0);
-		String url = this.getRequester();
-		if (url == null || url.equals("")) return result;
-		if (language != null && !language.equals("")){
-			url+=url.indexOf("?")>0?"&":"?";
-			url+="preferred_language="+language;
-		}
-		try {
-			WebResource webResource = client.resource(url);
-			String text = "";
-			text = webResource.type("text/plain").get(String.class);
-			result = om.readValue(text,new TypeReference<HashMap<String,String>>(){}); 
-		} catch (Exception e){
-			log.severe(e.toString());
-			log.severe(e.getMessage());
-		}
-		return result;
-	}
-	@Override
-	public HashMap<String,String> getExpandedRequester() {
-		return getExpandedRequester(null);
-	}
+    
+        @Override
+        public HashMap<String, String> getExpandedRequester(String language, String sessionKey) {
+    
+            HashMap<String, String> result = new HashMap<String, String>(0);
+            String url = this.getRequester();
+            if (url == null || url.equals(""))
+                return result;
+            if (language != null && !language.equals("")) {
+                url += url.indexOf("?") > 0 ? "&" : "?";
+                url += "preferred_language=" + language;
+            }
+            try {
+                AFHttpClient client = ParallelInit.getAFHttpClient();
+                String text = "";
+                try {
+                    String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
+                    if (credentialsFromSession != null) {
+                        client.addBasicAuthorizationHeader(credentialsFromSession);
+                    }
+                    text = client.get(url);
+                }
+                catch (Exception e) {
+                    log.severe(e.toString());
+                }
+                result = om.readValue(text, new TypeReference<HashMap<String, String>>() {
+                });
+            }
+            catch (Exception e) {
+                log.severe(e.toString());
+                log.severe(e.getMessage());
+            }
+            return result;
+        }
+        
+        @Override
+        public HashMap<String, String> getExpandedRequester(String sessionKey) {
+    
+            return getExpandedRequester(null, sessionKey);
+        }
 	@Override
 	public ArrayList<Answer> getAnswers() {
 		return answers;
@@ -114,9 +129,8 @@ public class Q_fields implements QuestionIntf {
 	}
 
     @Override
-    public String getQuestion_expandedtext(String language) {
+    public String getQuestion_expandedtext(String language, String sessionKey) {
 
-        Client client = ParallelInit.getClient();
         String url = this.getQuestion_text();
         if (url == null || url.equals("")) {
             return "";
@@ -124,18 +138,22 @@ public class Q_fields implements QuestionIntf {
         if (url.startsWith("text://")) {
             return url.replace("text://", "");
         }
-        else if(url.startsWith("http") && url.endsWith(".wav")) {
+        else if (url.startsWith("http") && url.endsWith(".wav")) {
             return url;
         }
-        
+
         if (language != null && !language.equals("")) {
             url += url.indexOf("?") > 0 ? "&" : "?";
             url += "preferred_language=" + language;
         }
         String text = "";
+        AFHttpClient client = ParallelInit.getAFHttpClient();
         try {
-            WebResource webResource = client.resource(url);
-            text = webResource.type("text/plain").get(String.class);
+            String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
+            if (credentialsFromSession != null) {
+                client.addBasicAuthorizationHeader(credentialsFromSession);
+            }
+            text = client.get(url);
         }
         catch (Exception e) {
             log.severe(e.toString());
@@ -143,10 +161,11 @@ public class Q_fields implements QuestionIntf {
         return text;
     }
 	
-	@Override
-	public String getQuestion_expandedtext() {
-		return getQuestion_expandedtext(null);
-	}
+    @Override
+    public String getQuestion_expandedtext(String sessionKey) {
+
+        return getQuestion_expandedtext(null, sessionKey);
+    }
 
 	@Override
 	public String getData() {

@@ -322,9 +322,9 @@ public class TestServlet extends HttpServlet
 
         Question question = ServerUtils.deserialize(questionJSON, false, Question.class);
         if (question != null) {
-            String result = question.getQuestion_expandedtext();
+            String result = question.getQuestion_expandedtext(null);
             if (question.getAnswers() != null && question.getType().equals("closed")) {
-                result = question.getTextWithAnswerTexts();
+                result = question.getTextWithAnswerTexts(null);
             }
             return result;
         }

@@ -98,7 +98,7 @@ public class SMSDeliveryStatus implements Serializable {
             smsStatus.setRemoteAddress(remoteAddress);
             smsStatus.setReference(referenceKey);
             smsStatus.setAccountId(accountId);
-            String smsText = question != null ? question.getTextWithAnswerTexts() : null;
+            String smsText = question != null ? question.getTextWithAnswerTexts(null) : null;
             smsStatus.setSms(smsText);
             smsStatus.setHost(Settings.HOST);
             smsStatus.setProvider(provider);

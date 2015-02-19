@@ -113,19 +113,21 @@ public class TestFramework
     
     public AdapterConfig createBroadsoftAdapter() throws Exception {
 
-        return createAdapterConfig(AdapterType.CALL.getName(), TEST_PUBLIC_KEY, localAddressBroadsoft, "");
+        return createAdapterConfig(AdapterType.CALL.toString(), AdapterProviders.BROADSOFT, TEST_PUBLIC_KEY,
+                                   localAddressBroadsoft, "");
     }
     
     public AdapterConfig createTwilioAdapter() throws Exception {
 
-        return createAdapterConfig(AdapterType.TWILIO.getName(), TEST_PUBLIC_KEY, localAddressBroadsoft, "");
+        return createAdapterConfig(AdapterType.CALL.toString(), AdapterProviders.TWILIO, TEST_PUBLIC_KEY,
+                                   localAddressBroadsoft, "");
     }
     
-    public static AdapterConfig createAdapterConfig(String adapterType, String accountId, String myAddress,
-        String initiatAgentURL) throws Exception {
+    public static AdapterConfig createAdapterConfig(String adapterType, AdapterProviders adapterProviders,
+        String accountId, String myAddress, String initiatAgentURL) throws Exception {
 
         AdapterConfig adapterConfig = new AdapterConfig();
-        adapterConfig.setAdapterType(adapterType);
+        adapterConfig.setAdapterType(adapterType.toLowerCase());
         adapterConfig.setAnonymous(false);
         adapterConfig.setPublicKey(accountId);
         adapterConfig.setMyAddress(myAddress);
@@ -134,6 +136,9 @@ public class TestFramework
         adapterConfig.setInitialAgentURL(initiatAgentURL);
         adapterConfig.setOwner(accountId);
         adapterConfig.addAccount(accountId);
+        if (adapterProviders != null) {
+            adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, adapterProviders);
+        }
         String adapterConfigString = adapterConfig.createConfig(ServerUtils.serialize(adapterConfig)).getEntity()
                                         .toString();
         adapterConfig = ServerUtils.deserialize(adapterConfigString, AdapterConfig.class);

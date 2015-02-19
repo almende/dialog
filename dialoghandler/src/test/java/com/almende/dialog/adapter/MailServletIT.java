@@ -69,8 +69,8 @@ public class MailServletIT extends TestFramework
         initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "question", "start" );
         
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
-            localAddressMail, initialAgentURL );
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+                                                          localAddressMail, initialAgentURL);
         //create session
         Session.createSession( adapterConfig, remoteAddressEmail );
         
@@ -105,8 +105,8 @@ public class MailServletIT extends TestFramework
             QuestionInRequest.APPOINTMENT.name() );
         initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "question", "start" );
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
-                                                           localAddressMail, initialAgentURL );
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+                                                          localAddressMail, initialAgentURL);
         //create session
         Session.createSession( adapterConfig, remoteAddressEmail );
         TextMessage textMessage = mailAppointmentInteraction("hi");
@@ -177,8 +177,8 @@ public class MailServletIT extends TestFramework
     {
         String textMessage = "How are you doing?";
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig( AdapterAgent.ADAPTER_TYPE_EMAIL, TEST_PUBLIC_KEY,
-            localAddressMail, "" );
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+                                                          localAddressMail, "");
         //create session
         Session.createSession( adapterConfig, remoteAddressEmail );
 

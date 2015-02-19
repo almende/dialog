@@ -41,7 +41,8 @@ public class RouteSMSIT extends TestFramework {
 
         String senderName = "TestUser";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), TEST_PUBLIC_KEY, "0612345678", "");
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS,
+                                                          TEST_PUBLIC_KEY, "0612345678", "");
         adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
         adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
         adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);

@@ -63,7 +63,8 @@ public class CMServletIT extends TestFramework {
     {
         String senderName = "TestUser";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( AdapterType.SMS.getName(), TEST_PUBLIC_KEY, "ASK", "" );
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
+                                                          TEST_PUBLIC_KEY, "ASK", "");
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put( remoteAddressVoice, null );
@@ -105,8 +106,8 @@ public class CMServletIT extends TestFramework {
         String remoteAddressVoice2 = "+31614753658";
         String senderName = "TestUser";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), TEST_PUBLIC_KEY,
-                                                          remoteAddressVoice, "");
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
+                                                          TEST_PUBLIC_KEY, remoteAddressVoice, "");
 
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(remoteAddressVoice, "testUser1");
@@ -132,8 +133,8 @@ public class CMServletIT extends TestFramework {
         String initialAgentURL = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "question", "start" );
         initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "questionType", QuestionInRequest.APPOINTMENT.name() );
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, TEST_PUBLIC_KEY,
-                                                          localAddressBroadsoft, initialAgentURL);
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, initialAgentURL);
         //create session
         Session.createSession( adapterConfig, PhoneNumberUtils.formatNumber(remoteAddressVoice, null ));
         TextMessage textMessage = smsAppointmentInteraction( "hi" );
@@ -246,8 +247,8 @@ public class CMServletIT extends TestFramework {
 
         String myAddress = "Ask-Fast";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), TEST_PUBLIC_KEY, myAddress,
-                                                          TEST_PRIVATE_KEY);
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
+                                                          TEST_PUBLIC_KEY, myAddress, TEST_PRIVATE_KEY);
 
         HashMap<String, String> addressMap = new LinkedHashMap<String, String>();
         addressMap.put(remoteAddressVoice, null);
@@ -339,17 +340,17 @@ public class CMServletIT extends TestFramework {
      * @return
      */
     @Test
-    public void outBoundSMSCallSenderNameNullTest() throws Exception
-    {
+    public void outBoundSMSCallSenderNameNullTest() throws Exception {
+
         String myAddress = "Ask-Fast";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig( AdapterType.SMS.getName(), TEST_PUBLIC_KEY, myAddress, TEST_PRIVATE_KEY );
-
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
+                                                          TEST_PUBLIC_KEY, myAddress, TEST_PRIVATE_KEY);
         HashMap<String, String> addressMap = new HashMap<String, String>();
-        addressMap.put( remoteAddressVoice, null );
+        addressMap.put(remoteAddressVoice, null);
         outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, null, null,
                                TEST_PUBLIC_KEY);
-        assertXMLGeneratedFromOutBoundCall( addressMap, adapterConfig, simpleQuestion, myAddress );
+        assertXMLGeneratedFromOutBoundCall(addressMap, adapterConfig, simpleQuestion, myAddress);
     }
     
     /**
@@ -429,8 +430,8 @@ public class CMServletIT extends TestFramework {
     @Test
     public void inboundMBSMSTest() throws Exception {
 
-        AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, TEST_PUBLIC_KEY, "0642500086",
-                                                       null);
+        AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
+                                                       TEST_PUBLIC_KEY, "0642500086", null);
         //create a session with already a question (meaning a message is already sent)
         Session session = Session.createSession(smsAdapter,
                                                      PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
@@ -491,29 +492,27 @@ public class CMServletIT extends TestFramework {
     public void outBoundSMSCallWithGlobalSwitch() throws Exception {
 
         dialogAgent = Mockito.mock(DialogAgent.class);
-        Mockito.when(dialogAgent.getGlobalSwitchProviderCredentials()).thenReturn(null);
+        Mockito.when(dialogAgent.getGlobalProviderCredentials()).thenReturn(null);
         outBoundSMSCallSenderNameNotNullTest();
 
         //set switch related test info
-        Map<AdapterProviders, Map<String, Map<String, Object>>> globalAdapterCredentials = new HashMap<AdapterProviders, Map<String, Map<String, Object>>>();
-        HashMap<String, Map<String, Object>> credentials = new HashMap<String, Map<String, Object>>();
-        HashMap<String, Object> actualCredentials = new HashMap<String, Object>();
-        actualCredentials.put("accessToken", "testTest");
-        actualCredentials.put("accessTokenSecret", "testTestSecret");
-        actualCredentials.put("adapterType", "sms");
-        HashMap<String, Object> properties = new HashMap<String, Object>();
-        properties.put(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
-        actualCredentials.put("properties", properties);
-        credentials.put(DialogAgent.ADAPTER_CREDENTIALS_GLOBAL_KEY, actualCredentials);
+        Map<AdapterProviders, Map<String, AdapterConfig>> globalAdapterCredentials = new HashMap<AdapterProviders, Map<String, AdapterConfig>>();
+        AdapterConfig adapterCredentials = new AdapterConfig();
+        adapterCredentials.setAccessToken("testTest");
+        adapterCredentials.setAccessTokenSecret("testTestSecret");
+        adapterCredentials.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
+        HashMap<String, AdapterConfig> credentials = new HashMap<String, AdapterConfig>();
+        credentials.put(DialogAgent.ADAPTER_CREDENTIALS_GLOBAL_KEY, adapterCredentials);
         globalAdapterCredentials.put(AdapterProviders.ROUTE_SMS, credentials);
         
         //mock the Context
-        Mockito.when(dialogAgent.getGlobalSwitchProviderCredentials()).thenReturn(globalAdapterCredentials);
+        Mockito.when(dialogAgent.getGlobalProviderCredentials()).thenReturn(globalAdapterCredentials);
         
         //fetch the session
         Session session = Session.getSession("sms", "ASK", PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         //switch sms adapter globally
-        Mockito.when(dialogAgent.getGlobalAdapterSwitchSettings(AdapterType.SMS)).thenReturn(AdapterProviders.ROUTE_SMS);
+        Mockito.when(dialogAgent.getGlobalAdapterSwitchSettingsForType(AdapterType.SMS))
+                                        .thenReturn(AdapterProviders.ROUTE_SMS);
         
         //perform outbound request
         HashMap<String, String> addressMap = new HashMap<String, String>();
@@ -537,7 +536,62 @@ public class CMServletIT extends TestFramework {
         session = Session.getSession("sms", "ASK", PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         assertTrue(session != null);
         assertEquals("ASK", session.getLocalAddress());
-        assertEquals(AdapterAgent.ADAPTER_TYPE_SMS, session.getType());
+        assertEquals(AdapterAgent.ADAPTER_TYPE_SMS.toLowerCase(), session.getType().toLowerCase());
+    }
+    
+    /**
+     * Perform an outbound sms request using an adapter whose credentials are stored globally.
+     * So default SMS provider is set as CM and an adapter without credentials is created.
+     * @throws Exception
+     */
+    @Test
+    public void outBoundSMSCallWithNoLocalCredentials() throws Exception {
+
+        dialogAgent = Mockito.mock(DialogAgent.class);
+        Mockito.when(dialogAgent.getGlobalProviderCredentials()).thenReturn(null);
+        outBoundSMSCallSenderNameNotNullTest();
+
+        //set switch related test info
+        Map<AdapterProviders, Map<String, AdapterConfig>> globalAdapterCredentials = new HashMap<AdapterProviders, Map<String, AdapterConfig>>();
+        AdapterConfig adapterCredentials = new AdapterConfig();
+        adapterCredentials.setAccessToken("testTest|blabla");
+        adapterCredentials.setAccessTokenSecret("testTestSecret");
+        adapterCredentials.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.CM);
+        HashMap<String, AdapterConfig> credentials = new HashMap<String, AdapterConfig>();
+        credentials.put(DialogAgent.ADAPTER_CREDENTIALS_GLOBAL_KEY, adapterCredentials);
+        globalAdapterCredentials.put(AdapterProviders.CM, credentials);
+        
+        //mock the Context
+        Mockito.when(dialogAgent.getGlobalProviderCredentials()).thenReturn(globalAdapterCredentials);
+        
+        //fetch the session
+        Session session = Session.getSession("sms", "ASK", PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        //do not perform any switch sms adapter globally
+        Mockito.when(dialogAgent.getGlobalAdapterSwitchSettingsForType(AdapterType.SMS)).thenReturn(null);
+        
+        //remove the adapter credentials in the adapter locally
+        AdapterConfig adapterConfig = session.getAdapterConfig();
+        adapterConfig.setAccessToken(null);
+        adapterConfig.setAccessTokenSecret(null);
+        adapterConfig.update();
+        
+        //perform outbound request
+        HashMap<String, String> addressMap = new HashMap<String, String>();
+        addressMap.put(remoteAddressVoice, null);
+        outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, "",
+                               "outBoundSMSCallSenderNameNotNullTest", session.getAdapterConfig().getOwner());
+        
+        //fetch the sms delivery status reports
+        List<SMSDeliveryStatus> smsStatues = SMSDeliveryStatus.fetchAll();
+        Assert.assertThat(smsStatues, Matchers.notNullValue());
+        Assert.assertThat(smsStatues.size(), Matchers.is(2));
+        for (SMSDeliveryStatus smsDeliveryStatus : smsStatues) {
+            assertEquals(AdapterProviders.CM, AdapterProviders.getByValue(smsDeliveryStatus.getProvider()));
+        }
+        session = Session.getSession("sms", "ASK", PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        assertTrue(session != null);
+        assertEquals("ASK", session.getLocalAddress());
+        assertEquals(AdapterAgent.ADAPTER_TYPE_SMS.toLowerCase(), session.getType().toLowerCase());
     }
 
     private HashMap<String, String> outBoundSMSCallXMLTest(Map<String, String> addressNameMap,
@@ -615,22 +669,22 @@ public class CMServletIT extends TestFramework {
      * @return
      * @throws Exception
      */
-    private TextMessage smsAppointmentInteraction( String message ) throws Exception
-    {
+    private TextMessage smsAppointmentInteraction(String message) throws Exception {
+
         HashMap<String, String> data = new HashMap<String, String>();
-        data.put( "receiver", localAddressBroadsoft );
-        data.put( "sender", remoteAddressVoice );
-        data.put( "message", message );
+        data.put("receiver", localAddressBroadsoft);
+        data.put("sender", remoteAddressVoice);
+        data.put("message", message);
         //fetch and invoke the receieveMessage method
         MBSmsServlet smsServlet = new MBSmsServlet();
-        Method fetchMethodByReflection = fetchMethodByReflection( "receiveMessage", MBSmsServlet.class, HashMap.class );
-        TextMessage textMessage = (TextMessage) invokeMethodByReflection( fetchMethodByReflection, smsServlet, data );
+        Method fetchMethodByReflection = fetchMethodByReflection("receiveMessage", MBSmsServlet.class, HashMap.class);
+        TextMessage textMessage = (TextMessage) invokeMethodByReflection(fetchMethodByReflection, smsServlet, data);
 
         //fetch the processMessage function
-        Method processMessage = fetchMethodByReflection( "processMessage", TextServlet.class, TextMessage.class );
+        Method processMessage = fetchMethodByReflection("processMessage", TextServlet.class, TextMessage.class);
 
-        int count = (Integer) invokeMethodByReflection( processMessage, smsServlet, textMessage );
-        assertTrue( count == 1 );
+        int count = (Integer) invokeMethodByReflection(processMessage, smsServlet, textMessage);
+        assertTrue(count == 1);
         return textMessage;
     }
     

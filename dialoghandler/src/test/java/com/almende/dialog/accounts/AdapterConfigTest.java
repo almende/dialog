@@ -230,10 +230,10 @@ public class AdapterConfigTest extends TestFramework
     @Test
     public void broadsoftAdapterProviderMatchTest() throws Exception {
 
-        AdapterConfig adapter = createAdapterConfig(AdapterType.CALL.getName(), TEST_PUBLIC_KEY, localAddressBroadsoft,
-                                                    "");
+        AdapterConfig adapter = createAdapterConfig(AdapterType.CALL.getName(), AdapterProviders.BROADSOFT,
+                                                    TEST_PUBLIC_KEY, localAddressBroadsoft, "");
         assertTrue(adapter.isCallAdapter());
-        assertTrue(AdapterProviders.isCallAdapter(adapter.getAdapterType()));
+        assertTrue(AdapterProviders.isCallAdapter(adapter.getProvider().toString()));
     }
     
     /**
@@ -245,11 +245,10 @@ public class AdapterConfigTest extends TestFramework
     @Test
     public void broadsoftInMediaPropertiesMatchTest() throws Exception {
 
-        AdapterConfig adapter = createAdapterConfig(AdapterType.CALL.getName(), TEST_PUBLIC_KEY, localAddressBroadsoft,
-                                                    "");
+        AdapterConfig adapter = createAdapterConfig(AdapterType.CALL.getName(), AdapterProviders.BROADSOFT,
+                                                    TEST_PUBLIC_KEY, localAddressBroadsoft, "");
         assertTrue(AdapterProviders.isCallAdapter(adapter.getAdapterType()));
-        adapter.setAdapterType("call");
-        adapter.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT);
+        adapter.setAdapterType(AdapterType.CALL.toString());
         adapter.update();
         assertTrue(adapter.isCallAdapter());
     }
@@ -261,12 +260,10 @@ public class AdapterConfigTest extends TestFramework
     @Test
     public void smsAdapterProviderMatchTest() throws Exception {
 
-        AdapterConfig adapter = createAdapterConfig(AdapterType.SMS.getName(), TEST_PUBLIC_KEY, localAddressBroadsoft,
-                                                    null);
-        adapter.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.CM);
+        AdapterConfig adapter = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM, TEST_PUBLIC_KEY,
+                                                    localAddressBroadsoft, null);
         assertTrue(adapter.isSMSAdapter());
-        assertTrue(AdapterProviders.isSMSAdapter(adapter.getProperties().get(AdapterConfig.ADAPTER_PROVIDER_KEY)
-                                        .toString()));
+        assertTrue(AdapterProviders.isSMSAdapter(adapter.getProvider().toString()));
     }
     
     /**
@@ -278,12 +275,12 @@ public class AdapterConfigTest extends TestFramework
     @Test
     public void routeSMSInMediaPropertiesMatchTest() throws Exception {
 
-        AdapterConfig adapter = createAdapterConfig(AdapterType.SMS.getName(), TEST_PUBLIC_KEY, localAddressBroadsoft,
-                                                    "");
-        adapter.setAdapterType("cm");
-        adapter.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.CM);
+        AdapterConfig adapter = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM, TEST_PUBLIC_KEY,
+                                                    localAddressBroadsoft, "");
+        adapter.setAdapterType(AdapterType.SMS.toString());
         adapter.update();
-        assertTrue(AdapterProviders.isSMSAdapter(adapter.getAdapterType()));
+        assertTrue(AdapterProviders.isSMSAdapter(adapter.getProvider().toString()));
+        assertTrue(AdapterProviders.CM.equals(adapter.getProvider()));
         assertTrue(adapter.isSMSAdapter());
     }
     

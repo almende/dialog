@@ -26,6 +26,7 @@ import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.twigmongo.FilterOperator;
+import com.almende.util.twigmongo.QueryResultIterator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
@@ -342,36 +343,44 @@ public class AdapterConfig {
 		return null;
 	}
 
-	public static ArrayList<AdapterConfig> findAdapters(String adapterType,
-			String myAddress, String keyword) {
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		
-		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
-				AdapterConfig.class);
+	/**
+	 * Fetches all adapters for the given matching filters
+	 * @param adapterType Lowercased and queried
+	 * @param myAddress case insensitive query is performed
+	 * @param keyword if "null" then a search for null is performed. 
+	 * @return
+	 */
+    public static ArrayList<AdapterConfig> findAdapters(String adapterType, String myAddress, String keyword) {
 
-		if (adapterType != null)
-			cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        RootFindCommand<AdapterConfig> cmd = datastore.find().type(AdapterConfig.class);
 
-		if (myAddress != null)
-			cmd.addFilter("myAddress", FilterOperator.EQUAL, myAddress);
-		
-		if (keyword != null) {
-			if(keyword.equals("null")) {
-				cmd.addFilter("keyword", FilterOperator.EQUAL, null);
-			} else {
-				cmd.addFilter("keyword", FilterOperator.EQUAL, keyword);
-			}
-		}
+        if (adapterType != null)
+            cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
 
-		Iterator<AdapterConfig> config = cmd.now();
-
-		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
-		while (config.hasNext()) {
-			adapters.add(config.next());
-		}
-
-		return adapters;
-	}
+        if (keyword != null) {
+            if (keyword.equals("null")) {
+                cmd.addFilter("keyword", FilterOperator.EQUAL, null);
+            }
+            else {
+                cmd.addFilter("keyword", FilterOperator.EQUAL, keyword);
+            }
+        }
+        QueryResultIterator<AdapterConfig> resultIterator = cmd.now();
+        ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+        while (resultIterator.hasNext()) {
+            AdapterConfig adapterConfig = resultIterator.next();
+            if(myAddress != null) {
+                if(adapterConfig.getMyAddress().equalsIgnoreCase(myAddress)) {
+                    adapters.add(adapterConfig);
+                }
+            }
+            else {
+                adapters.add(adapterConfig);
+            }
+        }
+        return adapters;
+    }
 	
 	/**
 	 * Fetches all the adapters where the accountId only matches that of the owner of the adapter. Doesnt 

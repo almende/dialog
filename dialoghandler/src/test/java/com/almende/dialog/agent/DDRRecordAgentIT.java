@@ -377,8 +377,7 @@ public class DDRRecordAgentIT extends TestFramework {
             }
         }
         //assert that a session exists
-        Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localAddressBroadsoft +
-                                                                                  "@ask.ask.voipit.nl",
+        Session session = Session.getSession(AdapterType.CALL.toString(), localAddressBroadsoft + "@ask.ask.voipit.nl",
                                              formattedRemoteAddressVoice);
         assertThat(session, Matchers.notNullValue());
         assertThat(session.getStartTimestamp(), Matchers.nullValue());
@@ -403,7 +402,7 @@ public class DDRRecordAgentIT extends TestFramework {
                            "<startTime>1401809063943</startTime><releaseTime>1401809070192</releaseTime></call></eventData></Event>";
         voiceXMLRESTProxy.receiveCCMessage(hangupXML);
         //assert that a session still exists
-        session = Session.getSession(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localAddressBroadsoft + "@ask.ask.voipit.nl",
+        session = Session.getSession(AdapterAgent.ADAPTER_TYPE_CALL, localAddressBroadsoft + "@ask.ask.voipit.nl",
                                      formattedRemoteAddressVoice);
         assertThat(session, Matchers.notNullValue());
         assertThat(session.getStartTimestamp(), Matchers.notNullValue());

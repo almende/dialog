@@ -20,6 +20,7 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
@@ -112,6 +113,7 @@ public class Session{
                 datastore.storeOrUpdate(oldSession);
             }
             else {
+                key = key.toLowerCase();
                 datastore.storeOrUpdate(this);
             }
         }
@@ -124,7 +126,7 @@ public class Session{
     public void drop() {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        Session session = datastore.load(Session.class, key);
+        Session session = datastore.load(Session.class, key.toLowerCase());
         if (session != null) {
             log.info("Deleing session with id: "+ session.getKey());
             datastore.delete(session);
@@ -152,7 +154,7 @@ public class Session{
     public static Session getOrCreateSession(String key, String keyword) {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        Session session = datastore.load(Session.class, key);
+        Session session = datastore.load(Session.class, key.toLowerCase());
         // If there is no session create a new one for the user
         if (session == null) {
             String[] split = key.split("\\|");
@@ -218,7 +220,7 @@ public class Session{
         session.setLocalAddress(fromAddress);
         session.setType(config.getAdapterType());
         session.setKeyword(config.getKeyword());
-        session.key = key;
+        session.key = key.toLowerCase();
         session.creationTimestamp = String.valueOf(TimeUtils.getServerCurrentTimeInMillis());
         session.setTrackingToken(UUID.randomUUID().toString());
         session.storeSession();
@@ -235,7 +237,7 @@ public class Session{
     @JsonIgnore
     public static Session getSession(String sessionKey) {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        return datastore.load(Session.class, sessionKey);
+        return datastore.load(Session.class, sessionKey.toLowerCase());
     }
     
     public static List<Session> findSessionByLocalAndRemoteAddress(String localAddress, String remoteAddress) {
@@ -275,11 +277,25 @@ public class Session{
         return adapterConfig;
     }
 	
-    public Map<String, String> getExtras()
+    @JsonProperty("extras")
+    public Map<String, String> getAllExtras()
     {
         extras = extras != null ? extras : new HashMap<String, String>();
         return extras;
     }
+    
+    /**
+     * Store all data but do not return sensitive data like provider etc
+     * @return
+     */
+    @JsonIgnore
+    public Map<String, String> getExtras() {
+
+        extras = extras != null ? extras : new HashMap<String, String>();
+        extras.remove(AdapterConfig.ADAPTER_PROVIDER_KEY);
+        return extras;
+    }
+    
     public void setExtras( Map<String, String> extras )
     {
         this.extras = extras;
@@ -314,7 +330,7 @@ public class Session{
     }
     public void setKey( String key )
     {
-        this.key = key;
+        this.key = key.toLowerCase();
     }
     
     /**
@@ -595,7 +611,8 @@ public class Session{
     public static String getSessionKey(AdapterConfig config, String remoteAddress) {
 
         if (config != null && remoteAddress != null) {
-            return config.getAdapterType() + "|" + config.getMyAddress() + "|" + remoteAddress;
+            return (config.getAdapterType().toLowerCase() + "|" + config.getMyAddress() + "|" + remoteAddress)
+                                            .toLowerCase();
         }
         else {
             return null;

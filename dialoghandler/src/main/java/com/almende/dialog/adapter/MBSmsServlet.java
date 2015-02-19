@@ -156,6 +156,6 @@ public class MBSmsServlet extends TextServlet {
     @Override
     protected String getProviderType() {
 
-        return AdapterProviders.MB.getName();
+        return AdapterProviders.MB.toString();
     }
 }

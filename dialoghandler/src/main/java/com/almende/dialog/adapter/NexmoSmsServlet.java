@@ -102,6 +102,6 @@ public class NexmoSmsServlet extends TextServlet {
     @Override
     protected String getProviderType() {
 
-        return AdapterProviders.NEXMO.getName();
+        return AdapterProviders.NEXMO.toString();
     }
 }

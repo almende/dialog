@@ -20,6 +20,7 @@ import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.entity.AdapterProviders;
 
 public class CLXUSSDServlet extends TextServlet {
 
@@ -231,7 +232,7 @@ public class CLXUSSDServlet extends TextServlet {
     @Override
     protected String getProviderType() {
 
-        return AdapterAgent.ADAPTER_TYPE_USSD;
+        return AdapterProviders.CLX.toString();
     }
 }
 

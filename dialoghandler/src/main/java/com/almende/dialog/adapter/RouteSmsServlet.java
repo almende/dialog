@@ -390,6 +390,6 @@ public class RouteSmsServlet extends TextServlet {
     @Override
     protected String getProviderType() {
 
-        return AdapterProviders.ROUTE_SMS.getName();
+        return AdapterProviders.ROUTE_SMS.toString();
     }
 }

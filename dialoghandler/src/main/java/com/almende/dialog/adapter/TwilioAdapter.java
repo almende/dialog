@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -22,7 +21,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -36,6 +34,7 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.twilio.sdk.TwilioRestClient;
@@ -109,7 +108,8 @@ public class TwilioAdapter {
                 session.setAccountId(accountId);
                 session.setDirection("outbound");
                 session.setRemoteAddress(formattedAddress);
-                session.setType(AdapterAgent.ADAPTER_TYPE_TWILIO);
+                session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
+                session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO.toString());
                 session.setAdapterID(config.getConfigId());
                 session.setQuestion(question);
                 session.storeSession();
@@ -175,9 +175,9 @@ public class TwilioAdapter {
             localID = new String(remoteID);
             remoteID = tmpLocalId;
         }
-        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_TWILIO, localID);
+        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
         String formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localID + "|" + formattedRemoteId;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + formattedRemoteId;
         Session session = Session.getSession(sessionKey);
 
         String url = "";
@@ -201,7 +201,8 @@ public class TwilioAdapter {
             session.setStartUrl(url);
             session.setDirection(direction);
             session.setRemoteAddress(formattedRemoteId);
-            session.setType(AdapterAgent.ADAPTER_TYPE_TWILIO);
+            session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
+            session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO.toString());
             session.setAdapterID(config.getConfigId());
         }
         else {
@@ -276,9 +277,9 @@ public class TwilioAdapter {
             localID = new String(remoteID);
             remoteID = tmpLocalId;
         }
-        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_TWILIO, localID);
+        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
         String formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localID + "|" + formattedRemoteId;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + formattedRemoteId;
         Session session = Session.getSession(sessionKey);
 
         String url = "";
@@ -303,7 +304,8 @@ public class TwilioAdapter {
             session.setStartUrl(url);
             session.setDirection(direction);
             session.setRemoteAddress(formattedRemoteId);
-            session.setType(AdapterAgent.ADAPTER_TYPE_TWILIO);
+            session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
+            session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO.toString());
             session.setAdapterID(config.getConfigId());
         }
         else {
@@ -385,7 +387,7 @@ public class TwilioAdapter {
             remoteID = tmpLocalId;
         }
 
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localID + "|" + remoteID;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + remoteID;
 
         Session session = Session.getSession(sessionKey);
         List<String> callIgnored = Arrays.asList("no-answer", "busy", "canceled", "failed");
@@ -469,7 +471,7 @@ public class TwilioAdapter {
             localID = new String(remoteID);
             remoteID = tmpLocalId;
         }
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO+"|"+localID+"|"+ remoteID;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + remoteID;
         Session session = Session.getSession(sessionKey);
         if (session != null) {
             Question question = session.getQuestion();
@@ -519,7 +521,7 @@ public class TwilioAdapter {
     public Response preconnect(@QueryParam("From") String localID, @QueryParam("To") String remoteID,
         @QueryParam("Direction") String direction) {
 
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localID + "|" + remoteID;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + remoteID;
 
         String reply = (new TwiMLResponse()).toXML();
         Session session = Session.getSession(sessionKey);
@@ -569,8 +571,8 @@ public class TwilioAdapter {
             localID = remoteID;
             remoteID = tmpLocalId;
         }
-        AdapterConfig config = AdapterConfig.findAdapterConfig( AdapterAgent.ADAPTER_TYPE_TWILIO, localID );
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" +config.getMyAddress() + "|" + remoteID;
+        AdapterConfig config = AdapterConfig.findAdapterConfig( AdapterAgent.ADAPTER_TYPE_CALL, localID );
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" +config.getMyAddress() + "|" + remoteID;
         Session session = Session.getSession( sessionKey );
         if ( session != null ) {
             //update session with call timings
@@ -587,8 +589,7 @@ public class TwilioAdapter {
     public void answered( String direction, String remoteID, String localID ) {
         log.info( "call answered with:" + direction + "_" + remoteID + "_" +
                   localID );
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" +
-                            localID + "|" + remoteID.split( "@outbound" )[0]; //ignore the @outbound suffix
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + remoteID.split("@outbound")[0]; //ignore the @outbound suffix
         Session session = Session.getSession( sessionKey );
         //for direction = transfer (redirect event), json should not be null        
         //make sure that the answered call is not triggered twice
@@ -627,7 +628,7 @@ public class TwilioAdapter {
     	if(session==null) {
     		String localAddress = call.getFrom(); 
     		remoteID = call.getTo();
-    		String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localAddress + "|" + remoteID;
+    		String sessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localAddress + "|" + remoteID;
     		session = Session.getSession(sessionKey);
     	}
     	

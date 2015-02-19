@@ -20,6 +20,7 @@ import com.almende.sms.SmsMessage;
 import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.QueryResultIterator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -206,6 +207,6 @@ public class AskSmsServlet extends TextServlet {
     @Override
     protected String getProviderType() {
 
-        return AdapterAgent.ADAPTER_TYPE_SMS;
+        return AdapterProviders.ASK_SMS.toString();
     }
 }

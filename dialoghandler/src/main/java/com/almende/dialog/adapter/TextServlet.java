@@ -534,7 +534,8 @@ abstract public class TextServlet extends HttpServlet {
                 // comment or referral anyway.
                 if (!(start && (question.getType().equalsIgnoreCase("comment") || question.getType()
                                                 .equalsIgnoreCase("referral")))) {
-                    question = question.answer(address, config.getConfigId(), null, escapeInput.body, null);
+                    question = question.answer(address, config.getConfigId(), null, escapeInput.body,
+                                               session != null ? session.getKey() : null);
                 }
                 Return replystr = formQuestion(question, config.getConfigId(), address, null,
                                                session != null ? session.getKey() : null);

@@ -22,7 +22,9 @@ import javax.ws.rs.core.Response.Status;
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.util.TimeUtils;
+import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
@@ -32,6 +34,7 @@ import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -108,7 +111,7 @@ public class AdapterConfig {
             TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
             datastore.store(newConfig);
 
-            if (newConfig.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
+            if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(newConfig.getAdapterType(), newConfig))) {
                 Broadsoft bs = new Broadsoft(newConfig);
                 bs.hideCallerId(newConfig.isAnonymous());
             }
@@ -216,7 +219,7 @@ public class AdapterConfig {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         datastore.update(this);
-        if (this.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
+        if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(getAdapterType(), this))) {
             Broadsoft bs = new Broadsoft(this);
             bs.hideCallerId(this.isAnonymous());
         }
@@ -294,21 +297,19 @@ public class AdapterConfig {
         return findAdaptersByList(adapterIDs);
     }
 
-	public static AdapterConfig findAdapterConfig(String adapterType,
-			String lookupKey) {
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		Iterator<AdapterConfig> config = datastore.find()
-				.type(AdapterConfig.class)
-				.addFilter("myAddress", FilterOperator.EQUAL, lookupKey)
-				.addFilter("adapterType", FilterOperator.EQUAL, adapterType)
-				.now();
-		if (config.hasNext()) {
-			return config.next();
-		}
-		log.severe("AdapterConfig not found:'" + adapterType + "':'"
-				+ lookupKey + "'");
-		return null;
-	}
+    public static AdapterConfig findAdapterConfig(String adapterType, String lookupKey) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
+                                        .addFilter("myAddress", FilterOperator.EQUAL, lookupKey)
+                                        .addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase())
+                                        .now();
+        if (config.hasNext()) {
+            return config.next();
+        }
+        log.severe("AdapterConfig not found:'" + adapterType + "':'" + lookupKey + "'");
+        return null;
+    }
 	
 	public static AdapterConfig findAdapterConfig(String adapterType,
 			String localAddress, String keyword) {
@@ -760,6 +761,15 @@ public class AdapterConfig {
         properties = properties != null ? properties : new HashMap<String, Object>(); 
         return properties;
     }
+    
+    public <T> T getProperties(String key, TypeReference<T> type) {
+
+        Object value = getProperties().get(key);
+        if (value != null) {
+            return JOM.getInstance().convertValue(value, type);
+        }
+        return null;
+    }
 
     public void setProperties( Map<String, Object> properties )
     {
@@ -868,7 +878,7 @@ public class AdapterConfig {
 
         //check the adapter type
         if (type != null) {
-            if (AdapterType.CALL.equals(type) || AdapterType.TWILIO.equals(type)) {
+            if (AdapterType.CALL.equals(type)) {
                 return true;
             }
             return false;
@@ -907,6 +917,18 @@ public class AdapterConfig {
             return AdapterProviders.isSMSAdapter(provider.toString());
         }
         return false;
+    }
+    
+    @JsonIgnore
+    public AdapterProviders getProvider() {
+
+        AdapterProviders providers = AdapterProviders.getByValue(adapterType);
+        //check the adapter type
+        if (providers == null && getProperties().get(ADAPTER_PROVIDER_KEY) != null) {
+            providers = getProperties(ADAPTER_PROVIDER_KEY, new TypeReference<AdapterProviders>() {
+            });
+        }
+        return providers;
     }
     
     public void addMediaProperties(String key, Object value) {

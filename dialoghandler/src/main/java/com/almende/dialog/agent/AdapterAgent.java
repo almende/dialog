@@ -39,19 +39,19 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 @Access(AccessType.PUBLIC)
 public class AdapterAgent extends Agent implements AdapterAgentInterface {
 	
-    public static final String ADAPTER_TYPE_BROADSOFT = AdapterType.CALL.getName();
-    public static final String ADAPTER_TYPE_TWILIO = AdapterType.TWILIO.getName();
-    public static final String ADAPTER_TYPE_SMS = AdapterType.SMS.getName();
-    public static final String ADAPTER_TYPE_FACEBOOK = AdapterType.FACEBOOK.getName();
-    public static final String ADAPTER_TYPE_EMAIL = AdapterType.EMAIL.getName();
-    public static final String ADAPTER_TYPE_XMPP = AdapterType.XMPP.getName();
-    public static final String ADAPTER_TYPE_TWITTER = AdapterType.TWITTER.getName();
-    public static final String ADAPTER_TYPE_USSD = AdapterType.USSD.getName();
-    public static final String ADAPTER_TYPE_PUSH = AdapterType.NOTIFICARE.getName();
     public static final int EMAIL_SCHEDULER_INTERVAL = 30 * 1000; //30seconds
     public static final int TWITTER_SCHEDULER_INTERVAL = 61 * 1000; //61seconds
     private static final Logger log = Logger.getLogger(AdapterAgent.class.getSimpleName());
-	
+    
+    public static final String ADAPTER_TYPE_CALL = AdapterType.CALL.toString();
+    public static final String ADAPTER_TYPE_SMS = AdapterType.SMS.toString();
+    public static final String ADAPTER_TYPE_FACEBOOK = AdapterType.FACEBOOK.toString();
+    public static final String ADAPTER_TYPE_EMAIL = AdapterType.EMAIL.toString();
+    public static final String ADAPTER_TYPE_XMPP = AdapterType.XMPP.toString();
+    public static final String ADAPTER_TYPE_TWITTER = AdapterType.TWITTER.toString();
+    public static final String ADAPTER_TYPE_USSD = AdapterType.USSD.toString();
+    public static final String ADAPTER_TYPE_PUSH = AdapterType.PUSH.toString();
+    
     @Override
     protected void onCreate()
     {
@@ -163,7 +163,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
     public void checkInBoundEmails()
     {
         log.info( "starting email scheduler check for inbound emails..." );
-        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( ADAPTER_TYPE_EMAIL, null, null );
+        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( AdapterType.EMAIL.toString(), null, null );
         for ( AdapterConfig adapterConfig : adapters )
         {
             Runnable mailServlet = new MailServlet( adapterConfig );
@@ -187,7 +187,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
     public void checkInBoundTwitterPosts()
     {
         log.info( "starting twitter scheduler check for mentions and direct messages..." );
-        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( ADAPTER_TYPE_TWITTER, null, null );
+        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( AdapterType.TWITTER.toString(), null, null );
         for ( AdapterConfig adapterConfig : adapters )
         {
             Runnable twitterDirectMessageServlet = new TwitterServlet( adapterConfig, TwitterEndpoint.DIRECT_MESSAGE );
@@ -222,11 +222,9 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
      * @throws Exception
      */
     public String createBroadSoftAdapter(@Name("address") String address, @Name("username") @Optional String username,
-                                         @Name("password") String password,
-                                         @Name("preferredLanguage") @Optional String preferredLanguage,
-                                         @Name("accountId") @Optional String accountId,
-                                         @Name("anonymous") boolean anonymous,
-                                         @Name("accountType") @Optional String accountType) throws Exception {
+        @Name("password") @Optional String password, @Name("preferredLanguage") @Optional String preferredLanguage,
+        @Name("accountId") @Optional String accountId, @Name("anonymous") boolean anonymous,
+        @Name("accountType") @Optional String accountType) throws Exception {
 
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
 
@@ -235,22 +233,20 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         String myAddress = "0" +
                            (normAddress.contains("@ask.ask.voipit.nl") ? normAddress
                                                                       : (normAddress + "@ask.ask.voipit.nl"));
-
-        if (username == null)
-            username = myAddress;
-
+        username = username != null ? username : myAddress;
         AdapterConfig config = new AdapterConfig();
-        config.setAdapterType(ADAPTER_TYPE_BROADSOFT);
+        config.setAdapterType(AdapterType.CALL.toString());
         config.setMyAddress(myAddress);
         config.setAddress(externalAddress);
-        config.setXsiUser(username);
-        config.setXsiPasswd(password);
         config.setPreferred_language(preferredLanguage);
         config.setPublicKey(accountId);
+        config.setXsiUser(username);
+        config.setXsiPasswd(password);
         config.setOwner(accountId);
         config.addAccount(accountId);
         config.setAnonymous(anonymous);
         config.setAccountType(AccountType.fromJson(accountType));
+        config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT);
         AdapterConfig newConfig = createAdapter(config);
         return newConfig.getConfigId();
     }
@@ -267,11 +263,9 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
      * @return AdapterId
      * @throws Exception
      */
-    public String createTwilioAdapter(@Name("address") String address, @Name("accountSid") String accountSid,
-                                         @Name("authToken") String authToken,
-                                         @Name("preferredLanguage") @Optional String preferredLanguage,
-                                         @Name("accountId") @Optional String accountId,
-                                         @Name("anonymous") @Optional Boolean anonymous) throws Exception {
+    public String createTwilioAdapter(@Name("address") String address, @Name("accountSid") @Optional String accountSid,
+        @Name("authToken") @Optional String authToken, @Name("preferredLanguage") @Optional String preferredLanguage,
+        @Name("accountId") @Optional String accountId, @Name("anonymous") @Optional Boolean anonymous) throws Exception {
 
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
         anonymous = (anonymous == null ? false : anonymous);
@@ -280,16 +274,17 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         String externalAddress = "+31" + normAddress;
 
         AdapterConfig config = new AdapterConfig();
-        config.setAdapterType(ADAPTER_TYPE_TWILIO);
+        config.setAdapterType(AdapterType.CALL.toString());
         config.setMyAddress(externalAddress);
         config.setAddress(externalAddress);
         config.setPreferred_language(preferredLanguage);
         config.setPublicKey(accountId);
         config.setOwner(accountId);
-        config.addAccount(accountId);
         config.setAccessToken(accountSid);
         config.setAccessTokenSecret(authToken);
+        config.addAccount(accountId);
         config.setAnonymous(anonymous);
+        config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO);
         AdapterConfig newConfig = createAdapter(config);
         return newConfig.getConfigId();
     }
@@ -305,7 +300,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         
         preferredLanguage = ( preferredLanguage == null ? "nl" : preferredLanguage );
         AdapterConfig config = new AdapterConfig();
-        config.setAdapterType( ADAPTER_TYPE_EMAIL );
+        config.setAdapterType( AdapterType.EMAIL.toString() );
         //by default create gmail account adapter
         config.getProperties().put( MailServlet.SENDING_PROTOCOL_KEY, sendingProtocol != null ? sendingProtocol : MailServlet.GMAIL_SENDING_PROTOCOL );
         config.getProperties().put( MailServlet.SENDING_HOST_KEY, sendingHost != null ? sendingHost : MailServlet.GMAIL_SENDING_HOST );
@@ -354,7 +349,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
 
         AdapterConfig config = new AdapterConfig();
-        config.setAdapterType(ADAPTER_TYPE_USSD);
+        config.setAdapterType(AdapterType.USSD.toString());
         config.setMyAddress(address);
         config.setKeyword(keyword);
         config.setPreferred_language(preferredLanguage);
@@ -365,21 +360,20 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.setAccessToken(username);
         config.setAccessTokenSecret(password);
         config.setAccountType(AccountType.fromJson(accountType));
+        config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.CLX);
         AdapterConfig newConfig = createAdapter(config);
-
         return newConfig.getConfigId();
     }
 	
     public String createPushAdapter(@Name("address") String address, @Name("keyword") @Optional String keyword,
-                                    @Name("username") String username, @Name("password") String password,
-                                    @Name("preferredLanguage") @Optional String preferredLanguage,
-                                    @Name("accountId") @Optional String accountId,
-                                    @Name("accountType") @Optional String accountType) throws Exception {
+        @Name("username") String username, @Name("password") String password,
+        @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
+        @Name("accountType") @Optional String accountType) throws Exception {
 
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
 
         AdapterConfig config = new AdapterConfig();
-        config.setAdapterType(ADAPTER_TYPE_PUSH);
+        config.setAdapterType(AdapterType.PUSH.toString());
         config.setMyAddress(address);
         config.setKeyword(keyword);
         config.setPreferred_language(preferredLanguage);
@@ -390,8 +384,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.setAccessToken(username);
         config.setAccessTokenSecret(password);
         config.setAccountType(AccountType.fromJson(accountType));
+        config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.NOTIFICARE);
         AdapterConfig newConfig = createAdapter(config);
-
         return newConfig.getConfigId();
     }
 
@@ -405,7 +399,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
                                              @Name("accountType") @Optional String accountType) throws Exception {
 
         xmppAddress = xmppAddress.endsWith("@xmpp.ask-fast.com") ? xmppAddress : (xmppAddress + "@xmpp.ask-fast.com");
-        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters(ADAPTER_TYPE_XMPP, xmppAddress, null);
+        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters(AdapterType.XMPP.toString(), xmppAddress, null);
         AdapterConfig newConfig = adapters != null && !adapters.isEmpty() ? adapters.iterator().next() : null;
         //check if adapter exists
         if (newConfig == null) {
@@ -442,7 +436,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
     {
         xmppAddress = xmppAddress.endsWith( "@xmpp.ask-fast.com" ) ? xmppAddress
                                                                   : ( xmppAddress + "@xmpp.ask-fast.com" );
-        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( ADAPTER_TYPE_XMPP, xmppAddress, null );
+        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( AdapterType.XMPP.toString(), xmppAddress, null );
         AdapterConfig adapterConfig = adapters != null && !adapters.isEmpty() ? adapters.iterator().next() : null;
         //check if adapter is owned by the accountId
         if ( adapterConfig != null && accountId.equals( adapterConfig.getOwner() ))
@@ -462,8 +456,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
         @Name("accountType") @Optional String accountType) throws Exception {
 
-        return createGenericSMSAdapter(address, ADAPTER_TYPE_SMS, AdapterProviders.MB, keyword, username, password,
-                                       preferredLanguage, accountId, accountType);
+        return createGenericSMSAdapter(address, AdapterProviders.MB, keyword, username, password, preferredLanguage,
+                                       accountId, accountType);
     }
     
     /**
@@ -480,7 +474,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
      * @return
      * @throws Exception
      */
-    public String createGenericSMSAdapter(@Name("address") String address, @Name("adapterType") String adapterType,
+    public String createGenericSMSAdapter(@Name("address") String address,
         @Name("provider") @Optional AdapterProviders provider, @Name("keyword") @Optional String keyword,
         @Name("username") String username, @Name("password") String password,
         @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
@@ -489,7 +483,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
 
         AdapterConfig config = new AdapterConfig();
-        config.setAdapterType(AdapterType.getByValue(adapterType).getName());
+        config.setAdapterType(AdapterType.SMS.toString());
         config.setMyAddress(address);
         config.setKeyword(keyword);
         config.setPreferred_language(preferredLanguage);
@@ -507,29 +501,14 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         return newConfig.getConfigId();
     }
 	
-	public String createNexmoAdapter(@Name("address") String address,
-			@Name("keyword") @Optional String keyword,
-			@Name("username") String username,
-			@Name("password") String password,
-			@Name("preferredLanguage") @Optional String preferredLanguage,
-			@Name("accountId") @Optional String accountId) throws Exception {
-		preferredLanguage = (preferredLanguage==null ? "nl" : preferredLanguage);
-		
-		AdapterConfig config = new AdapterConfig();
-		config.setAdapterType(ADAPTER_TYPE_SMS);
-		config.setMyAddress(address);
-		config.setKeyword(keyword);
-		config.setPreferred_language(preferredLanguage);
-		config.setPublicKey(accountId);
-		config.setOwner(accountId);
-		config.addAccount(accountId);
-		config.setAnonymous(false);
-		config.setAccessToken(username);
-		config.setAccessTokenSecret(password);		
-		AdapterConfig newConfig = createAdapter(config);
-		
-		return newConfig.getConfigId();
-	}
+    public String createNexmoAdapter(@Name("address") String address, @Name("keyword") @Optional String keyword,
+        @Name("username") String username, @Name("password") String password,
+        @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId)
+        throws Exception {
+
+        return createGenericSMSAdapter(address, AdapterProviders.NEXMO, keyword, username, password, preferredLanguage,
+                                       accountId, null);
+    }
 	
     public String attachTwitterAdapterToUser( @Name( "adapterID" ) @Optional String adapterID,
         @Name( "twitterUserName" ) @Optional String twitterUserName, @Name( "accountId" ) String accountId )
@@ -543,8 +522,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         if ( adapterConfig == null && twitterUserName != null && !twitterUserName.trim().isEmpty() )
         {
             twitterUserName = twitterUserName.startsWith( "@" ) ? twitterUserName : "@" + twitterUserName;
-            ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters( ADAPTER_TYPE_TWITTER,
-                twitterUserName, null );
+            ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters(AdapterType.TWITTER.toString(),
+                                                                                 twitterUserName, null);
             adapterConfig = !adapterConfigs.isEmpty() ? adapterConfigs.iterator().next() : null;
         }
         
@@ -638,7 +617,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
                 AdapterType adapterType = AdapterType.fromJson(adapter.getAdapterType());
                 switch (adapterType) {
                     case EMAIL:
-                    case NOTIFICARE:
+                    case PUSH:
                     case USSD:
                         if (adapter.getMyAddress() != null) {
                             config.setMyAddress(adapter.getMyAddress());
@@ -800,8 +779,9 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         config.getProperties().put(AdapterConfig.ADAPTER_CREATION_TIME_KEY, TimeUtils.getServerCurrentTimeInMillis());
         //change the casing to lower in case adatertype if email or xmpp
         if (config.getMyAddress() != null &&
-            (config.getAdapterType().equalsIgnoreCase(ADAPTER_TYPE_EMAIL) || config.getAdapterType()
-                                            .equalsIgnoreCase(ADAPTER_TYPE_XMPP))) {
+            (AdapterType.EMAIL.equals(AdapterType.getByValue(config.getAdapterType()))) ||
+            AdapterType.XMPP.equals(AdapterType.getByValue(config.getAdapterType()))) {
+            
             config.setMyAddress(config.getMyAddress().toLowerCase());
         }
         //check if there is an initialAgent url given. Create a dialog if it is
@@ -811,10 +791,11 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             config.getProperties().put(AdapterConfig.DIALOG_ID_KEY, dialog.getId());
         }
 
+        config.setAdapterType(config.getAdapterType().toLowerCase());
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         datastore.store(config);
 
-        if (config.getAdapterType().equalsIgnoreCase(ADAPTER_TYPE_BROADSOFT)) {
+        if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(config.getAdapterType(), config))) {
             Broadsoft bs = new Broadsoft(config);
             bs.hideCallerId(config.isAnonymous());
         }

@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DefaultValue;
@@ -29,11 +28,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -50,6 +47,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.myBlobstore.MyBlobStore;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 
@@ -110,7 +108,8 @@ public class VoiceXMLRESTProxy {
             session.setStartUrl(url);
             session.setDirection("outbound");
             session.setRemoteAddress(formattedAddress);
-            session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
+            session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
+            session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
             session.setAccountId(accountId);
             session.storeSession();
             Question question = Question.fromURL(url, config.getConfigId(), formattedAddress, config.getMyAddress(),
@@ -198,7 +197,8 @@ public class VoiceXMLRESTProxy {
                 session.setStartUrl(url);
                 session.setDirection("outbound");
                 session.setRemoteAddress(formattedAddress);
-                session.setType(AdapterAgent.ADAPTER_TYPE_BROADSOFT);
+                session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
+                session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
                 session.setAdapterID(config.getConfigId());
                 session.setQuestion(question);
                 session.setAccountId(accountId);
@@ -302,7 +302,7 @@ public class VoiceXMLRESTProxy {
         
         Map<String, String> extraParams = new HashMap<String, String>();
         
-        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localID);
+        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
         String formattedRemoteId = remoteID;
         //format the remote number
         formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID.split("@")[0], PhoneNumberFormat.E164);
@@ -313,7 +313,7 @@ public class VoiceXMLRESTProxy {
             return Response.ok().build();
         }
             
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+ formattedRemoteId;
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_CALL+"|"+localID+"|"+ formattedRemoteId;
         Session session = Session.getSession(sessionKey);
         
         String url = "";
@@ -345,7 +345,8 @@ public class VoiceXMLRESTProxy {
             session.setStartUrl( url );
             session.setDirection( direction );
             session.setRemoteAddress( externalRemoteID );
-            session.setType( AdapterAgent.ADAPTER_TYPE_BROADSOFT );
+            session.setType( AdapterAgent.ADAPTER_TYPE_CALL );
+            session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
             session.setAdapterID( config.getConfigId() );
         }
         else {
@@ -650,7 +651,7 @@ public class VoiceXMLRESTProxy {
         String answerTime) throws Exception
     {
         log.info( "call answered with:" + direction + "_" + remoteID + "_" + localID );
-        String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT+"|"+localID+"|"+remoteID.split( "@outbound" )[0]; //ignore the @outbound suffix
+        String sessionKey = AdapterAgent.ADAPTER_TYPE_CALL +"|"+localID+"|"+remoteID.split( "@outbound" )[0]; //ignore the @outbound suffix
         Session session = Session.getSession(sessionKey);
         //for direction = transfer (redirect event), json should not be null        
         //make sure that the answered call is not triggered twice
@@ -763,9 +764,8 @@ public class VoiceXMLRESTProxy {
                                     address += "@" + addressArray[1];
                                 }
                                 
-                                String sessionKey = AdapterAgent.ADAPTER_TYPE_BROADSOFT + "|" + config.getMyAddress() +
-                                "|" + formattedAddress;
-                                
+                                String sessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + config.getMyAddress() + "|" +
+                                                    formattedAddress;
                                 Session session = null;
                                 // if formattedAddress is empty (probably anonymous caller)
                                 // (Expensive query)

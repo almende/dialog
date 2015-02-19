@@ -490,6 +490,6 @@ public class CMSmsServlet extends TextServlet {
     @Override
     protected String getProviderType() {
 
-        return AdapterProviders.CM.getName();
+        return AdapterProviders.CM.toString();
     }
 }

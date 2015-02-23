@@ -1,6 +1,12 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+23-2-2015 version 1.5.12
+- hotfix: change the default recording time for twilio to one hour
+
+12-2-2015 version 1.5.11
+- hotfix: hide twilio 'anonymous' caller id
+
 5-2-2015 version 1.5.10
 - feature: Upgrade an account to POST_PAID or PRE_PAID type functionality
 

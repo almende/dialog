@@ -927,7 +927,7 @@ public class TwilioAdapter {
     	//assign a default voice mail length if one is not specified
         String voiceMessageLengthProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
                                                                            MediaPropertyKey.VOICE_MESSAGE_LENGTH);
-        voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15";
+        voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "3600";
         int length = 15;
         try {
             length = Integer.parseInt(voiceMessageLengthProperty);

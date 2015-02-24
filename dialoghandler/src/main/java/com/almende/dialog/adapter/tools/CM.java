@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
 import org.znerd.xmlenc.XMLOutputter;
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
@@ -99,7 +100,7 @@ public class CM {
             outputter.attribute("PASSWORD", password);
             outputter.endTag();
 
-            String reference = UUID.randomUUID().toString();
+            String reference = UUID.randomUUID().toString() + ":" + Settings.HOST;
             outputter.startTag("REFERENCE");
             outputter.cdata(reference);
             outputter.endTag();
@@ -139,7 +140,7 @@ public class CM {
                 }
                 
                 if (storeSMSRelatedData != null) {
-                    reference = UUID.randomUUID().toString();
+                    reference = UUID.randomUUID().toString() + ":" + Settings.HOST;
                     SMSDeliveryStatus linkedSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to, 
                                                                        config, accountId, session.getQuestion(), 
                                                                        null, "SENT", session.getDdrRecordId(),

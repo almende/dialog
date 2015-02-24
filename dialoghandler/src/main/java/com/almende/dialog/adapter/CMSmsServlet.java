@@ -84,8 +84,8 @@ public class CMSmsServlet extends TextServlet {
                     String responseText = "No result fetched";
                     String reference = req.getParameter("reference");
                     //check the host in the CMStatus
-                    if (reference != null) {
-                        String hostFromReference = SMSDeliveryStatus.getHostFromReference(reference);
+                    if (reference != null && reference.split(":").length == 2) {
+                        String hostFromReference = reference.split(":")[1];
                         log.info(String.format("Host from reference: %s and actual host: %s", hostFromReference + "?" +
                                                                                               req.getQueryString(),
                                                Settings.HOST));

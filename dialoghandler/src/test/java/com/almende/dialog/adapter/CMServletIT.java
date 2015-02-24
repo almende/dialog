@@ -250,6 +250,8 @@ public class CMServletIT extends TestFramework {
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
                                                           TEST_PUBLIC_KEY, myAddress, TEST_PRIVATE_KEY);
 
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 1.0, "SMS outbound", UnitType.PART, null, null);
+        
         HashMap<String, String> addressMap = new LinkedHashMap<String, String>();
         addressMap.put(remoteAddressVoice, null);
         addressMap.put(secondTestResponder, "Test");
@@ -314,6 +316,13 @@ public class CMServletIT extends TestFramework {
         assertEquals("2009-06-15T13:45:30", cmStatus.getDeliveredTimeStamp());
         assertEquals("0", cmStatus.getCode());
         assertEquals("No Error", cmStatus.getDescription());
+        
+        //fetch ddr records
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, cmStatus.getAccountId(), null, null, null, null,
+                                                             null, null, null);
+        assertEquals(1, ddrRecords.size());
+        assertEquals(ddrRecords.iterator().next().getId(), cmStatus.getDdrRecordId());
+        
 
         //test the status for the second number
         String remoteAddress = parentStatusDetails[1].equals(remoteAddressVoice) ? secondTestResponder
@@ -331,6 +340,7 @@ public class CMServletIT extends TestFramework {
         assertEquals("2009-06-15T13:45:30", linkeDeliveryStatus.getDeliveredTimeStamp());
         assertEquals("0", linkeDeliveryStatus.getCode());
         assertEquals("No Error", linkeDeliveryStatus.getDescription());
+        Assert.assertThat(cmStatus.getDdrRecordId(), Matchers.notNullValue());
     }
     
     /**
@@ -509,7 +519,8 @@ public class CMServletIT extends TestFramework {
         Mockito.when(dialogAgent.getGlobalProviderCredentials()).thenReturn(globalAdapterCredentials);
         
         //fetch the session
-        Session session = Session.getSession("sms", "ASK", PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        Session session = Session.getSessionByInternalKey("sms", "ASK",
+                                                          PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         //switch sms adapter globally
         Mockito.when(dialogAgent.getGlobalAdapterSwitchSettingsForType(AdapterType.SMS))
                                         .thenReturn(AdapterProviders.ROUTE_SMS);
@@ -533,7 +544,7 @@ public class CMServletIT extends TestFramework {
             }
         }
         assertTrue(smsSentFromRouteSMS);
-        session = Session.getSession("sms", "ASK", PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        session = Session.getSessionByInternalKey("sms", "ASK", PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         assertTrue(session != null);
         assertEquals("ASK", session.getLocalAddress());
         assertEquals(AdapterAgent.ADAPTER_TYPE_SMS.toLowerCase(), session.getType().toLowerCase());
@@ -565,7 +576,8 @@ public class CMServletIT extends TestFramework {
         Mockito.when(dialogAgent.getGlobalProviderCredentials()).thenReturn(globalAdapterCredentials);
         
         //fetch the session
-        Session session = Session.getSession("sms", "ASK", PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        Session session = Session.getSessionByInternalKey("sms", "ASK",
+                                                          PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         //do not perform any switch sms adapter globally
         Mockito.when(dialogAgent.getGlobalAdapterSwitchSettingsForType(AdapterType.SMS)).thenReturn(null);
         
@@ -588,10 +600,11 @@ public class CMServletIT extends TestFramework {
         for (SMSDeliveryStatus smsDeliveryStatus : smsStatues) {
             assertEquals(AdapterProviders.CM, AdapterProviders.getByValue(smsDeliveryStatus.getProvider()));
         }
-        session = Session.getSession("sms", "ASK", PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
-        assertTrue(session != null);
-        assertEquals("ASK", session.getLocalAddress());
-        assertEquals(AdapterAgent.ADAPTER_TYPE_SMS.toLowerCase(), session.getType().toLowerCase());
+        Session session2 = Session.getSessionByInternalKey("sms", "ASK", PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        assertTrue(session2 != null);
+        assertEquals("ASK", session2.getLocalAddress());
+        assertEquals(AdapterAgent.ADAPTER_TYPE_SMS.toLowerCase(), session2.getType().toLowerCase());
+        assertTrue(session.getKey() != session2.getKey());
     }
 
     private HashMap<String, String> outBoundSMSCallXMLTest(Map<String, String> addressNameMap,

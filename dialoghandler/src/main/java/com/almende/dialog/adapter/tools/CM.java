@@ -1,7 +1,6 @@
 package com.almende.dialog.adapter.tools;
 
 import java.io.StringWriter;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -9,10 +8,14 @@ import org.znerd.xmlenc.XMLOutputter;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -43,42 +46,6 @@ public class CM {
 		this.password = password;
 	}
 	
-    public int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
-
-        String dcs = MESSAGE_TYPE_GSM7;
-
-        message = new String(message.getBytes(), "UTF-8");
-        if (!isGSMSeven(message)) {
-            dcs = MESSAGE_TYPE_UTF8;
-        }
-        else {
-            dcs = MESSAGE_TYPE_GSM7;
-        }
-
-        if (fromName == null)
-            fromName = from;
-
-        // TODO: Check message for special chars, if so change dcs.		
-        HashMap<String, String> addressNameMap = new HashMap<String, String>();
-        addressNameMap.put(to, toName);
-        StringWriter sw = createXMLRequest(message, from, fromName, addressNameMap, dcs, config, accountId, extras);
-
-        if (!ServerUtils.isInUnitTestingEnvironment() && sw != null) {
-            Client client = ParallelInit.getClient();
-            WebResource webResource = client.resource(url);
-            String result = webResource.type("text/plain").post(String.class, sw.toString());
-            if (!result.equals("")) {
-                log.severe("No result from CM!");
-                log.severe("Send from: " + from + " to: " + to);
-                throw new Exception(result);
-            }
-            log.info("Result from CM: " + result);
-        }
-        int messagePartCount = countMessageParts(message, dcs);
-        return messagePartCount;
-    }
-    
     public int broadcastMessage(String message, String subject, String from, String fromName,
         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
         throws Exception {
@@ -140,13 +107,31 @@ public class CM {
             String senderId = fromName != null && !fromName.isEmpty() ? fromName : from;
             SMSDeliveryStatus storeSMSRelatedData = null;
             for (String to : addressNameMap.keySet()) {
+
+                //fetch the sessions
+                Map<String, String> sessionKeyMap = null;
+                Object sessionsObject = extras != null ? extras.get(Session.SESSION_KEY) : null;
+                if (sessionsObject != null) {
+                    sessionKeyMap = JOM.getInstance().convertValue(sessionsObject,
+                                                                   new TypeReference<Map<String, String>>() {
+                                                                   });
+                }
+                Session session = sessionKeyMap != null ? Session.getSession(sessionKeyMap.get(to)) : null;
                 //check if its a mobile number, if no ignore, log, drop session and continue
                 PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(to);
-                Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), to);
                 if (!PhoneNumberType.MOBILE.equals(numberType)) {
                     String errorMessage = String.format("Ignoring SMS request to: %s from: %s, as it is not of type MOBILE",
                                                         to, config.getMyAddress());
                     logger.warning(config, errorMessage, session);
+                    //update ddr if found
+                    String ddrRecordId = session != null ? session.getDdrRecordId() : null;
+                    DDRRecord ddrRecord = DDRRecord.getDDRRecord(ddrRecordId, accountId);
+                    if (ddrRecord != null) {
+                        ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
+                        ddrRecord.addAdditionalInfo(to, errorMessage);
+                        ddrRecord.createOrUpdate();
+                    }
+                    
                     if (session != null) {
                         session.drop();
                     }
@@ -155,12 +140,11 @@ public class CM {
                 
                 if (storeSMSRelatedData != null) {
                     reference = UUID.randomUUID().toString();
-                    SMSDeliveryStatus linkedSMSRelatedData = SMSDeliveryStatus
-                                                    .storeSMSRelatedData(reference, to, config, accountId,
-                                                                         session.getQuestion(), null, "SENT",
-                                                                         session.getDdrRecordId(),
-                                                                         AdapterProviders.CM.getName(),
-                                                                         session.getKey());
+                    SMSDeliveryStatus linkedSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to, 
+                                                                       config, accountId, session.getQuestion(), 
+                                                                       null, "SENT", session.getDdrRecordId(),
+                                                                       AdapterProviders.CM.getName(),
+                                                                       session.getKey());
                     storeSMSRelatedData.addExtraInfo(linkedSMSRelatedData.getRemoteAddress(),
                                                      linkedSMSRelatedData.getReference());
                     storeSMSRelatedData.store();
@@ -287,41 +271,42 @@ public class CM {
         return true;
     }
 	
-	/*
-	 * gets the number of message parts based on the charecters in the message
-	 */
-	public static int countMessageParts(String message){
-	    String dcs;
-        if ( !isGSMSeven( message ) )
-        {
+    /*
+     * gets the number of message parts based on the charecters in the message
+     */
+    public static int countMessageParts(String message) {
+
+        String dcs;
+        if (!isGSMSeven(message)) {
             dcs = MESSAGE_TYPE_UTF8;
         }
-        else
-        {
+        else {
             dcs = MESSAGE_TYPE_GSM7;
         }
-        return countMessageParts( message, dcs );
-	}
+        return countMessageParts(message, dcs);
+    }
 	
-	private static int countMessageParts(String message, String type) {
+    public static int countMessageParts(String message, String type) {
 
-		int maxChars = 0;
-		
-		if(type.equals(MESSAGE_TYPE_GSM7)) {
-			maxChars=160;
-			if(message.toCharArray().length<maxChars) // Test if concatenated message
-				maxChars = 153;				
-		} else if(type.equals(MESSAGE_TYPE_UTF8)) {
-			maxChars=70;
-			if(message.toCharArray().length<maxChars)
-				maxChars = 67;
-		} else if (type.equals(MESSAGE_TYPE_BIN)) {
-			maxChars=280;
-			if(message.toCharArray().length<maxChars)
-				maxChars = 268;
-		}
-		
-		int count = Math.round((message.toCharArray().length-1) / maxChars) + 1;
-		return count;
-	}
+        int maxChars = 0;
+
+        if (type.equals(MESSAGE_TYPE_GSM7)) {
+            maxChars = 160;
+            if (message.toCharArray().length < maxChars) // Test if concatenated message
+                maxChars = 153;
+        }
+        else if (type.equals(MESSAGE_TYPE_UTF8)) {
+            maxChars = 70;
+            if (message.toCharArray().length < maxChars)
+                maxChars = 67;
+        }
+        else if (type.equals(MESSAGE_TYPE_BIN)) {
+            maxChars = 280;
+            if (message.toCharArray().length < maxChars)
+                maxChars = 268;
+        }
+
+        int count = Math.round((message.toCharArray().length - 1) / maxChars) + 1;
+        return count;
+    }
 }

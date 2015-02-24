@@ -19,6 +19,7 @@ import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
+import com.almende.dialog.model.Session;
 
 public class VoiceXMLServletTest extends TestFramework {
 
@@ -71,8 +72,8 @@ public class VoiceXMLServletTest extends TestFramework {
         Question question = getOpenDTMFQuestion();
         AdapterConfig adapter = createBroadsoftAdapter();
         String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        createSession(sessionKey);
-        String result = renderQuestion(question, adapter, sessionKey);
+        Session session = createSession(sessionKey);
+        String result = renderQuestion(question, adapter, session.getKey());
         assertOpenQuestionWithDTMFType( result );
     }
 

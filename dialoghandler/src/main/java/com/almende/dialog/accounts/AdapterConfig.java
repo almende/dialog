@@ -48,6 +48,10 @@ public class AdapterConfig {
 	static final ObjectMapper om = new ObjectMapper();
 	public static final String ADAPTER_CREATION_TIME_KEY = "ADAPTER_CREATION_TIME";
 	public static final String ADAPTER_PROVIDER_KEY = "PROVIDER";
+	public static final String ACCESS_TOKEN_KEY = "ACCESS_TOKEN";
+	public static final String ACCESS_TOKEN_SECRET_KEY = "ACCESS_SECRET_TOKEN";
+	public static final String XSI_USER_KEY = "XSI_USER";
+	public static final String XSI_PASSWORD_KEY = "XSI_PASSWORD";
 	public static final String DIALOG_ID_KEY = "DIALOG_ID";
 
 	@Id

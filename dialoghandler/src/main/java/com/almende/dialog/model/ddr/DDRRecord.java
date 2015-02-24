@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.mongodb.DB;
 
@@ -94,7 +93,7 @@ public class DDRRecord
     Boolean shouldGenerateCosts = false;
     @JsonIgnore
     Boolean shouldIncludeServiceCosts = false;
-    Map<String, String> additionalInfo;
+    Map<String, Object> additionalInfo;
     /**
      * PRE_PAID accounts must have a fixed ddrCost. POST_PAID can have a variable one. 
      * This can be got from the adapterId too, but just makes it more explicit
@@ -144,22 +143,32 @@ public class DDRRecord
     
     /**
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
-     * if a session id is found in {@link DDRRecord#getAdditionalInfo()}
      */
-    public void createOrUpdateWithLog() {
+    public void createOrUpdateWithLog(String sessionKey) {
+
+        //fetch the Session
+        Session session = Session.getSession(sessionKey);
+        createOrUpdateWithLog(session);
+    }
+    
+    /**
+     * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
+     */
+    public void createOrUpdateWithLog(Session session) {
+
         createOrUpdate();
-        //create a log
-        if(additionalInfo != null && additionalInfo.get(Session.SESSION_KEY) != null) {
-            Session session = Session.getSession(additionalInfo.get(Session.SESSION_KEY));
+        if (session != null) {
             new com.almende.dialog.Logger().ddr(getAdapter(), this, session);
         }
-        else {
-            if (this.toAddress != null) {
-                for (String toAddress : this.toAddress.keySet()) {
-                    Session session = Session.getSession(Session.getSessionKey(getAdapter(), toAddress));
-                    new com.almende.dialog.Logger().ddr(getAdapter(), this, session);
-                }
-            }
+    }
+    
+    /**
+     * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
+     */
+    public void createOrUpdateWithLog(Map<String, String> sessionKeyMap) {
+
+        for (String sessionKey : sessionKeyMap.values()) {
+            createOrUpdateWithLog(sessionKey);
         }
     }
     
@@ -554,23 +563,37 @@ public class DDRRecord
         this.totalCost = totalCost != null ? totalCost : 0.0;
     }
 
-    public Map<String, String> getAdditionalInfo() {
-    
-        additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, String>();
+    public Map<String, Object> getAdditionalInfo() {
+
+        additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, Object>();
         if (!additionalInfo.isEmpty()) {
-            HashMap<String, String> additionalInfoCopy = new HashMap<String, String>();
+            Map<String, Object> additionalInfoCopy = getDotReplaceKeys(additionalInfo);
             for (String key : additionalInfo.keySet()) {
-                additionalInfoCopy.put(getDotReplacedString(key), additionalInfo.get(key));
+                Object value = additionalInfo.get(key);
+                if (value instanceof Map) {
+                    try {
+                        Map<String, Object> valueAsMap = JOM.getInstance()
+                                                        .convertValue(value, new TypeReference<Map<String, Object>>() {
+                                                        });
+                        valueAsMap = getDotReplaceKeys(valueAsMap);
+                        additionalInfoCopy.put(key, valueAsMap);
+                    }
+                    catch (Exception ex) {
+                        ex.printStackTrace();
+                        log.severe("Typecasting failed. Saving serialized data instead");
+                        additionalInfoCopy.put(key, ServerUtils.serializeWithoutException(value));
+                    }
+                }
             }
             additionalInfo = additionalInfoCopy;
         }
         return additionalInfo;
     }
 
-    public void setAdditionalInfo(Map<String, String> additionalInfo) {
+    public void setAdditionalInfo(Map<String, Object> additionalInfo) {
     
         if (additionalInfo != null) {
-            this.additionalInfo = this.additionalInfo != null ? this.additionalInfo : new HashMap<String, String>();
+            this.additionalInfo = this.additionalInfo != null ? this.additionalInfo : new HashMap<String, Object>();
             for (String key : additionalInfo.keySet()) {
                 this.additionalInfo.put(correctDotReplacedString(key), additionalInfo.get(key));
             }
@@ -583,19 +606,10 @@ public class DDRRecord
     @JsonIgnore
     public void addAdditionalInfo(String key, Object value) {
 
-        additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, String>();
+        additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, Object>();
         if (!DDR_RECORD_KEY.equals(key)) {
             //dot(.) is not allowed to be saved in mongo. just replace with -
-            if (!(value instanceof String)) {
-                try {
-                    value = JOM.getInstance().writeValueAsString(value);
-                }
-                catch (JsonProcessingException e) {
-                    log.severe(String.format("JSON serialization of additionalInfo failed for key: %s and value: %s. Reason: %s",
-                                             key, value, e.getMessage()));
-                }
-            }
-            additionalInfo.put(key, value.toString());
+            additionalInfo.put(getDotReplacedString(key), value);
         }
     }
     
@@ -697,6 +711,20 @@ public class DDRRecord
     }
     
     /**
+     * Adds a tracking token corresponding to the key and value
+     */
+    public void addTrackingToken(String address, String trackingToken) {
+
+        Object trackingTokensObject = getAdditionalInfo().get(Session.TRACKING_TOKEN_KEY);
+        trackingTokensObject = trackingTokensObject != null ? trackingTokensObject : new HashMap<String, String>();
+        Map<String, String> trackingTokens = JOM.getInstance().convertValue(trackingTokensObject,
+                                                                            new TypeReference<Map<String, String>>() {
+                                                                            });
+        trackingTokens.put(address, trackingToken);
+        addAdditionalInfo(Session.TRACKING_TOKEN_KEY, trackingTokens);
+    }
+    
+    /**
      * Ideally should be called by the GETTER methods of fields whose dot (.) values are to be
      * replaced by {@link DDRRecord#DOT_REPLACER_KEY}
      * @param data
@@ -720,5 +748,21 @@ public class DDRRecord
      */
     private String correctDotReplacedString(String data) {
         return data != null ? data.replace(DOT_REPLACER_KEY, ".") : null;
+    }
+    
+    /**
+     * Replace all dots (.) in keys of a map object 
+     * @param data
+     */
+    private Map<String, Object> getDotReplaceKeys(Map<String, Object> data) {
+
+        if (data != null) {
+            Map<String, Object> copyOfData = new HashMap<String, Object>();
+            for (String key : data.keySet()) {
+                copyOfData.put(getDotReplacedString(key), data.get(key));
+            }
+            return copyOfData;
+        }
+        return null;
     }
 }

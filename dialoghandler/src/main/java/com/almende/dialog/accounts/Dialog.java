@@ -29,7 +29,7 @@ import com.sun.research.ws.wadl.HTTPMethods;
 public class Dialog implements DialogInterface {
 
     static final Logger log = Logger.getLogger(Dialog.class.getName());
-    private static final String DIALOG_BASIC_AUTH_HEADER_KEY = "DIALOG_BASIC_AUTH_HEADER";
+    public static final String DIALOG_BASIC_AUTH_HEADER_KEY = "DIALOG_BASIC_AUTH_HEADER";
     
     @Id
     public String id = null;

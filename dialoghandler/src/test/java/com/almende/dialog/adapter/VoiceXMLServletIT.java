@@ -110,7 +110,6 @@ public class VoiceXMLServletIT extends TestFramework {
      * corresponding ddrRecord is missing from the session
      * @throws Exception 
      */
-    @SuppressWarnings("deprecation")
     @Test
     public void outboundPhoneCallMissingDDRTest() throws Exception {
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
@@ -130,8 +129,8 @@ public class VoiceXMLServletIT extends TestFramework {
         //trigger an outbound call
         VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner());
         //fetch the session, assert that a ddrRecord is not attached still
-        Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_CALL, localAddressBroadsoft,
-                                             PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        Session session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localAddressBroadsoft,
+                                                          PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         assertThat(session, notNullValue());
         assertThat(session.getDdrRecordId(), Matchers.notNullValue());
         
@@ -257,8 +256,8 @@ public class VoiceXMLServletIT extends TestFramework {
         outboundWithGlobalSwitchOnTest();
         
         //fetch the session
-        Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_CALL, localAddressBroadsoft,
-                                             PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        Session session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localAddressBroadsoft,
+                                                          PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         //add a specific adapter switch
         String testMyAddress = "0854881002";
         Map<AdapterProviders, Map<String, AdapterConfig>> globalSwitchProviderCredentials = dialogAgent

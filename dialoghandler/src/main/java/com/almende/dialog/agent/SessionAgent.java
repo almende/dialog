@@ -12,7 +12,7 @@ import com.almende.eve.rpc.annotation.AccessType;
 import com.almende.eve.rpc.annotation.Name;
 import com.almende.eve.rpc.jsonrpc.JSONRequest;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
-import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -129,10 +129,9 @@ public class SessionAgent extends Agent {
         String schedulerId = null;
         Integer updateSessionScedulerRunCount = 0;
         //maintain a counter for voicecalls. 
-        if (session != null &&
-            session.getAdapterConfig() != null &&
-            AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(session.getAdapterConfig().getAdapterType(),
-                                                                      session.getAdapterConfig()))) {
+        if (session != null && session.getAdapterConfig() != null &&
+            AdapterType.CALL.equals(AdapterType.getByValue(session.getAdapterConfig().getAdapterType()))) {
+
             updateSessionScedulerRunCount = updateSessionScedulerRunCount(sessionKey);
         }
         if (session == null || DDRUtils.stopDDRCosts(sessionKey, true) ||

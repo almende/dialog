@@ -33,10 +33,9 @@ public class MBSmsServlet extends TextServlet {
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
         Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
 
-        String[] tokens = config.getAccessToken().split("\\|");
-
-        CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
-        return cm.sendMessage(message, subject, from, fromName, to, toName, extras, config, accountId);
+        HashMap<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put(to, toName);
+        return broadcastMessage(message, subject, from, fromName, addressNameMap, extras, config, accountId);
     }
 
     @Override
@@ -73,10 +72,12 @@ public class MBSmsServlet extends TextServlet {
 
         String localAddress = URLDecoder.decode(data.get("receiver"), "UTF-8").replaceFirst("31", "0");
         String address = PhoneNumberUtils.formatNumber(URLDecoder.decode(data.get("sender"), "UTF-8").replaceFirst("31", "0"), null);
+        String reference = data.get("reference");
         if(address != null) {
         msg = new TextMessage(USE_KEYWORDS);
         msg.setLocalAddress(localAddress);
         msg.setAddress(address);
+        msg.setReference(reference);
             msg.setBody(URLDecoder.decode(data.get("message"), "UTF-8"));
         }
         else {
@@ -87,19 +88,20 @@ public class MBSmsServlet extends TextServlet {
     
     @Override
     protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
-        String message) throws Exception {
+        String message, String sessionKey) throws Exception {
 
-        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message);
+        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message,
+                                                               sessionKey);
     }
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
 
         //add costs with no.of messages * recipients
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, senderName, toAddress,
                                                                CM.countMessageParts(message) * toAddress.size(),
-                                                               message);
+                                                               message, sessionKeyMap);
     }
 
     @Override

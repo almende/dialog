@@ -940,7 +940,7 @@ public class TwilioAdapter {
         // Set timeout
         String timeoutProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
                 MediaPropertyKey.TIMEOUT);
-        timeoutProperty = timeoutProperty != null ? timeoutProperty : "5";
+        timeoutProperty = timeoutProperty != null ? timeoutProperty : "20";
         int timeout = 5;
         try {
             timeout = Integer.parseInt(timeoutProperty);

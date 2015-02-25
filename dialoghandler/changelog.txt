@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+25-2-2015 version 1.5.13
+- hotfix: change the silence timeout for twilio to 20 sec
+
 23-2-2015 version 1.5.12
 - hotfix: change the default recording time for twilio to one hour
 

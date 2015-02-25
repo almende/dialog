@@ -6,12 +6,13 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URIBuilder;
 import com.almende.dialog.Settings;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.util.ParallelInit;
@@ -142,29 +143,31 @@ public class ServerUtils
     }
     
     /**
-     * returns the url by adding the queryKey=queryValue based on if a query param is 
-     * already seen in the url 
+     * returns the url by adding the queryKey=queryValue based on if a query
+     * param is already seen in the url
+     * 
      * @return
-     * @throws UnsupportedEncodingException 
+     * @throws UnsupportedEncodingException
      */
-    public static String getURLWithQueryParams( String url, String queryKey, String queryValue ) throws UnsupportedEncodingException
-    {
-        String copyURL = new String( url );
-        if ( copyURL.endsWith( "/" ) || copyURL.endsWith( URLEncoder.encode( "/" ,"UTF-8") ) )
-        {
-            copyURL = copyURL.substring( 0, copyURL.length() - 1 );
-        }
+    public static String getURLWithQueryParams(String url, String queryKey, String queryValue)
+        throws UnsupportedEncodingException {
 
-        if ( ( copyURL.indexOf( "?" ) > 0 || copyURL.indexOf( URLEncoder.encode( "?" ,"UTF-8" ) ) > 0 )
-            && !copyURL.endsWith( "?" ) )
-        {
-            copyURL = copyURL + "&";
+        try {
+            URIBuilder uriBuilder = new URIBuilder(new URI(url));
+            URIBuilder returnResult = new URIBuilder(new URI(url)).removeQuery();
+            returnResult.addParameter(queryKey, queryValue);
+            for (NameValuePair nameValue : uriBuilder.getQueryParams()) {
+
+                if (!nameValue.getName().equals(queryKey)) {
+                    returnResult.addParameter(nameValue.getName(), nameValue.getValue());
+                }
+            }
+            return returnResult.toString();
         }
-        else
-        {
-            copyURL = copyURL + "?";
+        catch (Exception e) {
+            e.printStackTrace();
+            return url;
         }
-        return copyURL + queryKey + "=" + queryValue;
     }
     
     /**

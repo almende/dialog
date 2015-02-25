@@ -14,6 +14,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URIBuilder;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -121,19 +123,21 @@ public class TestServlet extends HttpServlet
 
         String result = "";
         String appointmentTag = req.getParameter("appointment");
-        try {
-            StringBuffer jb = new StringBuffer();
-            String line = null;
-            BufferedReader reader = req.getReader();
-            while ((line = reader.readLine()) != null) {
-                jb.append(line);
-            }
-            logForTest(jb.toString());
-            validatePayload(new String(jb.toString()));
+        StringBuffer jb = new StringBuffer();
+        String line = null;
+        BufferedReader reader = req.getReader();
+        while ((line = reader.readLine()) != null) {
+            jb.append(line);
         }
-        catch (Exception e) {
-            Assert.fail("POST payload retrieval failed. Message: " + e.getLocalizedMessage());
-            return;
+        logForTest(jb.toString());
+        try {
+            validatePayload(req.getRequestURL() + "?" + req.getQueryString(), new String(jb.toString()));
+        }
+        catch (Exception e1) {
+            e1.printStackTrace();
+            Assert.fail("POST payload retrieval failed. Message: " + e1.getLocalizedMessage());
+            result = null;
+            throw new ServletException(e1);
         }
         if (appointmentTag != null) {
             result = getAppointmentQuestion(appointmentTag);
@@ -365,9 +369,22 @@ public class TestServlet extends HttpServlet
      * @param payload
      * @throws Exception
      */
-    private void validatePayload(String payload) throws Exception {
+    private void validatePayload(String queryString, String payload) throws Exception {
 
-        boolean asserted = false;
+        boolean firstAsserted = false;
+        boolean secondAsserted = false;
+        //validate that every callback has a sessionKey and responder attached to it
+        for (NameValuePair nameValuePair : new URIBuilder(queryString).getQueryParams()) {
+            if (nameValuePair.getName().equals("responder")) {
+                firstAsserted = true;
+            }
+            if (nameValuePair.getName().equals("sessionKey")) {
+                secondAsserted = true;
+            }
+        }
+        Assert.assertTrue(firstAsserted);
+        Assert.assertTrue(secondAsserted);
+        firstAsserted = false;
         AnswerPost answerEntity = ServerUtils.deserialize(payload, false, AnswerPost.class);
         if (answerEntity != null) {
             Assert.assertThat(answerEntity.getExtras(), Matchers.notNullValue());
@@ -377,14 +394,15 @@ public class TestServlet extends HttpServlet
             Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.XSI_PASSWORD_KEY), Matchers.nullValue());
             Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.XSI_USER_KEY), Matchers.nullValue());
             Assert.assertThat(answerEntity.getExtras().get(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY), Matchers.nullValue());
-            asserted = true;
+            firstAsserted = true;
         }
         else {
             EventPost eventEntity = ServerUtils.deserialize(payload, false, EventPost.class);
             if (eventEntity != null) {
-                Map<String, Object> eventExtras = ServerUtils.deserialize(ServerUtils.serialize(eventEntity),
-                                                                          new TypeReference<Map<String, Object>>() {
-                                                                          });
+                Map<String, Object> eventExtras = ServerUtils
+                                                .deserialize(ServerUtils.serialize(eventEntity.getExtras()),
+                                                             new TypeReference<Map<String, Object>>() {
+                                                             });
                 Assert.assertThat(eventExtras, Matchers.notNullValue());
                 Assert.assertThat(eventExtras.get(AdapterConfig.ACCESS_TOKEN_KEY), Matchers.nullValue());
                 Assert.assertThat(eventExtras.get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY), Matchers.nullValue());
@@ -392,9 +410,9 @@ public class TestServlet extends HttpServlet
                 Assert.assertThat(eventExtras.get(AdapterConfig.XSI_PASSWORD_KEY), Matchers.nullValue());
                 Assert.assertThat(eventExtras.get(AdapterConfig.XSI_USER_KEY), Matchers.nullValue());
                 Assert.assertThat(eventExtras.get(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY), Matchers.nullValue());
-                asserted = true;
+                firstAsserted = true;
             }
         }
-        Assert.assertTrue(asserted);
+        Assert.assertTrue(firstAsserted);
     }
 }

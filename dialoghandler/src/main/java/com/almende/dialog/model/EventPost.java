@@ -1,6 +1,7 @@
 package com.almende.dialog.model;
 
 import java.io.Serializable;
+import java.util.HashMap;
 
 public class EventPost implements Serializable {
 
@@ -35,12 +36,14 @@ public class EventPost implements Serializable {
 		return message;
 	}
 	
-	public Object getExtras()
-    {
+    public Object getExtras() {
+
+        extras = extras != null ? extras : new HashMap<String, Object>();
         return extras;
     }
-    public void setExtras( Object extras )
-    {
+
+    public void setExtras(Object extras) {
+
         this.extras = extras;
     }
     

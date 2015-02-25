@@ -90,7 +90,7 @@ public class VoiceXMLRESTProxy {
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(address, "");
         HashMap<String, String> result = dial(addressNameMap, dialogIdOrUrl, config, accountId);
-        return result != null && !result.isEmpty() ? result.keySet().iterator().next() : null;
+        return result != null && !result.isEmpty() ? result.values().iterator().next() : null;
     }
 
     /**

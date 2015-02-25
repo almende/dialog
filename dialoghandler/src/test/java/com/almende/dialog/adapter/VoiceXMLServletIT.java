@@ -297,6 +297,47 @@ public class VoiceXMLServletIT extends TestFramework {
     }
     
     /**
+     * Perform an outbound call, receive a callback on an answer, make sure
+     * sensitive information are not seen in the payload
+     */
+    @Test
+    public void eventCallBackPayloadTest() throws Exception {
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.OPEN_QUESTION.name());
+
+        url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+        adapterConfig.setXsiUser(localAddressBroadsoft + "@ask.ask.voipit.nl");
+        adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
+        adapterConfig.update();
+
+        //trigger an outbound call
+        String sessionKey1 = VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner());
+        VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
+        voiceXMLRESTProxy.timeout(UUID.randomUUID().toString(), sessionKey1);
+
+        //validate that the session has it
+        Session session = Session.getSession(sessionKey1);
+        assertThat(session.getAllExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY),
+                   Matchers.is(AdapterProviders.BROADSOFT.toString()));
+
+        //mock the Context
+        UriInfo uriInfo = Mockito.mock(UriInfo.class);
+        Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
+        //mimick a fetch new dialog/ phone pickup
+        String sessionKey2 = VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner());
+        voiceXMLRESTProxy.answer(UUID.randomUUID().toString(), null, "1", sessionKey2, uriInfo);
+
+        //validate that the session has it
+        session = Session.getSession(sessionKey2);
+        assertThat(session.getAllExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY),
+                   Matchers.is(AdapterProviders.BROADSOFT.toString()));
+    }
+    
+    /**
      * @param result
      * @throws Exception
      */

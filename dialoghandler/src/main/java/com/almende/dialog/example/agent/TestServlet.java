@@ -6,16 +6,24 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.model.Answer;
+import com.almende.dialog.model.AnswerPost;
+import com.almende.dialog.model.EventPost;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.util.ServerUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 /**
  * this Servlet is used in the unit tests
@@ -37,7 +45,7 @@ public class TestServlet extends HttpServlet
     
     //used for local caching of question for testing
     public static String responseQuestionString = "" ;
-    protected static Object logObject = new Object();
+    private static Object logObject;
     
     private static final Logger log = Logger.getLogger( TestServlet.class.getSimpleName() );
     
@@ -109,50 +117,40 @@ public class TestServlet extends HttpServlet
     }
     
     @Override
-    protected void doPost( HttpServletRequest req, HttpServletResponse resp )
-    throws ServletException, IOException
-    {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
         String result = "";
-        String appointmentTag = req.getParameter( "appointment" );
-        if(appointmentTag != null)
-        {
-            result = getAppointmentQuestion( appointmentTag );
-            //store all the questions loaded in the TestFramework
-            try
-            {
-                storeResponseQuestionInThread(getResponseQuestionWithOptionsInString(result));
-            }
-            catch ( Exception e )
-            {
-                Assert.fail( "Exception is not expected to be thrown. "+ e.getLocalizedMessage() );
-            }
-        }
-        else if(req.getParameter( "questionType") != null && req.getParameter( "questionType").equals( QuestionInRequest.SIMPLE_COMMENT.name() ))
-        {
-            result = getJsonSimpleCommentQuestion( req.getParameter( "question" ) );
-        }
-        else
-        {
+        String appointmentTag = req.getParameter("appointment");
+        try {
             StringBuffer jb = new StringBuffer();
             String line = null;
-            try
-            {
-                BufferedReader reader = req.getReader();
-                while ( ( line = reader.readLine() ) != null )
-                {
-                    jb.append( line );
-                }
-                result = jb.toString();
-                TestServlet.logForTest( result );
+            BufferedReader reader = req.getReader();
+            while ((line = reader.readLine()) != null) {
+                jb.append(line);
             }
-            catch ( Exception e )
-            {
-                Assert.fail( "POST payload retrieval failed. Message: " + e.getLocalizedMessage() );
-                return;
+            logForTest(jb.toString());
+            validatePayload(new String(jb.toString()));
+        }
+        catch (Exception e) {
+            Assert.fail("POST payload retrieval failed. Message: " + e.getLocalizedMessage());
+            return;
+        }
+        if (appointmentTag != null) {
+            result = getAppointmentQuestion(appointmentTag);
+            //store all the questions loaded in the TestFramework
+            try {
+                storeResponseQuestionInThread(getResponseQuestionWithOptionsInString(result));
+            }
+            catch (Exception e) {
+                Assert.fail("Exception is not expected to be thrown. " + e.getLocalizedMessage());
             }
         }
-        resp.getWriter().write( result );
-        resp.setHeader( "Content-Type", MediaType.APPLICATION_JSON );
+        else if (req.getParameter("questionType") != null &&
+                 req.getParameter("questionType").equals(QuestionInRequest.SIMPLE_COMMENT.name())) {
+            result = getJsonSimpleCommentQuestion(req.getParameter("question"));
+        }
+        resp.getWriter().write(result);
+        resp.setHeader("Content-Type", MediaType.APPLICATION_JSON);
     }
 
     @Override
@@ -193,11 +191,11 @@ public class TestServlet extends HttpServlet
     public static void logForTest(Object log)
     {
         TestServlet.log.info( "LogForTest: "+ log.toString() );
-        logObject = log;
+        TestServlet.logObject = log;
     }
-    
-    public static Object getLogObject()
-    {
+
+    public static Object getLogObject() {
+
         return logObject;
     }
     
@@ -231,30 +229,28 @@ public class TestServlet extends HttpServlet
         }
     }
     
-    private String getJsonSimpleOpenQuestion( String questionText ) throws UnsupportedEncodingException
-    {
+    private String getJsonSimpleOpenQuestion(String questionText) throws UnsupportedEncodingException {
+
         Question question = new Question();
-        question.setQuestion_id( "1" );
-        question.setType( "open" );
-        if(questionText.startsWith( "http://" ))
-        {
-            question.setQuestion_text( questionText );
+        question.setQuestion_id("1");
+        question.setType("open");
+        if (questionText.startsWith("http://")) {
+            question.setQuestion_text(questionText);
         }
-        else
-        {
-            question.setQuestion_text( "text://" + questionText );
+        else {
+            question.setQuestion_text("text://" + questionText);
         }
-        String callback = ServerUtils.getURLWithQueryParams( TEST_SERVLET_PATH , "questionType", QuestionInRequest.SIMPLE_COMMENT.name() );
-        callback = ServerUtils.getURLWithQueryParams( callback, "question", "Simple%20Comment" );
-        question.setAnswers( new ArrayList<Answer>( Arrays.asList( new Answer( "Test answer", callback ))));
+        String callback = ServerUtils.getURLWithQueryParams(TEST_SERVLET_PATH, "questionType",
+                                                            QuestionInRequest.SIMPLE_COMMENT.name());
+        callback = ServerUtils.getURLWithQueryParams(callback, "question", "Simple%20Comment");
+        question.setAnswers(new ArrayList<Answer>(Arrays.asList(new Answer("Test answer", callback))));
         question.generateIds();
-        try
-        {
-            return ServerUtils.serialize( question );
+        question.addEventCallback(UUID.randomUUID().toString(), "timeout", callback);
+        try {
+            return ServerUtils.serialize(question);
         }
-        catch ( Exception e )
-        {
-            Assert.fail("exception not expected. "+ e.getLocalizedMessage());
+        catch (Exception e) {
+            Assert.fail("exception not expected. " + e.getLocalizedMessage());
             return null;
         }
     }
@@ -361,5 +357,44 @@ public class TestServlet extends HttpServlet
             result = getJsonAppointmentQuestion();
         }
         return result;
+    }
+    
+    /**
+     * Make sure that the payload does not contact any senstive information
+     * 
+     * @param payload
+     * @throws Exception
+     */
+    private void validatePayload(String payload) throws Exception {
+
+        boolean asserted = false;
+        AnswerPost answerEntity = ServerUtils.deserialize(payload, false, AnswerPost.class);
+        if (answerEntity != null) {
+            Assert.assertThat(answerEntity.getExtras(), Matchers.notNullValue());
+            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.ACCESS_TOKEN_KEY), Matchers.nullValue());
+            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY), Matchers.nullValue());
+            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY), Matchers.nullValue());
+            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.XSI_PASSWORD_KEY), Matchers.nullValue());
+            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.XSI_USER_KEY), Matchers.nullValue());
+            Assert.assertThat(answerEntity.getExtras().get(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY), Matchers.nullValue());
+            asserted = true;
+        }
+        else {
+            EventPost eventEntity = ServerUtils.deserialize(payload, false, EventPost.class);
+            if (eventEntity != null) {
+                Map<String, Object> eventExtras = ServerUtils.deserialize(ServerUtils.serialize(eventEntity),
+                                                                          new TypeReference<Map<String, Object>>() {
+                                                                          });
+                Assert.assertThat(eventExtras, Matchers.notNullValue());
+                Assert.assertThat(eventExtras.get(AdapterConfig.ACCESS_TOKEN_KEY), Matchers.nullValue());
+                Assert.assertThat(eventExtras.get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY), Matchers.nullValue());
+                Assert.assertThat(eventExtras.get(AdapterConfig.ADAPTER_PROVIDER_KEY), Matchers.nullValue());
+                Assert.assertThat(eventExtras.get(AdapterConfig.XSI_PASSWORD_KEY), Matchers.nullValue());
+                Assert.assertThat(eventExtras.get(AdapterConfig.XSI_USER_KEY), Matchers.nullValue());
+                Assert.assertThat(eventExtras.get(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY), Matchers.nullValue());
+                asserted = true;
+            }
+        }
+        Assert.assertTrue(asserted);
     }
 }

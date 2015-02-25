@@ -134,7 +134,8 @@ public class VoiceXMLServletIT extends TestFramework {
         assertThat(session, notNullValue());
         assertThat(session.getDdrRecordId(), Matchers.notNullValue());
         
-        List<DDRRecord> allDdrRecords = DDRRecord.getDDRRecords(null, null, null, null, null, null, null, null, null);
+        List<DDRRecord> allDdrRecords = DDRRecord.getDDRRecords(null, null, null, null, null, null, null, null, null,
+                                                                null);
         assertThat(allDdrRecords.isEmpty(), Matchers.is(true));
         
         //mock the Context

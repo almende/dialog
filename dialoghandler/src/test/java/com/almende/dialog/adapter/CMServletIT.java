@@ -165,7 +165,7 @@ public class CMServletIT extends TestFramework {
         HashSet<String> ownerDDRRecordIds = new HashSet<String>();
         HashSet<String> ownerLogIds = new HashSet<String>();
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
-                                                             null);
+                                                             null, null);
         for (DDRRecord ddrRecord : ddrRecords) {
             ownerDDRRecordIds.add(ddrRecord.get_Id());
         }
@@ -192,7 +192,7 @@ public class CMServletIT extends TestFramework {
 
         //check that all the new logs belong to the shared account
         List<DDRRecord> ddrRecordsReFetch = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null,
-                                                                    null, null, null);
+                                                                    null, null, null, null);
         assertEquals(ddrRecordsReFetch.size(), ddrRecords.size());
         for (DDRRecord ddrRecord : ddrRecordsReFetch) {
             assertTrue(ownerDDRRecordIds.contains(ddrRecord.get_Id()));
@@ -204,7 +204,7 @@ public class CMServletIT extends TestFramework {
         }
 
         //check that there are logs formed with shared account
-        ddrRecords = DDRRecord.getDDRRecords(null, TEST_PRIVATE_KEY, null, null, null, null, null, null, null);
+        ddrRecords = DDRRecord.getDDRRecords(null, TEST_PRIVATE_KEY, null, null, null, null, null, null, null, null);
         assertTrue(ddrRecords.size() > 0);
         logs = Logger.find(TEST_PRIVATE_KEY, null, null, null, null, null, null);
         assertTrue(logs.size() > 0);
@@ -319,7 +319,7 @@ public class CMServletIT extends TestFramework {
         
         //fetch ddr records
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, cmStatus.getAccountId(), null, null, null, null,
-                                                             null, null, null);
+                                                             null, null, null, null);
         assertEquals(1, ddrRecords.size());
         assertEquals(ddrRecords.iterator().next().getId(), cmStatus.getDdrRecordId());
         

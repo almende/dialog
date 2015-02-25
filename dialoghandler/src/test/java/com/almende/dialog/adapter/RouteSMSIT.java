@@ -108,7 +108,7 @@ public class RouteSMSIT extends TestFramework {
 
         //fetch the sms ddr records
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
-                                                             null);
+                                                             null, null);
         Assert.assertThat(allSessions.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         Assert.assertThat(ddrRecord.getStatusForAddress(invalidNumber), Matchers.is(CommunicationStatus.ERROR));

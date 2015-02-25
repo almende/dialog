@@ -539,13 +539,13 @@ public class DDRRecordAgentIT extends TestFramework {
      * @return
      * @throws Exception
      */
-    private static Collection<DDRRecord> getDDRRecordsByAccountId( String accountId ) throws Exception
-    {
-        Object ddrRecords = new DDRRecordAgent().getDDRRecords( null, accountId, null, null, null, null, null, null, null, null, null );
-        TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
-        {
+    private static Collection<DDRRecord> getDDRRecordsByAccountId(String accountId) throws Exception {
+
+        Object ddrRecords = new DDRRecordAgent().getDDRRecords(null, accountId, null, null, null, null, null, null,
+                                                               null, null, null, null);
+        TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>() {
         };
-        Collection<DDRRecord> allDdrRecords = typesInjector.inject( ddrRecords );
+        Collection<DDRRecord> allDdrRecords = typesInjector.inject(ddrRecords);
         return allDdrRecords;
     }
     

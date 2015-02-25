@@ -1,7 +1,9 @@
 package com.almende.dialog.model.ddr;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -86,6 +88,7 @@ public class DDRRecord
     Integer quantity;
     Long start;
     Long duration;
+    Collection<String> sessionKeys;
     CommunicationStatus status;
     Map<String, CommunicationStatus> statusPerAddress;
     
@@ -208,7 +211,7 @@ public class DDRRecord
      * @return
      */
     public static List<DDRRecord> getDDRRecords(String adapterId, String accountId, String fromAddress,
-        String ddrTypeId, CommunicationStatus status, Long startTime, Long endTime, Integer offset, Integer limit) {
+        String ddrTypeId, CommunicationStatus status, Long startTime, Long endTime, Collection<String> sessionKeys, Integer offset, Integer limit) {
 
         limit = limit != null && limit <= 1000 ? limit : 1000;
         offset = offset != null ? offset : 0;
@@ -235,8 +238,11 @@ public class DDRRecord
         for (int queryCounter = 0; queryCounter < queryList.size(); queryCounter++) {
             dbQueries[queryCounter] = queryList.get(queryCounter);
         }
-        List<DDRRecord> result = collection.find(DBQuery.and(dbQueries)).skip(offset).limit(limit)
-                                        .sort(DBSort.desc("start")).toArray();
+        DBCursor<DDRRecord> ddrCursor = collection.find(DBQuery.and(dbQueries));
+        if(sessionKeys != null) {
+            ddrCursor = ddrCursor.in("sessionKeys", sessionKeys);
+        }
+        List<DDRRecord> result = ddrCursor.skip(offset).limit(limit).sort(DBSort.desc("start")).toArray();
         if (result != null && !result.isEmpty() && status != null) {
             ArrayList<DDRRecord> resultByStatus = new ArrayList<DDRRecord>();
             for (DDRRecord ddrRecord : result) {
@@ -620,6 +626,22 @@ public class DDRRecord
     public void setAccountType(AccountType accountType) {
     
         this.accountType = accountType;
+    }
+    
+    public Collection<String> getSessionKeys() {
+        
+        return sessionKeys;
+    }
+
+    public void setSessionKeys(Collection<String> sessionKeys) {
+    
+        this.sessionKeys = sessionKeys;
+    }
+    
+    public void addSessionKey(String sessionKey) {
+        
+        sessionKeys = sessionKeys != null ? sessionKeys : new HashSet<String>();
+        sessionKeys.add(sessionKey);
     }
     
     private static JacksonDBCollection<DDRRecord, String> getCollection() {

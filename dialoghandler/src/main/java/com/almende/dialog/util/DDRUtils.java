@@ -268,7 +268,7 @@ public class DDRUtils
             //fetch the ddr based on the details
             List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterConfig.getConfigId(), adapterConfig.getOwner(),
                                                                  null, subscriptionDDRType.getTypeId(), null, null,
-                                                                 null, null, null);
+                                                                 null, null, null, null);
             DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
             newestDDRRecord = fetchNewestDdrRecord(ddrRecords);
             //flag for creating new ddrRecord
@@ -845,6 +845,7 @@ public class DDRUtils
                 ddrRecord.addAdditionalInfo("message", message);
                 if (sessionKeyMap != null) {
                     ddrRecord.addAdditionalInfo(Session.SESSION_KEY, sessionKeyMap);
+                    ddrRecord.setSessionKeys(sessionKeyMap.values());
                 }
                 //set the ddrRecord time with server current time creationTime.
                 ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());

@@ -102,26 +102,22 @@ public class RouteSMS {
             uriBuilder.addParameter("url", wapPushURL);
         }
 
+        boolean validSenderId = isValidSenderId(fromName);
+        String result = !validSenderId ? "1707" : null; //by default assign a result
         if (!ServerUtils.isInUnitTestingEnvironment()) {
-            
-            String result = "1707"; //by default assume that the senderId is wrong!
-            if (isValidSenderId(fromName)) {
-                result = afHttpClient.get(uriBuilder.build().toString());
-            }
-            String validateResult = isValidResult(config, result, sessionKeyMap);
-            if (!validateResult.equals("Successfully Sent"))
-                throw new Exception(validateResult);
-            log.info("Result from RouteSMS: " + result);
+            result = afHttpClient.get(uriBuilder.build().toString());
         }
         else {
-            for (String address : destination.split(",")) {
-                Session session = Session.getSession(sessionKeyMap.get(address));
-                SMSDeliveryStatus.storeSMSRelatedData(UUID.randomUUID().toString(), address, config, accountId, null,
-                                                      "1701", "Successfully Sent", session.getDdrRecordId(),
-                                                      session.getExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY),
-                                                      session.getKey());
+            result = result != null ? result : "";
+            for (String address : addressNameMap.keySet()) {
+                result += String.format("1701|%s:%s,", address, UUID.randomUUID().toString());
             }
         }
+        
+        String validateResult = isValidResult(config, result, sessionKeyMap);
+        if (!validateResult.equals("Successfully Sent"))
+            throw new Exception(validateResult);
+        log.info("Result from RouteSMS: " + result);
         return CM.countMessageParts(message, dcs);
     }
 
@@ -132,41 +128,38 @@ public class RouteSMS {
         if (resultFromRouteSMS != null) {
             String[] splitResult = resultFromRouteSMS.split(",");
 
-            if (splitResult.length > 1) {
+            for (String splitResultPerAddress : splitResult) {
 
-                for (String splitResultPerAddress : splitResult) {
+                if (!splitResultPerAddress.trim().isEmpty()) {
+                    String[] resultPerAddress = splitResultPerAddress.split("\\|");
+                    if (resultPerAddress.length == 2) {
 
-                    if (!splitResultPerAddress.trim().isEmpty()) {
-                        String[] resultPerAddress = splitResultPerAddress.split("\\|");
-                        if (resultPerAddress.length == 2) {
-
-                            String remoteAddress = resultPerAddress[1].split(":")[0];
-                            remoteAddress = PhoneNumberUtils.formatNumber(remoteAddress, null);
-                            //fetch the session corresponding to the address
-                            Session session = sessionKeyMap != null ? Session.getSession(sessionKeyMap
-                                                            .get(remoteAddress)) : null;
-                            String messageReference = null;
-                            CommunicationStatus status = null;
-                            if ("1701".equals(resultPerAddress[0])) {
-                                sendStatus = "Successfully Sent";
-                                messageReference = resultPerAddress[1].split(":")[1];
-                                status = CommunicationStatus.SENT;
-                            }
-                            else {
-                                sendStatus = getSendStatus(resultPerAddress[0]);
-                            }
-                            status = status != null ? status : CommunicationStatus.ERROR;
-                            createSMSSendData(config, sendStatus, resultPerAddress[0], remoteAddress, session,
-                                              messageReference, status);
+                        String remoteAddress = resultPerAddress[1].split(":")[0];
+                        remoteAddress = PhoneNumberUtils.formatNumber(remoteAddress, null);
+                        //fetch the session corresponding to the address
+                        Session session = sessionKeyMap != null ? Session.getSession(sessionKeyMap.get(remoteAddress))
+                                                               : null;
+                        String messageReference = null;
+                        CommunicationStatus status = null;
+                        if ("1701".equals(resultPerAddress[0])) {
+                            sendStatus = "Successfully Sent";
+                            messageReference = resultPerAddress[1].split(":")[1];
+                            status = CommunicationStatus.SENT;
                         }
+                        else {
+                            sendStatus = getSendStatus(resultPerAddress[0]);
+                        }
+                        status = status != null ? status : CommunicationStatus.ERROR;
+                        createSMSSendData(config, sendStatus, resultPerAddress[0], remoteAddress, session,
+                                          messageReference, status);
+                    }
+                    else {
+                        sendStatus = getSendStatus(resultFromRouteSMS);
+                        CommunicationStatus status = "1701".equals(resultFromRouteSMS) ? CommunicationStatus.SENT
+                                                                                      : CommunicationStatus.ERROR;
+                        updateSMSSendData(config, sendStatus, resultFromRouteSMS, sessionKeyMap, status);
                     }
                 }
-            }
-            else {
-                sendStatus = getSendStatus(resultFromRouteSMS);
-                CommunicationStatus status = "1701".equals(resultFromRouteSMS) ? CommunicationStatus.SENT
-                                                                              : CommunicationStatus.ERROR;
-                updateSMSSendData(config, sendStatus, resultFromRouteSMS, sessionKeyMap, status);
             }
         }
         return sendStatus;

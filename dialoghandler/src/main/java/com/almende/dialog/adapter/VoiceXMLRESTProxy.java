@@ -353,7 +353,7 @@ public class VoiceXMLRESTProxy {
                 question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), externalRemoteID, localID,
                                             session.getDdrRecordId(), session.getKey(), extraParams);
             }
-            if (!ServerUtils.isValidBearerToken(session, dialogLog)) {
+            if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
                 Language language = ServerUtils.getLanguage(question, config, null);
                 String insufficientCreditMessage = ServerUtils.getInsufficientMessage(language);
                 String ttsurl = getTTSURL(insufficientCreditMessage, language.getCode(), null, null, null);
@@ -1606,7 +1606,7 @@ public class VoiceXMLRESTProxy {
 
         String redirectedId = PhoneNumberUtils.formatNumber(question.getUrl().replace("tel:", ""), null);
 
-        if (!ServerUtils.isValidBearerToken(session, dialogLog)) {
+        if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
             Language language = ServerUtils.getLanguage(question, adapterConfig, null);
             String insufficientCreditMessage = ServerUtils.getInsufficientMessage(language);
             String ttsurl = getTTSURL(insufficientCreditMessage, language.getCode(), null, null, null);

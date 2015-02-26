@@ -30,6 +30,7 @@ import com.almende.eve.rpc.jsonrpc.JSONRequest;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.uuid.UUID;
+import com.askfast.commons.Status;
 import com.askfast.commons.agent.intf.AdapterAgentInterface;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
@@ -598,6 +599,13 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             }
             if (adapter.isAnonymous() != null) {
                 config.setAnonymous(adapter.isAnonymous());
+            }
+            if (adapter.getStatus() != null) {
+
+                log.warning(String.format(" *** Updating status of adapter: %s with id: %s from: %s to: %s ***",
+                                          config.getMyAddress(), config.getConfigId(), config.getStatus(),
+                                          adapter.getStatus()));
+                config.setStatus(Status.fromJson(adapter.getStatus()));
             }
             if (adapter.getDialogId() != null) {
                 //check if the accoundId is the owner of this adapter. Incoming scenarios only work if 

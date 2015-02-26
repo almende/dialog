@@ -274,7 +274,7 @@ public class TwilioAdapter {
                                         session.getDdrRecordId(), session.getKey(), extraParams);
         }
         
-        if (!ServerUtils.isValidBearerToken(session, dialogLog)) {
+        if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
             Language language = ServerUtils.getLanguage(question, config, null);
             String insufficientCreditMessage = ServerUtils.getInsufficientMessage(language);
             return Response.ok(renderExitQuestion(question, Arrays.asList(insufficientCreditMessage), session.getKey()))
@@ -1104,7 +1104,7 @@ public class TwilioAdapter {
                     if (redirectedId != null) {
                         
                         //check credits
-                        if (!ServerUtils.isValidBearerToken(session, dialogLog)) {
+                        if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
 
                             Language language = ServerUtils.getLanguage(question, adapterConfig, null);
                             String insufficientCreditMessage = ServerUtils.getInsufficientMessage(language);

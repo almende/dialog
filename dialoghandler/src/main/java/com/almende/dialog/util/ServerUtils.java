@@ -20,6 +20,7 @@ import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.util.ParallelInit;
+import com.askfast.commons.Status;
 import com.askfast.commons.entity.Account;
 import com.askfast.commons.entity.Language;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -224,14 +225,18 @@ public class ServerUtils
      *            Logs for any message
      * @return
      */
-    public static boolean isValidBearerToken(Session session, com.almende.dialog.Logger dialogLog) {
+    public static boolean isValidBearerToken(Session session, AdapterConfig config, com.almende.dialog.Logger dialogLog) {
 
         String bearerToken = session.getExtras().get(DialogAgent.BEARER_TOKEN_KEY);
-        if (!isInUnitTestingEnvironment() && Settings.KEYSERVER != null &&
-            (bearerToken == null || !KeyServerLib.checkAccount(session.getAccountId(), bearerToken))) {
-
-            dialogLog.log(LogLevel.INFO,
-                          session.getAdapterConfig(),
+        if (!isInUnitTestingEnvironment() && Settings.KEYSERVER != null) {
+            
+            if(bearerToken != null) {
+                return KeyServerLib.checkAccount(session.getAccountId(), bearerToken);
+            }
+            else if(config != null && Status.ACTIVE.equals(config.getStatus())) {
+                return true;
+            }
+            dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
                           String.format("Not enough credits to start communication from: %s to: %s",
                                         session.getLocalAddress(), session.getRemoteAddress()), session);
             session.drop();

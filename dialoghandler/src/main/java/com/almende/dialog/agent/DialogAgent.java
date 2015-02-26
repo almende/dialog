@@ -63,6 +63,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     private static final String DEFAULT_ADAPTER_PROVIDER_MAPPING_KEY = "ADAPTER_PROVIDER_MAPPING";
     public static final String ADAPTER_PROVIDER_CREDENTIALS_KEY = "ADAPTER_PROVIDER_CREDENTIALS";
     public static final String ADAPTER_CREDENTIALS_GLOBAL_KEY = "GLOBAL";
+    public static final String BEARER_TOKEN_KEY = "BEARER_TOKEN";
     
     /**
      * Used by the Tests to store any default communication providers. Usually 
@@ -360,7 +361,8 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         case BROADSOFT: {
                             // fetch the first address in the map
                             if (!addressMap.keySet().isEmpty()) {
-                                resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, dialogIdOrUrl, config, accountId);
+                                resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, dialogIdOrUrl, config, accountId,
+                                                                          bearerToken);
                             }
                             else {
                                 throw new Exception("Address should not be empty to setup a call");

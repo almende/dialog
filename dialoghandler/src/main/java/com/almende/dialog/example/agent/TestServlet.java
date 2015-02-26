@@ -369,18 +369,22 @@ public class TestServlet extends HttpServlet
      * @param payload
      * @throws Exception
      */
-    private void validatePayload(String queryString, String payload) throws Exception {
+    private void validatePayload(String url, String payload) throws Exception {
 
         boolean firstAsserted = false;
         boolean secondAsserted = false;
         //validate that every callback has a sessionKey and responder attached to it
-        for (NameValuePair nameValuePair : new URIBuilder(queryString).getQueryParams()) {
+        for (NameValuePair nameValuePair : new URIBuilder(url).getQueryParams()) {
             if (nameValuePair.getName().equals("responder")) {
                 firstAsserted = true;
             }
             if (nameValuePair.getName().equals("sessionKey")) {
                 secondAsserted = true;
             }
+        }
+        //responder and sessionKeys are only not expected for SMSDeliveryStatus callbacks 
+        if(!firstAsserted || !secondAsserted) {
+            log.info("-------------"+ url + "--------");
         }
         Assert.assertTrue(firstAsserted);
         Assert.assertTrue(secondAsserted);

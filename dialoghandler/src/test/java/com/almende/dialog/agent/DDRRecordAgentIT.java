@@ -500,7 +500,7 @@ public class DDRRecordAgentIT extends TestFramework {
                 adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
                 adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
                 adapterConfig.update();
-                VoiceXMLRESTProxy.dial(addressNameMap, message, adapterConfig, adapterConfig.getOwner());
+                VoiceXMLRESTProxy.dial(addressNameMap, message, adapterConfig, adapterConfig.getOwner(), null);
                 break;
             default:
                 break;

@@ -127,7 +127,7 @@ public class VoiceXMLServletIT extends TestFramework {
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.8, "Test outgoing", UnitType.SECOND, null, null);
         
         //trigger an outbound call
-        VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner());
+        VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner(), null);
         //fetch the session, assert that a ddrRecord is not attached still
         Session session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localAddressBroadsoft,
                                                           PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
@@ -316,7 +316,8 @@ public class VoiceXMLServletIT extends TestFramework {
         adapterConfig.update();
 
         //trigger an outbound call
-        String sessionKey1 = VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner());
+        String sessionKey1 = VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner(),
+                                                    null);
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         voiceXMLRESTProxy.timeout(UUID.randomUUID().toString(), sessionKey1);
 
@@ -329,7 +330,8 @@ public class VoiceXMLServletIT extends TestFramework {
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         //mimick a fetch new dialog/ phone pickup
-        String sessionKey2 = VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner());
+        String sessionKey2 = VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner(),
+                                                    null);
         voiceXMLRESTProxy.answer(UUID.randomUUID().toString(), null, "1", sessionKey2, uriInfo);
 
         //validate that the session has it

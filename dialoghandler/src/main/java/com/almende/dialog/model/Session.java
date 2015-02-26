@@ -11,6 +11,7 @@ import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.TextServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
@@ -393,6 +394,7 @@ public class Session{
         extras.remove(AdapterConfig.ACCESS_TOKEN_SECRET_KEY);
         extras.remove(AdapterConfig.XSI_USER_KEY);
         extras.remove(AdapterConfig.XSI_PASSWORD_KEY);
+        extras.remove(DialogAgent.BEARER_TOKEN_KEY);
         return extras;
     }
     

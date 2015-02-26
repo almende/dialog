@@ -37,6 +37,7 @@ import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.Language;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.twilio.sdk.TwilioRestClient;
@@ -271,6 +272,13 @@ public class TwilioAdapter {
         if (question == null) {
             question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), formattedRemoteId, localID,
                                         session.getDdrRecordId(), session.getKey(), extraParams);
+        }
+        
+        if (!ServerUtils.isValidBearerToken(session, dialogLog)) {
+            Language language = ServerUtils.getLanguage(question, config, null);
+            String insufficientCreditMessage = ServerUtils.getInsufficientMessage(language);
+            return Response.ok(renderExitQuestion(question, Arrays.asList(insufficientCreditMessage), session.getKey()))
+                                            .build();
         }
         // Check if we were able to load a question
         if (question == null) {
@@ -1015,21 +1023,21 @@ public class TwilioAdapter {
         }
     }
     
-    protected String renderExitQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
-    	TwiMLResponse twiml = new TwiMLResponse();
-    	
-    	addPrompts(prompts, question.getPreferred_language(), twiml);
-    	
-    	try {
-        	twiml.append(new Hangup());
-        } catch (TwiMLException e) {
-        	log.warning("Failed to append hangup");
+    protected String renderExitQuestion(Question question, List<String> prompts, String sessionKey) {
+
+        TwiMLResponse twiml = new TwiMLResponse();
+        addPrompts(prompts, question.getPreferred_language(), twiml);
+        try {
+            twiml.append(new Hangup());
         }
-    	
-    	return twiml.toXML();
+        catch (TwiMLException e) {
+            log.warning("Failed to append hangup");
+        }
+
+        return twiml.toXML();
     }
     
-    protected void addPrompts(ArrayList<String> prompts, String language, Verb twiml) {
+    protected void addPrompts(List<String> prompts, String language, Verb twiml) {
 
         String lang = language.contains("-") ? language : "nl-NL";
         try {
@@ -1078,7 +1086,6 @@ public class TwilioAdapter {
                     // added for release0.4.2 to store the question in the
                     // session,
                     // for triggering an answered event
-
                     // Check with remoteID we are going to use for the call
                     String newRemoteID = remoteID;
                     String externalCallerId = question.getMediaPropertyValue(MediumType.BROADSOFT,
@@ -1093,59 +1100,24 @@ public class TwilioAdapter {
 
                     log.info(String.format("current session key before referral is: %s and remoteId %s", sessionKey,
                                            remoteID));
-
                     String redirectedId = PhoneNumberUtils.formatNumber(question.getUrl().replace("tel:", ""), null);
                     if (redirectedId != null) {
-                        // update url with formatted redirecteId. RFC3966
-                        // returns format tel:<blabla> as expected
-                        question.setUrl(redirectedId);
-                        // store the remoteId as its lost while trying to
-                        // trigger the answered event
-                        HashMap<String, String> extras = new HashMap<String, String>();
-                        extras.put("referredCalledId", redirectedId);
-                        session.getExtras().putAll(extras);
-                        session.setQuestion(question);
-                        session.setRemoteAddress(newRemoteID);
+                        
+                        //check credits
+                        if (!ServerUtils.isValidBearerToken(session, dialogLog)) {
 
-                        // create a new ddr record and session to catch the
-                        // redirect
-                        Session referralSession = Session.createSession(adapterConfig, newRemoteID, redirectedId);
-                        HashMap<String, String> referralExtras = new HashMap<String, String>();
-                        referralExtras.put("originalRemoteId", remoteID);
-                        referralExtras.put("redirect", "true");
-                        referralSession.getExtras().putAll(referralExtras);
-                        referralSession.setAccountId(session.getAccountId());
-                        if (session.getDirection() != null) {
-                            DDRRecord ddrRecord = null;
-                            try {
-                                ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
-                                                                                            referralSession.getAccountId(),
-                                                                                            redirectedId, 1,
-                                                                                            question.getUrl(),
-                                                                                            session.getKey());
-                                if (ddrRecord != null) {
-                                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
-                                    ddrRecord.createOrUpdate();
-                                    referralSession.setDdrRecordId(ddrRecord.getId());
-                                }
-                            }
-                            catch (Exception e) {
-                                e.printStackTrace();
-                                log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
-                            }
-                            referralSession.setDirection(session.getDirection());
-                            referralSession.setTrackingToken(session.getTrackingToken());
+                            Language language = ServerUtils.getLanguage(question, adapterConfig, null);
+                            String insufficientCreditMessage = ServerUtils.getInsufficientMessage(language);
+                            return Response.ok(renderExitQuestion(null, Arrays.asList(insufficientCreditMessage),
+                                                                  session.getKey())).build();
                         }
-                        referralSession.setQuestion(session.getQuestion());
-                        referralSession.getExtras().put("referralSessionKey", session.getKey());
-                        referralSession.storeSession();
-                        session.storeSession();
+                        updateSessionOnRedirect(question, adapterConfig, remoteID, session, newRemoteID, redirectedId);
+                        result = renderReferral(question, res.prompts, sessionKey, newRemoteID);
                     }
                     else {
                         log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ", question.getUrl()
                                                         .replace("tel:", "")));
                     }
-                    result = renderReferral(question, res.prompts, sessionKey, newRemoteID);
                 }
             }
             else if (question.getType().equalsIgnoreCase("exit")) {
@@ -1163,6 +1135,62 @@ public class TwilioAdapter {
         }
         log.info("Sending xml: " + result);
         return Response.status(Status.OK).type(MediaType.APPLICATION_XML).entity(result).build();
+    }
+
+    /** Creates a new {@link Session} and {@link DDRRecord} for the redirection.
+     * @param question
+     * @param adapterConfig
+     * @param originalRemoteID The remoteId before the referral has taken place
+     * @param session The previous sesison in contention that existed between the originalRemoteId and the referralFromId
+     * @param referralFromID The origin Id of the referral
+     * @param referralToId The destination id of the referral
+     */
+    private void updateSessionOnRedirect(Question question, AdapterConfig adapterConfig, String originalRemoteID,
+        Session session, String referralFromID, String referralToId) {
+
+        // update url with formatted redirecteId. RFC3966
+        // returns format tel:<blabla> as expected
+        question.setUrl(referralToId);
+        // store the remoteId as its lost while trying to
+        // trigger the answered event
+        HashMap<String, String> extras = new HashMap<String, String>();
+        extras.put("referredCalledId", referralToId);
+        session.getExtras().putAll(extras);
+        session.setQuestion(question);
+        session.setRemoteAddress(referralFromID);
+
+        // create a new ddr record and session to catch the
+        // redirect
+        Session referralSession = Session.createSession(adapterConfig, referralFromID, referralToId);
+        HashMap<String, String> referralExtras = new HashMap<String, String>();
+        referralExtras.put("originalRemoteId", originalRemoteID);
+        referralExtras.put("redirect", "true");
+        referralSession.getExtras().putAll(referralExtras);
+        referralSession.setAccountId(session.getAccountId());
+        if (session.getDirection() != null) {
+            DDRRecord ddrRecord = null;
+            try {
+                ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
+                                                                            referralSession.getAccountId(),
+                                                                            referralToId, 1, question.getUrl(),
+                                                                            session.getKey());
+                if (ddrRecord != null) {
+                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+                    ddrRecord.createOrUpdate();
+                    referralSession.setDdrRecordId(ddrRecord.getId());
+                }
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
+            }
+            referralSession.setDirection(session.getDirection());
+            referralSession.setTrackingToken(session.getTrackingToken());
+        }
+        referralSession.setQuestion(session.getQuestion());
+        referralSession.getExtras().put("referralSessionKey", session.getKey());
+        referralSession.storeSession();
+        session.storeSession();
     }
     
     protected String getAnswerUrl() {

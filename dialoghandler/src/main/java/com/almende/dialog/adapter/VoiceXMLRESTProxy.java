@@ -9,6 +9,7 @@ import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
@@ -49,6 +51,7 @@ import com.almende.dialog.util.TimeUtils;
 import com.almende.util.myBlobstore.MyBlobStore;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.Language;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 
@@ -84,12 +87,12 @@ public class VoiceXMLRESTProxy {
      * @return
      * @throws UnsupportedEncodingException
      */
-    public static String dial(String address, String dialogIdOrUrl, AdapterConfig config, String accountId)
-        throws Exception {
+    public static String dial(String address, String dialogIdOrUrl, AdapterConfig config, String accountId,
+        String bearerToken) throws Exception {
 
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(address, "");
-        HashMap<String, String> result = dial(addressNameMap, dialogIdOrUrl, config, accountId);
+        HashMap<String, String> result = dial(addressNameMap, dialogIdOrUrl, config, accountId, bearerToken);
         return result != null && !result.isEmpty() ? result.values().iterator().next() : null;
     }
 
@@ -110,17 +113,20 @@ public class VoiceXMLRESTProxy {
      * @param accountId
      *            AccoundId initiating this broadcast. All costs are applied to
      *            this accountId
+     * @param bearerToken
+     *            Used to check if the account has enough credits to make a
+     *            referral
      * @return
      * @throws Exception
      */
     public static HashMap<String, String> dial(Map<String, String> addressNameMap, String dialogIdOrUrl,
-        AdapterConfig config, String accountId) throws Exception {
+        AdapterConfig config, String accountId, String bearerToken) throws Exception {
 
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
         // If it is a broadcast don't provide the remote address because it is deceiving.
         String loadAddress = null;
         Session session = null;
-        if(addressNameMap == null || addressNameMap.isEmpty()) {
+        if (addressNameMap == null || addressNameMap.isEmpty()) {
             throw new Exception("No address given. Error in call request");
         }
         else if (addressNameMap.size() == 1) {
@@ -178,6 +184,7 @@ public class VoiceXMLRESTProxy {
                     session.setAdapterID(config.getConfigId());
                     session.setQuestion(question);
                     session.setAccountId(accountId);
+                    session.addExtras(DialogAgent.BEARER_TOKEN_KEY, bearerToken);
                     session.storeSession();
                     dialogLog.log(LogLevel.INFO, session.getAdapterConfig(), String
                                                     .format("Outgoing call requested from: %s to: %s",
@@ -261,6 +268,25 @@ public class VoiceXMLRESTProxy {
         return Response.ok(result).build();
     }
 
+    /**
+     * This is the common entry point for all calls (both inbound and outbound)
+     * when a connection is established. This is called in by the provider and
+     * is configured in the default.ccxml
+     * 
+     * @param direction
+     *            The direction in the call has been triggered.
+     * @param remoteID
+     *            The number to which an outbound call is done to, or an inbound
+     *            call is received from. Even for an anonymous call this field
+     *            is always populated.
+     * @param externalRemoteID
+     *            This is to make sure we distinguish anonymous calls. This
+     *            field is empty when it is an anonymous call.
+     * @param localID
+     *            The number bought from the provider
+     * @param ui
+     * @return
+     */
     @Path("new")
     @GET
     @Produces("application/voicexml")
@@ -270,7 +296,6 @@ public class VoiceXMLRESTProxy {
 
         log.info("call started:" + direction + ":" + remoteID + ":" + localID);
         this.host = ui.getBaseUri().toString().replace(":80/", "/");
-
         Map<String, String> extraParams = new HashMap<String, String>();
 
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
@@ -284,6 +309,7 @@ public class VoiceXMLRESTProxy {
             return Response.ok().build();
         }
 
+        //get or create a session based on the remoteId that is always populated.  
         String internalSessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + formattedRemoteId;
         Session session = Session.getSessionByInternalKey(internalSessionKey);
 
@@ -313,31 +339,39 @@ public class VoiceXMLRESTProxy {
             url = config.getURLForInboundScenario(session);
             Broadsoft bs = new Broadsoft(config);
             bs.startSubscription();
-            dialogLog.log(LogLevel.INFO,
-                          config,
+            dialogLog.log(LogLevel.INFO, config, 
                           String.format("Incoming Call received from: %s at: %s", formattedRemoteId,
                                         config.getMyAddress()), session);
         }
-
+        
+        Question question = null;
+        
         if (session != null) {
+            
+            question = session.getQuestion();
+            if (question == null) {
+                question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), externalRemoteID, localID,
+                                            session.getDdrRecordId(), session.getKey(), extraParams);
+            }
+            if (!ServerUtils.isValidBearerToken(session, dialogLog)) {
+                Language language = ServerUtils.getLanguage(question, config, null);
+                String insufficientCreditMessage = ServerUtils.getInsufficientMessage(language);
+                String ttsurl = getTTSURL(insufficientCreditMessage, language.getCode(), null, null, null);
+                return Response.ok(renderExitQuestion(Arrays.asList(ttsurl), session.getKey())).build();
+            }
             session.setStartUrl(url);
             session.setDirection(direction);
             session.setRemoteAddress(externalRemoteID);
             session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
             session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
             session.setAdapterID(config.getConfigId());
+            session.storeSession();
         }
         else {
             log.severe(String.format("Session not found for internalKey: %s", internalSessionKey));
             return null;
         }
 
-        Question question = session.getQuestion();
-        session.storeSession();
-        if (question == null) {
-            question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), externalRemoteID, localID,
-                                        session.getDdrRecordId(), session.getKey(), extraParams);
-        }
         // Check if we were able to load a question
         if (question == null) {
             //If not load a default error message
@@ -1434,7 +1468,7 @@ public class VoiceXMLRESTProxy {
         outputter.endTag();
     }
 
-    protected String renderExitQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
+    protected String renderExitQuestion(List<String> prompts, String sessionKey) {
 
         StringWriter sw = new StringWriter();
         try {
@@ -1490,25 +1524,7 @@ public class VoiceXMLRESTProxy {
             session.storeSession();
 
             //convert all text prompts to speech 
-            if (res.prompts != null) {
-                String language = question.getPreferred_language().contains("-") ? question.getPreferred_language()
-                                                                                : "nl-nl";
-                String ttsSpeedProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
-                                                                         MediaPropertyKey.TSS_SPEED);
-                ttsSpeedProperty = ttsSpeedProperty != null ? ttsSpeedProperty : "0";
-                ArrayList<String> promptsCopy = new ArrayList<String>();
-                for (String prompt : res.prompts) {
-                    if (!prompt.startsWith("dtmfKey://")) {
-                        if (!prompt.endsWith(".wav")) {
-                            promptsCopy.add(getTTSURL(prompt, language, "wav", ttsSpeedProperty, null));
-                        }
-                        else {
-                            promptsCopy.add(prompt);
-                        }
-                    }
-                }
-                res.prompts = promptsCopy;
-            }
+            convertTextsToTTSURLS(question, res);
 
             if (question.getType().equalsIgnoreCase("closed")) {
                 result = renderClosedQuestion(question, res.prompts, sessionKey);
@@ -1518,62 +1534,11 @@ public class VoiceXMLRESTProxy {
             }
             else if (question.getType().equalsIgnoreCase("referral")) {
                 if (question.getUrl() != null && question.getUrl().startsWith("tel:")) {
-                    // added for release0.4.2 to store the question in the session,
-                    //for triggering an answered event
-                    log.info(String.format("current session key before referral is: %s and remoteId %s", sessionKey,
-                                           remoteID));
-                    String redirectedId = PhoneNumberUtils.formatNumber(question.getUrl().replace("tel:", ""), null);
-                    if (redirectedId != null) {
-                        //update url with formatted redirecteId. RFC3966 returns format tel:<blabla> as expected
-                        question.setUrl(PhoneNumberUtils.formatNumber(redirectedId, PhoneNumberFormat.RFC3966));
-                        //store the remoteId as its lost while trying to trigger the answered event
-                        HashMap<String, String> extras = new HashMap<String, String>();
-                        extras.put("referredCalledId", redirectedId);
-                        session.getExtras().putAll(extras);
-                        session.setQuestion(question);
-                        session.setRemoteAddress(remoteID);
-                        //create a new ddr record and session to catch the redirect
-                        Session referralSession = Session.createSession(adapterConfig, redirectedId);
-                        referralSession.setAccountId(session.getAccountId());
-                        HashMap<String, String> referralExtras = new HashMap<String, String>();
-                        referralExtras.put("originalRemoteId", remoteID);
-                        referralExtras.put("redirect", "true");
-                        referralSession.getExtras().putAll(referralExtras);
-                        referralSession.storeSession();
-                        if (session.getDirection() != null) {
-                            DDRRecord ddrRecord = null;
-                            try {
-                                ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
-                                                                                            referralSession.getAccountId(),
-                                                                                            redirectedId, 1,
-                                                                                            question.getUrl(),
-                                                                                            session.getKey());
-                                if (ddrRecord != null) {
-                                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
-                                    ddrRecord.createOrUpdate();
-                                    referralSession.setDdrRecordId(ddrRecord.getId());
-                                }
-                            }
-                            catch (Exception e) {
-                                e.printStackTrace();
-                                log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
-                            }
-                            referralSession.setDirection(session.getDirection());
-                            referralSession.setTrackingToken(session.getTrackingToken());
-                        }
-                        referralSession.setQuestion(session.getQuestion());
-                        referralSession.storeSession();
-                        session.storeSession();
-                    }
-                    else {
-                        log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ", question.getUrl()
-                                                        .replace("tel:", "")));
-                    }
-                    result = renderComment(question, res.prompts, sessionKey);
+                    result = renderReferralQuestion(question, adapterConfig, remoteID, res, session);
                 }
             }
             else if (question.getType().equalsIgnoreCase("exit")) {
-                result = renderExitQuestion(question, res.prompts, sessionKey);
+                result = renderExitQuestion(res.prompts, sessionKey);
             }
             else if (res.prompts.size() > 0) {
                 result = renderComment(question, res.prompts, sessionKey);
@@ -1587,6 +1552,113 @@ public class VoiceXMLRESTProxy {
         }
         log.info("Sending xml: " + result);
         return Response.ok(result).build();
+    }
+
+    /**
+     * Converts all prompts which do not have prefix dtmfKey://. If the prompt
+     * ends with a .wav suffix it if added directly. If not it is converted to a
+     * TTS url
+     * 
+     * @param question
+     * @param res
+     */
+    private void convertTextsToTTSURLS(Question question, Return res) {
+
+        if (res.prompts != null) {
+            String language = question.getPreferred_language().contains("-") ? question.getPreferred_language()
+                                                                            : "nl-nl";
+            String ttsSpeedProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                     MediaPropertyKey.TSS_SPEED);
+            ttsSpeedProperty = ttsSpeedProperty != null ? ttsSpeedProperty : "0";
+            ArrayList<String> promptsCopy = new ArrayList<String>();
+            for (String prompt : res.prompts) {
+                if (!prompt.startsWith("dtmfKey://")) {
+                    if (!prompt.endsWith(".wav")) {
+                        promptsCopy.add(getTTSURL(prompt, language, "wav", ttsSpeedProperty, null));
+                    }
+                    else {
+                        promptsCopy.add(prompt);
+                    }
+                }
+            }
+            res.prompts = promptsCopy;
+        }
+    }
+
+    /** Render a question requesting to be redirected to another agent or a number. 
+     * Does a credit check and drops the session if it fails.
+     * @param question
+     * @param adapterConfig
+     * @param remoteID
+     * @param sessionKey
+     * @param res
+     * @param session
+     * @return
+     */
+    private String renderReferralQuestion(Question question, AdapterConfig adapterConfig, String remoteID, Return res,
+        Session session) {
+
+        String result;
+        // added for release0.4.2 to store the question in the session,
+        //for triggering an answered event
+        log.info(String.format("current session key before referral is: %s and remoteId %s",
+                               session != null ? session.getKey() : null, remoteID));
+
+        String redirectedId = PhoneNumberUtils.formatNumber(question.getUrl().replace("tel:", ""), null);
+
+        if (!ServerUtils.isValidBearerToken(session, dialogLog)) {
+            Language language = ServerUtils.getLanguage(question, adapterConfig, null);
+            String insufficientCreditMessage = ServerUtils.getInsufficientMessage(language);
+            String ttsurl = getTTSURL(insufficientCreditMessage, language.getCode(), null, null, null);
+            return renderExitQuestion(Arrays.asList(ttsurl), session.getKey());
+        }
+        if (redirectedId != null) {
+            //update url with formatted redirecteId. RFC3966 returns format tel:<blabla> as expected
+            question.setUrl(PhoneNumberUtils.formatNumber(redirectedId, PhoneNumberFormat.RFC3966));
+            //store the remoteId as its lost while trying to trigger the answered event
+            HashMap<String, String> extras = new HashMap<String, String>();
+            extras.put("referredCalledId", redirectedId);
+            session.getExtras().putAll(extras);
+            session.setQuestion(question);
+            session.setRemoteAddress(remoteID);
+            //create a new ddr record and session to catch the redirect
+            Session referralSession = Session.createSession(adapterConfig, redirectedId);
+            referralSession.setAccountId(session.getAccountId());
+            HashMap<String, String> referralExtras = new HashMap<String, String>();
+            referralExtras.put("originalRemoteId", remoteID);
+            referralExtras.put("redirect", "true");
+            referralSession.getExtras().putAll(referralExtras);
+            referralSession.storeSession();
+            if (session.getDirection() != null) {
+                DDRRecord ddrRecord = null;
+                try {
+                    ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
+                                                                                referralSession.getAccountId(),
+                                                                                redirectedId, 1, question.getUrl(),
+                                                                                session.getKey());
+                    if (ddrRecord != null) {
+                        ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+                        ddrRecord.createOrUpdate();
+                        referralSession.setDdrRecordId(ddrRecord.getId());
+                    }
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                    log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
+                }
+                referralSession.setDirection(session.getDirection());
+                referralSession.setTrackingToken(session.getTrackingToken());
+            }
+            referralSession.setQuestion(session.getQuestion());
+            referralSession.storeSession();
+            session.storeSession();
+        }
+        else {
+            log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ",
+                                     question.getUrl().replace("tel:", "")));
+        }
+        result = renderComment(question, res.prompts, session != null ? session.getKey() : null);
+        return result;
     }
 
     protected String getAnswerUrl() {

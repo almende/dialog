@@ -5,7 +5,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +16,7 @@ import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import org.hamcrest.Matchers;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -22,6 +25,7 @@ import org.w3c.dom.Node;
 import com.almende.dialog.IntegrationTest;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.example.agent.TestServlet;
@@ -338,6 +342,74 @@ public class VoiceXMLServletIT extends TestFramework {
         session = Session.getSession(sessionKey2);
         assertThat(session.getAllExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY),
                    Matchers.is(AdapterProviders.BROADSOFT.toString()));
+    }
+    
+    /**
+     * This test is to check if the inbound functionality works correctly for a dialog
+     * with the wrong credentials for the secured url access
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void inboundPhoneCall_WithSecuredDialogAccessFailTest() throws Exception {
+
+        Response securedDialogResponse = performSecuredInboundCall("wrongUserName", "testpassword");
+        Assert.assertThat(securedDialogResponse.getEntity().toString(), Matchers
+                                        .containsString("<prompt><audio src=\"http://tts.ask-fast.com/api/parse?"
+                                                        + "text=Er%20is%20iets%20mis%20gegaan%20met%20het%20"
+                                                        + "ophalen%20van%20uw%20dialoog&amp;lang=nl-nl&amp;"
+                                                        + "codec=wav&amp;speed=0&amp;format=8khz_8bit_mono&amp;"
+                                                        + "type=.wav\"/></prompt>"));
+    }
+    
+    /**
+     * This test is to check if the inbound functionality works for a dialog
+     * with the right credentials for the secured url access
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void inboundPhoneCall_WithSecuredDialogAccessSuccessTest() throws Exception {
+
+        Response securedDialogResponse = performSecuredInboundCall("testuserName", "testpassword");
+        assertTrue(securedDialogResponse != null);
+        assertOpenQuestionWithDTMFType(securedDialogResponse.getEntity().toString());
+    }
+
+    /**
+     * @throws UnsupportedEncodingException
+     * @throws Exception
+     * @throws URISyntaxException
+     */
+    private Response performSecuredInboundCall(String username, String password) throws UnsupportedEncodingException,
+        Exception, URISyntaxException {
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
+        url = ServerUtils.getURLWithQueryParams(url, "secured", "true");
+
+        //create a dialog
+        dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
+        dialogAgent.createDialog(TEST_PUBLIC_KEY, "Test secured dialog", url);
+        Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+        createDialog.setUserName(username);
+        createDialog.setPassword(password);
+        createDialog.setUseBasicAuth(true);
+        createDialog.storeOrUpdate();
+
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+        adapterConfig.setDialogId(createDialog.getId());
+        adapterConfig.update();
+
+        //mock the Context
+        UriInfo uriInfo = Mockito.mock(UriInfo.class);
+        Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
+        VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
+        return voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
+                                              uriInfo);
     }
     
     /**

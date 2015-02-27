@@ -14,6 +14,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.hamcrest.Matchers;
@@ -55,67 +56,81 @@ public class TestServlet extends HttpServlet
      * simple enum to generate different questions formats
      * @author Shravan
      */
-    public enum QuestionInRequest
-    {
-        APPOINTMENT, SIMPLE_COMMENT, OPEN_QUESTION, OPEN_QUESION_WITHOUT_ANSWERS, URL_QUESTION_TEXT, PLAIN_TEXT_QUESION;
+    public enum QuestionInRequest {
+        SECURED,
+        APPOINTMENT,
+        SIMPLE_COMMENT,
+        OPEN_QUESTION,
+        OPEN_QUESION_WITHOUT_ANSWERS,
+        URL_QUESTION_TEXT,
+        PLAIN_TEXT_QUESION;
     }
     
     @Override
-    protected void doGet( HttpServletRequest req, HttpServletResponse resp )
-    throws ServletException, IOException
-    {
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
         String result = "";
-        String questionType = req.getParameter( "questionType" );
-        if ( questionType != null )
-        {
-            switch ( QuestionInRequest.valueOf(questionType) )
-            {
+        String questionType = req.getParameter("questionType");
+        if (req.getParameter("secured") != null) {
+            if (req.getHeader("Authorization") != null) {
+                log.info("Login via Authorization header");
+                String header = req.getHeader("Authorization");
+                assert header.substring(0, 6).equals("Basic ");
+                String basicAuthEncoded = header.substring(6);
+                String userPass = new String(new Base64().decode(basicAuthEncoded));
+                String[] userPassArray = userPass.split(":");
+                if (!"testusername".equalsIgnoreCase(userPassArray[0]) ||
+                    !"testpassword".equalsIgnoreCase(userPassArray[1])) {
+                    result = null;
+                    throw new ServletException("Insecure test servlet access");
+                }
+            }
+        }
+        if (questionType != null) {
+            switch (QuestionInRequest.valueOf(questionType)) {
                 case APPOINTMENT:
-                    result = getAppointmentQuestion( req.getParameter( "question" ) );
+                    result = getAppointmentQuestion(req.getParameter("question"));
                     break;
                 case SIMPLE_COMMENT:
-                    result = getJsonSimpleCommentQuestion( req.getParameter( "question" ) );
+                    result = getJsonSimpleCommentQuestion(req.getParameter("question"));
                     break;
                 case OPEN_QUESTION:
-                    result = getJsonSimpleOpenQuestion( req.getParameter( "question" ) );
+                    result = getJsonSimpleOpenQuestion(req.getParameter("question"));
                     break;
                 case PLAIN_TEXT_QUESION:
-                    result = req.getParameter( "question" );
+                    result = req.getParameter("question");
                     break;
                 case OPEN_QUESION_WITHOUT_ANSWERS:
-                    result = getJsonSimpleOpenQuestionWithoutAnswers( req.getParameter( "question" ) );
+                    result = getJsonSimpleOpenQuestionWithoutAnswers(req.getParameter("question"));
+                    break;
                 default:
                     break;
             }
         }
         //store all the questions loaded in the TestFramework
-        if(result != null && !result.isEmpty())
-        {
-            try
-            {
+        if (result != null && !result.isEmpty()) {
+            try {
                 storeResponseQuestionInThread(getResponseQuestionWithOptionsInString(result));
             }
-            catch ( Exception e )
-            {
-                Assert.fail( "Exception is not expected to be thrown. "+ e.getLocalizedMessage() );
+            catch (Exception e) {
+                Assert.fail("Exception is not expected to be thrown. " + e.getLocalizedMessage());
             }
         }
-        if ( result == null || result.isEmpty()
-            && req.getPathInfo().startsWith( URLDecoder.decode( OPEN_QUESTION_URL_WITH_SPACES, "UTF-8" ) ) )
-        {
-            String message = req.getPathInfo().substring(
-                URLDecoder.decode( OPEN_QUESTION_URL_WITH_SPACES, "UTF-8" ).length() + 1 );
-            result = getJsonSimpleOpenQuestion( TEST_SERVLET_PATH + PLAIN_TEXT_QUESTION + "/" + message );
+        if (result == null || result.isEmpty() &&
+            req.getPathInfo().startsWith(URLDecoder.decode(OPEN_QUESTION_URL_WITH_SPACES, "UTF-8"))) {
+            String message = req.getPathInfo().substring(URLDecoder.decode(OPEN_QUESTION_URL_WITH_SPACES, "UTF-8")
+                                                                                         .length() + 1);
+            result = getJsonSimpleOpenQuestion(TEST_SERVLET_PATH + PLAIN_TEXT_QUESTION + "/" + message);
         }
-        else if ( result == null || result.isEmpty()
-            && req.getPathInfo().startsWith( URLDecoder.decode( PLAIN_TEXT_QUESTION, "UTF-8" ) ) )
-        {
-            result = URLDecoder.decode(
-                req.getPathInfo().substring( URLDecoder.decode( PLAIN_TEXT_QUESTION, "UTF-8" ).length() + 1 ), "UTF-8" );
+        else if (result == null || result.isEmpty() &&
+                 req.getPathInfo().startsWith(URLDecoder.decode(PLAIN_TEXT_QUESTION, "UTF-8"))) {
+            result = URLDecoder.decode(req.getPathInfo().substring(URLDecoder.decode(PLAIN_TEXT_QUESTION, "UTF-8")
+                                                                                                   .length() + 1),
+                                       "UTF-8");
         }
-        TestServlet.logForTest( result );
-        resp.getWriter().write( result );
-        resp.setHeader( "Content-Type", MediaType.APPLICATION_JSON );
+        TestServlet.logForTest(result);
+        resp.getWriter().write(result);
+        resp.setHeader("Content-Type", MediaType.APPLICATION_JSON);
     }
     
     @Override

@@ -416,14 +416,15 @@ public class Session{
     }
     
     /**
-     * used to mimick the String store entity. 
+     * used to mimick the String store entity.
+     * 
      * @return the first value found in the {@link Session#extras}
      */
     public static String getString(String sessionKey) {
 
         Session session = getSession(sessionKey);
-        return session != null && !session.getExtras().isEmpty() ? session.getExtras().values().iterator().next()
-                                                                : null;
+        return session != null && !session.getAllExtras().isEmpty() ? session.getAllExtras().values().iterator().next()
+                                                                   : null;
     }
     
     public String getKey()
@@ -444,7 +445,7 @@ public class Session{
     {
         Session session = new Session();
         session.setKey( key );
-        session.getExtras().put( key, valueTobeStored );
+        session.getAllExtras().put( key, valueTobeStored );
         session.storeSession();
         return session;
     }
@@ -630,9 +631,8 @@ public class Session{
         while ( resultIterator.hasNext() )
         {
             Session session = resultIterator.next();
-            if ( session != null && session.getExtras().get( extrasKey ) != null
-                && session.getExtras().get( extrasKey ).equals( extrasValue ) )
-            {
+            if (session != null && session.getAllExtras().get(extrasKey) != null &&
+                session.getAllExtras().get(extrasKey).equals(extrasValue)) {
                 return session.getQuestion();
             }
         }

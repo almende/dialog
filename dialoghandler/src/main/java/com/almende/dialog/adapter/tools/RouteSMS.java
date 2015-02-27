@@ -225,7 +225,7 @@ public class RouteSMS {
             SMSDeliveryStatus.storeSMSRelatedData(messageReference, session.getRemoteAddress(), config,
                                                   session.getAccountId(), session.getQuestion(), smsCode, returnResult,
                                                   session.getDdrRecordId(),
-                                                  session.getExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY),
+                                                  session.getAllExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY),
                                                   session.getKey());
             //if ddr record ID is found. update it
             if (session.getDdrRecordId() != null) {

@@ -143,6 +143,7 @@ public class Dialog implements DialogInterface {
      */
     public void storeOrUpdate() {
 
+        id = id != null ? id : UUID.randomUUID().toString();
         creationTime = creationTime != null ? creationTime : TimeUtils.getServerCurrentTimeInMillis();
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         datastore.storeOrUpdate(this);
@@ -349,7 +350,7 @@ public class Dialog implements DialogInterface {
 
         if (dialog != null && session != null && dialog.getUseBasicAuth()) {
             String credential = Credentials.basic(dialog.getUserName(), dialog.getPassword());
-            session.getExtras().put(DIALOG_BASIC_AUTH_HEADER_KEY, credential);
+            session.getAllExtras().put(DIALOG_BASIC_AUTH_HEADER_KEY, credential);
             session.storeSession();
         }
     }
@@ -366,7 +367,7 @@ public class Dialog implements DialogInterface {
         if (sessionKey != null) {
             Session session = Session.getSession(sessionKey);
             if (session != null) {
-                return session.getExtras().get(DIALOG_BASIC_AUTH_HEADER_KEY);
+                return session.getAllExtras().get(DIALOG_BASIC_AUTH_HEADER_KEY);
             }
         }
         return null;

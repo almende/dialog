@@ -227,7 +227,7 @@ public class ServerUtils
      */
     public static boolean isValidBearerToken(Session session, AdapterConfig config, com.almende.dialog.Logger dialogLog) {
 
-        String bearerToken = session.getExtras().get(DialogAgent.BEARER_TOKEN_KEY);
+        String bearerToken = session.getAllExtras().get(DialogAgent.BEARER_TOKEN_KEY);
         if (!isInUnitTestingEnvironment() && Settings.KEYSERVER != null) {
             
             if(bearerToken != null) {

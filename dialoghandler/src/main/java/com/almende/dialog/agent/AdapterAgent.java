@@ -680,6 +680,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             AdapterType adapterType = AdapterType.fromJson(config.getAdapterType());
             if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, false) != null) {
                 config.removeAccount(accountId);
+                config.getProperties().remove(AdapterConfig.DIALOG_ID_KEY);
                 switch (adapterType) {
                     case XMPP:
                         //deregister if its an askfast xmpp account

@@ -97,7 +97,7 @@ public class AdapterConfig {
 
         try {
             AdapterConfig newConfig = new AdapterConfig();
-            newConfig.status = com.askfast.commons.Status.ACTIVE;
+            newConfig.status = com.askfast.commons.Status.INACTIVE;
 
             newConfig = om.readerForUpdating(newConfig).readValue(json);
             newConfig.adapterType = newConfig.adapterType.toLowerCase();

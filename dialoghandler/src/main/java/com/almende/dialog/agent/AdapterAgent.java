@@ -857,6 +857,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         }
 
         config.setAdapterType(config.getAdapterType().toLowerCase());
+        config.setStatus(Status.INACTIVE);
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         datastore.store(config);
 

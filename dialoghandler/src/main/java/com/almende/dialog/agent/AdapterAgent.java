@@ -572,7 +572,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
 		if(config==null)
 			throw new Exception("No adapter with this id");
-		
+		config.setStatus(Status.ACTIVE);
 		config.addAccount(accountId);
 		config.update();
 	}

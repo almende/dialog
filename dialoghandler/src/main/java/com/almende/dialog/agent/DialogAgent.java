@@ -643,6 +643,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                                 AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(dialogDetails
                                                                 .getAdapterID());
                                 if (adapterConfig != null) {
+                                    dialogDetails.setAdapterType(adapterConfig.getAdapterType());
                                     isCallAdapter = adapterConfig.isCallAdapter();
                                 }
                             }

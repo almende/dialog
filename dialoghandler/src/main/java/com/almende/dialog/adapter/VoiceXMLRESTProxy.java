@@ -332,6 +332,14 @@ public class VoiceXMLRESTProxy {
             if (session != null) {
                 session.drop();
             }
+            //check if an existing session exists
+            session = Session.getSessionByInternalKey(config.getAdapterType(), config.getMyAddress(), formattedRemoteId);
+            if (session != null) {
+                String responseMessage = checkIfCallAlreadyInSession(formattedRemoteId, config, session);
+                if(responseMessage == null) {
+                    session.drop();
+                }
+            }
             session = Session.createSession(config, formattedRemoteId);
             session.setAccountId(config.getOwner());
             session.setRemoteAddress(externalRemoteID);
@@ -616,7 +624,7 @@ public class VoiceXMLRESTProxy {
                                                      new HashMap<String, String>());
                 session.setQuestion(question);
             }
-            if (session.getQuestion() != null && !isEventTriggered("hangup", session)) {
+            if (session.getQuestion() != null && !isEventTriggered("hangup", session, false)) {
 
                 HashMap<String, Object> timeMap = getTimeMap(session.getStartTimestamp(), session.getAnswerTimestamp(),
                                                              session.getReleaseTimestamp());
@@ -654,7 +662,7 @@ public class VoiceXMLRESTProxy {
         Session session = Session.getSession(sessionKey);
         //for direction = transfer (redirect event), json should not be null        
         //make sure that the answered call is not triggered twice
-        if (session != null && session.getQuestion() != null && !isEventTriggered("answered", session)) {
+        if (session != null && session.getQuestion() != null && !isEventTriggered("answered", session, true)) {
             String responder = session.getRemoteAddress();
             String referredCalledId = session.getExtras().get("referredCalledId");
             HashMap<String, Object> timeMap = getTimeMap(startTime, answerTime, null);
@@ -764,22 +772,9 @@ public class VoiceXMLRESTProxy {
                                     address += "@" + addressArray[1];
                                 }
 
-                                String sessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + config.getMyAddress() + "|" +
+                                String sessionKey = config.getAdapterType() + "|" + config.getMyAddress() + "|" +
                                                     formattedAddress;
-                                Session session = null;
-                                // if formattedAddress is empty (probably anonymous caller)
-                                // (Expensive query)
-                                if (formattedAddress.isEmpty()) {
-                                    List<Session> sessions = Session.findSessionByLocalAndRemoteAddress(config
-                                                                    .getMyAddress(), formattedAddress);
-                                    if (sessions.size() == 1) {
-                                        session = sessions.get(0);
-                                    }
-                                }
-                                else {
-                                    // find the session based on the active call on the 
-                                    session = Session.getSessionByInternalKey(sessionKey);
-                                }
+                                Session session = Session.getSessionByInternalKey(sessionKey);
                                 if (session != null) {
 
                                     log.info("Session key: " + sessionKey);
@@ -795,14 +790,14 @@ public class VoiceXMLRESTProxy {
                                         if (callState.getTextContent().equals("Active")) {
                                             if (releaseCause == null ||
                                                 (releaseCause != null &&
-                                                 !releaseCause.getTextContent()
-                                                                                 .equalsIgnoreCase("Temporarily Unavailable") && !releaseCause
-                                                                                .getTextContent()
-                                                                                .equalsIgnoreCase("User Not Found"))) {
+                                                 !releaseCause.getTextContent().equalsIgnoreCase("Temporarily Unavailable") 
+                                                 && !releaseCause.getTextContent().equalsIgnoreCase("User Not Found"))) {
+
                                                 session.setDirection(direction);
                                                 session.setAnswerTimestamp(answerTimeString);
                                                 session.setStartTimestamp(startTimeString);
                                                 if (session.getQuestion() == null) {
+                                                    
                                                     Question questionFromIncomingCall = Session
                                                                                     .getQuestionFromDifferentSession(config.getConfigId(),
                                                                                                                      "inbound",
@@ -907,9 +902,9 @@ public class VoiceXMLRESTProxy {
                                         //update session with call timings
                                         if (callReleased) {
                                             //sometimes answerTimeStamp is only given in the ACTIVE ccxml
-                                            String answerTimestamp = session.getAnswerTimestamp();
-                                            answerTimeString = (answerTimestamp != null && answerTimeString == null) ? answerTimestamp
-                                                                                                                    : answerTimeString;
+//                                            String answerTimestamp = session.getAnswerTimestamp();
+//                                            answerTimeString = (answerTimestamp != null && answerTimeString == null) ? answerTimestamp
+//                                                                                                                    : answerTimeString;
                                             session.setAnswerTimestamp(answerTimeString);
                                             session.setStartTimestamp(startTimeString);
                                             session.setReleaseTimestamp(releaseTimeString);
@@ -1766,7 +1761,7 @@ public class VoiceXMLRESTProxy {
      * @param session
      * @return
      */
-    private static boolean isEventTriggered(String eventName, Session session) {
+    private static boolean isEventTriggered(String eventName, Session session, boolean updateSession) {
 
         if (session != null) {
             if (session.getExtras().get("event_" + eventName) != null) {
@@ -1776,7 +1771,7 @@ public class VoiceXMLRESTProxy {
                                                                           .get("event_" + eventName)), null)));
                 return true;
             }
-            else {
+            else if(updateSession) {
                 session.getExtras().put("event_" + eventName, String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
                 session.storeSession();
             }

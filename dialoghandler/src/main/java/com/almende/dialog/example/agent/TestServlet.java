@@ -21,6 +21,7 @@ import org.hamcrest.Matchers;
 import org.junit.Assert;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
+import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.AnswerPost;
 import com.almende.dialog.model.EventPost;
@@ -386,52 +387,57 @@ public class TestServlet extends HttpServlet
      */
     private void validatePayload(String url, String payload) throws Exception {
 
-        boolean firstAsserted = false;
-        boolean secondAsserted = false;
-        //validate that every callback has a sessionKey and responder attached to it
-        for (NameValuePair nameValuePair : new URIBuilder(url).getQueryParams()) {
-            if (nameValuePair.getName().equals("responder")) {
+        //ignore all calls from test broadsoft subscriptions
+        if (!url.contains(Broadsoft.XSI_ACTIONS)) {
+            boolean firstAsserted = false;
+            boolean secondAsserted = false;
+            //validate that every callback has a sessionKey and responder attached to it
+            for (NameValuePair nameValuePair : new URIBuilder(url).getQueryParams()) {
+                if (nameValuePair.getName().equals("responder")) {
+                    firstAsserted = true;
+                }
+                if (nameValuePair.getName().equals("sessionKey")) {
+                    secondAsserted = true;
+                }
+            }
+            //responder and sessionKeys are only not expected for SMSDeliveryStatus callbacks 
+            if (!firstAsserted || !secondAsserted) {
+                log.info("-------------" + url + "--------");
+            }
+            Assert.assertTrue(firstAsserted);
+            Assert.assertTrue(secondAsserted);
+            firstAsserted = false;
+            AnswerPost answerEntity = ServerUtils.deserialize(payload, false, AnswerPost.class);
+            if (answerEntity != null) {
+                Assert.assertThat(answerEntity.getExtras(), Matchers.notNullValue());
+                Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.ACCESS_TOKEN_KEY), Matchers.nullValue());
+                Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY),
+                                  Matchers.nullValue());
+                Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY),
+                                  Matchers.nullValue());
+                Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.XSI_PASSWORD_KEY), Matchers.nullValue());
+                Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.XSI_USER_KEY), Matchers.nullValue());
+                Assert.assertThat(answerEntity.getExtras().get(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY),
+                                  Matchers.nullValue());
                 firstAsserted = true;
             }
-            if (nameValuePair.getName().equals("sessionKey")) {
-                secondAsserted = true;
+            else {
+                EventPost eventEntity = ServerUtils.deserialize(payload, false, EventPost.class);
+                if (eventEntity != null) {
+                    Map<String, Object> eventExtras = ServerUtils.deserialize(ServerUtils.serialize(eventEntity
+                                                    .getExtras()), new TypeReference<Map<String, Object>>() {
+                    });
+                    Assert.assertThat(eventExtras, Matchers.notNullValue());
+                    Assert.assertThat(eventExtras.get(AdapterConfig.ACCESS_TOKEN_KEY), Matchers.nullValue());
+                    Assert.assertThat(eventExtras.get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY), Matchers.nullValue());
+                    Assert.assertThat(eventExtras.get(AdapterConfig.ADAPTER_PROVIDER_KEY), Matchers.nullValue());
+                    Assert.assertThat(eventExtras.get(AdapterConfig.XSI_PASSWORD_KEY), Matchers.nullValue());
+                    Assert.assertThat(eventExtras.get(AdapterConfig.XSI_USER_KEY), Matchers.nullValue());
+                    Assert.assertThat(eventExtras.get(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY), Matchers.nullValue());
+                    firstAsserted = true;
+                }
             }
+            Assert.assertTrue(firstAsserted);
         }
-        //responder and sessionKeys are only not expected for SMSDeliveryStatus callbacks 
-        if(!firstAsserted || !secondAsserted) {
-            log.info("-------------"+ url + "--------");
-        }
-        Assert.assertTrue(firstAsserted);
-        Assert.assertTrue(secondAsserted);
-        firstAsserted = false;
-        AnswerPost answerEntity = ServerUtils.deserialize(payload, false, AnswerPost.class);
-        if (answerEntity != null) {
-            Assert.assertThat(answerEntity.getExtras(), Matchers.notNullValue());
-            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.ACCESS_TOKEN_KEY), Matchers.nullValue());
-            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY), Matchers.nullValue());
-            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY), Matchers.nullValue());
-            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.XSI_PASSWORD_KEY), Matchers.nullValue());
-            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.XSI_USER_KEY), Matchers.nullValue());
-            Assert.assertThat(answerEntity.getExtras().get(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY), Matchers.nullValue());
-            firstAsserted = true;
-        }
-        else {
-            EventPost eventEntity = ServerUtils.deserialize(payload, false, EventPost.class);
-            if (eventEntity != null) {
-                Map<String, Object> eventExtras = ServerUtils
-                                                .deserialize(ServerUtils.serialize(eventEntity.getExtras()),
-                                                             new TypeReference<Map<String, Object>>() {
-                                                             });
-                Assert.assertThat(eventExtras, Matchers.notNullValue());
-                Assert.assertThat(eventExtras.get(AdapterConfig.ACCESS_TOKEN_KEY), Matchers.nullValue());
-                Assert.assertThat(eventExtras.get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY), Matchers.nullValue());
-                Assert.assertThat(eventExtras.get(AdapterConfig.ADAPTER_PROVIDER_KEY), Matchers.nullValue());
-                Assert.assertThat(eventExtras.get(AdapterConfig.XSI_PASSWORD_KEY), Matchers.nullValue());
-                Assert.assertThat(eventExtras.get(AdapterConfig.XSI_USER_KEY), Matchers.nullValue());
-                Assert.assertThat(eventExtras.get(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY), Matchers.nullValue());
-                firstAsserted = true;
-            }
-        }
-        Assert.assertTrue(firstAsserted);
     }
 }

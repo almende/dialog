@@ -113,7 +113,6 @@ public class VoiceXMLServletIT extends TestFramework {
      * Test to validate if wrong remote address given will not 
      * @throws Exception
      */
-    @SuppressWarnings({"deprecation"})
     @Test
     public void outboundPhoneCall_RepeatedBroadsoftSubsciptionFailTestTest() throws Exception {
 
@@ -408,6 +407,32 @@ public class VoiceXMLServletIT extends TestFramework {
         assertTrue(securedDialogResponse != null);
         assertOpenQuestionWithDTMFType(securedDialogResponse.getEntity().toString());
     }
+    
+    /**
+     * This test is to check if the outbound functionality works correctly for a dialog
+     * with the wrong credentials for the secured url access
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void outboundPhoneCall_WithSecuredDialogAccessFailTest() throws Exception {
+
+        String sessionKey = performSecuredOutBoundCall("wrongUserName", "testpassword");
+        assertThat(sessionKey, Matchers.nullValue());
+    }
+    
+    /**
+     * This test is to check if the outbound functionality works for a dialog
+     * with the right credentials for the secured url access
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void outboundPhoneCall_WithSecuredDialogAccessSuccessTest() throws Exception {
+
+        String sessionKey = performSecuredOutBoundCall("testuserName", "testpassword");
+        assertThat(sessionKey, Matchers.notNullValue());
+    }
 
     /**
      * @throws UnsupportedEncodingException
@@ -443,6 +468,36 @@ public class VoiceXMLServletIT extends TestFramework {
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         return voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
                                               uriInfo);
+    }
+    
+    /**
+     * @throws UnsupportedEncodingException
+     * @throws Exception
+     * @throws URISyntaxException
+     */
+    private String performSecuredOutBoundCall(String username, String password) throws UnsupportedEncodingException,
+        Exception, URISyntaxException {
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
+        url = ServerUtils.getURLWithQueryParams(url, "secured", "true");
+
+        //create a dialog
+        dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
+        dialogAgent.createDialog(TEST_PUBLIC_KEY, "Test secured dialog", url);
+        Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+        createDialog.setUserName(username);
+        createDialog.setPassword(password);
+        createDialog.setUseBasicAuth(true);
+        createDialog.storeOrUpdate();
+
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, null);
+        //trigger an outbound call
+        return VoiceXMLRESTProxy.dial(remoteAddressVoice, createDialog.getId(), adapterConfig,
+                                      adapterConfig.getOwner(), null);
     }
     
     /**

@@ -38,6 +38,7 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
@@ -170,37 +171,37 @@ public class VoiceXMLRESTProxy {
                                 session = Session.createSession(config, formattedAddress);
                             }
                         }
-                    }
-                    else {
-                        session = Session.createSession(config, formattedAddress);
+                        else {
+                            session = Session.createSession(config, formattedAddress);
+                        }
                     }
                     session.killed = false;
                     session.setStartUrl(url);
                     session.setDirection("outbound");
                     session.setRemoteAddress(formattedAddress);
                     session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
+                    session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
                     session.setAdapterID(config.getConfigId());
                     session.setQuestion(question);
                     session.setAccountId(accountId);
+                    session.addExtras(DialogAgent.BEARER_TOKEN_KEY, bearerToken);
                     session.storeSession();
                     dialogLog.log(LogLevel.INFO, session.getAdapterConfig(), String
                                                     .format("Outgoing call requested from: %s to: %s",
                                                             session.getLocalAddress(), formattedAddress), session);
                     String extSession = "";
-                    if (!ServerUtils.isInUnitTestingEnvironment()) {
-                        Broadsoft bs = new Broadsoft(config);
-                        String subscriptiion = bs.startSubscription();
-                        log.info(String.format("Calling subscription complete. Message: %s. Starting call.. ",
-                                               subscriptiion));
-                        extSession = bs.startCall(formattedAddress + "@outbound", session);
-                        if (extSession == null) {
-                            String errorMessage = String.format("Call not started between %s and %s. Error in requesting adapter provider",
-                                                                config.getMyAddress(), formattedAddress);
-                            log.severe(errorMessage);
-                            session.drop();
-                            resultSessionMap.put(address, errorMessage);
-                            continue;
-                        }
+                    Broadsoft bs = new Broadsoft(config);
+                    String subscriptiion = bs.startSubscription();
+                    log.info(String.format("Calling subscription complete. Message: %s. Starting call.. ",
+                                           subscriptiion));
+                    extSession = bs.startCall(formattedAddress + "@outbound", session);
+                    if (extSession == null) {
+                        String errorMessage = String.format("Call not started between %s and %s. Error in requesting adapter provider",
+                                                            config.getMyAddress(), formattedAddress);
+                        log.severe(errorMessage);
+                        session.drop();
+                        resultSessionMap.put(address, errorMessage);
+                        continue;
                     }
                     //create a ddrRecord
                     try {

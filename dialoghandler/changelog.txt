@@ -1,6 +1,12 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+3-3-2015 version 1.6.1
+- release: small updates unmerged in release_1.6.0
+
+3-3-2015 version 1.6.0
+- release: secure dialogs, unique callerId
+
 3-3-2015 version 1.5.14
 - hotfix: reject call triggered to invalid numbers. reset retry counter if fails
 

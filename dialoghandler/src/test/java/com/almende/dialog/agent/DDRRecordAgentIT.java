@@ -20,6 +20,8 @@ import com.almende.dialog.adapter.MBSmsServlet;
 import com.almende.dialog.adapter.MailServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.adapter.XMPPServlet;
+import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -27,6 +29,7 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AccountType;
@@ -170,10 +173,13 @@ public class DDRRecordAgentIT extends TestFramework {
     public void outgoingPHONECallAddsADDRRecordTest() throws Exception
     {
         String remoteAddressVoice = PhoneNumberUtils.formatNumber( TestFramework.remoteAddressVoice, null );
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "Test");
         Map<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( remoteAddressVoice, "" );
-        Map<String, String> resultMap = createDDRPricesAndAdapterAndSendOutBound( UnitType.MINUTE, AdapterType.CALL,
-            "http://askfastmarket.appspot.com/resource/question/comment?message=Test", addressNameMap );
+        Map<String, String> resultMap = createDDRPricesAndAdapterAndSendOutBound(UnitType.MINUTE, AdapterType.CALL,
+                                                                                 url, addressNameMap);
         
         //check if a ddr record is created
         Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
@@ -247,7 +253,6 @@ public class DDRRecordAgentIT extends TestFramework {
                            remoteAddressVoice +
                            "</address><callType>Network</callType></remoteParty><startTime>1401809063943</startTime>" +
                            "<answerTime>1401809070192</answerTime><releaseTime>1401809370000</releaseTime></call></eventData></Event>";
-
         voiceXMLRESTProxy.receiveCCMessage(hangupXML);
         allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
         assertCount = 0;
@@ -334,8 +339,11 @@ public class DDRRecordAgentIT extends TestFramework {
         String formattedRemoteAddressVoice = PhoneNumberUtils.formatNumber( remoteAddressVoice, null );
         Map<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( formattedRemoteAddressVoice, "" );
-        Map<String, String> resultMap = createDDRPricesAndAdapterAndSendOutBound( UnitType.MINUTE, AdapterType.CALL,
-            "http://askfastmarket.appspot.com/resource/question/comment?message=Test", addressNameMap );
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "Test");
+        Map<String, String> resultMap = createDDRPricesAndAdapterAndSendOutBound(UnitType.MINUTE, AdapterType.CALL,
+                                                                                 url, addressNameMap);
         
         //check if a ddr record is created
         Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
@@ -447,7 +455,6 @@ public class DDRRecordAgentIT extends TestFramework {
                            "<endPoint xsi1:type=\"xsi:AccessEndpoint\"><addressOfRecord>0854881000@ask.ask.voipit.nl</addressOfRecord></endPoint>" +
                            "<appearance>2</appearance><startTime>1401809063943</startTime><answerTime>1401809061002</answerTime></call></eventData>" +
                            "</Event>";
-        
         voiceXMLRESTProxy.receiveCCMessage(answerXML);
         
         //force start the processing of Session
@@ -482,8 +489,10 @@ public class DDRRecordAgentIT extends TestFramework {
         assertThat(ddrPriceForAdapterPurchase.getDdrTypeId(), Matchers.notNullValue());
         String adapterId = null;
         AdapterConfig adapterConfig = null;
-        message = message.startsWith("http") ? message
-                                            : ("http://askfastmarket.appspot.com/resource/question/open?message=" + message);
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", message);
+        message = message.startsWith("http") ? message : url;
         switch (adapterType) {
             case SMS:
                 adapterId = adapterAgent.createMBAdapter("TEST", "TEST", "1111|TEST", "test", null, TEST_ACCOUNTID,

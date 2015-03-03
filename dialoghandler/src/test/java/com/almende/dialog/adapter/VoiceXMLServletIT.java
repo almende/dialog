@@ -120,8 +120,8 @@ public class VoiceXMLServletIT extends TestFramework {
                                                        QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT, TEST_PUBLIC_KEY,
-                                                          localAddressBroadsoft, url);
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
 
         //mock the Context
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
@@ -133,7 +133,7 @@ public class VoiceXMLServletIT extends TestFramework {
         List<DDRRecord> allDdrRecords = DDRRecord.getDDRRecords(null, null, null, null, null, null, null, null, null, null);
         assertThat(allDdrRecords.isEmpty(), Matchers.is(true));
         Session session = Session.getSessionByInternalKey(adapterConfig.getAdapterType(), adapterConfig.getMyAddress(),
-                                             PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+                                                          PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         assertThat(session, Matchers.nullValue());
     }
 
@@ -194,7 +194,6 @@ public class VoiceXMLServletIT extends TestFramework {
                            "@ask.ask.voipit.nl</subscriberId>" +
                            "<applicationId>cc</applicationId><subscriptionId>" +
                            adapterConfig.getXsiSubscription() +
-                           TEST_PUBLIC_KEY +
                            "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
                            "\"http://schema.broadsoft.com/xsi-events\"><eventName>CallSessionEvent</eventName><call><callId>callhalf-12914560105:1</callId><extTrackingId>" +
                            "10669651:1</extTrackingId><personality>Originator</personality><callState>Released</callState><releaseCause>Temporarily Unavailable</releaseCause>" +
@@ -408,6 +407,32 @@ public class VoiceXMLServletIT extends TestFramework {
         assertTrue(securedDialogResponse != null);
         assertOpenQuestionWithDTMFType(securedDialogResponse.getEntity().toString());
     }
+    
+    /**
+     * This test is to check if the outbound functionality works correctly for a dialog
+     * with the wrong credentials for the secured url access
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void outboundPhoneCall_WithSecuredDialogAccessFailTest() throws Exception {
+
+        String sessionKey = performSecuredOutBoundCall("wrongUserName", "testpassword");
+        assertThat(sessionKey, Matchers.nullValue());
+    }
+    
+    /**
+     * This test is to check if the outbound functionality works for a dialog
+     * with the right credentials for the secured url access
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void outboundPhoneCall_WithSecuredDialogAccessSuccessTest() throws Exception {
+
+        String sessionKey = performSecuredOutBoundCall("testuserName", "testpassword");
+        assertThat(sessionKey, Matchers.notNullValue());
+    }
 
     /**
      * @throws UnsupportedEncodingException
@@ -443,6 +468,36 @@ public class VoiceXMLServletIT extends TestFramework {
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         return voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
                                               uriInfo);
+    }
+    
+    /**
+     * @throws UnsupportedEncodingException
+     * @throws Exception
+     * @throws URISyntaxException
+     */
+    private String performSecuredOutBoundCall(String username, String password) throws UnsupportedEncodingException,
+        Exception, URISyntaxException {
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
+        url = ServerUtils.getURLWithQueryParams(url, "secured", "true");
+
+        //create a dialog
+        dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
+        dialogAgent.createDialog(TEST_PUBLIC_KEY, "Test secured dialog", url);
+        Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+        createDialog.setUserName(username);
+        createDialog.setPassword(password);
+        createDialog.setUseBasicAuth(true);
+        createDialog.storeOrUpdate();
+
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, null);
+        //trigger an outbound call
+        return VoiceXMLRESTProxy.dial(remoteAddressVoice, createDialog.getId(), adapterConfig,
+                                      adapterConfig.getOwner(), null);
     }
     
     /**

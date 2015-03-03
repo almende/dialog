@@ -44,6 +44,7 @@ public class SMSDeliveryStatus implements Serializable {
     private String accountId = null;
     private String provider = "";
     private String ddrRecordId = "";
+    private String sessionKey = "";
     private Map<String, Object> extraInfos = null;
 
     @JsonIgnore
@@ -109,6 +110,7 @@ public class SMSDeliveryStatus implements Serializable {
                 smsStatus.setCallback(deliveryEventCallback.getCallback());
             }
             smsStatus.setDdrRecordId(ddrRecordId);
+            smsStatus.setSessionKey(sessionKey);
             smsStatus.store();
             return smsStatus;
         }
@@ -322,5 +324,15 @@ public class SMSDeliveryStatus implements Serializable {
             }
         }
         return this;
+    }
+
+    public String getSessionKey() {
+
+        return sessionKey;
+    }
+
+    public void setSessionKey(String sessionKey) {
+
+        this.sessionKey = sessionKey;
     }
 }

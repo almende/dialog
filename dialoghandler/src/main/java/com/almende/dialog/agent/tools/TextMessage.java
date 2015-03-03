@@ -11,6 +11,7 @@ public class TextMessage {
     private String body = "";
     private String recipientName = "";
     private String keyword = null;
+    private String reference = null;
     private boolean extractKeyword = false;
     private Map<String, Object> extras = null;
 	
@@ -105,5 +106,15 @@ public class TextMessage {
                     this.keyword = words[0].toUpperCase();
             }
         }
+    }
+    
+    public String getReference() {
+        
+        return reference;
+    }
+
+    public void setReference(String reference) {
+    
+        this.reference = reference;
     }
 }

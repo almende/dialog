@@ -48,6 +48,10 @@ public class AdapterConfig {
 	static final ObjectMapper om = new ObjectMapper();
 	public static final String ADAPTER_CREATION_TIME_KEY = "ADAPTER_CREATION_TIME";
 	public static final String ADAPTER_PROVIDER_KEY = "PROVIDER";
+	public static final String ACCESS_TOKEN_KEY = "ACCESS_TOKEN";
+	public static final String ACCESS_TOKEN_SECRET_KEY = "ACCESS_SECRET_TOKEN";
+	public static final String XSI_USER_KEY = "XSI_USER";
+	public static final String XSI_PASSWORD_KEY = "XSI_PASSWORD";
 	public static final String DIALOG_ID_KEY = "DIALOG_ID";
 
 	@Id
@@ -59,7 +63,7 @@ public class AdapterConfig {
 	String address = "";
 	String myAddress = "";
 	String keyword = null;
-	String status = "";
+	com.askfast.commons.Status status = null;
 	//cache the dialog if its ever fetched to reduce read overhead
 	@JsonIgnore
 	private Dialog cachedDialog = null;
@@ -93,12 +97,12 @@ public class AdapterConfig {
 
         try {
             AdapterConfig newConfig = new AdapterConfig();
-            newConfig.status = "OPEN";
+            newConfig.status = com.askfast.commons.Status.INACTIVE;
 
             newConfig = om.readerForUpdating(newConfig).readValue(json);
             newConfig.adapterType = newConfig.adapterType.toLowerCase();
             if (adapterExists(newConfig.getAdapterType(), newConfig.getMyAddress(), newConfig.getKeyword())) {
-                return Response.status(Status.CONFLICT).build();
+                return Response.status(javax.ws.rs.core.Response.Status.CONFLICT).build();
             }
             if (newConfig.getConfigId() == null) {
                 newConfig.configId = new UUID().toString();
@@ -651,11 +655,11 @@ public class AdapterConfig {
 		this.keyword = keyword;
 	}
 	
-	public void setStatus(String status) {
+	public void setStatus(com.askfast.commons.Status status) {
 		this.status = status;
 	}
 	
-	public String getStatus() {
+	public com.askfast.commons.Status getStatus() {
 		return status;
 	}
 	
@@ -732,15 +736,17 @@ public class AdapterConfig {
         }
 	
     /**
-     * Removes the accountId from the shared accounts list. If this accountId
-     * matches the ownerId, makes the next shared account in the list as the
-     * owner. If no accounts are found. Makes this adapter free.
+     * Removes the accountId from the shared accounts list and reset the adapter
+     * to {@link com.askfast.commons.Status#INACTIVE}. If this accountId matches
+     * the ownerId, makes the next shared account in the list as the owner. If
+     * no accounts are found. Makes this adapter free.
      * 
      * @param accountId
      */
     public void removeAccount(String accountId) {
 
         if (accountId != null) {
+            status = com.askfast.commons.Status.INACTIVE;
             if (accounts != null) {
                 accounts.remove(accountId);
             }

@@ -30,6 +30,7 @@ import com.almende.eve.rpc.jsonrpc.JSONRequest;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.uuid.UUID;
+import com.askfast.commons.Status;
 import com.askfast.commons.agent.intf.AdapterAgentInterface;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
@@ -571,7 +572,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 		AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
 		if(config==null)
 			throw new Exception("No adapter with this id");
-		
+		config.setStatus(Status.ACTIVE);
 		config.addAccount(accountId);
 		config.update();
 	}
@@ -598,6 +599,13 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             }
             if (adapter.isAnonymous() != null) {
                 config.setAnonymous(adapter.isAnonymous());
+            }
+            if (adapter.getStatus() != null) {
+
+                log.warning(String.format(" *** Updating status of adapter: %s with id: %s from: %s to: %s ***",
+                                          config.getMyAddress(), config.getConfigId(), config.getStatus(),
+                                          adapter.getStatus()));
+                config.setStatus(Status.fromJson(adapter.getStatus()));
             }
             if (adapter.getDialogId() != null) {
                 //check if the accoundId is the owner of this adapter. Incoming scenarios only work if 
@@ -672,6 +680,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             AdapterType adapterType = AdapterType.fromJson(config.getAdapterType());
             if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, false) != null) {
                 config.removeAccount(accountId);
+                config.getProperties().remove(AdapterConfig.DIALOG_ID_KEY);
                 switch (adapterType) {
                     case XMPP:
                         //deregister if its an askfast xmpp account
@@ -848,6 +857,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         }
 
         config.setAdapterType(config.getAdapterType().toLowerCase());
+        config.setStatus(Status.INACTIVE);
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         datastore.store(config);
 

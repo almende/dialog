@@ -2,6 +2,7 @@ package com.almende.dialog.adapter;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.ServletException;
@@ -43,8 +44,9 @@ public class RouteSmsServlet extends TextServlet {
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
         Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
 
-        RouteSMS routeSMS = new RouteSMS(config.getAccessToken(), config.getAccessTokenSecret(), null, null);
-        return routeSMS.sendMessage(message, subject, from, fromName, to, toName, extras, config, accountId);
+        HashMap<String, String> addressNameMap = new HashMap<String, String>(1);
+        addressNameMap.put(to, toName);
+        return broadcastMessage(message, subject, from, fromName, addressNameMap, extras, config, accountId); 
     }
 
     @Override
@@ -167,7 +169,7 @@ public class RouteSmsServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
-        String message) throws Exception {
+        String message, String sessionKey) throws Exception {
 
         // Needs implementation, but service not available at CM
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
@@ -175,12 +177,12 @@ public class RouteSmsServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
 
         //add costs with no.of messages * recipients
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, senderName, toAddress,
                                                                CM.countMessageParts(message) * toAddress.size(),
-                                                               message);
+                                                               message, sessionKeyMap);
     }
 
     /**
@@ -206,7 +208,8 @@ public class RouteSmsServlet extends TextServlet {
             SMSDeliveryStatus routeSMSStatus = SMSDeliveryStatus.fetch(messageId);
             to = PhoneNumberUtils.formatNumber(to, null);
             if (routeSMSStatus != null && to != null) {
-                Session session = Session.getSession(Session.getSessionKey(routeSMSStatus.getAdapterConfig(), to));
+                Session session = Session.getSessionByInternalKey(Session.getInternalSessionKey(routeSMSStatus
+                                                .getAdapterConfig(), to));
                 if (sent != null) {
                     routeSMSStatus.setSentTimeStamp(String.valueOf(TimeUtils
                                                     .getTimeWithFormat(sent, "yyyy-mm-dd hh:mm:ss",

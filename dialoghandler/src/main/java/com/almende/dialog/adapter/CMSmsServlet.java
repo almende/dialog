@@ -3,6 +3,7 @@ package com.almende.dialog.adapter;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -43,9 +44,9 @@ public class CMSmsServlet extends TextServlet {
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
         Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
 
-        String[] tokens = config.getAccessToken().split("\\|");
-        CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
-        return cm.sendMessage(message, subject, from, fromName, to, toName, extras, config, accountId);
+        HashMap<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put(to, toName);
+        return broadcastMessage(message, subject, from, fromName, addressNameMap, extras, config, accountId);
     }
 
     @Override
@@ -54,7 +55,6 @@ public class CMSmsServlet extends TextServlet {
         throws Exception {
 
         String[] tokens = config.getAccessToken().split("\\|");
-
         CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
         return cm.broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId);
     }
@@ -84,8 +84,8 @@ public class CMSmsServlet extends TextServlet {
                     String responseText = "No result fetched";
                     String reference = req.getParameter("reference");
                     //check the host in the CMStatus
-                    if (reference != null) {
-                        String hostFromReference = SMSDeliveryStatus.getHostFromReference(reference);
+                    if (reference != null && reference.split(":").length == 2) {
+                        String hostFromReference = reference.split(":")[1];
                         log.info(String.format("Host from reference: %s and actual host: %s", hostFromReference + "?" +
                                                                                               req.getQueryString(),
                                                Settings.HOST));
@@ -152,7 +152,7 @@ public class CMSmsServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
-        String message) throws Exception {
+        String message, String sessionKey) throws Exception {
 
         // Needs implementation, but service not available at CM
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
@@ -160,12 +160,12 @@ public class CMSmsServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
 
         //add costs with no.of messages * recipients
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, senderName, toAddress,
                                                                CM.countMessageParts(message) * toAddress.size(),
-                                                               message);
+                                                               message, sessionKeyMap);
     }
 
     /**
@@ -217,6 +217,7 @@ public class CMSmsServlet extends TextServlet {
             }
         }
         catch (Exception e) {
+            e.printStackTrace();
             log.severe("Document parse failed. \nMessage: " + e.getLocalizedMessage());
         }
         return null;
@@ -247,8 +248,7 @@ public class CMSmsServlet extends TextServlet {
             to = PhoneNumberUtils.formatNumber(to, null);
             if (cmStatus != null && to != null) {
 
-                Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_SMS, cmStatus.getAdapterConfig()
-                                                .getMyAddress(), to);
+                Session session = Session.getSession(cmStatus.getSessionKey());
                 if (to != null) {
                     cmStatus = cmStatus.getLinkedSmsDeliveryStatus(to);
                     cmStatus.setRemoteAddress(to);
@@ -290,32 +290,25 @@ public class CMSmsServlet extends TextServlet {
                 }
                 else {
                     log.info("Reference: " + reference + ". No delivered callback found.");
-                    dialogLog.info(cmStatus.getAdapterConfig(), "No delivered callback found for reference: " +
-                                                                reference, session);
                 }
                 //fetch ddr corresponding to this
-                if (session != null) {
-                    DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), cmStatus.getAccountId());
-                    if (ddrRecord != null) {
-                        if (errorCode == null || errorCode.isEmpty()) {
-                            ddrRecord.addStatusForAddress(to, CommunicationStatus.DELIVERED);
-                        }
-                        else {
-                            ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
-                            ddrRecord.addAdditionalInfo("ERROR", cmStatus.getDescription());
-                        }
-                        ddrRecord.createOrUpdate();
+                DDRRecord ddrRecord = DDRRecord.getDDRRecord(cmStatus.getDdrRecordId(), cmStatus.getAccountId());
+                if (ddrRecord != null) {
+                    if (errorCode == null || errorCode.isEmpty()) {
+                        ddrRecord.addStatusForAddress(to, CommunicationStatus.DELIVERED);
                     }
                     else {
-                        log.warning(String.format("No ddr record found for id: %s", session.getDdrRecordId()));
+                        ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
+                        ddrRecord.addAdditionalInfo("ERROR", cmStatus.getDescription());
                     }
-                    //check if session is killed. if so drop it :)
-                    if (session.isKilled() && isSMSsDelivered(ddrRecord)) {
-                        session.drop();
-                    }
+                    ddrRecord.createOrUpdate();
                 }
                 else {
-                    log.warning(String.format("No session attached for cm status: %s", cmStatus.getReference()));
+                    log.warning(String.format("No ddr record found for id: %s", cmStatus.getDdrRecordId()));
+                }
+                //check if session is killed. if so drop it :)
+                if (session.isKilled() && isSMSsDelivered(ddrRecord)) {
+                    session.drop();
                 }
                 cmStatus.store();
             }

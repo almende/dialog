@@ -19,10 +19,17 @@ import com.almende.dialog.adapter.tools.SMSDeliveryStatus;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
+import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
+import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
+import com.almende.eve.rpc.jsonrpc.JSONRPCException;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.utils.PhoneNumberUtils;
 
 @Category(IntegrationTest.class)
 public class RouteSMSIT extends TestFramework {
@@ -57,6 +64,106 @@ public class RouteSMSIT extends TestFramework {
         Assert.assertThat(smsStatues.size(), Matchers.is(1));
         Assert.assertThat(smsStatues.iterator().next().getCode(), Matchers.is("1701"));
         Assert.assertThat(smsStatues.iterator().next().getDescription(), Matchers.is("Successfully Sent"));
+    }
+    
+    /**
+     * Checks outbound SMS with invalid numbers. Creates sessions for landlines
+     * number, but should not create sessions for invalid numbers.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void outBoundSMSWithInvalidNumberDDRCheck() throws Exception {
+
+        String senderName = "TestUser";
+        String landlineNumber = "0103031111";
+        String invalidNumber = "1234";
+
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS,
+                                                          TEST_PUBLIC_KEY, "0612345678", "");
+        adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
+        adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
+        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
+        adapterConfig.update();
+
+        //create ddrType for the ddr records to be created.
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.10, "outgoing sms", UnitType.PART,
+                           AdapterType.SMS, null);
+
+        HashMap<String, String> addressMap = new HashMap<String, String>();
+        addressMap.put(remoteAddressVoice, null);
+        addressMap.put(landlineNumber, null);
+        addressMap.put(invalidNumber, null);
+
+        outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
+                               "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+        //fetch sessions
+        List<Session> allSessions = Session.getAllSessions();
+        //sessions for the landline and the invalid numbers must be dropped
+        Assert.assertThat(allSessions.size(), Matchers.is(1));
+        for (Session session : allSessions) {
+            Assert.assertThat(session.getRemoteAddress(), Matchers.not(invalidNumber));
+            Assert.assertThat(session.getRemoteAddress(), Matchers.not(landlineNumber));
+        }
+
+        //fetch the sms ddr records
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        Assert.assertThat(allSessions.size(), Matchers.is(1));
+        DDRRecord ddrRecord = ddrRecords.iterator().next();
+        Assert.assertThat(ddrRecord.getStatusForAddress(invalidNumber), Matchers.is(CommunicationStatus.ERROR));
+        Assert.assertThat(ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(landlineNumber, null)),
+                          Matchers.is(CommunicationStatus.ERROR));
+        Assert.assertThat(ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
+                          Matchers.is(CommunicationStatus.SENT));
+    }
+    
+    /**
+     * Checks outbound SMS with invalid senderid. Make sure that the session is
+     * deleted. No {@link SMSDeliveryStatus} is created. DDR with invalid
+     * senderId is created.
+     * 
+     * @throws Exception
+     */
+    @Test(expected=JSONRPCException.class)
+    public void outBoundSMSWithInvalidSenderIdCheck() throws Exception {
+
+        String senderName = "TestUser122342345";
+
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS,
+                                                          TEST_PUBLIC_KEY, "0612345678", "");
+        adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
+        adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
+        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
+        adapterConfig.update();
+
+        //create ddrType for the ddr records to be created.
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.10, "outgoing sms", UnitType.PART,
+                           AdapterType.SMS, null);
+
+        HashMap<String, String> addressMap = new HashMap<String, String>();
+        addressMap.put(remoteAddressVoice, null);
+
+        outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
+                               "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+        //fetch sessions
+        List<Session> allSessions = Session.getAllSessions();
+        //no sessions must be found
+        Assert.assertThat(allSessions.size(), Matchers.is(0));
+
+        //fetch the sms ddr records
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        Assert.assertThat(allSessions.size(), Matchers.is(1));
+        DDRRecord ddrRecord = ddrRecords.iterator().next();
+        Assert.assertThat(ddrRecord.getStatusForAddress(remoteAddressVoice), Matchers.is(CommunicationStatus.ERROR));
+
+        //check the SMSDeliveryStatus
+        List<SMSDeliveryStatus> allSMSStatus = SMSDeliveryStatus.fetchAll();
+        //no status must be found
+        Assert.assertThat(allSMSStatus.size(), Matchers.is(0));
     }
     
     @Test

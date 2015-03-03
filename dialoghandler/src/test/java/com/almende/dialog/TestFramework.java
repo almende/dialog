@@ -55,18 +55,17 @@ public class TestFramework
     public static ThreadLocal<ServletRunner> servletRunner = new ThreadLocal<ServletRunner>();
     
     @Before
-    public void setup()
-    {
-        new ParallelInit( true );
+    public void setup() {
+
+        TestServlet.TEST_SERVLET_PATH = "http://localhost:8082/dialoghandler/unitTestServlet";
+        new ParallelInit(true);
         ParallelInit.getDatastore();
-        if(ParallelInit.datastore != null)
-        {
+        if (ParallelInit.datastore != null) {
             ParallelInit.datastore.dropDatabase();
         }
         servletRunner.remove();
-        if(servletRunner.get() == null)
-        {
-            servletRunner.set( setupTestServlet() );
+        if (servletRunner.get() == null) {
+            servletRunner.set(setupTestServlet());
         }
         DialogAgent dialogAgent = new DialogAgent();
         dialogAgent.setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.CM);

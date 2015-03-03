@@ -55,6 +55,7 @@ public class TestFramework
     @Before
     public void setup()
     {
+        TestServlet.TEST_SERVLET_PATH = "http://localhost:8082/dialoghandler/unitTestServlet";
         new ParallelInit( true );
         ParallelInit.getDatastore();
         if(ParallelInit.datastore != null)
@@ -65,7 +66,7 @@ public class TestFramework
         if(servletRunner.get() == null)
         {
             servletRunner.set( setupTestServlet() );
-        }
+        } 
     }
     
     @After

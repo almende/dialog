@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DefaultValue;
@@ -29,11 +28,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -125,6 +122,13 @@ public class VoiceXMLRESTProxy {
             bs.startSubscription();
 
             String extSession = bs.startCall(formattedAddress + "@outbound", session);
+            if (extSession == null) {
+                String errorMessage = String.format("Call not started between %s and %s. Error in requesting adapter provider",
+                                                    config.getMyAddress(), formattedAddress);
+                log.severe(errorMessage);
+                session.drop();
+                return address + ": " + errorMessage;
+            }
             //create a ddrRecord
             try {
                 DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId,
@@ -213,6 +217,14 @@ public class VoiceXMLRESTProxy {
                     log.info(String.format("Calling subscription complete. Message: %s. Starting call.. ",
                                            subscriptiion));
                     extSession = bs.startCall(formattedAddress + "@outbound", session);
+                    if (extSession == null) {
+                        String errorMessage = String.format("Call not started between %s and %s. Error in requesting adapter provider",
+                                                            config.getMyAddress(), formattedAddress);
+                        log.severe(errorMessage);
+                        session.drop();
+                        resultSessionMap.put(address, errorMessage);
+                        continue;
+                    }
                 }
                 //create a ddrRecord
                 try {

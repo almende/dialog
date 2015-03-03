@@ -24,7 +24,7 @@ import com.almende.dialog.util.ServerUtils;
 public class TestServlet extends HttpServlet
 {
     private static final long serialVersionUID = 1L;
-    public static final String TEST_SERVLET_PATH = "http://localhost:8082/dialoghandler/unitTestServlet";
+    public static String TEST_SERVLET_PATH = "http://localhost:8082/dialoghandler/unitTestServlet";
     public static final String APPOINTMENT_MAIN_QUESTION = "Are you available today?";
     public static final String OPEN_QUESTION_URL_WITH_SPACES = "/URL WITH SPACES";
     public static final String PLAIN_TEXT_QUESTION = "/PLAIN%20TEXT";

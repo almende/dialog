@@ -22,14 +22,21 @@ import javax.ws.rs.core.Response.Status;
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.util.TimeUtils;
+import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.twigmongo.FilterOperator;
+import com.almende.util.twigmongo.QueryResultIterator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.almende.util.uuid.UUID;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -40,6 +47,11 @@ public class AdapterConfig {
 	static final Logger log = Logger.getLogger(AdapterConfig.class.getName());
 	static final ObjectMapper om = new ObjectMapper();
 	public static final String ADAPTER_CREATION_TIME_KEY = "ADAPTER_CREATION_TIME";
+	public static final String ADAPTER_PROVIDER_KEY = "PROVIDER";
+	public static final String ACCESS_TOKEN_KEY = "ACCESS_TOKEN";
+	public static final String ACCESS_TOKEN_SECRET_KEY = "ACCESS_SECRET_TOKEN";
+	public static final String XSI_USER_KEY = "XSI_USER";
+	public static final String XSI_PASSWORD_KEY = "XSI_PASSWORD";
 	public static final String DIALOG_ID_KEY = "DIALOG_ID";
 
 	@Id
@@ -51,7 +63,7 @@ public class AdapterConfig {
 	String address = "";
 	String myAddress = "";
 	String keyword = null;
-	String status = "";
+	com.askfast.commons.Status status = null;
 	//cache the dialog if its ever fetched to reduce read overhead
 	@JsonIgnore
 	private Dialog cachedDialog = null;
@@ -85,11 +97,12 @@ public class AdapterConfig {
 
         try {
             AdapterConfig newConfig = new AdapterConfig();
-            newConfig.status = "OPEN";
+            newConfig.status = com.askfast.commons.Status.INACTIVE;
 
             newConfig = om.readerForUpdating(newConfig).readValue(json);
+            newConfig.adapterType = newConfig.adapterType.toLowerCase();
             if (adapterExists(newConfig.getAdapterType(), newConfig.getMyAddress(), newConfig.getKeyword())) {
-                return Response.status(Status.CONFLICT).build();
+                return Response.status(javax.ws.rs.core.Response.Status.CONFLICT).build();
             }
             if (newConfig.getConfigId() == null) {
                 newConfig.configId = new UUID().toString();
@@ -104,7 +117,7 @@ public class AdapterConfig {
             TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
             datastore.store(newConfig);
 
-            if (newConfig.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
+            if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(newConfig.getAdapterType(), newConfig))) {
                 Broadsoft bs = new Broadsoft(newConfig);
                 bs.hideCallerId(newConfig.isAnonymous());
             }
@@ -211,8 +224,9 @@ public class AdapterConfig {
     public void update() {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        adapterType = adapterType.toLowerCase();
         datastore.update(this);
-        if (this.getAdapterType().equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
+        if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(getAdapterType(), this))) {
             Broadsoft bs = new Broadsoft(this);
             bs.hideCallerId(this.isAnonymous());
         }
@@ -290,21 +304,19 @@ public class AdapterConfig {
         return findAdaptersByList(adapterIDs);
     }
 
-	public static AdapterConfig findAdapterConfig(String adapterType,
-			String lookupKey) {
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		Iterator<AdapterConfig> config = datastore.find()
-				.type(AdapterConfig.class)
-				.addFilter("myAddress", FilterOperator.EQUAL, lookupKey)
-				.addFilter("adapterType", FilterOperator.EQUAL, adapterType)
-				.now();
-		if (config.hasNext()) {
-			return config.next();
-		}
-		log.severe("AdapterConfig not found:'" + adapterType + "':'"
-				+ lookupKey + "'");
-		return null;
-	}
+    public static AdapterConfig findAdapterConfig(String adapterType, String lookupKey) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
+                                        .addFilter("myAddress", FilterOperator.EQUAL, lookupKey)
+                                        .addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase())
+                                        .now();
+        if (config.hasNext()) {
+            return config.next();
+        }
+        log.severe("AdapterConfig not found:'" + adapterType + "':'" + lookupKey + "'");
+        return null;
+    }
 	
 	public static AdapterConfig findAdapterConfig(String adapterType,
 			String localAddress, String keyword) {
@@ -312,7 +324,7 @@ public class AdapterConfig {
 		Iterator<AdapterConfig> config = datastore.find()
 				.type(AdapterConfig.class)
 				.addFilter("myAddress", FilterOperator.EQUAL, localAddress)
-				.addFilter("adapterType", FilterOperator.EQUAL, adapterType)
+				.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase())
 				.addFilter("keyword", FilterOperator.EQUAL, keyword)
 				.now();
 		if (config.hasNext()) {
@@ -337,36 +349,44 @@ public class AdapterConfig {
 		return null;
 	}
 
-	public static ArrayList<AdapterConfig> findAdapters(String adapterType,
-			String myAddress, String keyword) {
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		
-		RootFindCommand<AdapterConfig> cmd = datastore.find().type(
-				AdapterConfig.class);
+	/**
+	 * Fetches all adapters for the given matching filters
+	 * @param adapterType Lowercased and queried
+	 * @param myAddress case insensitive query is performed
+	 * @param keyword if "null" then a search for null is performed. 
+	 * @return
+	 */
+    public static ArrayList<AdapterConfig> findAdapters(String adapterType, String myAddress, String keyword) {
 
-		if (adapterType != null)
-			cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        RootFindCommand<AdapterConfig> cmd = datastore.find().type(AdapterConfig.class);
 
-		if (myAddress != null)
-			cmd.addFilter("myAddress", FilterOperator.EQUAL, myAddress);
-		
-		if (keyword != null) {
-			if(keyword.equals("null")) {
-				cmd.addFilter("keyword", FilterOperator.EQUAL, null);
-			} else {
-				cmd.addFilter("keyword", FilterOperator.EQUAL, keyword);
-			}
-		}
+        if (adapterType != null)
+            cmd.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase());
 
-		Iterator<AdapterConfig> config = cmd.now();
-
-		ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
-		while (config.hasNext()) {
-			adapters.add(config.next());
-		}
-
-		return adapters;
-	}
+        if (keyword != null) {
+            if (keyword.equals("null")) {
+                cmd.addFilter("keyword", FilterOperator.EQUAL, null);
+            }
+            else {
+                cmd.addFilter("keyword", FilterOperator.EQUAL, keyword);
+            }
+        }
+        QueryResultIterator<AdapterConfig> resultIterator = cmd.now();
+        ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
+        while (resultIterator.hasNext()) {
+            AdapterConfig adapterConfig = resultIterator.next();
+            if(myAddress != null) {
+                if(adapterConfig.getMyAddress().equalsIgnoreCase(myAddress)) {
+                    adapters.add(adapterConfig);
+                }
+            }
+            else {
+                adapters.add(adapterConfig);
+            }
+        }
+        return adapters;
+    }
 	
 	/**
 	 * Fetches all the adapters where the accountId only matches that of the owner of the adapter. Doesnt 
@@ -535,19 +555,21 @@ public class AdapterConfig {
 		return adapterType;
 	}
 
-	public void setAdapterType(String adapterType) {
-		this.adapterType = adapterType;
-	}
+    public void setAdapterType(String adapterType) {
+
+        adapterType = adapterType != null ? adapterType.toLowerCase() : null;
+        this.adapterType = adapterType;
+    }
 
     /**
      * Fetchs the initialAgentURL by looking up if there is any dialogId
      * configured in {@link AdapterConfig#properties} If it is not found.
      * returns the initialAgentURL
-     * 
+     * @param session if not null, stores the authorization credentials in this instance
      * @return
      */
     @JsonIgnore
-    public String getURLForInboundScenario() {
+    public String getURLForInboundScenario(Session session) {
 
         if (getProperties().get(DIALOG_ID_KEY) != null) {
             try {
@@ -555,6 +577,7 @@ public class AdapterConfig {
                     cachedDialog = Dialog.getDialog(getProperties().get(DIALOG_ID_KEY).toString(), null);
                 }
                 if (cachedDialog != null) {
+                    Dialog.addDialogCredentialsToSession(cachedDialog, session);
                     return cachedDialog.getUrl();
                 }
                 else { //remove the key tag if the dialog is not found
@@ -591,22 +614,21 @@ public class AdapterConfig {
     }
     
     /**
-     * Gets the dialog that is linked to the owner of this adapter. 
+     * Gets the dialog that is linked to the owner of this adapter.
+     * 
      * @return
+     * @throws Exception
      */
     @JsonIgnore
     public Dialog getDialog() {
+
         Object dialogId = properties != null ? properties.get(DIALOG_ID_KEY) : null;
-        if(dialogId != null) {
-            try {
-                return Dialog.getDialog(dialogId.toString(), owner);
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-                log.severe("Dialog fetch failed. Reason: " + e.getMessage());
+        if (dialogId != null) {
+            if (cachedDialog == null || !cachedDialog.getId().equals(dialogId.toString())) {
+                cachedDialog = Dialog.getDialog(dialogId.toString(), null);
             }
         }
-        return null;
+        return cachedDialog;
     }
     
 	public String getAddress() {
@@ -633,11 +655,11 @@ public class AdapterConfig {
 		this.keyword = keyword;
 	}
 	
-	public void setStatus(String status) {
+	public void setStatus(com.askfast.commons.Status status) {
 		this.status = status;
 	}
 	
-	public String getStatus() {
+	public com.askfast.commons.Status getStatus() {
 		return status;
 	}
 	
@@ -714,15 +736,17 @@ public class AdapterConfig {
         }
 	
     /**
-     * Removes the accountId from the shared accounts list. If this accountId
-     * matches the ownerId, makes the next shared account in the list as the
-     * owner. If no accounts are found. Makes this adapter free.
+     * Removes the accountId from the shared accounts list and reset the adapter
+     * to {@link com.askfast.commons.Status#INACTIVE}. If this accountId matches
+     * the ownerId, makes the next shared account in the list as the owner. If
+     * no accounts are found. Makes this adapter free.
      * 
      * @param accountId
      */
     public void removeAccount(String accountId) {
 
         if (accountId != null) {
+            status = com.askfast.commons.Status.INACTIVE;
             if (accounts != null) {
                 accounts.remove(accountId);
             }
@@ -755,6 +779,15 @@ public class AdapterConfig {
     {
         properties = properties != null ? properties : new HashMap<String, Object>(); 
         return properties;
+    }
+    
+    public <T> T getProperties(String key, TypeReference<T> type) {
+
+        Object value = getProperties().get(key);
+        if (value != null) {
+            return JOM.getInstance().convertValue(value, type);
+        }
+        return null;
     }
 
     public void setProperties( Map<String, Object> properties )
@@ -855,5 +888,70 @@ public class AdapterConfig {
             }
         }
         return adapters;
+    }
+    
+    @JsonIgnore
+    public boolean isCallAdapter() {
+
+        AdapterType type = AdapterType.getByValue(adapterType);
+
+        //check the adapter type
+        if (type != null) {
+            if (AdapterType.CALL.equals(type)) {
+                return true;
+            }
+            return false;
+        }
+        //check if the adapterType has the provider value itself
+        else if(AdapterProviders.getByValue(adapterType) != null){
+            return AdapterProviders.isCallAdapter(adapterType);
+        }
+        //check the properties
+        else if(properties != null && properties.get(ADAPTER_PROVIDER_KEY) != null){
+            Object provider = properties.get(ADAPTER_PROVIDER_KEY);
+            return AdapterProviders.isCallAdapter(provider.toString());
+        }
+        return false;
+    }
+    
+    @JsonIgnore    
+    public boolean isSMSAdapter() {
+
+        AdapterType type = AdapterType.getByValue(adapterType);
+
+        //check the adapter type
+        if (type != null) {
+            if (AdapterType.SMS.equals(type)) {
+                return true;
+            }
+            return false;
+        }
+        //check if the adapterType has the provider value itself
+        else if(AdapterProviders.getByValue(adapterType) != null){
+            return AdapterProviders.isSMSAdapter(adapterType);
+        }
+        //check the properties
+        else if(properties != null && properties.get(ADAPTER_PROVIDER_KEY) != null){
+            Object provider = properties.get(ADAPTER_PROVIDER_KEY);
+            return AdapterProviders.isSMSAdapter(provider.toString());
+        }
+        return false;
+    }
+
+    @JsonIgnore
+    public AdapterProviders getProvider() {
+
+        AdapterProviders providers = AdapterProviders.getByValue(adapterType);
+        //check the adapter type
+        if (providers == null && getProperties().get(ADAPTER_PROVIDER_KEY) != null) {
+            providers = getProperties(ADAPTER_PROVIDER_KEY, new TypeReference<AdapterProviders>() {
+            });
+        }
+        return providers;
+    }
+    
+    public void addMediaProperties(String key, Object value) {
+        properties = properties != null ? properties : new HashMap<String, Object>();
+        properties.put(key, value);
     }
 }

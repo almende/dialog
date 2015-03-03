@@ -19,6 +19,7 @@ import org.w3c.dom.Document;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DDRRecordAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
@@ -28,6 +29,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.TypeUtil;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.meterware.servletunit.ServletRunner;
@@ -53,20 +55,21 @@ public class TestFramework
     public static ThreadLocal<ServletRunner> servletRunner = new ThreadLocal<ServletRunner>();
     
     @Before
-    public void setup()
-    {
+    public void setup() {
+
         TestServlet.TEST_SERVLET_PATH = "http://localhost:8082/dialoghandler/unitTestServlet";
-        new ParallelInit( true );
+        new ParallelInit(true);
         ParallelInit.getDatastore();
-        if(ParallelInit.datastore != null)
-        {
+        if (ParallelInit.datastore != null) {
             ParallelInit.datastore.dropDatabase();
         }
         servletRunner.remove();
-        if(servletRunner.get() == null)
-        {
-            servletRunner.set( setupTestServlet() );
-        } 
+        if (servletRunner.get() == null) {
+            servletRunner.set(setupTestServlet());
+        }
+        DialogAgent dialogAgent = new DialogAgent();
+        dialogAgent.setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.CM);
+        dialogAgent.setDefaultProviderSettings(AdapterType.CALL, AdapterProviders.BROADSOFT);
     }
     
     @After
@@ -77,6 +80,7 @@ public class TestFramework
             ParallelInit.datastore.dropDatabase();
         }
         servletRunner.remove();
+        TestServlet.clearLogObject();
     }
     
     public static String fetchResponse( String httpMethods, String url, String payload )
@@ -108,19 +112,21 @@ public class TestFramework
     
     public AdapterConfig createBroadsoftAdapter() throws Exception {
 
-        return createAdapterConfig(AdapterType.CALL.getName(), TEST_PUBLIC_KEY, localAddressBroadsoft, "");
+        return createAdapterConfig(AdapterType.CALL.toString(), AdapterProviders.BROADSOFT, TEST_PUBLIC_KEY,
+                                   localAddressBroadsoft, "");
     }
     
     public AdapterConfig createTwilioAdapter() throws Exception {
 
-        return createAdapterConfig(AdapterType.TWILIO.getName(), TEST_PUBLIC_KEY, localAddressBroadsoft, "");
+        return createAdapterConfig(AdapterType.CALL.toString(), AdapterProviders.TWILIO, TEST_PUBLIC_KEY,
+                                   localAddressBroadsoft, "");
     }
     
-    public static AdapterConfig createAdapterConfig(String adapterType, String accountId, String myAddress,
-        String initiatAgentURL) throws Exception {
+    public static AdapterConfig createAdapterConfig(String adapterType, AdapterProviders adapterProviders,
+        String accountId, String myAddress, String initiatAgentURL) throws Exception {
 
         AdapterConfig adapterConfig = new AdapterConfig();
-        adapterConfig.setAdapterType(adapterType);
+        adapterConfig.setAdapterType(adapterType.toLowerCase());
         adapterConfig.setAnonymous(false);
         adapterConfig.setPublicKey(accountId);
         adapterConfig.setMyAddress(myAddress);
@@ -129,9 +135,13 @@ public class TestFramework
         adapterConfig.setInitialAgentURL(initiatAgentURL);
         adapterConfig.setOwner(accountId);
         adapterConfig.addAccount(accountId);
+        if (adapterProviders != null) {
+            adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, adapterProviders);
+        }
         String adapterConfigString = adapterConfig.createConfig(ServerUtils.serialize(adapterConfig)).getEntity()
                                         .toString();
-        return ServerUtils.deserialize(adapterConfigString, AdapterConfig.class);
+        adapterConfig = ServerUtils.deserialize(adapterConfigString, AdapterConfig.class);
+        return adapterConfig;
     }
     
     public static AdapterConfig createAdapterConfig(String adapterType, String owner,

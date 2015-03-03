@@ -205,7 +205,7 @@ public class DDRRecordAgentIT extends TestFramework {
         Mockito.when( uri.getBaseUri() ).thenReturn( new URI( "http://localhost:8082/dialoghandler/vxml/new" ) );
         //-----------------------------------------------------------------------
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        voiceXMLRESTProxy.getNewDialog( "outbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft + "@ask.ask.voipit.nl", uri );
+        voiceXMLRESTProxy.getNewDialog( "outbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft + "@ask.ask.voipit.nl", uri);
         allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
         for ( DDRRecord ddrRecord : allDdrRecords )
         {
@@ -309,6 +309,7 @@ public class DDRRecordAgentIT extends TestFramework {
                 assertThat( ddrRecord.getFromAddress(), Matchers.is( MailServlet.DEFAULT_SENDER_EMAIL ) );
                 assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
                 assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
+                assertThat(ddrRecord.getAdditionalInfo().get(Session.SESSION_KEY), Matchers.notNullValue());
                 assertCount++;
             }
             else if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_ADAPTER_PRICE_KEY ) ) )
@@ -386,10 +387,11 @@ public class DDRRecordAgentIT extends TestFramework {
             }
         }
         //assert that a session exists
-        Session session = Session.getSession(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localAddressBroadsoft +
-                                                                                  "@ask.ask.voipit.nl", formattedRemoteAddressVoice);
+        Session session = Session.getSessionByInternalKey(AdapterType.CALL.toString(), localAddressBroadsoft +
+                                                                                       "@ask.ask.voipit.nl",
+                                                          formattedRemoteAddressVoice);
         assertThat(session, Matchers.notNullValue());
-        assertThat(session.getStartTimestamp(), Matchers.nullValue());
+        assertThat(session.getStartTimestamp(), Matchers.notNullValue());
         assertThat(session.getAnswerTimestamp(), Matchers.nullValue());
         assertThat(session.getReleaseTimestamp(), Matchers.nullValue());
         assertThat(session.getCreationTimestamp(), Matchers.notNullValue());
@@ -420,8 +422,9 @@ public class DDRRecordAgentIT extends TestFramework {
 
         voiceXMLRESTProxy.receiveCCMessage(hangupXML);
         //assert that a session still exists
-        session = Session.getSession(AdapterAgent.ADAPTER_TYPE_BROADSOFT, localAddressBroadsoft + "@ask.ask.voipit.nl",
-                                     formattedRemoteAddressVoice);
+        session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localAddressBroadsoft +
+                                                                                  "@ask.ask.voipit.nl",
+                                                  formattedRemoteAddressVoice);
         assertThat(session, Matchers.notNullValue());
         assertThat(session.getStartTimestamp(), Matchers.notNullValue());
         assertThat(session.getAnswerTimestamp(), Matchers.nullValue());
@@ -454,9 +457,11 @@ public class DDRRecordAgentIT extends TestFramework {
         
         //check that all ddrs are processed
         DDRRecord ddrRecord = DDRRecord.getDDRRecord(ddrRecordId, resultMap.get( ACCOUNT_ID_KEY ));
+        ddrRecord.setShouldGenerateCosts(true);
         assertThat(ddrRecord, Matchers.notNullValue());
         assertThat(ddrRecord.getStart(), Matchers.notNullValue());
         assertThat(ddrRecord.getDuration(), Matchers.notNullValue());
+        assertThat(ddrRecord.getTotalCost(), Matchers.notNullValue());
         assertThat(ddrRecord.getStatusForAddress(formattedRemoteAddressVoice), Matchers.is(CommunicationStatus.FINISHED));
     }
 
@@ -510,7 +515,9 @@ public class DDRRecordAgentIT extends TestFramework {
                                                                 TEST_ACCOUNTID, false, null);
                 updateAdapterAsTrial(adapterId);
                 adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
-                VoiceXMLRESTProxy.dial(addressNameMap, message, adapterConfig, adapterConfig.getOwner());
+                adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
+                adapterConfig.update();
+                VoiceXMLRESTProxy.dial(addressNameMap, message, adapterConfig, adapterConfig.getOwner(), null);
                 break;
             default:
                 break;
@@ -549,13 +556,13 @@ public class DDRRecordAgentIT extends TestFramework {
      * @return
      * @throws Exception
      */
-    private static Collection<DDRRecord> getDDRRecordsByAccountId( String accountId ) throws Exception
-    {
-        Object ddrRecords = new DDRRecordAgent().getDDRRecords( null, accountId, null, null, null, null, null, null, null, null, null );
-        TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
-        {
+    private static Collection<DDRRecord> getDDRRecordsByAccountId(String accountId) throws Exception {
+
+        Object ddrRecords = new DDRRecordAgent().getDDRRecords(null, accountId, null, null, null, null, null, null,
+                                                               null, null, null, null);
+        TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>() {
         };
-        Collection<DDRRecord> allDdrRecords = typesInjector.inject( ddrRecords );
+        Collection<DDRRecord> allDdrRecords = typesInjector.inject(ddrRecords);
         return allDdrRecords;
     }
     

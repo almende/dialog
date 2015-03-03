@@ -92,6 +92,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>route-smshandler</servlet-name>
+		<servlet-class>com.almende.dialog.adapter.RouteSmsServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>route-smshandler</servlet-name>
+		<url-pattern>/sms/route-sms/*</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>NotificareServlet</servlet-name>
 		<servlet-class>com.almende.dialog.adapter.NotificareServlet</servlet-class>
 	</servlet>

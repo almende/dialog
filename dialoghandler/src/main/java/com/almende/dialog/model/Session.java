@@ -2,16 +2,16 @@ package com.almende.dialog.model;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.TextServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
@@ -21,6 +21,7 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
@@ -43,7 +44,16 @@ public class Session{
     String localName;
     String direction;
     String type;
+    /**
+     * session id maintained by our providers
+     */
     String externalSession;
+    /**
+     * Session id maintained by us as a reference. 
+     * Used by Broadsoft to store an intermediary id of adapterType|localAddress|remoteAddress
+     */
+    String internalSession;
+    
     String keyword;
     String adapterID;
     String trackingToken;
@@ -113,6 +123,7 @@ public class Session{
                 datastore.storeOrUpdate(oldSession);
             }
             else {
+                key = key.toLowerCase();
                 datastore.storeOrUpdate(this);
             }
         }
@@ -125,7 +136,7 @@ public class Session{
     public void drop() {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        Session session = datastore.load(Session.class, key);
+        Session session = datastore.load(Session.class, key.toLowerCase());
         if (session != null) {
             log.info("Deleing session with id: "+ session.getKey());
             datastore.delete(session);
@@ -148,15 +159,43 @@ public class Session{
 
         return getOrCreateSession(key, null);
     }
+
+    public static Session getOrCreateSession(AdapterConfig config, String remoteAddress) {
+
+        Session session = getSessionByInternalKey(config.getAdapterType(), config.getMyAddress(), remoteAddress);
+        if (session == null) {
+            session = createSession(config, remoteAddress);
+            session.existingSession = false;
+        }
+        else {
+            session.existingSession = true;
+        }
+        if (config.getPreferred_language() != null) {
+            session.setLanguage(config.getPreferred_language());
+        }
+        return session;
+    }
+    
+    public static Session createSession(AdapterConfig config, String remoteAddress, boolean flushOldSessionIfAny) {
+
+        Session session = getSessionByInternalKey(config.getAdapterType(), config.getMyAddress(), remoteAddress);
+        if (session != null && flushOldSessionIfAny) {
+            session.drop();
+        }
+        session = createSession(config, remoteAddress);
+        session.existingSession = false;
+        session.existingSession = true;
+        return session;
+    }
     
     @JsonIgnore
-    public static Session getOrCreateSession(String key, String keyword) {
+    public static Session getOrCreateSession(String internalSessionKey, String keyword) {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        Session session = datastore.load(Session.class, key);
+        Session session = datastore.load(Session.class, internalSessionKey.toLowerCase());
         // If there is no session create a new one for the user
         if (session == null) {
-            String[] split = key.split("\\|");
+            String[] split = internalSessionKey.split("\\|");
 
             if (split.length == 3) {
                 String type = split[0];
@@ -195,7 +234,7 @@ public class Session{
                 session = createSession(config, split[2]);
             }
             else {
-                log.severe("getSession: incorrect key given:" + key);
+                log.severe("getSession: incorrect key given:" + internalSessionKey);
             }
             session.existingSession = false;
         }
@@ -211,7 +250,7 @@ public class Session{
 
     public static Session createSession(AdapterConfig config, String fromAddress, String remoteAddress) {
 
-        String key = config.getAdapterType() + "|" + fromAddress + "|" + remoteAddress;
+        String internalSessionKey = config.getAdapterType() + "|" + fromAddress + "|" + remoteAddress;
 
         Session session = new Session();
         session.setAdapterID(config.getConfigId());
@@ -219,7 +258,8 @@ public class Session{
         session.setLocalAddress(fromAddress);
         session.setType(config.getAdapterType());
         session.setKeyword(config.getKeyword());
-        session.key = key;
+        session.internalSession = internalSessionKey.toLowerCase();
+        session.key = UUID.randomUUID().toString();
         session.creationTimestamp = String.valueOf(TimeUtils.getServerCurrentTimeInMillis());
         session.setTrackingToken(UUID.randomUUID().toString());
         session.storeSession();
@@ -235,36 +275,93 @@ public class Session{
      */
     @JsonIgnore
     public static Session getSession(String sessionKey) {
-        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        return datastore.load(Session.class, sessionKey);
-    }
-    
-    public static List<Session> findSessionByLocalAndRemoteAddress(String localAddress, String remoteAddress) {
-        
-        List<Session> sessions = new ArrayList<Session>(); 
-        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        Iterator<Session> config = datastore.find()
-                        .type(Session.class)
-                        .addFilter("localAddress", FilterOperator.EQUAL, localAddress)
-                        .addFilter("remoteAddress", FilterOperator.EQUAL, remoteAddress)
-                        .addFilter("releaseTimestamp", FilterOperator.EQUAL, null)
-                        .now();
-        if (config.hasNext()) {
-            sessions.add(config.next());
-        }
-        return sessions;
-    }
-    
-    public static Session findSessionByExternalId(String externalSessionId) {
-        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        Iterator<Session> config = datastore.find()
-                        .type(Session.class)
-                        .addFilter("externalSession", FilterOperator.EQUAL, externalSessionId)
-                        .now();
-        if (config.hasNext()) {
-            return config.next();
+
+        if (sessionKey != null) {
+            TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+            return datastore.load(Session.class, sessionKey.toLowerCase());
         }
         return null;
+    }
+    
+    /**
+     * Returns the first session found for the internal session id given
+     * @param internalSessionKey
+     * @return
+     */
+    public static Session getSessionByInternalKey(String internalSessionKey) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        QueryResultIterator<Session> sessionIterator = datastore
+                                        .find().type(Session.class)
+                                        .addFilter("internalSession", FilterOperator.EQUAL,
+                                                   internalSessionKey.toLowerCase()).now();
+        if (sessionIterator != null && sessionIterator.hasNext()) {
+            return sessionIterator.next();
+        }
+        return null;
+    }
+    
+    /**
+     * Returns the first session found for the external session id given
+     * 
+     * @param externalSessionKey
+     * @return
+     */
+    public static Session getSessionByExternalKey(String externalSessionKey) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        QueryResultIterator<Session> sessionIterator = datastore.find().type(Session.class)
+                                        .addFilter("externalSession", FilterOperator.EQUAL, externalSessionKey).now();
+        if (sessionIterator != null && sessionIterator.hasNext()) {
+            return sessionIterator.next();
+        }
+        return null;
+    }
+    
+    /**
+     * parses the sessionKey from the method parameters and tries to fetch it
+     * @param adapterType
+     * @param localAddress
+     * @param remoteAddress
+     * @return
+     */
+    public static Session getSessionByInternalKey(String adapterType, String localAddress, String remoteAddress) {
+        String sessionKey = adapterType + "|" + localAddress + "|" + remoteAddress;
+        return getSessionByInternalKey(sessionKey);
+    }
+    
+    /**
+     * parses the sessionKey from the method parameters and tries to fetch it
+     * 
+     * @param adapterType
+     * @param localAddress
+     * @param remoteAddress
+     * @return
+     */
+    public static String getInternalSessionKey(AdapterConfig config, String remoteAddress) {
+
+        if (config != null && remoteAddress != null) {
+            return (config.getAdapterType().toLowerCase() + "|" + config.getMyAddress() + "|" + remoteAddress)
+                                            .toLowerCase();
+        }
+        else {
+            return null;
+        }
+    }
+
+    
+    public static List<Session> findSessionByLocalAndRemoteAddress(String localAddress, String remoteAddress) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        return datastore.find().type(Session.class).addFilter("localAddress", FilterOperator.EQUAL, localAddress)
+                                        .addFilter("remoteAddress", FilterOperator.EQUAL, remoteAddress)
+                                        .addFilter("releaseTimestamp", FilterOperator.EQUAL, null).now().toArray();
+    }
+    
+    public static List<Session> getAllSessions() {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        return datastore.find().type(Session.class).now().toArray();
     }
     
     @JsonIgnore
@@ -276,24 +373,58 @@ public class Session{
         return adapterConfig;
     }
 	
-    public Map<String, String> getExtras()
+    @JsonProperty("extras")
+    public Map<String, String> getAllExtras()
     {
         extras = extras != null ? extras : new HashMap<String, String>();
         return extras;
     }
+    
+    /**
+     * Store all data but do not return sensitive data like provider etc
+     * @return
+     */
+    @JsonIgnore
+    public Map<String, String> getExtras() {
+
+        extras = extras != null ? extras : new HashMap<String, String>();
+        extras.remove(AdapterConfig.ADAPTER_PROVIDER_KEY);
+        extras.remove(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY);
+        extras.remove(AdapterConfig.ACCESS_TOKEN_KEY);
+        extras.remove(AdapterConfig.ACCESS_TOKEN_SECRET_KEY);
+        extras.remove(AdapterConfig.XSI_USER_KEY);
+        extras.remove(AdapterConfig.XSI_PASSWORD_KEY);
+        extras.remove(DialogAgent.BEARER_TOKEN_KEY);
+        return extras;
+    }
+    
     public void setExtras( Map<String, String> extras )
     {
         this.extras = extras;
     }
+
     /**
-     * used to mimick the String store entity. 
+     * Adds an extra info into this session. Doesnt persist it to the DB. 
+     * Additional methodcall needed.
+     * @param key
+     * @param value
+     */
+    public void addExtras(String key, String value) {
+
+        extras = extras != null ? extras : new HashMap<String, String>();
+        extras.put(key, value);
+    }
+    
+    /**
+     * used to mimick the String store entity.
+     * 
      * @return the first value found in the {@link Session#extras}
      */
     public static String getString(String sessionKey) {
 
         Session session = getSession(sessionKey);
-        return session != null && !session.getExtras().isEmpty() ? session.getExtras().values().iterator().next()
-                                                                : null;
+        return session != null && !session.getAllExtras().isEmpty() ? session.getAllExtras().values().iterator().next()
+                                                                   : null;
     }
     
     public String getKey()
@@ -302,7 +433,7 @@ public class Session{
     }
     public void setKey( String key )
     {
-        this.key = key;
+        this.key = key.toLowerCase();
     }
     
     /**
@@ -314,7 +445,7 @@ public class Session{
     {
         Session session = new Session();
         session.setKey( key );
-        session.getExtras().put( key, valueTobeStored );
+        session.getAllExtras().put( key, valueTobeStored );
         session.storeSession();
         return session;
     }
@@ -334,6 +465,9 @@ public class Session{
 
     public void setQuestion(Question question) {
 
+        if (question != null && question.getPreferred_language() != null) {
+            this.language = question.getPreferred_language();
+        }
         this.question = question;
     }
     
@@ -404,12 +538,18 @@ public class Session{
         this.type=type;
     }
 
-    
+    /**
+     * Session id maintained by our providers
+     * @param externalSession
+     */
     public void setExternalSession(String externalSession) {
+
         this.externalSession = externalSession;
     }
     
-    
+    /**
+     * Session id maintained by our providers
+     */
     public String getExternalSession() {
         return this.externalSession;
     }
@@ -491,9 +631,8 @@ public class Session{
         while ( resultIterator.hasNext() )
         {
             Session session = resultIterator.next();
-            if ( session != null && session.getExtras().get( extrasKey ) != null
-                && session.getExtras().get( extrasKey ).equals( extrasValue ) )
-            {
+            if (session != null && session.getAllExtras().get(extrasKey) != null &&
+                session.getAllExtras().get(extrasKey).equals(extrasValue)) {
                 return session.getQuestion();
             }
         }
@@ -559,37 +698,6 @@ public class Session{
         }
     }
     
-    /**
-     * parses the sessionKey from the method parameters and tries to fetch it
-     * @param adapterType
-     * @param localAddress
-     * @param remoteAddress
-     * @return
-     */
-    public static Session getSession(String adapterType, String localAddress, String remoteAddress) {
-
-        String sessionKey = adapterType + "|" + localAddress + "|" + remoteAddress;
-        return getSession(sessionKey);
-    }
-    
-    /**
-     * parses the sessionKey from the method parameters and tries to fetch it
-     * 
-     * @param adapterType
-     * @param localAddress
-     * @param remoteAddress
-     * @return
-     */
-    public static String getSessionKey(AdapterConfig config, String remoteAddress) {
-
-        if (config != null && remoteAddress != null) {
-            return config.getAdapterType() + "|" + config.getMyAddress() + "|" + remoteAddress;
-        }
-        else {
-            return null;
-        }
-    }
-
     public String getLocalName() {
     
         return localName;
@@ -608,5 +716,16 @@ public class Session{
     public boolean isExistingSession() {
         
         return existingSession;
+    }
+    
+    public String getInternalSession() {
+        
+        return internalSession;
+    }
+
+    public void setInternalSession(String internalSession) {
+    
+        internalSession = internalSession != null ? internalSession.toLowerCase() : null;
+        this.internalSession = internalSession;
     }
 }

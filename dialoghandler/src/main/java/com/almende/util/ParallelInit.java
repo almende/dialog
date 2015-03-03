@@ -68,6 +68,7 @@ public class ParallelInit {
                     } catch (InterruptedException e) {
                     }
             }
+            afhttpClient.flushCredentials();
             return afhttpClient;
         }
 	

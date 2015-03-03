@@ -1,5 +1,6 @@
 package com.almende.dialog.agent;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -7,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.almende.dialog.Settings;
@@ -17,6 +19,7 @@ import com.almende.dialog.adapter.CMSmsServlet;
 import com.almende.dialog.adapter.MBSmsServlet;
 import com.almende.dialog.adapter.MailServlet;
 import com.almende.dialog.adapter.NotificareServlet;
+import com.almende.dialog.adapter.RouteSmsServlet;
 import com.almende.dialog.adapter.TwilioAdapter;
 import com.almende.dialog.adapter.TwitterServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
@@ -37,8 +40,10 @@ import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.TypeUtil;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.askfast.commons.agent.intf.DialogAgentInterface;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DialogRequestDetails;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -54,7 +59,25 @@ import com.rabbitmq.client.QueueingConsumer.Delivery;
 public class DialogAgent extends Agent implements DialogAgentInterface {
 
     private static final Logger log = Logger.getLogger(DialogAgent.class.getName());
-
+    private static final String GLOBAL_ADAPTER_SWITCH_MAPPING_KEY = "GLOBAL_ADAPTER_SWITCH_MAPPING";
+    private static final String DEFAULT_ADAPTER_PROVIDER_MAPPING_KEY = "ADAPTER_PROVIDER_MAPPING";
+    public static final String ADAPTER_PROVIDER_CREDENTIALS_KEY = "ADAPTER_PROVIDER_CREDENTIALS";
+    public static final String ADAPTER_CREDENTIALS_GLOBAL_KEY = "GLOBAL";
+    public static final String BEARER_TOKEN_KEY = "BEARER_TOKEN";
+    
+    /**
+     * Used by the Tests to store any default communication providers. Usually 
+     * saved in this agent state. 
+     */
+    private static Map<AdapterType, AdapterProviders> DEFAULT_PROVIDERS = null;
+    static {
+        if (DEFAULT_PROVIDERS == null) {
+            DEFAULT_PROVIDERS = new HashMap<AdapterType, AdapterProviders>();
+            DEFAULT_PROVIDERS.put(AdapterType.CALL, AdapterProviders.BROADSOFT);
+            DEFAULT_PROVIDERS.put(AdapterType.SMS, AdapterProviders.CM);
+        }
+    }
+    
     //create a single static connection for collecting dialog requests
     private static ConnectionFactory rabbitMQConnectionFactory;
     private static final String DIALOG_PROCESS_QUEUE_NAME = "DIALOG_PUBLISH_QUEUE";
@@ -82,49 +105,48 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         dialogProcessorThread.start();
     }
     
-	public ArrayList<String> getActiveCalls(@Name("adapterID") String adapterID) {
-		
-		try {
-			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(
-					adapterID, null, null);
-			if (config.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
-				return VoiceXMLRESTProxy.getActiveCalls(config);
-			}
-		} catch (Exception ex) {
-		}
-		return null;
-	}
-	
-	public ArrayList<String> getActiveCallsInfo(
-			@Name("adapterID") String adapterID) {
-		
-		try {
-			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(
-					adapterID, null, null);
-			if (config.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
-				return VoiceXMLRESTProxy.getActiveCallsInfo(config);
-			}
-		} catch (Exception ex) {
-		}
-		
-		return null;
-	}
-	
-	public boolean killActiveCalls(@Name("adapterID") String adapterID) {
-		
-		try {
-			AdapterConfig config = AdapterConfig.findAdapterConfigFromList(
-					adapterID, null, null);
-            if ( config.getAdapterType().equalsIgnoreCase( AdapterAgent.ADAPTER_TYPE_BROADSOFT ) )
-            {
-                return VoiceXMLRESTProxy.killActiveCalls( config );
+    public ArrayList<String> getActiveCalls(@Name("adapterID") String adapterID) {
+
+        try {
+            AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, null, null);
+            if (config != null &&
+                AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(config.getAdapterType(), config))) {
+                return VoiceXMLRESTProxy.getActiveCalls(config);
             }
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-		
-		return false;
-	}
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return null;
+    }
+	
+    public ArrayList<String> getActiveCallsInfo(@Name("adapterID") String adapterID) {
+
+        try {
+            AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, null, null);
+            if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(config.getAdapterType(), config))) {
+                return VoiceXMLRESTProxy.getActiveCallsInfo(config);
+            }
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return null;
+    }
+	
+    public boolean killActiveCalls(@Name("adapterID") String adapterID) {
+
+        try {
+            AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, null, null);
+            if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(config.getAdapterType(), config))) {
+                return VoiceXMLRESTProxy.killActiveCalls(config);
+            }
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return false;
+    }
 	
 	public String killCall(@Name("session") String sessionKey) {
 		Session session = Session.getSession(sessionKey);
@@ -133,17 +155,15 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 		return "ok";
 	}
 	
-	public HashMap<String, String> outboundCall(
-			@Name("address") String address,
-			@Name("senderName") @Optional String senderName,
-			@Name("subject") @Optional String subject, @Name("url") String url,
-			@Name("adapterType") @Optional String adapterType,
-			@Name("adapterID") @Optional String adapterID,
-			@Name("accountID") String accountID,
-			@Name("bearerToken") String bearerToken) throws Exception {
-		return outboundCallWithList(Arrays.asList(address), senderName,
-				subject, url, adapterType, adapterID, accountID, bearerToken);
-	}
+        public HashMap<String, String> outboundCall(@Name("address") String address,
+            @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
+            @Name("url") String url, @Name("adapterType") @Optional String adapterType,
+            @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountID,
+            @Name("bearerToken") String bearerToken) throws Exception {
+    
+            return outboundCallWithList(Arrays.asList(address), senderName, subject, url, adapterType, adapterID,
+                                        accountID, bearerToken);
+        }
 	
 	/**
 	 * updated the outboundCall functionality to support broadcast functionality
@@ -175,7 +195,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
         @Name("url") String url, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
-        @Name("bearerToken") String bearerToken) throws JSONRPCException {
+        @Name("bearerToken") String bearerToken) throws Exception {
 
         HashMap<String, String> result = new HashMap<String, String>();
         for (String address : addressMap.keySet()) {
@@ -203,7 +223,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("url") String url, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
         @Name("bearerToken") String bearerToken, @Name("callProperties") @Optional Map<String, String> callProperties)
-        throws JSONRPCException {
+        throws Exception {
 
         if (callProperties != null && !callProperties.isEmpty()) {
             log.info("outbound call with properties: " + ServerUtils.serializeWithoutException(callProperties));
@@ -221,17 +241,37 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
     /**
      * Method used to broadcast the same message to multiple addresses
-     * @param addressNameMap Map with address (e.g. phonenumber or email) as Key and name
-    *            as value. The name is useful for email and not used for SMS etc
-     * @param addressCcNameMap Cc list of the address to which this message is broadcasted. This is only used by the email servlet.
-     * @param addressBccNameMap Bcc list of the address to which this message is broadcasted. This is only used by the email servlet.
-     * @param senderName The sendername, used only by the email servlet, SMS
-     * @param subject This is used only by the email servlet
-     * @param url The URL on which a GET HTTPRequest is performed and expected a question JSON
-     * @param adapterType Either an adapterType must be given (in which case it will fetch the first adapter on this type), if null an adapterId is expected
-     * @param adapterID AdapterId for a channel configuration. This configuration is used to perform this outbound communication 
-     * @param accountId This accountId is charged with the costs for this communication
-     * @param bearerToken Secure token used for verifying this communication request
+     * 
+     * @param addressNameMap
+     *            Map with address (e.g. phonenumber or email) as Key and name
+     *            as value. The name is useful for email and not used for SMS
+     *            etc
+     * @param addressCcNameMap
+     *            Cc list of the address to which this message is broadcasted.
+     *            This is only used by the email servlet.
+     * @param addressBccNameMap
+     *            Bcc list of the address to which this message is broadcasted.
+     *            This is only used by the email servlet.
+     * @param senderName
+     *            The sendername, used only by the email servlet, SMS
+     * @param subject
+     *            This is used only by the email servlet
+     * @param dialogIdOrUrl
+     *            if a String with leading "http" is found its considered as a
+     *            url. Else a Dialog of this id is tried t The URL on which a
+     *            GET HTTPRequest is performed and expected a question JSON
+     * @param adapterType
+     *            Either an adapterType must be given (in which case it will
+     *            fetch the first adapter on this type), if null an adapterId is
+     *            expected
+     * @param adapterID
+     *            AdapterId for a channel configuration. This configuration is
+     *            used to perform this outbound communication
+     * @param accountId
+     *            This accountId is charged with the costs for this
+     *            communication
+     * @param bearerToken
+     *            Secure token used for verifying this communication request
      * @return
      * @throws JSONRPCException
      */
@@ -239,10 +279,11 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("addressCcMap") @Optional Map<String, String> addressCcMap,
         @Name("addressBccMap") @Optional Map<String, String> addressBccMap,
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
-        @Name("url") String url, @Name("adapterType") @Optional String adapterType,
+        @Name("dialogIdOrUrl") String dialogIdOrUrl, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
-        @Name("bearerToken") String bearerToken) throws JSONRPCException {
+        @Name("bearerToken") String bearerToken) throws Exception {
 
+        log.info("outbound call with map");
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
         if (adapterType != null && !adapterType.equals("") && adapterID != null && !adapterID.equals("")) {
             throw new JSONRPCException("Choose adapterType or adapterID not both");
@@ -254,7 +295,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         }
         log.info(String.format("accountId: %s bearer %s adapterType %s", accountId, bearerToken, adapterType));
         // Check accountID/bearer Token against OAuth KeyServer
-        if (Settings.KEYSERVER != null) {
+        if (Settings.KEYSERVER != null && !ServerUtils.isInUnitTestingEnvironment()) {
             if (!KeyServerLib.checkAccount(accountId, bearerToken)) {
                 throw new JSONRPCException(CODE.INVALID_REQUEST, "Invalid token given");
             }
@@ -285,54 +326,104 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
             log.info(String.format("Config found: %s of Type: %s with address: %s", config.getConfigId(),
                                    config.getAdapterType(), config.getMyAddress()));
-            adapterType = config.getAdapterType();
             try {
+                
+                adapterType = adapterType != null ? adapterType : config.getAdapterType();
                 //log all addresses 
-                log.info(String.format("recepients of question at: %s are: %s", url, ServerUtils.serialize(addressMap)));
+                log.info(String.format("recepients of question at: %s are: %s", dialogIdOrUrl, ServerUtils.serialize(addressMap)));
                 log.info(String.format("cc recepients are: %s", ServerUtils.serialize(addressCcMap)));
                 log.info(String.format("bcc recepients are: %s", ServerUtils.serialize(addressBccMap)));
+                
+                AdapterProviders globalSwitchAdapter = getGlobalAdapterSwitchSettingsForType(AdapterType
+                                                .getByValue(adapterType));
+                //apply global switch if application
+                if (globalSwitchAdapter != null) {
+                    switchAdapterIfGlobalSettingsFound(adapterType, config, globalSwitchAdapter);
+                }
+                adapterType = config.getAdapterType();
+                AdapterProviders provider = getProvider(adapterType, config);
+                
+                //update adapter credentials if not found locally and found globally
+                if (ServerUtils.isNullOrEmpty(config.getAccessToken()) &&
+                    ServerUtils.isNullOrEmpty(config.getAccessTokenSecret()) &&
+                    ServerUtils.isNullOrEmpty(config.getXsiUser()) && ServerUtils.isNullOrEmpty(config.getXsiPasswd())) {
 
+                    switchAdapterIfGlobalSettingsFound(adapterType, config, provider);
+                }
+                
                 if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_XMPP)) {
-                    resultSessionMap = new XMPPServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
-                                                                     senderName, subject, config, accountId);
+                    resultSessionMap = new XMPPServlet().startDialog(addressMap, addressCcMap, addressBccMap,
+                                                                     dialogIdOrUrl, senderName, subject, config,
+                                                                     accountId);
                 }
-                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_BROADSOFT)) {
-                    // fetch the first address in the map
-                    if (!addressMap.keySet().isEmpty()) {
-                        resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, url, config, accountId);
-                    }
-                    else {
-                        throw new Exception("Address should not be empty to setup a call");
-                    }
-                }
-                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWILIO)) {
-                    // fetch the first address in the map
-                    if (!addressMap.keySet().isEmpty() && getApplicationId() != null) {
-                        resultSessionMap = TwilioAdapter.dial(addressMap, url, config, accountId, getApplicationId());
-                    }
-                    else {
-                        throw new Exception("Address should not be empty to setup a call");
+                else if(config.isCallAdapter() && provider != null) {
+                    switch (provider) {
+                        case BROADSOFT: {
+                            // fetch the first address in the map
+                            if (!addressMap.keySet().isEmpty()) {
+                                resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, dialogIdOrUrl, config, accountId,
+                                                                          bearerToken);
+                            }
+                            else {
+                                throw new Exception("Address should not be empty to setup a call");
+                            }
+                        }
+                        break;
+                        case TWILIO: {
+                            // fetch the first address in the map
+                            if (!addressMap.keySet().isEmpty() && getApplicationId() != null) {
+                                resultSessionMap = TwilioAdapter.dial(addressMap, dialogIdOrUrl, config, accountId,
+                                                                      getApplicationId());
+                            }
+                            else {
+                                throw new Exception("Address should not be empty to setup a call");
+                            }
+                            break;
+                        }
+                        default:
+                            throw new Exception(String.format("No calling provider found for adapter: %s with id: %s",
+                                                              config.getMyAddress(), config.getConfigId()));
                     }
                 }
                 else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_EMAIL)) {
-                    resultSessionMap = new MailServlet().startDialog(addressMap, addressCcMap, addressBccMap, url,
-                                                                     senderName, subject, config, accountId);
+                    resultSessionMap = new MailServlet().startDialog(addressMap, addressCcMap, addressBccMap,
+                                                                     dialogIdOrUrl, senderName, subject, config,
+                                                                     accountId);
                 }
-                else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_SMS)) {
-                    resultSessionMap = new MBSmsServlet().startDialog(addressMap, null, null, url, senderName, subject,
-                                                                      config, accountId);
-                }
-                else if (adapterType.toUpperCase().equals("CM")) {
-                    resultSessionMap = new CMSmsServlet().startDialog(addressMap, null, null, url, senderName, subject,
-                                                                      config, accountId);
+                else if (config.isSMSAdapter()) {
+                    
+                    if (provider != null) {
+                        switch (provider) {
+                            case MB:
+                                resultSessionMap = new MBSmsServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
+                                                                                  senderName, subject, config, accountId);
+                                break;
+                            case CM:
+                                resultSessionMap = new CMSmsServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
+                                                                                  senderName, subject, config, accountId);
+                                break;
+                            case ROUTE_SMS:
+                                resultSessionMap = new RouteSmsServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
+                                                                                     senderName, subject, config,
+                                                                                     accountId);
+                                break;
+                            default:
+                                throw new Exception(String.format("No calling provider found for adapter: %s with id: %s",
+                                                                  config.getMyAddress(), config.getConfigId()));
+                        }
+                    }
+                    else {
+                        throw new Exception(String.format("No calling provider found for adapter: %s with id: %s",
+                                                          config.getMyAddress(), config.getConfigId()));
+                    }
                 }
                 else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_USSD)) {
-                    resultSessionMap = new CLXUSSDServlet().startDialog(addressMap, null, null, url, senderName,
-                                                                        subject, config, accountId);
+                    resultSessionMap = new CLXUSSDServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
+                                                                        senderName, subject, config, accountId);
                 }
                 else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_PUSH)) {
-                    resultSessionMap = new NotificareServlet().startDialog(addressMap, null, null, url, senderName,
-                                                                           subject, config, accountId);
+                    resultSessionMap = new NotificareServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
+                                                                           senderName, subject, config, accountId);
                 }
                 else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWITTER)) {
                     HashMap<String, String> formattedTwitterAddresses = new HashMap<String, String>(addressMap.size());
@@ -341,8 +432,9 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         String formattedTwitterAddress = address.startsWith("@") ? address : ("@" + address);
                         formattedTwitterAddresses.put(formattedTwitterAddress, addressMap.get(address));
                     }
-                    resultSessionMap = new TwitterServlet().startDialog(formattedTwitterAddresses, null, null, url,
-                                                                        senderName, subject, config, accountId);
+                    resultSessionMap = new TwitterServlet().startDialog(formattedTwitterAddresses, null, null,
+                                                                        dialogIdOrUrl, senderName, subject, config,
+                                                                        accountId);
                 }
                 else {
                     throw new Exception("Unknown type given: either broadsoft or phone or mail:" +
@@ -361,7 +453,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         }
         return resultSessionMap;
     }
-	
+
     public String changeAgent(@Name("url") String url, @Name("adapterType") @Optional String adapterType,
                               @Name("adapterID") @Optional String adapterID, @Name("accountId") String accountId,
                               @Name("bearerToken") String bearerToken) throws Exception {
@@ -399,15 +491,15 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
             log.info("Config found: " + config.getConfigId());
             TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-            Dialog dialog = Dialog.createDialog("Dialog created on agent update", config.getURLForInboundScenario(),
-                                                config.getOwner());
+            Dialog dialog = Dialog.createDialog("Dialog created on agent update",
+                                                config.getURLForInboundScenario(null), config.getOwner());
             config.getProperties().put(AdapterConfig.DIALOG_ID_KEY, dialog.getId());
             datastore.store(config);
 
             ObjectNode result = JOM.createObjectNode();
             result.put("id", config.getConfigId());
             result.put("type", config.getAdapterType());
-            result.put("url", config.getURLForInboundScenario());
+            result.put("url", config.getURLForInboundScenario(null));
             return result.toString();
         }
         else {
@@ -496,7 +588,13 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     }
     
     public String getApplicationId() {
-    	return getState().get("applicationId", String.class);
+
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            return getState().get("applicationId", String.class);
+        }
+        else {
+            return UUID.randomUUID().toString();
+        }
     }
     
     public void setApplicationId(@Name("applicationId") String applicationId) {
@@ -541,14 +639,12 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                                                    new String(delivery.getBody())));
                             HashMap<String, String> sessionTriggered = outboundCall(dialogDetails);
                             boolean isCallAdapter = false;
-                            if (AdapterType.isCallAdapter(dialogDetails.getAdapterType())) {
-                                isCallAdapter = true;
-                            }
-                            else if (dialogDetails.getAdapterID() != null) {
+                            if (dialogDetails.getAdapterID() != null) {
                                 AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(dialogDetails
                                                                 .getAdapterID());
                                 if (adapterConfig != null) {
-                                    isCallAdapter = AdapterType.isCallAdapter(adapterConfig.getAdapterType());
+                                    dialogDetails.setAdapterType(adapterConfig.getAdapterType());
+                                    isCallAdapter = adapterConfig.isCallAdapter();
                                 }
                             }
                             //only add it to the process queue only for a phone call. 
@@ -630,6 +726,164 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
         getState().put("max_sessionsInQueue", maxSessionsInQueue);
         return getMaxSessionsAllowedInQueue();
+    }
+    
+    /**
+     * Get the default providers for channels. Doesnt return null, returns the
+     * {@link DialogAgent#DEFAULT_PROVIDERS} in case the agent info is null. 
+     * 
+     * @return
+     */
+    public Map<AdapterType, AdapterProviders> getDefaultProviderSettings() {
+
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            Map<AdapterType, AdapterProviders> defaultProviders = getState()
+                                            .get(DEFAULT_ADAPTER_PROVIDER_MAPPING_KEY,
+                                                 new TypeUtil<Map<AdapterType, AdapterProviders>>() {
+                                                 });
+            return defaultProviders != null ? defaultProviders : DEFAULT_PROVIDERS;
+        }
+        else {
+            return DEFAULT_PROVIDERS;
+        }
+    }
+   
+    /**
+     * Set the default provider for a particular channel
+     * @return
+     */
+    public Map<AdapterType, AdapterProviders> setDefaultProviderSettings(
+        @Name("adapterType") @Optional AdapterType adapterType,
+        @Name("adapterProvider") AdapterProviders adapterProvider) {
+
+        Map<AdapterType, AdapterProviders> defaultProviderSettings = getDefaultProviderSettings();
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            defaultProviderSettings = defaultProviderSettings != null ? defaultProviderSettings
+                                                                     : new HashMap<AdapterType, AdapterProviders>();
+            defaultProviderSettings.put(adapterType, adapterProvider);
+            getState().put(DEFAULT_ADAPTER_PROVIDER_MAPPING_KEY, defaultProviderSettings);
+            return getDefaultProviderSettings();
+        }
+        else {
+            DEFAULT_PROVIDERS = DEFAULT_PROVIDERS != null ? DEFAULT_PROVIDERS
+                                                         : new HashMap<AdapterType, AdapterProviders>();
+            DEFAULT_PROVIDERS.put(adapterType, adapterProvider);
+            return DEFAULT_PROVIDERS;
+        }
+    }
+    
+    public AdapterProviders getGlobalAdapterSwitchSettingsForType(@Name("adapterType") AdapterType adapterType) {
+
+        Map<AdapterType, AdapterProviders> globalAdapterSwitchSettings = getGlobalAdapterSwitchSettings();
+        return globalAdapterSwitchSettings != null ? globalAdapterSwitchSettings.get(adapterType) : null;
+    }
+    
+    public Map<AdapterType, AdapterProviders> getGlobalAdapterSwitchSettings() {
+
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            return getState().get(GLOBAL_ADAPTER_SWITCH_MAPPING_KEY,
+                                  new TypeUtil<Map<AdapterType, AdapterProviders>>() {
+                                  });
+        }
+        else {
+            return DEFAULT_PROVIDERS;
+        }
+    }
+   
+    /**
+     * Set the default provider for a particular channel
+     * 
+     * @return
+     */
+    public Map<AdapterType, AdapterProviders> setGlobalAdapterSwitchSettings(
+        @Name("adapterType") @Optional AdapterType adapterType,
+        @Name("adapterProvider") AdapterProviders adapterProvider) {
+
+        Map<AdapterType, AdapterProviders> adapterProviderMapping = getGlobalAdapterSwitchSettings();
+        adapterProviderMapping = adapterProviderMapping != null ? adapterProviderMapping
+                                                               : new HashMap<AdapterType, AdapterProviders>();
+        if (adapterType == null) {
+            adapterType = adapterProvider.getAdapterType();
+        }
+        adapterProviderMapping.put(adapterType, adapterProvider);
+        getState().put(GLOBAL_ADAPTER_SWITCH_MAPPING_KEY, adapterProviderMapping);
+        return getGlobalAdapterSwitchSettings();
+    }
+    
+    /**
+     * Gets all the credentials stored in the DialogAgent
+     * @return
+     */
+    public Map<AdapterProviders, Map<String, AdapterConfig>> getGlobalProviderCredentials() {
+
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            return getState().get(ADAPTER_PROVIDER_CREDENTIALS_KEY,
+                                  new TypeUtil<Map<AdapterProviders, Map<String, AdapterConfig>>>() {
+                                  });
+        }
+        return null;
+    }
+
+    /**
+     * Set the default credentials for the channels used. This enables a global
+     * switch on which provider to user.
+     * 
+     * @return
+     * @throws IOException
+     */
+    public Map<AdapterProviders, Map<String, AdapterConfig>> setGlobalProviderCredentials(
+        @Name("adapterProvider") AdapterProviders adapterProviders,
+        @Name("specificAdapterId") @Optional String adapterId, @Name("config") AdapterConfig adapterCredentials)
+        throws IOException {
+
+        Object defaultProviderCredentials = getGlobalProviderCredentials();
+        if (defaultProviderCredentials == null) {
+            defaultProviderCredentials = new HashMap<AdapterProviders, Map<String, AdapterConfig>>();
+        }
+        String defaultCredentials = JOM.getInstance().writeValueAsString(defaultProviderCredentials);
+        Map<AdapterProviders, Map<String, AdapterConfig>> defaultCredentialsAsMap = JOM
+                                        .getInstance()
+                                        .readValue(defaultCredentials,
+                                                   new TypeReference<Map<AdapterProviders, Map<String, AdapterConfig>>>() {
+                                                   });
+        Map<String, AdapterConfig> defaultCredentialForProvider = defaultCredentialsAsMap.get(adapterProviders);
+        if (defaultCredentialForProvider == null) {
+            defaultCredentialForProvider = new HashMap<String, AdapterConfig>();
+        }
+        String credentialsKey = adapterId != null ? adapterId : ADAPTER_CREDENTIALS_GLOBAL_KEY;
+        adapterCredentials.setMyAddress(null);
+        adapterCredentials.setAdapterType(null);
+        adapterCredentials.setConfigId(null);
+        adapterCredentials.setPreferred_language(null);
+        adapterCredentials.setOwner(null);
+        adapterCredentials.setAccounts(null);
+        adapterCredentials.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, adapterProviders);
+        defaultCredentialForProvider.put(credentialsKey, adapterCredentials);
+        defaultCredentialsAsMap.put(adapterProviders, defaultCredentialForProvider);
+        getState().put(ADAPTER_PROVIDER_CREDENTIALS_KEY, defaultCredentialsAsMap);
+        return getGlobalProviderCredentials();
+    }
+    
+    /** Get the provider attached to this adapter by checking the adapterProperties and adapterType
+     * @param adapterType
+     * @param config
+     * @return
+     */
+    public static AdapterProviders getProvider(String adapterType, AdapterConfig config) {
+
+        AdapterProviders provider = null;
+        if (config.getProperties().get(AdapterConfig.ADAPTER_PROVIDER_KEY) != null) {
+            Object adapterProvider = config.getProperties().get(AdapterConfig.ADAPTER_PROVIDER_KEY);
+            provider = AdapterProviders.getByValue(adapterProvider.toString());
+        }
+        //check if the adapter type has the provider info in it
+        else if (AdapterProviders.getByValue(adapterType) != null) {
+            provider = AdapterProviders.getByValue(adapterType);
+        }
+        else {
+            provider = DEFAULT_PROVIDERS != null ? DEFAULT_PROVIDERS.get(AdapterType.getByValue(adapterType)) : null;
+        }
+        return provider;
     }
     
 //    /**
@@ -759,6 +1013,71 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             }
         }
         return result;
+    }
+    
+    /**
+     * Updates the Adapter with globally configured adapter credentials. Useful
+     * when a particular provider goes down. Gives an option to switch globally.
+     * Generally applicable to SMS and CALL type channels only
+     * 
+     * @param adapterType
+     * @param config
+     * @param adapterProvider
+     * @param globalSwitchProviderCredentials
+     */
+    private void switchAdapterIfGlobalSettingsFound(String adapterType, AdapterConfig config,
+        AdapterProviders adapterProvider) {
+
+        Map<AdapterProviders, Map<String, AdapterConfig>> globalSwitchProviderCredentials = getGlobalProviderCredentials();
+        //check if there is a global switch on adapters
+        if (mustCredentialsBeFetchedFromGlobal(adapterType, adapterProvider, config) &&
+            globalSwitchProviderCredentials != null && globalSwitchProviderCredentials.get(adapterProvider) != null) {
+
+            Map<String, AdapterConfig> credentialsForSelectedAdapter = globalSwitchProviderCredentials
+                                            .get(adapterProvider);
+            //check if there is specific credentials for the given adapter
+            AdapterConfig switchAdapterCredentials = credentialsForSelectedAdapter.get(config.getConfigId());
+            switchAdapterCredentials = switchAdapterCredentials != null ? switchAdapterCredentials
+                                                                       : credentialsForSelectedAdapter.get(ADAPTER_CREDENTIALS_GLOBAL_KEY);
+
+            log.info(String.format("PERFORMING GLOBAL SWITCH FOR ADAPTER: %s ID: %s WITH CREDENTIALS: %s",
+                                   config.getMyAddress(), config.getConfigId(),
+                                   ServerUtils.serializeWithoutException(switchAdapterCredentials)));
+
+            try {
+                //ignore the myAddress and adapterType if given
+                switchAdapterCredentials.setAdapterType(null);
+                switchAdapterCredentials.setMyAddress(null);
+                JOM.getInstance().readerForUpdating(config).readValue(ServerUtils.serialize(switchAdapterCredentials));
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(String.format("Updating config: %s with id: %s failed. Error: %s", config.getMyAddress(),
+                                         config.getConfigId(), e.toString()));
+            }
+        }
+    }
+    
+    /**
+     * Checks if the adapter credentials must be fetched from global scope or
+     * not. If the given adapter misses the credentials and its available in the
+     * global state, it returns true.
+     * 
+     * @return
+     */
+    private boolean mustCredentialsBeFetchedFromGlobal(String adapterType, AdapterProviders provider,
+        AdapterConfig config) {
+
+        //return true if the providers dont match or the adapter credentials are missing
+        if (provider != null &&
+            !provider.equals(getProvider(adapterType, config)) ||
+            (ServerUtils.isNullOrEmpty(config.getAccessToken()) &&
+             ServerUtils.isNullOrEmpty(config.getAccessTokenSecret()) && ServerUtils.isNullOrEmpty(config.getXsiUser()) && ServerUtils
+                                            .isNullOrEmpty(config.getXsiPasswd()))) {
+
+            return true;
+        }
+        return false;
     }
 
 //    /** Count of all the addresses in this dialogDetails

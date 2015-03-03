@@ -20,6 +20,7 @@ import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.entity.AdapterProviders;
 
 public class CLXUSSDServlet extends TextServlet {
 
@@ -215,7 +216,7 @@ public class CLXUSSDServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
-        String message) throws Exception {
+        String message, String sessionKey) throws Exception {
 
         throw new NotImplementedException("Incoming cost processing is not implemented for " +
                                           this.getClass().getSimpleName());
@@ -223,9 +224,16 @@ public class CLXUSSDServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
 
-        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, null, toAddress, 1, message);
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, null, toAddress, 1, message,
+                                                               sessionKeyMap);
+    }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterProviders.CLX.toString();
     }
 }
 

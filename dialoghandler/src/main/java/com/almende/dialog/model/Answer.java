@@ -1,6 +1,6 @@
 package com.almende.dialog.model;
 
-import com.almende.dialog.model.impl.*;
+import com.almende.dialog.model.impl.A_fields;
 import com.almende.dialog.model.intf.AnswerIntf;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -27,10 +27,12 @@ public class Answer implements AnswerIntf {
 	@Override
 	public String getAnswer_expandedtext() { return answer.getAnswer_expandedtext(); }
 	@Override
+
 	@JsonIgnore
-	public String getAnswer_expandedtext(String language) {
-		return answer.getAnswer_expandedtext(language); 
-	}
+        public String getAnswer_expandedtext(String language, String authorizationHeader) {
+    
+            return answer.getAnswer_expandedtext(language, authorizationHeader);
+        }
 
 	@Override
 	public void setAnswer_id(String answer_id) { answer.setAnswer_id(answer_id); }

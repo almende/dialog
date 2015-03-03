@@ -6,16 +6,27 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import org.apache.commons.codec.binary.Base64;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URIBuilder;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
+import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.model.Answer;
+import com.almende.dialog.model.AnswerPost;
+import com.almende.dialog.model.EventPost;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.util.ServerUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 /**
  * this Servlet is used in the unit tests
@@ -37,7 +48,7 @@ public class TestServlet extends HttpServlet
     
     //used for local caching of question for testing
     public static String responseQuestionString = "" ;
-    protected static Object logObject = new Object();
+    private static Object logObject;
     
     private static final Logger log = Logger.getLogger( TestServlet.class.getSimpleName() );
     
@@ -45,114 +56,120 @@ public class TestServlet extends HttpServlet
      * simple enum to generate different questions formats
      * @author Shravan
      */
-    public enum QuestionInRequest
-    {
-        APPOINTMENT, SIMPLE_COMMENT, OPEN_QUESTION, OPEN_QUESION_WITHOUT_ANSWERS, URL_QUESTION_TEXT, PLAIN_TEXT_QUESION;
+    public enum QuestionInRequest {
+        SECURED,
+        APPOINTMENT,
+        SIMPLE_COMMENT,
+        OPEN_QUESTION,
+        OPEN_QUESION_WITHOUT_ANSWERS,
+        URL_QUESTION_TEXT,
+        PLAIN_TEXT_QUESION;
     }
     
     @Override
-    protected void doGet( HttpServletRequest req, HttpServletResponse resp )
-    throws ServletException, IOException
-    {
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
         String result = "";
-        String questionType = req.getParameter( "questionType" );
-        if ( questionType != null )
-        {
-            switch ( QuestionInRequest.valueOf(questionType) )
-            {
+        String questionType = req.getParameter("questionType");
+        if (req.getParameter("secured") != null) {
+            if (req.getHeader("Authorization") != null) {
+                log.info("Login via Authorization header");
+                String header = req.getHeader("Authorization");
+                assert header.substring(0, 6).equals("Basic ");
+                String basicAuthEncoded = header.substring(6);
+                String userPass = new String(new Base64().decode(basicAuthEncoded));
+                String[] userPassArray = userPass.split(":");
+                if (!"testusername".equalsIgnoreCase(userPassArray[0]) ||
+                    !"testpassword".equalsIgnoreCase(userPassArray[1])) {
+                    result = null;
+                    throw new ServletException("Insecure test servlet access");
+                }
+            }
+        }
+        if (questionType != null) {
+            switch (QuestionInRequest.valueOf(questionType)) {
                 case APPOINTMENT:
-                    result = getAppointmentQuestion( req.getParameter( "question" ) );
+                    result = getAppointmentQuestion(req.getParameter("question"));
                     break;
                 case SIMPLE_COMMENT:
-                    result = getJsonSimpleCommentQuestion( req.getParameter( "question" ) );
+                    result = getJsonSimpleCommentQuestion(req.getParameter("question"));
                     break;
                 case OPEN_QUESTION:
-                    result = getJsonSimpleOpenQuestion( req.getParameter( "question" ) );
+                    result = getJsonSimpleOpenQuestion(req.getParameter("question"));
                     break;
                 case PLAIN_TEXT_QUESION:
-                    result = req.getParameter( "question" );
+                    result = req.getParameter("question");
                     break;
                 case OPEN_QUESION_WITHOUT_ANSWERS:
-                    result = getJsonSimpleOpenQuestionWithoutAnswers( req.getParameter( "question" ) );
+                    result = getJsonSimpleOpenQuestionWithoutAnswers(req.getParameter("question"));
+                    break;
                 default:
                     break;
             }
         }
         //store all the questions loaded in the TestFramework
-        if(result != null && !result.isEmpty())
-        {
-            try
-            {
+        if (result != null && !result.isEmpty()) {
+            try {
                 storeResponseQuestionInThread(getResponseQuestionWithOptionsInString(result));
             }
-            catch ( Exception e )
-            {
-                Assert.fail( "Exception is not expected to be thrown. "+ e.getLocalizedMessage() );
+            catch (Exception e) {
+                Assert.fail("Exception is not expected to be thrown. " + e.getLocalizedMessage());
             }
         }
-        if ( result == null || result.isEmpty()
-            && req.getPathInfo().startsWith( URLDecoder.decode( OPEN_QUESTION_URL_WITH_SPACES, "UTF-8" ) ) )
-        {
-            String message = req.getPathInfo().substring(
-                URLDecoder.decode( OPEN_QUESTION_URL_WITH_SPACES, "UTF-8" ).length() + 1 );
-            result = getJsonSimpleOpenQuestion( TEST_SERVLET_PATH + PLAIN_TEXT_QUESTION + "/" + message );
+        if (result == null || result.isEmpty() &&
+            req.getPathInfo().startsWith(URLDecoder.decode(OPEN_QUESTION_URL_WITH_SPACES, "UTF-8"))) {
+            String message = req.getPathInfo().substring(URLDecoder.decode(OPEN_QUESTION_URL_WITH_SPACES, "UTF-8")
+                                                                                         .length() + 1);
+            result = getJsonSimpleOpenQuestion(TEST_SERVLET_PATH + PLAIN_TEXT_QUESTION + "/" + message);
         }
-        else if ( result == null || result.isEmpty()
-            && req.getPathInfo().startsWith( URLDecoder.decode( PLAIN_TEXT_QUESTION, "UTF-8" ) ) )
-        {
-            result = URLDecoder.decode(
-                req.getPathInfo().substring( URLDecoder.decode( PLAIN_TEXT_QUESTION, "UTF-8" ).length() + 1 ), "UTF-8" );
+        else if (result == null || result.isEmpty() &&
+                 req.getPathInfo().startsWith(URLDecoder.decode(PLAIN_TEXT_QUESTION, "UTF-8"))) {
+            result = URLDecoder.decode(req.getPathInfo().substring(URLDecoder.decode(PLAIN_TEXT_QUESTION, "UTF-8")
+                                                                                                   .length() + 1),
+                                       "UTF-8");
         }
-        TestServlet.logForTest( result );
-        resp.getWriter().write( result );
-        resp.setHeader( "Content-Type", MediaType.APPLICATION_JSON );
+        TestServlet.logForTest(result);
+        resp.getWriter().write(result);
+        resp.setHeader("Content-Type", MediaType.APPLICATION_JSON);
     }
     
     @Override
-    protected void doPost( HttpServletRequest req, HttpServletResponse resp )
-    throws ServletException, IOException
-    {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
         String result = "";
-        String appointmentTag = req.getParameter( "appointment" );
-        if(appointmentTag != null)
-        {
-            result = getAppointmentQuestion( appointmentTag );
+        String appointmentTag = req.getParameter("appointment");
+        StringBuffer jb = new StringBuffer();
+        String line = null;
+        BufferedReader reader = req.getReader();
+        while ((line = reader.readLine()) != null) {
+            jb.append(line);
+        }
+        logForTest(jb.toString());
+        try {
+            validatePayload(req.getRequestURL() + "?" + req.getQueryString(), new String(jb.toString()));
+        }
+        catch (Exception e1) {
+            e1.printStackTrace();
+            Assert.fail("POST payload retrieval failed. Message: " + e1.getLocalizedMessage());
+            result = null;
+            throw new ServletException(e1);
+        }
+        if (appointmentTag != null) {
+            result = getAppointmentQuestion(appointmentTag);
             //store all the questions loaded in the TestFramework
-            try
-            {
+            try {
                 storeResponseQuestionInThread(getResponseQuestionWithOptionsInString(result));
             }
-            catch ( Exception e )
-            {
-                Assert.fail( "Exception is not expected to be thrown. "+ e.getLocalizedMessage() );
+            catch (Exception e) {
+                Assert.fail("Exception is not expected to be thrown. " + e.getLocalizedMessage());
             }
         }
-        else if(req.getParameter( "questionType") != null && req.getParameter( "questionType").equals( QuestionInRequest.SIMPLE_COMMENT.name() ))
-        {
-            result = getJsonSimpleCommentQuestion( req.getParameter( "question" ) );
+        else if (req.getParameter("questionType") != null &&
+                 req.getParameter("questionType").equals(QuestionInRequest.SIMPLE_COMMENT.name())) {
+            result = getJsonSimpleCommentQuestion(req.getParameter("question"));
         }
-        else
-        {
-            StringBuffer jb = new StringBuffer();
-            String line = null;
-            try
-            {
-                BufferedReader reader = req.getReader();
-                while ( ( line = reader.readLine() ) != null )
-                {
-                    jb.append( line );
-                }
-                result = jb.toString();
-                TestServlet.logForTest( result );
-            }
-            catch ( Exception e )
-            {
-                Assert.fail( "POST payload retrieval failed. Message: " + e.getLocalizedMessage() );
-                return;
-            }
-        }
-        resp.getWriter().write( result );
-        resp.setHeader( "Content-Type", MediaType.APPLICATION_JSON );
+        resp.getWriter().write(result);
+        resp.setHeader("Content-Type", MediaType.APPLICATION_JSON);
     }
 
     @Override
@@ -193,12 +210,17 @@ public class TestServlet extends HttpServlet
     public static void logForTest(Object log)
     {
         TestServlet.log.info( "LogForTest: "+ log.toString() );
-        logObject = log;
+        TestServlet.logObject = log;
+    }
+
+    public static Object getLogObject() {
+
+        return logObject;
     }
     
-    public static Object getLogObject()
-    {
-        return logObject;
+    public static void clearLogObject() {
+
+        logObject = null;
     }
     
     private String getJsonSimpleOpenQuestionWithoutAnswers( String questionText )
@@ -226,30 +248,28 @@ public class TestServlet extends HttpServlet
         }
     }
     
-    private String getJsonSimpleOpenQuestion( String questionText ) throws UnsupportedEncodingException
-    {
+    private String getJsonSimpleOpenQuestion(String questionText) throws UnsupportedEncodingException {
+
         Question question = new Question();
-        question.setQuestion_id( "1" );
-        question.setType( "open" );
-        if(questionText.startsWith( "http://" ))
-        {
-            question.setQuestion_text( questionText );
+        question.setQuestion_id("1");
+        question.setType("open");
+        if (questionText.startsWith("http://")) {
+            question.setQuestion_text(questionText);
         }
-        else
-        {
-            question.setQuestion_text( "text://" + questionText );
+        else {
+            question.setQuestion_text("text://" + questionText);
         }
-        String callback = ServerUtils.getURLWithQueryParams( TEST_SERVLET_PATH , "questionType", QuestionInRequest.SIMPLE_COMMENT.name() );
-        callback = ServerUtils.getURLWithQueryParams( callback, "question", "Simple%20Comment" );
-        question.setAnswers( new ArrayList<Answer>( Arrays.asList( new Answer( "Test answer", callback ))));
+        String callback = ServerUtils.getURLWithQueryParams(TEST_SERVLET_PATH, "questionType",
+                                                            QuestionInRequest.SIMPLE_COMMENT.name());
+        callback = ServerUtils.getURLWithQueryParams(callback, "question", "Simple%20Comment");
+        question.setAnswers(new ArrayList<Answer>(Arrays.asList(new Answer("Test answer", callback))));
         question.generateIds();
-        try
-        {
-            return ServerUtils.serialize( question );
+        question.addEventCallback(UUID.randomUUID().toString(), "timeout", callback);
+        try {
+            return ServerUtils.serialize(question);
         }
-        catch ( Exception e )
-        {
-            Assert.fail("exception not expected. "+ e.getLocalizedMessage());
+        catch (Exception e) {
+            Assert.fail("exception not expected. " + e.getLocalizedMessage());
             return null;
         }
     }
@@ -317,9 +337,9 @@ public class TestServlet extends HttpServlet
 
         Question question = ServerUtils.deserialize(questionJSON, false, Question.class);
         if (question != null) {
-            String result = question.getQuestion_expandedtext();
+            String result = question.getQuestion_expandedtext(null);
             if (question.getAnswers() != null && question.getType().equals("closed")) {
-                result = question.getTextWithAnswerTexts();
+                result = question.getTextWithAnswerTexts(null);
             }
             return result;
         }
@@ -356,5 +376,62 @@ public class TestServlet extends HttpServlet
             result = getJsonAppointmentQuestion();
         }
         return result;
+    }
+    
+    /**
+     * Make sure that the payload does not contact any senstive information
+     * 
+     * @param payload
+     * @throws Exception
+     */
+    private void validatePayload(String url, String payload) throws Exception {
+
+        boolean firstAsserted = false;
+        boolean secondAsserted = false;
+        //validate that every callback has a sessionKey and responder attached to it
+        for (NameValuePair nameValuePair : new URIBuilder(url).getQueryParams()) {
+            if (nameValuePair.getName().equals("responder")) {
+                firstAsserted = true;
+            }
+            if (nameValuePair.getName().equals("sessionKey")) {
+                secondAsserted = true;
+            }
+        }
+        //responder and sessionKeys are only not expected for SMSDeliveryStatus callbacks 
+        if(!firstAsserted || !secondAsserted) {
+            log.info("-------------"+ url + "--------");
+        }
+        Assert.assertTrue(firstAsserted);
+        Assert.assertTrue(secondAsserted);
+        firstAsserted = false;
+        AnswerPost answerEntity = ServerUtils.deserialize(payload, false, AnswerPost.class);
+        if (answerEntity != null) {
+            Assert.assertThat(answerEntity.getExtras(), Matchers.notNullValue());
+            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.ACCESS_TOKEN_KEY), Matchers.nullValue());
+            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY), Matchers.nullValue());
+            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY), Matchers.nullValue());
+            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.XSI_PASSWORD_KEY), Matchers.nullValue());
+            Assert.assertThat(answerEntity.getExtras().get(AdapterConfig.XSI_USER_KEY), Matchers.nullValue());
+            Assert.assertThat(answerEntity.getExtras().get(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY), Matchers.nullValue());
+            firstAsserted = true;
+        }
+        else {
+            EventPost eventEntity = ServerUtils.deserialize(payload, false, EventPost.class);
+            if (eventEntity != null) {
+                Map<String, Object> eventExtras = ServerUtils
+                                                .deserialize(ServerUtils.serialize(eventEntity.getExtras()),
+                                                             new TypeReference<Map<String, Object>>() {
+                                                             });
+                Assert.assertThat(eventExtras, Matchers.notNullValue());
+                Assert.assertThat(eventExtras.get(AdapterConfig.ACCESS_TOKEN_KEY), Matchers.nullValue());
+                Assert.assertThat(eventExtras.get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY), Matchers.nullValue());
+                Assert.assertThat(eventExtras.get(AdapterConfig.ADAPTER_PROVIDER_KEY), Matchers.nullValue());
+                Assert.assertThat(eventExtras.get(AdapterConfig.XSI_PASSWORD_KEY), Matchers.nullValue());
+                Assert.assertThat(eventExtras.get(AdapterConfig.XSI_USER_KEY), Matchers.nullValue());
+                Assert.assertThat(eventExtras.get(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY), Matchers.nullValue());
+                firstAsserted = true;
+            }
+        }
+        Assert.assertTrue(firstAsserted);
     }
 }

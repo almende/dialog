@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+3-3-2015 version 1.5.14
+- hotfix: reject call triggered to invalid numbers. reset retry counter if fails
+
 25-2-2015 version 1.5.13
 - hotfix: change the silence timeout for twilio to 20 sec
 

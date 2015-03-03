@@ -1,5 +1,6 @@
 package com.almende.dialog.util;
 
+import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
@@ -8,6 +9,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 import org.joda.time.DateTime;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.TwilioAdapter;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
@@ -19,6 +21,7 @@ import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.agent.AgentHost;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
@@ -26,6 +29,8 @@ import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.twilio.sdk.resource.instance.Account;
+import com.twilio.sdk.resource.instance.Call;
 
 /**
  * Helper functions for creating DDR records and processing of them
@@ -82,15 +87,24 @@ public class DDRUtils
      *            no of units to be charged. Typically for the SMS, it depends
      *            on the length of the SMS text and the address list
      * @param quantity
+     * @param sessionKey
      * @throws Exception
      */
     public static DDRRecord createDDRRecordOnOutgoingCommunication(AdapterConfig config, String accountId,
-        String toAddress, int quantity, String message) throws Exception {
+        String toAddress, int quantity, String message, String sessionKey) throws Exception {
 
         HashMap<String, String> toAddressMap = new HashMap<String, String>();
         toAddressMap.put(toAddress, "");
+        HashMap<String, String> sessionKeyMap = new HashMap<String, String>();
+        sessionKeyMap.put(toAddress, sessionKey);
+        //update the startTime of the session
+        Session session = Session.getSession(sessionKey);
+        if(session != null) {
+            session.setStartTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
+            session.storeSession();
+        }
         return createDDRRecordOnCommunication(config, accountId, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, null,
-                                              toAddressMap, CommunicationStatus.SENT, quantity, message);
+                                              toAddressMap, CommunicationStatus.SENT, quantity, message, sessionKeyMap);
     }
     
     /**
@@ -100,15 +114,19 @@ public class DDRUtils
      * @param fromAddress
      * @param quantity
      * @param message
+     * @param sessionKey
      * @throws Exception
      */
     public static DDRRecord createDDRRecordOnIncomingCommunication(AdapterConfig config, String accountId,
-        String fromAddress, int quantity, String message) throws Exception {
+        String fromAddress, int quantity, String message, String sessionKey) throws Exception {
 
         HashMap<String, String> fromAddressMap = new HashMap<String, String>();
         fromAddressMap.put(fromAddress, "");
+        HashMap<String, String> sessionKeyMap = new HashMap<String, String>();
+        sessionKeyMap.put(fromAddress, sessionKey);
         return createDDRRecordOnCommunication(config, accountId, DDRTypeCategory.INCOMING_COMMUNICATION_COST, null,
-                                              fromAddressMap, CommunicationStatus.RECEIVED, quantity, message);
+                                              fromAddressMap, CommunicationStatus.RECEIVED, quantity, message,
+                                              sessionKeyMap);
     }
 
     /**
@@ -118,13 +136,16 @@ public class DDRUtils
      * @param config
      * @param toAddress
      *            the address list
+     * @param message
+     * @param sessionKey
      * @throws Exception
      */
     public static DDRRecord createDDRRecordOnOutgoingCommunication(AdapterConfig config, String accountId,
-        Map<String, String> toAddress, String message) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
 
         return createDDRRecordOnCommunication(config, accountId, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, null,
-                                              toAddress, CommunicationStatus.SENT, toAddress.size(), message);
+                                              toAddress, CommunicationStatus.SENT, toAddress.size(), message,
+                                              sessionKeyMap);
     }
     
     /**
@@ -140,13 +161,16 @@ public class DDRUtils
      * @param message
      *            actual message being sent. is saved in the addtionalInfo of
      *            the ddrRecord
+     * @param sessionKey
      * @throws Exception
      */
     public static DDRRecord createDDRRecordOnOutgoingCommunication(AdapterConfig config, String accountId,
-        String senderName, Map<String, String> toAddress, int quantity, String message) throws Exception {
+        String senderName, Map<String, String> toAddress, int quantity, String message,
+        Map<String, String> sessionKeyMap) throws Exception {
 
         return createDDRRecordOnCommunication(config, accountId, DDRTypeCategory.OUTGOING_COMMUNICATION_COST,
-                                              senderName, toAddress, CommunicationStatus.SENT, quantity, message);
+                                              senderName, toAddress, CommunicationStatus.SENT, quantity, message,
+                                              sessionKeyMap);
     }
 
     /**
@@ -155,16 +179,19 @@ public class DDRUtils
      * @param accountId This accountId is charged for the communication
      * @param fromAddress
      * @param message
+     * @param sessionKey
      * @return
      * @throws Exception
      */
     public static DDRRecord createDDRRecordOnIncomingCommunication(AdapterConfig config, String accountId,
-        String fromAddress, String message) throws Exception {
+        String fromAddress, String message, String sessionKey) throws Exception {
 
         Map<String, String> fromAddresses = new HashMap<String, String>();
         fromAddresses.put(fromAddress, "");
+        Map<String, String> sessionKeyMap = new HashMap<String, String>();
+        sessionKeyMap.put(fromAddress, sessionKey);
         return createDDRRecordOnCommunication(config, accountId, DDRTypeCategory.INCOMING_COMMUNICATION_COST,
-                                              fromAddresses, CommunicationStatus.RECEIVED, message);
+                                              fromAddresses, CommunicationStatus.RECEIVED, message, sessionKeyMap);
     }
     
     /**
@@ -179,7 +206,7 @@ public class DDRUtils
      * @throws Exception
      */
     public static DDRRecord updateDDRRecordOnCallStops(String ddrRecordId, AdapterConfig adapterConfig,
-        String accountId, Long startTime, Long answerTime, Long releaseTime) throws Exception {
+        String accountId, Long startTime, Long answerTime, Long releaseTime, String sessionKey) throws Exception {
 
         DDRRecord ddrRecord = DDRRecord.getDDRRecord(ddrRecordId, accountId);
         if (ddrRecord != null) {
@@ -214,7 +241,7 @@ public class DDRUtils
                 }
             }
             ddrRecord.setDuration(duration > 0L ? duration : 0);
-            ddrRecord.createOrUpdateWithLog();
+            ddrRecord.createOrUpdateWithLog(sessionKey);
         }
         else {
             log.warning(String.format("No ddr record found for id: %s", ddrRecord));
@@ -241,7 +268,7 @@ public class DDRUtils
             //fetch the ddr based on the details
             List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterConfig.getConfigId(), adapterConfig.getOwner(),
                                                                  null, subscriptionDDRType.getTypeId(), null, null,
-                                                                 null, null, null);
+                                                                 null, null, null, null);
             DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
             newestDDRRecord = fetchNewestDdrRecord(ddrRecords);
             //flag for creating new ddrRecord
@@ -302,12 +329,12 @@ public class DDRUtils
                                                 adapterConfig.getOwner(), 1);
                 newestDDRRecord.setAccountType(adapterConfig.getAccountType());
                 newestDDRRecord.setStart(serverCurrentTime.getMillis());
-                newestDDRRecord.createOrUpdateWithLog();
                 //publish charges if needed
                 if(publishCharges) {
                     Double ddrCost = calculateDDRCost(newestDDRRecord);
                     publishDDREntryToQueue(newestDDRRecord.getAccountId(), ddrCost);
                 }
+                newestDDRRecord.createOrUpdate();
             }
             return newestDDRRecord;
         }
@@ -353,14 +380,16 @@ public class DDRUtils
      * @param unitType
      * @param addresses
      * @param status
+     * @param message
+     * @param sessionKey
      * @throws Exception
      */
     public static DDRRecord createDDRRecordOnCommunication(AdapterConfig config, String accountId,
-        DDRTypeCategory category, Map<String, String> addresses, CommunicationStatus status, String message)
-        throws Exception {
+        DDRTypeCategory category, Map<String, String> addresses, CommunicationStatus status, String message,
+        Map<String, String> sessionKeyMap) throws Exception {
 
         return createDDRRecordOnCommunication(config, accountId, category, null, addresses, status, addresses.size(),
-                                              message);
+                                              message, sessionKeyMap);
     }
     
     /**
@@ -389,7 +418,7 @@ public class DDRUtils
             DDRType ddrType = ddrRecord.getDdrType();
             config = ddrRecord.getAdapter();
             List<DDRPrice> communicationDDRPrices = null;
-            if(AdapterType.isCallAdapter( config.getAdapterType()))
+            if(config.isCallAdapter())
             {
                 String toAddress = null;
                 //for a calling ddr record, it must always have one address in the toList
@@ -609,14 +638,22 @@ public class DDRUtils
                         session.setDdrRecordId(ddrRecord.getId());
                     }
                 }
-                if (AdapterType.isCallAdapter(adapterConfig.getAdapterType())) {
+                if (adapterConfig.isCallAdapter()) {
+                    //update session with call times if missing
+                    if (AdapterProviders.TWILIO.equals(adapterConfig.getProvider()) &&
+                        (session.getStartTimestamp() == null || session.getReleaseTimestamp() == null || session
+                                                        .getAnswerTimestamp() == null)) {
+
+                        updateSessionWithTwilioCallTimes(session, adapterConfig);
+                    }
                     if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
                         session.getDirection() != null) {
-                        ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(), adapterConfig, 
-                                                               session.getAccountId(), Long.parseLong(session.getStartTimestamp()),
-                                                               session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
-                                                                                                   : null,
-                                                               Long.parseLong(session.getReleaseTimestamp()));
+                        ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(), adapterConfig,
+                                                       session.getAccountId(), Long.parseLong(session.getStartTimestamp()),
+                                                       session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
+                                                                                            : null,
+                                                        Long.parseLong(session.getReleaseTimestamp()),
+                                                        session.getKey());
                         //push session to queue when the call is picked up but no costs are attached or
                         //when the ddrRecord is found but no answerTimestamp is seen. (Try to process it again later: when the answer ccxml comes in later on)
                         boolean candidateToBePushedToQueue = false;
@@ -627,9 +664,11 @@ public class DDRUtils
                             dialogLog.severe(adapterConfig, errorMessage, session);
                             candidateToBePushedToQueue = true;
                         }
-                        else if (ddrRecord != null && session.getAnswerTimestamp() == null) {
-                            String warningMessage = String.format("No costs added. Looks like a hangup! for session: %s",
-                                                                  session.getKey());
+                        else if (ddrRecord != null && session.getAnswerTimestamp() == null &&
+                                 session.getReleaseTimestamp() != null) {
+
+                            String warningMessage = String.format("No costs added. Looks like a immediate hangup! Hangup timestamp: %s found. But answerTimestamp not found for session: %s",
+                                                                  session.getReleaseTimestamp(), session.getKey());
                             log.warning(warningMessage);
                             candidateToBePushedToQueue = true;
                         }
@@ -643,7 +682,7 @@ public class DDRUtils
                         //attach cost to ddr is prepaid type
                         if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
                             ddrRecord.setTotalCost(totalCost);
-                            ddrRecord.createOrUpdateWithLog();
+                            ddrRecord.createOrUpdateWithLog(session);
                         }
                         publishDDREntryToQueue(ddrRecord.getAccountId(), totalCost);
                         result = true;
@@ -695,7 +734,7 @@ public class DDRUtils
         }
         return result;
     }
-    
+
     /** always include start-up costs if the adapter is broadsoft and there is some communication costs involved.
      * Only applies to incoming phonecalls
      * @param result
@@ -705,7 +744,7 @@ public class DDRUtils
      */
     protected static double applyStartUpCost(double result, AdapterConfig config, String direction) throws Exception {
 
-        if (config != null && AdapterType.isCallAdapter(config.getAdapterType()) && result > 0.0 &&
+        if (config != null && config.isCallAdapter() && result > 0.0 &&
             "outbound".equalsIgnoreCase(direction)) {
             DDRPrice startUpPrice = fetchDDRPrice(DDRTypeCategory.START_UP_COST,
                                                   AdapterType.getByValue(config.getAdapterType()),
@@ -735,7 +774,7 @@ public class DDRUtils
             boolean applyServiceCharge = true;
 
             //dont apply service charge if its a missed call or call ignroed (call duration is 0)
-            if (ddrRecord.getAdapter() != null && AdapterType.isCallAdapter(ddrRecord.getAdapter().getAdapterType()) &&
+            if (ddrRecord.getAdapter() != null && ddrRecord.getAdapter().isCallAdapter() &&
                 (ddrRecord.getDuration() == null || ddrRecord.getDuration() <= 0)) {
                 applyServiceCharge = false;
             }
@@ -772,7 +811,7 @@ public class DDRUtils
      */
     private static DDRRecord createDDRRecordOnCommunication(AdapterConfig config, String accountId,
         DDRTypeCategory category, String senderName, Map<String, String> addresses, CommunicationStatus status,
-        int quantity, String message) throws Exception {
+        int quantity, String message, Map<String, String> sessionKeyMap) throws Exception {
 
         DDRType communicationCostDDRType = DDRType.getDDRType(category);
         if (communicationCostDDRType != null && config != null) {
@@ -781,17 +820,6 @@ public class DDRUtils
             if (config.getConfigId() != null && accountId != null) {
                 DDRRecord ddrRecord = new DDRRecord(communicationCostDDRType.getTypeId(), config.getConfigId(),
                                                     accountId, 1);
-                //default the start to the sessionCreationTime. This is expected to be updated with the actual
-                //timestamp for voice communication
-                //set the ddrRecord time with session creationTime.
-                String remoteAddress = "";
-                if (addresses != null && !addresses.isEmpty()) {
-                    remoteAddress = addresses.keySet().iterator().next();
-                }
-                Session session = Session.getSession(config.getAdapterType(), config.getMyAddress(), remoteAddress);
-                if (session != null) {
-                    ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
-                }
                 switch (status) {
                     case SENT:
                         String fromAddress = senderName != null && !senderName.isEmpty() ? senderName : config
@@ -815,7 +843,13 @@ public class DDRUtils
                 }
                 ddrRecord.setAccountType(config.getAccountType());
                 ddrRecord.addAdditionalInfo("message", message);
-                ddrRecord.createOrUpdateWithLog();
+                if (sessionKeyMap != null) {
+                    ddrRecord.addAdditionalInfo(Session.SESSION_KEY, sessionKeyMap);
+                    ddrRecord.setSessionKeys(sessionKeyMap.values());
+                }
+                //set the ddrRecord time with server current time creationTime.
+                ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
+                ddrRecord.createOrUpdateWithLog(sessionKeyMap);
                 return ddrRecord;
             }
         }
@@ -843,5 +877,26 @@ public class DDRUtils
             }
         }
         return selecteDdrRecord;
+    }
+    
+    /** Updates the call times in the session for a twilio adapter
+     * @param session
+     * @param adapterConfig
+     * @throws ParseException
+     */
+    private static void updateSessionWithTwilioCallTimes(Session session, AdapterConfig adapterConfig)
+        throws ParseException {
+
+        String accessToken = adapterConfig.getAccessToken();
+        accessToken = accessToken != null ? accessToken : session.getAllExtras()
+                                        .get(AdapterConfig.ACCESS_TOKEN_KEY);
+        String accessTokenSecret = adapterConfig.getAccessTokenSecret();
+        accessTokenSecret = accessTokenSecret != null ? accessTokenSecret : session.getAllExtras()
+                                        .get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY);
+        Account twilioAccount = TwilioAdapter.getTwilioAccount(accessToken, accessTokenSecret);
+        if (twilioAccount != null) {
+            Call callDetails = twilioAccount.getCall(session.getExternalSession());
+            TwilioAdapter.updateSessionWithCallTimes(session, callDetails);
+        }
     }
 }

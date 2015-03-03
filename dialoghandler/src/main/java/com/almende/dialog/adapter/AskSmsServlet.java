@@ -20,6 +20,7 @@ import com.almende.sms.SmsMessage;
 import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.QueryResultIterator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -191,15 +192,21 @@ public class AskSmsServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
-        String message) throws Exception {
+        String message, String sessionKey) throws Exception {
 
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
     }
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
 
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
+    }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterProviders.ASK_SMS.toString();
     }
 }

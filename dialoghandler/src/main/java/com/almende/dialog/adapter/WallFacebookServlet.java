@@ -11,6 +11,7 @@ import org.joda.time.DateTime;
 import org.scribe.model.Token;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.Facebook;
+import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
@@ -146,7 +147,7 @@ public class WallFacebookServlet extends TextServlet {
 
     @Override
     protected String getAdapterType() {
-        return "FACEBOOK";
+        return AdapterAgent.ADAPTER_TYPE_FACEBOOK;
     }
 
     @Override
@@ -156,16 +157,25 @@ public class WallFacebookServlet extends TextServlet {
     }
     
     @Override
-    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress, String message) throws Exception {
+    protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
+        String message, String sessionKey) throws Exception {
 
-        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message);
+        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message,
+                                                               sessionKey);
     }
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-                                             Map<String, String> toAddress, String message) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
 
         //add costs with no.of messages * recipients
-        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, toAddress, message);
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, toAddress, message,
+                                                               sessionKeyMap);
+    }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterAgent.ADAPTER_TYPE_FACEBOOK;
     }
 }

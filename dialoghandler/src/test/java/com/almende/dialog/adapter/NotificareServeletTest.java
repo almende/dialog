@@ -11,6 +11,8 @@ import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.AdapterType;
 
 public class NotificareServeletTest extends TestFramework {
 
@@ -26,7 +28,8 @@ public class NotificareServeletTest extends TestFramework {
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(remoteAdressVoice2, senderName);
 
-        AdapterConfig adapterConfig = createAdapterConfig("push", TEST_PUBLIC_KEY, localAddressBroadsoft, "");
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.PUSH.toString(), AdapterProviders.NOTIFICARE,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, "");
         //set tokens beore testing
         adapterConfig.setAccessToken("");
         adapterConfig.setAccessTokenSecret("");

@@ -313,14 +313,13 @@ public class Broadsoft {
 		return null;
 	}
 	
-    private String getCallId( String xml )
-    {
-        if ( xml != null && !xml.isEmpty() )
-        {
-            int startPos = xml.indexOf( "callId>" );
-            int endPos = xml.indexOf( "</callId" );
+    private String getCallId(String xml) {
 
-            String callId = xml.substring( startPos + 7, endPos );
+        if (xml != null && !xml.isEmpty()) {
+            int startPos = xml.indexOf("callId>");
+            int endPos = xml.indexOf("</callId");
+
+            String callId = xml.substring(startPos + 7, endPos);
 
             return callId;
         }

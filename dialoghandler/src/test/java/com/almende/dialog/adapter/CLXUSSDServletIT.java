@@ -13,6 +13,8 @@ import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.AdapterType;
 
 @Category(IntegrationTest.class)
 public class CLXUSSDServletIT extends TestFramework{
@@ -27,7 +29,8 @@ public class CLXUSSDServletIT extends TestFramework{
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(remoteAdressVoice2, senderName);
 
-        AdapterConfig adapterConfig = createAdapterConfig("ussd", TEST_PUBLIC_KEY, remoteAddressVoice, "");
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), null, TEST_PUBLIC_KEY,
+                                                          remoteAddressVoice, "");
         // for test ser real password and username
         adapterConfig.setAccessToken("ASKFastBV_h_ugw0");
         adapterConfig.setAccessTokenSecret("qMA3gBY5");
@@ -49,7 +52,8 @@ public class CLXUSSDServletIT extends TestFramework{
 
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("questionType", "comment");
-        AdapterConfig adapterConfig = createAdapterConfig("ussd", TEST_PUBLIC_KEY, "31624107792", "");
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), null, TEST_PUBLIC_KEY,
+                                                          "31624107792", "");
         CLXUSSDServlet servlet = new CLXUSSDServlet();
         servlet.sendMessage("hallo", "hey", "me", "vincent", "31624107792", "vincent", map, adapterConfig,
                             adapterConfig.getOwner());
@@ -63,13 +67,13 @@ public class CLXUSSDServletIT extends TestFramework{
         addressNameMap.put(remoteAdressVoice2, senderName);
         addressNameMap.put(remoteAdressVoice2, senderName);
 
-        AdapterConfig adapterConfig = createAdapterConfig("ussd", TEST_PUBLIC_KEY, "", "");
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), AdapterProviders.CLX,
+                                                          TEST_PUBLIC_KEY, "", "");
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", message);
         outBoundUSSDCallXMLTest(addressNameMap, adapterConfig, message, QuestionInRequest.SIMPLE_COMMENT, senderName,
                                 "outBoundBroadcastCallSenderNameNotNullTest");
-
     }
 
     @Test
@@ -78,7 +82,8 @@ public class CLXUSSDServletIT extends TestFramework{
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(remoteAdressVoice2, senderName);
 
-        AdapterConfig adapterConfig = createAdapterConfig("ussd", TEST_PUBLIC_KEY, "", "");
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), AdapterProviders.CLX,
+                                                          TEST_PUBLIC_KEY, "", "");
 
         Session.createSession(adapterConfig, "31624107792");
 
@@ -87,9 +92,7 @@ public class CLXUSSDServletIT extends TestFramework{
         url = ServerUtils.getURLWithQueryParams(url, "question", message);
         outBoundUSSDCallXMLTest(addressNameMap, adapterConfig, message, QuestionInRequest.SIMPLE_COMMENT, senderName,
                                 "outBoundBroadcastCallSenderNameNotNullTest");
-
-    }
-	
+    }	
 
 	
     private void outBoundUSSDCallXMLTest(Map<String, String> addressNameMap, AdapterConfig adapterConfig,

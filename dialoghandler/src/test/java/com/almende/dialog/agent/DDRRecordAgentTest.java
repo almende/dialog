@@ -69,7 +69,8 @@ public class DDRRecordAgentTest extends TestFramework
         String createAdapter = adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null,
             null, null, TEST_ACCOUNTID, null, null );
         //check if a ddr record is created
-        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, TEST_ACCOUNTID, null, null, null, null, null, null, null, null, null );
+        Object ddrRecords = ddrRecordAgent.getDDRRecords(null, TEST_ACCOUNTID, null, null, null, null, null, null,
+                                                         null, null, null, null);
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };
@@ -95,7 +96,8 @@ public class DDRRecordAgentTest extends TestFramework
         assertThat( ddrPrice.getDdrTypeId(), Matchers.notNullValue() );
         adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null, null, null, null, null, null );
         //check if a ddr record is created
-        Object ddrRecords = ddrRecordAgent.getDDRRecords( null, null, null, null, null, null, null, null, null, null, null );
+        Object ddrRecords = ddrRecordAgent.getDDRRecords(null, null, null, null, null, null, null, null, null, null,
+                                                         null, null);
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };
@@ -180,13 +182,13 @@ public class DDRRecordAgentTest extends TestFramework
      * @return
      * @throws Exception
      */
-    private static Collection<DDRRecord> getDDRRecordsByAccountId( String accountId ) throws Exception
-    {
-        Object ddrRecords = new DDRRecordAgent().getDDRRecords( null, accountId, null, null, null, null, null, null, null, null, null );
-        TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
-        {
+    private static Collection<DDRRecord> getDDRRecordsByAccountId(String accountId) throws Exception {
+
+        Object ddrRecords = new DDRRecordAgent().getDDRRecords(null, accountId, null, null, null, null, null, null,
+                                                               null, null, null, null);
+        TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>() {
         };
-        Collection<DDRRecord> allDdrRecords = typesInjector.inject( ddrRecords );
+        Collection<DDRRecord> allDdrRecords = typesInjector.inject(ddrRecords);
         return allDdrRecords;
     }
 }

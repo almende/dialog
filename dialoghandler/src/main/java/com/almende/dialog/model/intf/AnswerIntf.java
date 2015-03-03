@@ -1,7 +1,6 @@
 package com.almende.dialog.model.intf;
 
 import java.io.Serializable;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public interface AnswerIntf extends Serializable {
@@ -12,7 +11,7 @@ public interface AnswerIntf extends Serializable {
 	@JsonIgnore
 	public String getAnswer_expandedtext();
 	@JsonIgnore
-	public String getAnswer_expandedtext(String language);
+	public String getAnswer_expandedtext(String language, String authorizationHeader);
 	
 	public void setAnswer_id(String answer_id);
 	public void setAnswer_text(String answer_text);

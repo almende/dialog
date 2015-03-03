@@ -21,29 +21,30 @@ public class AdapterAgentTest extends TestFramework
      */
     @Test
     public void updatingDialogIdInAdapterTest() throws Exception {
+
         String testMessage = "testMessage";
-        String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType", QuestionInRequest.SIMPLE_COMMENT.name() );
-        url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
-        createEmailAdapter( "askfasttest@gmail.com", "", null, null, null, null, null, null, null,
-            TEST_PRIVATE_KEY, url );
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", testMessage);
+        createEmailAdapter("askfasttest@gmail.com", "", null, null, null, null, null, null, null, TEST_PRIVATE_KEY, url);
         //fetch the adapter again
         ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(TEST_PRIVATE_KEY);
         assertThat(adapterConfigs.size(), Matchers.is(1));
         AdapterConfig config = adapterConfigs.iterator().next();
         assertThat(config.getInitialAgentURL(), Matchers.is(url));
-        assertThat(config.getURLForInboundScenario(), Matchers.is(url));
-        
+        assertThat(config.getURLForInboundScenario(null), Matchers.is(url));
+
         //create a dialog and attach it to the user
         String dialogURL = url + "&dummy=test";
         Dialog dialog = Dialog.createDialog("Test dialog", dialogURL, TEST_PRIVATE_KEY);
         Adapter adapter = new Adapter();
         adapter.setDialogId(dialog.getId());
         new AdapterAgent().updateAdapter(TEST_PRIVATE_KEY, config.getConfigId(), adapter);
-        
+
         //refetch the adapter
         config = AdapterConfig.getAdapterConfig(config.getConfigId());
         assertThat(config.getInitialAgentURL(), Matchers.is(url));
-        assertThat(config.getURLForInboundScenario(), Matchers.is(dialogURL));
+        assertThat(config.getURLForInboundScenario(null), Matchers.is(dialogURL));
     }
     
     /**
@@ -62,7 +63,7 @@ public class AdapterAgentTest extends TestFramework
         assertThat(adapterConfigs.size(), Matchers.is(1));
         AdapterConfig config = adapterConfigs.iterator().next();
         assertThat(config.getInitialAgentURL(), Matchers.is(url));
-        assertThat(config.getURLForInboundScenario(), Matchers.is(url));
+        assertThat(config.getURLForInboundScenario(null), Matchers.is(url));
         
         //create a dialog and attach it to the user
         String dialogURL = url + "&dummy=test";
@@ -75,7 +76,7 @@ public class AdapterAgentTest extends TestFramework
         //refetch the adapter
         config = AdapterConfig.getAdapterConfig(config.getConfigId());
         assertThat(config.getInitialAgentURL(), Matchers.is(""));
-        assertThat(config.getURLForInboundScenario(), Matchers.is(dialogURL));
+        assertThat(config.getURLForInboundScenario(null), Matchers.is(dialogURL));
     }
     
     /**
@@ -84,22 +85,22 @@ public class AdapterAgentTest extends TestFramework
      */
     @Test
     public void updatingEmptyDialogURLTest() throws Exception {
-        
+
         //create an adapter with a dialogId
         updatingDialogIdInAdapterTest();
-      //fetch the adapter again
+        //fetch the adapter again
         ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(TEST_PRIVATE_KEY);
         assertThat(adapterConfigs.size(), Matchers.is(1));
         AdapterConfig config = adapterConfigs.iterator().next();
         Adapter adapter = new Adapter();
         adapter.setDialogId("");
         new AdapterAgent().updateAdapter(TEST_PRIVATE_KEY, config.getConfigId(), adapter);
-        
+
         //refetch the adapter
         AdapterConfig refetchedConfig = AdapterConfig.getAdapterConfig(config.getConfigId());
         assertThat(refetchedConfig.getInitialAgentURL(), Matchers.is(config.getInitialAgentURL()));
-        assertThat(refetchedConfig.getURLForInboundScenario(), Matchers.is(config.getInitialAgentURL()));
-        assertThat(refetchedConfig.getURLForInboundScenario(), Matchers.is(refetchedConfig.getInitialAgentURL()));
+        assertThat(refetchedConfig.getURLForInboundScenario(null), Matchers.is(config.getInitialAgentURL()));
+        assertThat(refetchedConfig.getURLForInboundScenario(null), Matchers.is(refetchedConfig.getInitialAgentURL()));
         assertThat(refetchedConfig.getProperties().get(AdapterConfig.DIALOG_ID_KEY), Matchers.nullValue());
         assertThat(refetchedConfig.getDialog(), Matchers.nullValue());
     }

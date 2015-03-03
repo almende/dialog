@@ -59,42 +59,44 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
     public static final String GMAIL_RECEIVING_PROTOCOL = "imaps";
     public static final String CC_ADDRESS_LIST_KEY = "cc_email";
     public static final String BCC_ADDRESS_LIST_KEY = "bcc_email";
-	private static final long serialVersionUID = 6892283600126803780L;
-	private static final String servletPath = "/dialoghandler/_ah/mail/";
-	public static final String DEFAULT_SENDER_EMAIL = "askfasttest@gmail.com";
-	public static final String DEFAULT_SENDER_EMAIL_PASSWORD = "askask2times";
-	
-	public void doErrorPost(HttpServletRequest req, HttpServletResponse res) {}
-	
-	private AdapterConfig adapterConfig = null;
-	public MailServlet()
-	{
-	    
-	}
-	
-	public MailServlet( AdapterConfig adapterConfig )
-    {
-	    this.adapterConfig = adapterConfig;
+    private static final long serialVersionUID = 6892283600126803780L;
+    private static final String servletPath = "/dialoghandler/_ah/mail/";
+    public static final String DEFAULT_SENDER_EMAIL = "askfasttest@gmail.com";
+    public static final String DEFAULT_SENDER_EMAIL_PASSWORD = "askask2times";
+
+    public void doErrorPost(HttpServletRequest req, HttpServletResponse res) {
+
+    }
+
+    private AdapterConfig adapterConfig = null;
+
+    public MailServlet() {
+
     }
 	
-	@Override
-	protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception {
-		
-		Properties props = new Properties();
-		javax.mail.Session mailSession = javax.mail.Session.getDefaultInstance(props, null);
-		
-		MimeMessage message = new MimeMessage(mailSession, req.getInputStream());
-		
-		String uri = req.getRequestURI();
-		String recipient = uri.substring(servletPath.length());
-		
-		/*Address[] recipients = message.getAllRecipients();
-		Address recipient=null;
-		if (recipients.length>0){
-			recipient = recipients[0];
-		}*/ 
-		return receiveMessage( message, recipient );
-	}
+    public MailServlet(AdapterConfig adapterConfig) {
+
+        this.adapterConfig = adapterConfig;
+    }
+	
+    @Override
+    protected TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception {
+
+        Properties props = new Properties();
+        javax.mail.Session mailSession = javax.mail.Session.getDefaultInstance(props, null);
+
+        MimeMessage message = new MimeMessage(mailSession, req.getInputStream());
+
+        String uri = req.getRequestURI();
+        String recipient = uri.substring(servletPath.length());
+
+        /*
+         * Address[] recipients = message.getAllRecipients(); Address
+         * recipient=null; if (recipients.length>0){ recipient = recipients[0];
+         * }
+         */
+        return receiveMessage(message, recipient);
+    }
 
     /**
      * method separated from the original
@@ -102,58 +104,52 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
      * HttpServletResponse)} so that it can be tested without any data mock-ups.
      * @since 3/09/2013
      */
-	private TextMessage receiveMessage( MimeMessage message, String recipient ) throws Exception
-	{
-		TextMessage msg = new TextMessage();
-		msg.setSubject( "RE: " + message.getSubject() );
-		if ( recipient != null && !recipient.equals( "" ) )
-		{
-			msg.setLocalAddress( recipient.toString() );
-		}
-		else
-		{
-			Address[] recipients = message.getAllRecipients();
-			if ( recipients.length > 0 )
-			{
-				InternetAddress recip = (InternetAddress) recipients[0];
-				msg.setLocalAddress( recip.getAddress() );
-			}
-			else
-				throw new Exception( "MailServlet: Can't determine local address! (Dev)" );
-		}
+    private TextMessage receiveMessage(MimeMessage message, String recipient) throws Exception {
 
-		Address[] senders = message.getFrom();
-		if ( senders != null && senders.length > 0 )
-		{
-			InternetAddress sender = (InternetAddress) senders[0];
-			msg.setAddress( sender.getAddress() );
-			msg.setRecipientName( sender.getPersonal() );
-		}
+        TextMessage msg = new TextMessage();
+        msg.setSubject("RE: " + message.getSubject());
+        if (recipient != null && !recipient.equals("")) {
+            msg.setLocalAddress(recipient.toString());
+        }
+        else {
+            Address[] recipients = message.getAllRecipients();
+            if (recipients.length > 0) {
+                InternetAddress recip = (InternetAddress) recipients[0];
+                msg.setLocalAddress(recip.getAddress());
+            }
+            else
+                throw new Exception("MailServlet: Can't determine local address! (Dev)");
+        }
 
-		Multipart mp = null;
-		if ( message.getContent() instanceof Multipart )
-		{
-			mp = (Multipart) message.getContent();
-		}
-		else
-		{
-			mp = new MimeMultipart();
-			mp.addBodyPart( new MimeBodyPart( new InternetHeaders(), message.getContent().toString().getBytes() ) );
-		}
-		if ( mp.getCount() > 0 )
-		{
-			msg.setBody(  getText((Part)mp.getBodyPart( 0 )));
-			Session ses =  Session.getSession(AdapterAgent.ADAPTER_TYPE_EMAIL, msg.getLocalAddress(), msg.getAddress());    
-                        if (ses != null && ses.getQuestion() != null && ses.getQuestion().getType().equals("closed")) {
-                            msg.setBody(getFristLineOfEmail(msg, mp.getBodyPart(0).getContentType()));
-                            log.info("Receive mail trimmed down body: " + msg.getBody());
-                        }
-                        else {
-                            log.info("Receive mail: " + msg.getBody());
-                        }
-		}
-		return msg;
-	}
+        Address[] senders = message.getFrom();
+        if (senders != null && senders.length > 0) {
+            InternetAddress sender = (InternetAddress) senders[0];
+            msg.setAddress(sender.getAddress());
+            msg.setRecipientName(sender.getPersonal());
+        }
+
+        Multipart mp = null;
+        if (message.getContent() instanceof Multipart) {
+            mp = (Multipart) message.getContent();
+        }
+        else {
+            mp = new MimeMultipart();
+            mp.addBodyPart(new MimeBodyPart(new InternetHeaders(), message.getContent().toString().getBytes()));
+        }
+        if (mp.getCount() > 0) {
+            msg.setBody(getText((Part) mp.getBodyPart(0)));
+            Session ses = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_EMAIL, msg.getLocalAddress(),
+                                                          msg.getAddress());
+            if (ses != null && ses.getQuestion() != null && ses.getQuestion().getType().equals("closed")) {
+                msg.setBody(getFristLineOfEmail(msg, mp.getBodyPart(0).getContentType()));
+                log.info("Receive mail trimmed down body: " + msg.getBody());
+            }
+            else {
+                log.info("Receive mail: " + msg.getBody());
+            }
+        }
+        return msg;
+    }
 	
 	private String getText(Part p) throws MessagingException, IOException {
 		if (p.isMimeType("text/*")) {
@@ -277,7 +273,8 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                     String errorMessage = String.format("Error in adding TO: receipient: %s (%s). Ignored. Message: %s",
                                                         address, toName, e.toString());
                     log.severe(errorMessage);
-                    Session askfastSession = Session.getSession(Session.getSessionKey(config, address));
+                    Session askfastSession = Session.getSessionByInternalKey(config.getAdapterType(),
+                                                                             config.getMyAddress(), address);
                     logger.severe(config, errorMessage.replace("javax.mail.internet.AddressException: ", ""),
                                   askfastSession);
                 }
@@ -301,7 +298,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                                 String errorMessage = String.format("Error in adding CC: receipient: %s (%s). Ignored. Message: %s",
                                                                     address, toName, e.toString());
                                 log.severe(errorMessage);
-                                Session askfastSession = Session.getSession(Session.getSessionKey(config, address));
+                                Session askfastSession = Session.getSession(Session.getInternalSessionKey(config, address));
                                 logger.severe(config, errorMessage.replace("javax.mail.internet.AddressException: ", ""),
                                               askfastSession);
                             }
@@ -329,7 +326,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                                 String errorMessage = String.format("Error in adding BCC: receipient: %s (%s). Ignored. Message: %s",
                                                                     address, toName, e.toString());
                                 log.severe(errorMessage);
-                                Session askfastSession = Session.getSession(Session.getSessionKey(config, address));
+                                Session askfastSession = Session.getSession(Session.getInternalSessionKey(config, address));
                                 logger.severe(config, errorMessage.replace("javax.mail.internet.AddressException: ", ""),
                                               askfastSession);
                             }
@@ -626,15 +623,23 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
 
     @Override
     protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
-        String message) throws Exception {
+        String message, String sessionKey) throws Exception {
 
-        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message);
+        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message,
+                                                               sessionKey);
     }
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
 
-        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, toAddress, message);
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, toAddress, message,
+                                                               sessionKeyMap);
+    }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterAgent.ADAPTER_TYPE_EMAIL;
     }
 }

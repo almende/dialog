@@ -14,6 +14,7 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.entity.AdapterProviders;
 import com.google.common.io.CharStreams;
 
 public class NotificareServlet extends TextServlet {
@@ -26,7 +27,7 @@ public class NotificareServlet extends TextServlet {
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
         Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
 
-        Session ses = Session.getSession(getAdapterType(), config.getMyAddress(), to);
+        Session ses = Session.getSessionByInternalKey(getAdapterType(), config.getMyAddress(), to);
         if (!ServerUtils.isInUnitTestingEnvironment()) {
             Notificare notificare = new Notificare();
             notificare.sendMessage(message, subject, from, fromName, to, toName, config, ses);
@@ -49,16 +50,18 @@ public class NotificareServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
-        String message) throws Exception {
+        String message, String sessionKey) throws Exception {
 
-        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message);
+        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message,
+                                                               sessionKey);
     }
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
 
-        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, null, toAddress, 1, message);
+        return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, null, toAddress, 1, message,
+                                                               sessionKeyMap);
     }
 
     @Override
@@ -129,6 +132,12 @@ public class NotificareServlet extends TextServlet {
 
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    protected String getProviderType() {
+
+        return AdapterProviders.NOTIFICARE.toString();
     }
 
 }

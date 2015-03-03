@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -22,7 +21,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -177,6 +175,12 @@ public class TwilioAdapter {
         }
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_TWILIO, localID);
         String formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
+        
+        if (formattedRemoteId == null) {
+            log.severe(String.format("RemoveId address is invalid: %s. Ignoring.. ", remoteID));
+            return Response.ok().build();
+        }
+        
         String sessionKey = AdapterAgent.ADAPTER_TYPE_TWILIO + "|" + localID + "|" + formattedRemoteId;
         Session session = Session.getSession(sessionKey);
 
@@ -214,7 +218,7 @@ public class TwilioAdapter {
             question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), formattedRemoteId, localID,
                                         session.getDdrRecordId(), session.getKey(), extraParams);
         }
-     // Check if we were able to load a question
+        // Check if we were able to load a question
         if(question==null) {
             //If not load a default error message
             question = Question.getError( config.getPreferred_language() );

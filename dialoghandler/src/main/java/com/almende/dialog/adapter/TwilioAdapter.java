@@ -464,7 +464,7 @@ public class TwilioAdapter {
 	
     @Path("preconnect")
     @GET
-    @Produces("application/voicexml+xml")
+    @Produces("application/xml")
     public Response preconnect(@QueryParam("From") String localID, @QueryParam("To") String remoteID,
         @QueryParam("Direction") String direction, @QueryParam("CallSid") String callSid) {
 

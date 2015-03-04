@@ -1,7 +1,7 @@
 DialogHandler
 https://github.com/almende/dialog/
 
-4-3-2015 version 1.6.2
+4-3-2015 version 1.6.3
 - hotfix: reverted back dialogIdOrUrl to url
 
 3-3-2015 version 1.6.2

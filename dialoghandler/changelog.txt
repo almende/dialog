@@ -1,6 +1,15 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+4-3-2015 version 1.6.4
+- hotfix: null pointer while finalizing twilio call. Added unit tests
+
+4-3-2015 version 1.6.3
+- hotfix: reverted back dialogIdOrUrl to url
+
+3-3-2015 version 1.6.2
+- hotfix: twilio preconnect now returns xml response
+
 3-3-2015 version 1.6.1
 - release: small updates unmerged in release_1.6.0
 

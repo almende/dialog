@@ -279,7 +279,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("addressCcMap") @Optional Map<String, String> addressCcMap,
         @Name("addressBccMap") @Optional Map<String, String> addressBccMap,
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
-        @Name("dialogIdOrUrl") String dialogIdOrUrl, @Name("adapterType") @Optional String adapterType,
+        @Name("url") String dialogIdOrUrl, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
         @Name("bearerToken") String bearerToken) throws Exception {
 

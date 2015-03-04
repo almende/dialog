@@ -481,8 +481,8 @@ public class TwilioAdapter {
                           session.getAdapterConfig(),
                           String.format("Wrong answer received from: %s for question: %s", responder,
                                         question.getQuestion_expandedtext(session.getKey())), session);
-            
-            answered( direction, remoteID, localID, session.getKey() );
+
+            answered(direction, remoteID, localID, session.getKey());
 
             HashMap<String, String> extras = new HashMap<String, String>();
             extras.put("sessionKey", session.getKey());
@@ -656,9 +656,26 @@ public class TwilioAdapter {
             SimpleDateFormat format = new SimpleDateFormat(pattern, Locale.ENGLISH);
             String created = call.getProperty("date_created");
             session.setStartTimestamp(format.parse(created).getTime() + "");
-            session.setReleaseTimestamp(format.parse(call.getEndTime()).getTime() + "");
-            session.setAnswerTimestamp(call.getDuration().equals("0") ? session.getReleaseTimestamp() : format
-                                            .parse(call.getStartTime()).getTime() + "");
+            if (call.getEndTime() != null) {
+                session.setReleaseTimestamp(format.parse(call.getEndTime()).getTime() + "");
+            }
+            if (call.getDuration() != null) {
+                if(call.getDuration().equals("0")) {
+                    session.setAnswerTimestamp(session.getReleaseTimestamp());
+                }
+                else if(call.getStartTime() != null) {
+                    session.setAnswerTimestamp(format.parse(call.getStartTime()).getTime() + "");
+                }
+            }
+            else {
+                session.setAnswerTimestamp(null);
+                session.setReleaseTimestamp(session.getStartTimestamp());
+            }
+            if (session.getReleaseTimestamp() == null && session.getAnswerTimestamp() != null) {
+                Long releaseTimeByDuration = Long.parseLong(session.getAnswerTimestamp()) +
+                                             (Long.parseLong(call.getDuration()) * 1000);
+                session.setReleaseTimestamp(releaseTimeByDuration + "");
+            }
             return session;
         }
         return null;

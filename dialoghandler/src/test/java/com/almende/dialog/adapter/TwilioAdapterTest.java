@@ -2,16 +2,17 @@ package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.logging.Logger;
-
+import org.hamcrest.Matchers;
+import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.TwilioAdapter.Return;
@@ -20,7 +21,10 @@ import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
+import com.almende.dialog.model.Session;
+import com.almende.dialog.util.TimeUtils;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.twilio.sdk.resource.instance.Call;
 
 public class TwilioAdapterTest extends TestFramework {
 	
@@ -261,6 +265,71 @@ public class TwilioAdapterTest extends TestFramework {
         assertEquals(formattedAddress, number.getTextContent());
         assertTrue(number.getAttributes().getNamedItem("url").getTextContent().endsWith("/dialoghandler/rest/twilio/preconnect"));
 	}
+	
+    /**
+     * Tests the
+     * {@link TwilioAdapter#updateSessionWithCallTimes(com.almende.dialog.model.Session, com.twilio.sdk.resource.instance.Call)}
+     * method if all the session times are updated correctly when {@link Call#getEndTime()} is null
+     * 
+     * @throws ParseException
+     */
+    @Test
+    public void updateSessionWithCallTimesNullEndTimeTest() throws ParseException {
+
+        //mock the Context
+        Call call = Mockito.mock(Call.class);
+        Mockito.when(call.getProperty("date_created")).thenReturn("Mon, 15 Aug 2005 15:52:01 +0000");
+        Mockito.when(call.getEndTime()).thenReturn(null);
+        Mockito.when(call.getDuration()).thenReturn("30");
+        Mockito.when(call.getStartTime()).thenReturn("Mon, 15 Aug 2005 15:52:02 +0000");
+        Session session = new Session();
+        Session updateSessionWithCallTimes = TwilioAdapter.updateSessionWithCallTimes(session, call);
+        Assert.assertThat(updateSessionWithCallTimes.getStartTimestamp(), Matchers.is(TimeUtils
+                                        .getTimeWithFormat("Mon, 15 Aug 2005 15:52:01 +0000",
+                                                           "EEE, dd MMM yyyy HH:mm:ss Z", null, null).getMillis() +
+                                                                                      ""));
+        Assert.assertThat(updateSessionWithCallTimes.getAnswerTimestamp(), Matchers.is(TimeUtils
+                                        .getTimeWithFormat("Mon, 15 Aug 2005 15:52:02 +0000",
+                                                           "EEE, dd MMM yyyy HH:mm:ss Z", null, null).getMillis() +
+                                                                                       ""));
+        Assert.assertThat(updateSessionWithCallTimes.getReleaseTimestamp(), Matchers
+                                        .is((TimeUtils.getTimeWithFormat("Mon, 15 Aug 2005 15:52:02 +0000",
+                                                                         "EEE, dd MMM yyyy HH:mm:ss Z", null, null)
+                                                                        .getMillis() + 30000) +
+                                            ""));
+    }
+    
+    /**
+     * Tests the
+     * {@link TwilioAdapter#updateSessionWithCallTimes(com.almende.dialog.model.Session, com.twilio.sdk.resource.instance.Call)}
+     * method if all the session times are updated correctly
+     * 
+     * @throws ParseException
+     */
+    @Test
+    public void updateSessionWithCallTimesTest() throws ParseException {
+
+        //mock the Context
+        Call call = Mockito.mock(Call.class);
+        Mockito.when(call.getProperty("date_created")).thenReturn("Mon, 15 Aug 2005 15:52:01 +0000");
+        Mockito.when(call.getEndTime()).thenReturn("Mon, 15 Aug 2005 15:52:32 +0000");
+        Mockito.when(call.getDuration()).thenReturn("31");
+        Mockito.when(call.getStartTime()).thenReturn("Mon, 15 Aug 2005 15:52:02 +0000");
+        Session session = new Session();
+        Session updateSessionWithCallTimes = TwilioAdapter.updateSessionWithCallTimes(session, call);
+        Assert.assertThat(updateSessionWithCallTimes.getStartTimestamp(), Matchers.is(TimeUtils
+                                        .getTimeWithFormat("Mon, 15 Aug 2005 15:52:01 +0000",
+                                                           "EEE, dd MMM yyyy HH:mm:ss Z", null, null).getMillis() +
+                                                                                      ""));
+        Assert.assertThat(updateSessionWithCallTimes.getAnswerTimestamp(), Matchers.is(TimeUtils
+                                        .getTimeWithFormat("Mon, 15 Aug 2005 15:52:02 +0000",
+                                                           "EEE, dd MMM yyyy HH:mm:ss Z", null, null).getMillis() +
+                                                                                       ""));
+        Assert.assertThat(updateSessionWithCallTimes.getReleaseTimestamp(), Matchers.is(TimeUtils
+                                        .getTimeWithFormat("Mon, 15 Aug 2005 15:52:32 +0000",
+                                                           "EEE, dd MMM yyyy HH:mm:ss Z", null, null).getMillis() +
+                                                                                        ""));
+    }
     
     private Question getCommentQuestion(boolean tts) {
 

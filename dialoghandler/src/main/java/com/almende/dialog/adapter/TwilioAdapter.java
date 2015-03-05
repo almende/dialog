@@ -37,6 +37,7 @@ import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
@@ -335,10 +336,9 @@ public class TwilioAdapter {
         //if call is rejected. call the hangup event
         else if (callIgnored.contains(dialCallStatus) && session != null && session.getQuestion() != null) {
 
-            Map<String, String> extras = session.getExtras();
-            extras.put("requester", session.getLocalAddress());
-            Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected", extras, remoteID,
-                                                                    session.getKey());
+            session.addExtras("requester", session.getLocalAddress());
+            Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected", session.getPublicExtras(),
+                                                                    remoteID, session.getKey());
             AdapterConfig config = session.getAdapterConfig();
             finalizeCall(config, session, callSid, remoteID);
             return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session.getKey(), null);
@@ -465,11 +465,17 @@ public class TwilioAdapter {
     @Path("preconnect")
     @GET
     @Produces("application/xml")
-    public Response preconnect(@QueryParam("From") String localID, @QueryParam("To") String remoteID,
+    public Response preconnect(@QueryParam("From") String localID, @QueryParam("AccountSid") String accountSid,
+        @QueryParam("CalledVia") String calledVia, @QueryParam("To") String remoteID,
         @QueryParam("Direction") String direction, @QueryParam("CallSid") String callSid) {
 
         String reply = (new TwiMLResponse()).toXML();
         Session session = Session.getSessionByExternalKey(callSid);
+        //fetch session from parent call
+        if (session == null) {
+            session = fetchSessionFromParent(localID, accountSid, calledVia, callSid);
+        }
+
         if (session != null && session.getQuestion() != null) {
             Question question = session.getQuestion();
             String responder = session.getRemoteAddress();
@@ -496,7 +502,7 @@ public class TwilioAdapter {
         }
         return Response.ok(reply).build();
     }
-    
+
     @Path("cc")
     @GET
     public Response receiveCCMessage(@QueryParam("CallSid") String callSid, @QueryParam("From") String localID,
@@ -535,7 +541,7 @@ public class TwilioAdapter {
         //make sure that the answered call is not triggered twice
         if (session != null && session.getQuestion() != null && !isEventTriggered("answered", session)) {
             String responder = session.getRemoteAddress();
-            String referredCalledId = session.getExtras().get("referredCalledId");
+            String referredCalledId = session.getAllExtras().get("referredCalledId");
             HashMap<String, Object> timeMap = new HashMap<String, Object>();
             timeMap.put("referredCalledId", referredCalledId);
             timeMap.put("sessionKey", sessionKey);
@@ -622,10 +628,10 @@ public class TwilioAdapter {
                 
                 HashMap<String, Object> timeMap = getTimeMap(session.getStartTimestamp(), session.getAnswerTimestamp(),
                                                              session.getReleaseTimestamp());
-                timeMap.put("referredCalledId", session.getExtras().get("referredCalledId"));
+                timeMap.put("referredCalledId", session.getAllExtras().get("referredCalledId"));
                 timeMap.put("sessionKey", session.getKey());
-                if(session.getExtras() != null && !session.getExtras().isEmpty()) {
-                    timeMap.putAll(session.getExtras());
+                if(session.getAllExtras() != null && !session.getAllExtras().isEmpty()) {
+                    timeMap.putAll(session.getPublicExtras());
                 }
                 Response hangupResponse = handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(),
                                                          session.getKey(), null);
@@ -705,14 +711,14 @@ public class TwilioAdapter {
     private static boolean isEventTriggered(String eventName, Session session) {
 
         if (session != null) {
-            if (session.getExtras().get("event_" + eventName) != null) {
-                String timestamp = TimeUtils.getStringFormatFromDateTime(Long.parseLong(session.getExtras()
+            if (session.getAllExtras().get("event_" + eventName) != null) {
+                String timestamp = TimeUtils.getStringFormatFromDateTime(Long.parseLong(session.getAllExtras()
                                                 .get("event_" + eventName)), null);
                 log.warning(eventName + "event already triggered before for this session at: " + timestamp);
                 return true;
             }
             else {
-                session.getExtras().put("event_" + eventName, String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
+                session.getAllExtras().put("event_" + eventName, String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
                 session.storeSession();
             }
         }
@@ -1170,19 +1176,15 @@ public class TwilioAdapter {
         question.setUrl(referralToId);
         // store the remoteId as its lost while trying to
         // trigger the answered event
-        HashMap<String, String> extras = new HashMap<String, String>();
-        extras.put("referredCalledId", referralToId);
-        session.getExtras().putAll(extras);
+        session.addExtras("referredCalledId", referralToId);
         session.setQuestion(question);
         session.setRemoteAddress(referralFromID);
 
         // create a new ddr record and session to catch the
         // redirect
         Session referralSession = Session.createSession(adapterConfig, referralFromID, referralToId);
-        HashMap<String, String> referralExtras = new HashMap<String, String>();
-        referralExtras.put("originalRemoteId", originalRemoteID);
-        referralExtras.put("redirect", "true");
-        referralSession.getExtras().putAll(referralExtras);
+        referralSession.addExtras("originalRemoteId", originalRemoteID);
+        referralSession.addExtras("redirect", "true");
         referralSession.setAccountId(session.getAccountId());
         if (session.getDirection() != null) {
             DDRRecord ddrRecord = null;
@@ -1190,9 +1192,9 @@ public class TwilioAdapter {
                 ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
                                                                             referralSession.getAccountId(),
                                                                             referralToId, 1, question.getUrl(),
-                                                                            session.getKey());
+                                                                            referralSession.getKey());
                 if (ddrRecord != null) {
-                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, referralSession.getTrackingToken());
                     ddrRecord.createOrUpdate();
                     referralSession.setDdrRecordId(ddrRecord.getId());
                 }
@@ -1201,12 +1203,13 @@ public class TwilioAdapter {
                 e.printStackTrace();
                 log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
             }
-            referralSession.setDirection(session.getDirection());
+            referralSession.setDirection("outbound");
             referralSession.setTrackingToken(session.getTrackingToken());
         }
         referralSession.setQuestion(session.getQuestion());
-        referralSession.getExtras().put("referralSessionKey", session.getKey());
+        referralSession.addExtras(Session.PARENT_SESSION_KEY, session.getKey());
         referralSession.storeSession();
+        session.addExtras(Session.CHILD_SESSION_KEY, referralSession.getKey());
         session.storeSession();
     }
     
@@ -1228,5 +1231,26 @@ public class TwilioAdapter {
             return "";
         }
         return callerId;
+    }
+    
+    /**
+     * Fetch the linked session using a parentCall sid stored within that of a
+     * childCallSid
+     * 
+     * @param localID
+     * @param accountSid
+     * @param calledVia
+     * @param callSid
+     * @return
+     */
+    private Session fetchSessionFromParent(String localID, String accountSid, String calledVia, String callSid) {
+
+        AdapterConfig adapterConfig = AdapterConfig.findAdapterConfig(AdapterType.CALL.toString(),
+                                                                      calledVia != null ? calledVia : localID, null);
+        //fetch the parent session for this preconnect
+        TwilioRestClient client = new TwilioRestClient(accountSid != null ? accountSid : adapterConfig.getAccessToken(),
+                                                       adapterConfig.getAccessTokenSecret());
+        Call call = client.getAccount().getCall(callSid);
+        return Session.getSessionFromParentExternalId(callSid, call.getParentCallSid());
     }
 }

@@ -399,7 +399,7 @@ public class VoiceXMLRESTProxy {
         if (session.getQuestion() != null) {
             //play trial account audio if the account is trial
             if (config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)) {
-                session.getExtras().put(PLAY_TRIAL_AUDIO_KEY, "true");
+                session.addExtras(PLAY_TRIAL_AUDIO_KEY, "true");
             }
             //create ddr record
             DDRRecord ddrRecord = null;
@@ -634,10 +634,10 @@ public class VoiceXMLRESTProxy {
 
                 HashMap<String, Object> timeMap = getTimeMap(session.getStartTimestamp(), session.getAnswerTimestamp(),
                                                              session.getReleaseTimestamp());
-                timeMap.put("referredCalledId", session.getExtras().get("referredCalledId"));
+                timeMap.put("referredCalledId", session.getAllExtras().get("referredCalledId"));
                 timeMap.put("sessionKey", session.getKey());
-                if (session.getExtras() != null && !session.getExtras().isEmpty()) {
-                    timeMap.putAll(session.getExtras());
+                if (session.getAllExtras() != null && !session.getAllExtras().isEmpty()) {
+                    timeMap.putAll(session.getPublicExtras());
                 }
                 Response hangupResponse = handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(),
                                                          session.getKey());
@@ -670,7 +670,7 @@ public class VoiceXMLRESTProxy {
         //make sure that the answered call is not triggered twice
         if (session != null && session.getQuestion() != null && !isEventTriggered("answered", session, true)) {
             String responder = session.getRemoteAddress();
-            String referredCalledId = session.getExtras().get("referredCalledId");
+            String referredCalledId = session.getAllExtras().get("referredCalledId");
             HashMap<String, Object> timeMap = getTimeMap(startTime, answerTime, null);
             timeMap.put("referredCalledId", referredCalledId);
             timeMap.put("sessionKey", sessionKey);
@@ -1509,11 +1509,11 @@ public class VoiceXMLRESTProxy {
             question = res.question;
         Session session = Session.getSession(sessionKey);
         //if the adapter is a trial adapter, add a introductory node
-        if (session != null && "true".equals(session.getExtras().get(PLAY_TRIAL_AUDIO_KEY))) {
+        if (session != null && "true".equals(session.getAllExtras().get(PLAY_TRIAL_AUDIO_KEY))) {
             res.prompts = res.prompts != null ? res.prompts : new ArrayList<String>();
             String trialAudioURL = getTrialAudioURL(question.getPreferred_language());
             res.prompts.add(0, trialAudioURL);
-            session.getExtras().put(PLAY_TRIAL_AUDIO_KEY, "false");
+            session.addExtras(PLAY_TRIAL_AUDIO_KEY, "false");
         }
         log.info("question formed at handleQuestion is: " + ServerUtils.serializeWithoutException(question));
         log.info("prompts formed at handleQuestion is: " + res.prompts);
@@ -1617,18 +1617,14 @@ public class VoiceXMLRESTProxy {
             //update url with formatted redirecteId. RFC3966 returns format tel:<blabla> as expected
             question.setUrl(PhoneNumberUtils.formatNumber(redirectedId, PhoneNumberFormat.RFC3966));
             //store the remoteId as its lost while trying to trigger the answered event
-            HashMap<String, String> extras = new HashMap<String, String>();
-            extras.put("referredCalledId", redirectedId);
-            session.getExtras().putAll(extras);
+            session.addExtras("referredCalledId", redirectedId);
             session.setQuestion(question);
             session.setRemoteAddress(remoteID);
             //create a new ddr record and session to catch the redirect
             Session referralSession = Session.createSession(adapterConfig, redirectedId);
             referralSession.setAccountId(session.getAccountId());
-            HashMap<String, String> referralExtras = new HashMap<String, String>();
-            referralExtras.put("originalRemoteId", remoteID);
-            referralExtras.put("redirect", "true");
-            referralSession.getExtras().putAll(referralExtras);
+            referralSession.addExtras("originalRemoteId", remoteID);
+            referralSession.addExtras("redirect", "true");
             referralSession.storeSession();
             if (session.getDirection() != null) {
                 DDRRecord ddrRecord = null;
@@ -1770,15 +1766,15 @@ public class VoiceXMLRESTProxy {
     private static boolean isEventTriggered(String eventName, Session session, boolean updateSession) {
 
         if (session != null) {
-            if (session.getExtras().get("event_" + eventName) != null) {
+            if (session.getAllExtras().get("event_" + eventName) != null) {
                 log.warning(String.format("%s event already triggered before for this session: %s at: %s", eventName,
                                           session.getKey(),
-                                          TimeUtils.getStringFormatFromDateTime(Long.parseLong(session.getExtras()
+                                          TimeUtils.getStringFormatFromDateTime(Long.parseLong(session.getPublicExtras()
                                                                           .get("event_" + eventName)), null)));
                 return true;
             }
             else if(updateSession) {
-                session.getExtras().put("event_" + eventName, String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
+                session.getAllExtras().put("event_" + eventName, String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
                 session.storeSession();
             }
         }

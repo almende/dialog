@@ -32,6 +32,8 @@ public class Session{
     private static ConnectionFactory rabbitMQConnectionFactory;
     private static final String SESSION_QUEUE_NAME = "SESSION_POST_PROCESS_QUEUE";
     public static final String SESSION_KEY = "sessionKey";
+    public static final String PARENT_SESSION_KEY = "parentSessionKey";
+    public static final String CHILD_SESSION_KEY = "childSessionKey";
     public static final String TRACKING_TOKEN_KEY = "trackingToken";
     
     @Id
@@ -381,21 +383,22 @@ public class Session{
     }
     
     /**
-     * Store all data but do not return sensitive data like provider etc
+     * Used to fetch all extra data but not return sensitive data like provider etc
      * @return
      */
     @JsonIgnore
-    public Map<String, String> getExtras() {
+    public Map<String, String> getPublicExtras() {
 
-        extras = extras != null ? extras : new HashMap<String, String>();
-        extras.remove(AdapterConfig.ADAPTER_PROVIDER_KEY);
-        extras.remove(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY);
-        extras.remove(AdapterConfig.ACCESS_TOKEN_KEY);
-        extras.remove(AdapterConfig.ACCESS_TOKEN_SECRET_KEY);
-        extras.remove(AdapterConfig.XSI_USER_KEY);
-        extras.remove(AdapterConfig.XSI_PASSWORD_KEY);
-        extras.remove(DialogAgent.BEARER_TOKEN_KEY);
-        return extras;
+        HashMap<String, String> extrasCopy = extras != null ? new HashMap<String, String>(extras)
+                                                           : new HashMap<String, String>();
+        extrasCopy.remove(AdapterConfig.ADAPTER_PROVIDER_KEY);
+        extrasCopy.remove(Dialog.DIALOG_BASIC_AUTH_HEADER_KEY);
+        extrasCopy.remove(AdapterConfig.ACCESS_TOKEN_KEY);
+        extrasCopy.remove(AdapterConfig.ACCESS_TOKEN_SECRET_KEY);
+        extrasCopy.remove(AdapterConfig.XSI_USER_KEY);
+        extrasCopy.remove(AdapterConfig.XSI_PASSWORD_KEY);
+        extrasCopy.remove(DialogAgent.BEARER_TOKEN_KEY);
+        return extrasCopy;
     }
     
     public void setExtras( Map<String, String> extras )
@@ -727,5 +730,30 @@ public class Session{
     
         internalSession = internalSession != null ? internalSession.toLowerCase() : null;
         this.internalSession = internalSession;
+    }
+    
+    /**
+     * Used to fetch the session created because of a referral communication.
+     * The parentExternalKey is used to fetch the parent sesison and then the
+     * child (linked/referred) session is fetched
+     * 
+     * @param childExternalKey Updates the externalKey of the child session if missing
+     * @param parentExternalKey Used to load the child session via a parent session
+     * @return
+     */
+    public static Session getSessionFromParentExternalId(String childExternalKey, String parentExternalKey) {
+
+        //fetch the parent session for this preconnect
+        Session parentSession = Session.getSessionByExternalKey(parentExternalKey);
+        Session childSession = null;
+        String referredSessionKey = parentSession.getAllExtras().get(Session.CHILD_SESSION_KEY);
+        if (referredSessionKey != null) {
+            childSession = Session.getSession(referredSessionKey);
+            if (childSession != null && childSession.getExternalSession() == null) {
+                childSession.setExternalSession(childExternalKey);
+                childSession.storeSession();
+            }
+        }
+        return childSession;
     }
 }

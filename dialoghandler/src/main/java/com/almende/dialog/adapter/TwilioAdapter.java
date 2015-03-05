@@ -466,14 +466,14 @@ public class TwilioAdapter {
     @GET
     @Produces("application/xml")
     public Response preconnect(@QueryParam("From") String localID, @QueryParam("AccountSid") String accountSid,
-        @QueryParam("CalledVia") String calledVia, @QueryParam("To") String remoteID,
+        @QueryParam("To") String remoteID,
         @QueryParam("Direction") String direction, @QueryParam("CallSid") String callSid) {
 
         String reply = (new TwiMLResponse()).toXML();
         Session session = Session.getSessionByExternalKey(callSid);
         //fetch session from parent call
         if (session == null) {
-            session = fetchSessionFromParent(localID, accountSid, calledVia, callSid);
+            session = fetchSessionFromParent(localID, accountSid, callSid);
         }
 
         if (session != null && session.getQuestion() != null) {
@@ -1239,14 +1239,12 @@ public class TwilioAdapter {
      * 
      * @param localID
      * @param accountSid
-     * @param calledVia
      * @param callSid
      * @return
      */
-    private Session fetchSessionFromParent(String localID, String accountSid, String calledVia, String callSid) {
+    private Session fetchSessionFromParent(String localID, String accountSid, String callSid) {
 
-        AdapterConfig adapterConfig = AdapterConfig.findAdapterConfig(AdapterType.CALL.toString(),
-                                                                      calledVia != null ? calledVia : localID, null);
+        AdapterConfig adapterConfig = AdapterConfig.findAdapterConfig(AdapterType.CALL.toString(), localID, null);
         //fetch the parent session for this preconnect
         TwilioRestClient client = new TwilioRestClient(accountSid != null ? accountSid : adapterConfig.getAccessToken(),
                                                        adapterConfig.getAccessTokenSecret());

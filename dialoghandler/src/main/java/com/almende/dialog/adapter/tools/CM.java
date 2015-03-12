@@ -51,13 +51,7 @@ public class CM {
         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
         throws Exception {
 
-        String dcs;
-        if (!isGSMSeven(message)) {
-            dcs = MESSAGE_TYPE_UTF8;
-        }
-        else {
-            dcs = MESSAGE_TYPE_GSM7;
-        }
+        String dcs = getMessageType(message);
         //create an CM XML request based on the parameters
         StringWriter sw = createXMLRequest(message, from, fromName, addressNameMap, dcs, config, accountId, extras);
 
@@ -206,7 +200,8 @@ public class CM {
         return sw;
     }
 	
-	public static boolean isGSMSeven(CharSequence str0) {
+    public static boolean isGSMSeven(CharSequence str0) {
+
         if (str0 == null) {
             return true;
         }
@@ -218,51 +213,52 @@ public class CM {
             // simple range checks for most common characters (0x20 -> 0x5F) or (0x61 -> 0x7E)
             if ((c >= ' ' && c <= '_') || (c >= 'a' && c <= '~')) {
                 continue;
-            } else {
+            }
+            else {
                 // 10X more efficient using a switch statement vs. a lookup table search
                 switch (c) {
-                    case '\u00A3':	// £
-                    case '\u00A5':	// ¥
-                    case '\u00E8':	// è
-                    case '\u00E9':	// é
-                    case '\u00F9':	// ù
-                    case '\u00EC':	// ì
-                    case '\u00F2':	// ò
-                    case '\u00C7':	// Ç
-                    case '\n':          // newline
-                    case '\u00D8':	// Ø
-                    case '\u00F8':	// ø
-                    case '\r':          // carriage return
-                    case '\u00C5':	// Å
-                    case '\u00E5':	// å
-                    case '\u0394':	// Δ
-                    case '\u03A6':	// Φ
-                    case '\u0393':	// Γ
-                    case '\u039B':	// Λ
-                    case '\u03A9':	// Ω
-                    case '\u03A0':	// Π
-                    case '\u03A8':	// Ψ
-                    case '\u03A3':	// Σ
-                    case '\u0398':	// Θ
-                    case '\u039E':	// Ξ
-                    case '\u00C6':	// Æ
-                    case '\u00E6':	// æ
-                    case '\u00DF':	// ß
-                    case '\u00C9':	// É
-                    case '\u00A4':	// ¤
-                    case '\u00A1':	// ¡
-                    case '\u00C4':	// Ä
-                    case '\u00D6':	// Ö
-                    case '\u00D1':	// Ñ
-                    case '\u00DC':	// Ü
-                    case '\u00A7':	// §
-                    case '\u00BF':	// ¿
-                    case '\u00E4':	// ä
-                    case '\u00F6':	// ö
-                    case '\u00F1':	// ñ
-                    case '\u00FC':	// ü
-                    case '\u00E0':	// à
-                    case '\u20AC':	// €
+                    case '\u00A3': // £
+                    case '\u00A5': // ¥
+                    case '\u00E8': // è
+                    case '\u00E9': // é
+                    case '\u00F9': // ù
+                    case '\u00EC': // ì
+                    case '\u00F2': // ò
+                    case '\u00C7': // Ç
+                    case '\n': // newline
+                    case '\u00D8': // Ø
+                    case '\u00F8': // ø
+                    case '\r': // carriage return
+                    case '\u00C5': // Å
+                    case '\u00E5': // å
+                    case '\u0394': // Δ
+                    case '\u03A6': // Φ
+                    case '\u0393': // Γ
+                    case '\u039B': // Λ
+                    case '\u03A9': // Ω
+                    case '\u03A0': // Π
+                    case '\u03A8': // Ψ
+                    case '\u03A3': // Σ
+                    case '\u0398': // Θ
+                    case '\u039E': // Ξ
+                    case '\u00C6': // Æ
+                    case '\u00E6': // æ
+                    case '\u00DF': // ß
+                    case '\u00C9': // É
+                    case '\u00A4': // ¤
+                    case '\u00A1': // ¡
+                    case '\u00C4': // Ä
+                    case '\u00D6': // Ö
+                    case '\u00D1': // Ñ
+                    case '\u00DC': // Ü
+                    case '\u00A7': // §
+                    case '\u00BF': // ¿
+                    case '\u00E4': // ä
+                    case '\u00F6': // ö
+                    case '\u00F1': // ñ
+                    case '\u00FC': // ü
+                    case '\u00E0': // à
+                    case '\u20AC': // €
                         continue;
                     default:
                         return false;
@@ -272,10 +268,11 @@ public class CM {
         return true;
     }
 	
-    /*
-     * gets the number of message parts based on the charecters in the message
+    /**
+     * @param message
+     * @return
      */
-    public static int countMessageParts(String message) {
+    public static String getMessageType(String message) {
 
         String dcs;
         if (!isGSMSeven(message)) {
@@ -284,6 +281,16 @@ public class CM {
         else {
             dcs = MESSAGE_TYPE_GSM7;
         }
+        return dcs;
+    }
+	
+    /*
+     * gets the number of message parts based on the charecters in the message
+     */
+    public static int countMessageParts(String message) {
+
+        String dcs;
+        dcs = getMessageType(message);
         return countMessageParts(message, dcs);
     }
 	

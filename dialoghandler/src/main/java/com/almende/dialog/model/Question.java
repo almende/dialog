@@ -1,5 +1,6 @@
 package com.almende.dialog.model;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -85,7 +86,8 @@ public class Question implements QuestionIntf {
             try {
                 url = ServerUtils.getURLWithQueryParams(url, "responder", remoteID);
                 url = ServerUtils.getURLWithQueryParams(url, "requester", fromID);
-                url = ServerUtils.getURLWithQueryParams(url, "sessionKey", sessionKey);
+                
+                url = appendParentSessionKeyToURL(sessionKey, url);
                 for (String key : extraParams.keySet()) {
                     url = ServerUtils.getURLWithQueryParams(url, key, extraParams.get(key));
                 }
@@ -339,7 +341,7 @@ public class Question implements QuestionIntf {
                 log.info(String.format("answerText: %s and answer: %s", answer_input, om.writeValueAsString(answer)));
 
                 url = ServerUtils.getURLWithQueryParams(url, "responder", responder);
-                url = ServerUtils.getURLWithQueryParams(url, "sessionKey", sessionKey);
+                url = appendParentSessionKeyToURL(sessionKey, url);
                 String post = om.writeValueAsString(ans);
                 log.info("Going to send: " + post);
                 String newQuestionJSON = null;
@@ -407,7 +409,7 @@ public class Question implements QuestionIntf {
             AFHttpClient client = ParallelInit.getAFHttpClient();
             try {
                 url = ServerUtils.getURLWithQueryParams(url, "responder", responder);
-                url = ServerUtils.getURLWithQueryParams(url, "sessionKey", sessionKey);
+                url = appendParentSessionKeyToURL(sessionKey, url);
                 String post = om.writeValueAsString(event);
                 String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
                 if (credentialsFromSession != null) {
@@ -795,5 +797,24 @@ public class Question implements QuestionIntf {
                               sessionKey);
             return this;
         }
+    }
+    
+    /** Adds the parent session key attached with the given sessionkey to the url
+     * @param sessionKey
+     * @param url
+     * @return
+     * @throws UnsupportedEncodingException
+     */
+    public static String appendParentSessionKeyToURL(String sessionKey, String url) throws UnsupportedEncodingException {
+
+        Session session = Session.getSession(sessionKey);
+        if (session != null) {
+            url = ServerUtils.getURLWithQueryParams(url, "sessionKey", sessionKey);
+            String parentSessionKey = session.getAllExtras().get(Session.PARENT_SESSION_KEY);
+            if (parentSessionKey != null) {
+                url = ServerUtils.getURLWithQueryParams(url, Session.PARENT_SESSION_KEY, parentSessionKey);
+            }
+        }
+        return url;
     }
 }

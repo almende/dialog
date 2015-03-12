@@ -296,6 +296,29 @@ public class TwilioAdapter {
         }
     }
 	
+    /**
+     * The answer inputs are redirected to this endpoint
+     * 
+     * @param answer_id
+     *            This is generally not associated with a twilio answer
+     * @param answer_input
+     *            The actual answer given for a previous question
+     * @param localID
+     *            The from address of this call
+     * @param remoteID
+     *            The to address of this call
+     * @param direction
+     *            "inbound" or "outbound-dial"
+     * @param recordingUrl
+     *            Url for the voice recording if previous question was of type
+     *            OPEN_AUDIO
+     * @param dialCallStatus
+     *            The call status
+     * @param callSid
+     *            The external id for this call. This can also be the parent
+     *            externalId if previous question was a referral
+     * @return
+     */
     @Path("answer")
     @GET
     @Produces("application/xml")
@@ -305,7 +328,6 @@ public class TwilioAdapter {
         @QueryParam("DialCallStatus") String dialCallStatus, @QueryParam("CallSid") String callSid) {
 
         TwiMLResponse twiml = new TwiMLResponse();
-
         localID = checkAnonymousCallerId(localID);
 
         try {
@@ -337,8 +359,9 @@ public class TwilioAdapter {
         else if (callIgnored.contains(dialCallStatus) && session != null && session.getQuestion() != null) {
 
             session.addExtras("requester", session.getLocalAddress());
-            Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected", session.getPublicExtras(),
-                                                                    remoteID, session.getKey());
+            Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected",
+                                                                    session.getPublicExtras(), remoteID,
+                                                                    session.getKey());
             AdapterConfig config = session.getAdapterConfig();
             finalizeCall(config, session, callSid, remoteID);
             return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session.getKey(), null);
@@ -380,18 +403,7 @@ public class TwilioAdapter {
                         e.printStackTrace();
                     }
                 }
-                if (question == null) {
-                    try {
-                        session.pushSessionToQueue();
-                        twiml.append(new Hangup());
-                    }
-                    catch (TwiMLException e) {
-                        e.printStackTrace();
-                    }
-                }
-                else {
-                    return handleQuestion(question, session.getAdapterConfig(), responder, session.getKey(), null);
-                }
+                return handleQuestion(question, session.getAdapterConfig(), responder, session.getKey(), null);
             }
             else {
                 log.warning("No question found in session!");
@@ -805,12 +817,13 @@ public class TwilioAdapter {
     protected String renderComment(Question question, ArrayList<String> prompts, String sessionKey) {
 
         TwiMLResponse twiml = new TwiMLResponse();
-
         try {
             addPrompts(prompts, question.getPreferred_language(), twiml);
-            Redirect redirect = new Redirect(getAnswerUrl());
-            redirect.setMethod("GET");
-            twiml.append(redirect);
+            if (question != null && question.getAnswers() != null && !question.getAnswers().isEmpty()) {
+                Redirect redirect = new Redirect(getAnswerUrl());
+                redirect.setMethod("GET");
+                twiml.append(redirect);
+            }
         }
         catch (TwiMLException e) {
             e.printStackTrace();
@@ -1056,7 +1069,6 @@ public class TwilioAdapter {
         catch (TwiMLException e) {
             log.warning("Failed to append hangup");
         }
-
         return twiml.toXML();
     }
     
@@ -1242,13 +1254,23 @@ public class TwilioAdapter {
      * @param callSid
      * @return
      */
-    private Session fetchSessionFromParent(String localID, String accountSid, String callSid) {
+    public Session fetchSessionFromParent(String localID, String accountSid, String callSid) {
 
-        AdapterConfig adapterConfig = AdapterConfig.findAdapterConfig(AdapterType.CALL.toString(), localID, null);
-        //fetch the parent session for this preconnect
-        TwilioRestClient client = new TwilioRestClient(accountSid != null ? accountSid : adapterConfig.getAccessToken(),
-                                                       adapterConfig.getAccessTokenSecret());
-        Call call = client.getAccount().getCall(callSid);
-        return Session.getSessionFromParentExternalId(callSid, call.getParentCallSid());
+        try {
+            AdapterConfig adapterConfig = AdapterConfig.findAdapterConfig(AdapterType.CALL.toString(), localID, null);
+            //fetch the parent session for this preconnect
+            Account twilioAccount = getTwilioAccount(accountSid != null ? accountSid : adapterConfig.getAccessToken(),
+                                                     adapterConfig.getAccessTokenSecret());
+            if (twilioAccount != null) {
+                Call call = twilioAccount.getCall(callSid);
+                return Session.getSessionFromParentExternalId(callSid, call.getParentCallSid());
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            log.severe(String.format("Session fetch failed from parent callsid. localId: %s, accountSid: %s and callSid: %s",
+                                     localID, accountSid, callSid));
+        }
+        return null;
     }
 }

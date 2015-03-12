@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -160,6 +161,7 @@ public class ServerUtils
         throws UnsupportedEncodingException {
 
         try {
+            url = url.replace(" ", URLEncoder.encode(" ", "UTF-8"));
             URIBuilder uriBuilder = new URIBuilder(new URI(url));
             URIBuilder returnResult = new URIBuilder(new URI(url)).removeQuery();
             returnResult.addParameter(queryKey, queryValue);

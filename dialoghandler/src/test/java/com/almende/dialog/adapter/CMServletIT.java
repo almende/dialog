@@ -33,6 +33,7 @@ import com.almende.dialog.Log;
 import com.almende.dialog.Logger;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.SMSDeliveryStatus;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
@@ -144,6 +145,89 @@ public class CMServletIT extends TestFramework {
             .getJsonAppointmentQuestion() );
         assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, expectedQuestion,
             textMessage.getLocalAddress() );
+    }
+    
+    /**
+     * Test if a long (above 160 chars) text is sent and billed properly.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void SendLongMessageTest() throws Exception {
+
+        String senderName = "TestUser";
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
+                                                          TEST_PUBLIC_KEY, "ASK", "");
+
+        HashMap<String, String> addressMap = new HashMap<String, String>();
+        addressMap.put(remoteAddressVoice, null);
+        String text = "Miusov, as a man man of breeding and deilcacy, could not but feel some inwrd qualms, "
+                      + "when he reached the Father Superior's with Ivan: he felt ashamed of havin lost his temper. "
+                      + "He felt that he ought to have disdaimed that despicable wretch, Fyodor Pavlovitch, too "
+                      + "much to have been upset by him in Father Zossima's cell, and so to have forgotten himself."
+                      + "\"Teh monks were not to blame, in any case,\" he reflceted, on the steps. \"And if "
+                      + "they're decent people here (and the Father Superior, I understand, is a nobleman) why "
+                      + "not be friendly and courteous withthem? I won't argue, I'll fall in with everything,"
+                      + "I'll win them by politness, and show them that I've nothing to do with that Aesop, "
+                      + "thta buffoon, that Pierrot, and have merely been takken in over this affair, just "
+                      + "as they have.\"";
+        //create ddrPrice
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.5, "outgoing sms", UnitType.PART,
+                           AdapterType.SMS, null);
+        outBoundSMSCallXMLTest(addressMap, adapterConfig, text, QuestionInRequest.SIMPLE_COMMENT, senderName,
+                               "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+        assertXMLGeneratedFromOutBoundCall(addressMap, adapterConfig, text, senderName);
+        //check the total message parts
+        int countMessageParts = CM.countMessageParts(text);
+        //fetch the ddr records
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        Assert.assertThat(ddrRecords.size(), Matchers.is(1));
+        DDRRecord ddrRecord = ddrRecords.iterator().next();
+        ddrRecord.setShouldIncludeServiceCosts(true);
+        ddrRecord.setShouldGenerateCosts(true);
+        Assert.assertThat(ddrRecord.getQuantity(), Matchers.is(countMessageParts));
+        Assert.assertThat(ddrRecord.getTotalCost(), Matchers.is(0.5 * countMessageParts));
+    }
+    
+    /**
+     * Test if a long (above 160 chars) special characters text is sent and billed properly.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void SendLongSpecialCharectersMessageTest() throws Exception {
+
+        String senderName = "TestUser";
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
+                                                          TEST_PUBLIC_KEY, "ASK", "");
+
+        HashMap<String, String> addressMap = new HashMap<String, String>();
+        addressMap.put(remoteAddressVoice, null);
+        String text = "ç, @, € and courteous withthem? ç, @, € ç, @, € % ç, @, € ç, @, € ç, @, € ç, " +
+                      "@, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, " +
+                      "@, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, " +
+                      "€ ç, @, € ";
+        //create ddrPrice
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.5, "outgoing sms", UnitType.PART,
+                           AdapterType.SMS, null);
+        outBoundSMSCallXMLTest(addressMap, adapterConfig, text, QuestionInRequest.SIMPLE_COMMENT, senderName,
+                               "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+        assertXMLGeneratedFromOutBoundCall(addressMap, adapterConfig, text, senderName);
+        //check the total message parts
+        int countMessageParts = CM.countMessageParts(text);
+        //fetch the ddr records
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        Assert.assertThat(ddrRecords.size(), Matchers.is(1));
+        DDRRecord ddrRecord = ddrRecords.iterator().next();
+        ddrRecord.setShouldIncludeServiceCosts(true);
+        ddrRecord.setShouldGenerateCosts(true);
+        Assert.assertThat(Math.ceil(text.length() / 160.0), Matchers.lessThan(new Double(countMessageParts)));
+        Assert.assertThat(ddrRecord.getQuantity(), Matchers.is(countMessageParts));
+        Assert.assertThat(ddrRecord.getTotalCost(), Matchers.is(0.5 * countMessageParts));
     }
     
     /**

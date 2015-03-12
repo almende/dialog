@@ -1,7 +1,9 @@
 package com.almende.dialog.model;
 
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -92,7 +94,7 @@ public class Question implements QuestionIntf {
                 if (credentialsFromSession != null) {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
-                json = client.get(url);
+                json = client.get(url.replace(" ", URLEncoder.encode(" ", "UTF-8")));
                 dialogLog.info(adapterID, "Received new question: " + json, ddrRecordId, sessionKey);
             }
             catch (Exception e) {
@@ -222,9 +224,11 @@ public class Question implements QuestionIntf {
                 log.severe(e.getLocalizedMessage());
             }
         }
-        else if (this.getType().equals("comment") || this.getType().equals("referral")) {
-            if (this.getAnswers() == null || this.getAnswers().size() == 0)
+        //just get the next question if its a comment, referral or an exit question
+        else if (Arrays.asList("comment", "referral").contains(getType())) {
+            if (this.getAnswers() == null || this.getAnswers().size() == 0) {
                 return null;
+            }
             answer = this.getAnswers().get(0);
         }
         else if (answer_id != null) {
@@ -344,7 +348,7 @@ public class Question implements QuestionIntf {
                 if (credentialsFromSession != null) {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
-                newQuestionJSON = client.post(post, url);
+                newQuestionJSON = client.post(post, url.replace(" ", URLEncoder.encode(" ", "UTF-8")));
 
                 log.info("Received new question (answer): " + newQuestionJSON);
                 dialogLog.info(adapterID, "Received new question (answer): " + newQuestionJSON, null, sessionKey);
@@ -409,7 +413,7 @@ public class Question implements QuestionIntf {
                 if (credentialsFromSession != null) {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
-                String s = client.post(post, url);
+                String s = client.post(post, url.replace(" ", URLEncoder.encode(" ", "UTF-8")));
                 log.info("Received new question (event): " + s);
 
                 if (s != null && !s.equals("")) {

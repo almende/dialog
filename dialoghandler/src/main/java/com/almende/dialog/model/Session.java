@@ -746,12 +746,14 @@ public class Session{
         //fetch the parent session for this preconnect
         Session parentSession = Session.getSessionByExternalKey(parentExternalKey);
         Session childSession = null;
-        String referredSessionKey = parentSession.getAllExtras().get(Session.CHILD_SESSION_KEY);
-        if (referredSessionKey != null) {
-            childSession = Session.getSession(referredSessionKey);
-            if (childSession != null && childSession.getExternalSession() == null) {
-                childSession.setExternalSession(childExternalKey);
-                childSession.storeSession();
+        if (parentSession != null) {
+            String referredSessionKey = parentSession.getAllExtras().get(Session.CHILD_SESSION_KEY);
+            if (referredSessionKey != null) {
+                childSession = Session.getSession(referredSessionKey);
+                if (childSession != null && childSession.getExternalSession() == null) {
+                    childSession.setExternalSession(childExternalKey);
+                    childSession.storeSession();
+                }
             }
         }
         return childSession;

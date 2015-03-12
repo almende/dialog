@@ -4,8 +4,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -25,6 +28,7 @@ import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.AnswerPost;
 import com.almende.dialog.model.EventPost;
+import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.util.ServerUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -63,8 +67,11 @@ public class TestServlet extends HttpServlet
         SIMPLE_COMMENT,
         OPEN_QUESTION,
         OPEN_QUESION_WITHOUT_ANSWERS,
+        CLOSED_YES_NO,
         URL_QUESTION_TEXT,
-        PLAIN_TEXT_QUESION;
+        PLAIN_TEXT_QUESION,
+        REFERRAL,
+        EXIT;
     }
     
     @Override
@@ -87,27 +94,7 @@ public class TestServlet extends HttpServlet
                 }
             }
         }
-        if (questionType != null) {
-            switch (QuestionInRequest.valueOf(questionType)) {
-                case APPOINTMENT:
-                    result = getAppointmentQuestion(req.getParameter("question"));
-                    break;
-                case SIMPLE_COMMENT:
-                    result = getJsonSimpleCommentQuestion(req.getParameter("question"));
-                    break;
-                case OPEN_QUESTION:
-                    result = getJsonSimpleOpenQuestion(req.getParameter("question"));
-                    break;
-                case PLAIN_TEXT_QUESION:
-                    result = req.getParameter("question");
-                    break;
-                case OPEN_QUESION_WITHOUT_ANSWERS:
-                    result = getJsonSimpleOpenQuestionWithoutAnswers(req.getParameter("question"));
-                    break;
-                default:
-                    break;
-            }
-        }
+        result = getQuestionFromRequest(req, questionType);
         //store all the questions loaded in the TestFramework
         if (result != null && !result.isEmpty()) {
             try {
@@ -132,6 +119,58 @@ public class TestServlet extends HttpServlet
         TestServlet.logForTest(result);
         resp.getWriter().write(result);
         resp.setHeader("Content-Type", MediaType.APPLICATION_JSON);
+    }
+
+    /**
+     * @param req
+     * @param result
+     * @param questionType
+     * @return
+     * @throws UnsupportedEncodingException
+     */
+    public String getQuestionFromRequest(HttpServletRequest req, String questionType)
+        throws UnsupportedEncodingException {
+
+        String result = "";
+        if (questionType != null) {
+            switch (QuestionInRequest.valueOf(questionType)) {
+                case APPOINTMENT:
+                    result = getAppointmentQuestion(req.getParameter("question"));
+                    break;
+                case SIMPLE_COMMENT:
+                    result = getJsonSimpleCommentQuestion(req.getParameter("question"));
+                    break;
+                case OPEN_QUESTION:
+                    result = getJsonSimpleOpenQuestion(req.getParameter("question"));
+                    break;
+                case PLAIN_TEXT_QUESION:
+                    result = req.getParameter("question");
+                    break;
+                case OPEN_QUESION_WITHOUT_ANSWERS:
+                    result = getJsonSimpleOpenQuestionWithoutAnswers(req.getParameter("question"));
+                    break;
+                case REFERRAL:
+                    result = getReferralQuestion(req.getParameter("address"), req.getParameter("question"),
+                                                 req.getParameter("preconnect"), req.getParameter("answerText"),
+                                                 req.getParameter("next"));
+                    break;
+                case EXIT:
+                    result = getExitQuestion(req.getParameter("question"));
+                    break;
+                case CLOSED_YES_NO:
+                    Map<String, String> answerAndCallback = new LinkedHashMap<String, String>();
+                    answerAndCallback.put("1", TEST_SERVLET_PATH + "?questionType=" + QuestionInRequest.SIMPLE_COMMENT +
+                                               "&question=" + "You chose 1");
+                    String referralForNextAddressWithPreconnect = String.format("%s?questionType=%s&question=You chose 2&address=%s&preconnect=%s", TEST_SERVLET_PATH, 
+                                                                                QuestionInRequest.REFERRAL, req.getParameter("address"), 
+                                                                                URLEncoder.encode(req.getRequestURL() + "?" + req.getQueryString(), "UTF-8"));
+                    answerAndCallback.put("2", TEST_SERVLET_PATH + "?questionType=" + QuestionInRequest.EXIT + "&question=You chose 2");
+                    result = getClosedQuestion(req.getParameter("question"), answerAndCallback);
+                default:
+                    break;
+            }
+        }
+        return result;
     }
     
     @Override
@@ -165,9 +204,8 @@ public class TestServlet extends HttpServlet
                 Assert.fail("Exception is not expected to be thrown. " + e.getLocalizedMessage());
             }
         }
-        else if (req.getParameter("questionType") != null &&
-                 req.getParameter("questionType").equals(QuestionInRequest.SIMPLE_COMMENT.name())) {
-            result = getJsonSimpleCommentQuestion(req.getParameter("question"));
+        else if (req.getParameter("questionType") != null) {
+            result = getQuestionFromRequest(req, req.getParameter("questionType"));
         }
         resp.getWriter().write(result);
         resp.setHeader("Content-Type", MediaType.APPLICATION_JSON);
@@ -323,6 +361,66 @@ public class TestServlet extends HttpServlet
         question.setType( "comment" );
         question.setQuestion_text( "text://"+ APPOINTMENT_ACCEPTANCE_RESPONSE );
         question.generateIds();
+        return question.toJSON();
+    }
+    
+    public static String getClosedQuestion(String questionText, Map<String, String> answerAndCallback)
+    {
+        Question question = new Question();
+        question.setQuestion_id( "1" );
+        question.setType( "closed" );
+        question.setQuestion_text( "text://" + questionText );
+        Collection<Answer> allAnswers = new ArrayList<Answer>();
+        for (String answer : answerAndCallback.keySet()) {
+            allAnswers.add(new Answer("text://" + answer, answerAndCallback.get(answer)));
+        }
+        //set the answers in the question
+        question.setAnswers(new ArrayList<Answer>(allAnswers));
+        question.generateIds();
+        return question.toJSON();
+    }
+    
+    public String getReferralQuestion(String address, String message, String preconnect, String answerText,
+        String answerNext) {
+
+        Question question = new Question();
+        address = address != null ? address : "";
+        if (address != null && !address.isEmpty()) {
+            if (preconnect != null) {
+                try {
+                    preconnect = preconnect.replace(" ", URLEncoder.encode(" ", "UTF-8"));
+                }
+                catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+            }
+            question.setType("referral");
+            question.setUrl("tel:" + address);
+            if (message != null) {
+                question.setQuestion_text(message);
+            }
+            if (answerNext != null) {
+                question.setAnswers(new ArrayList<Answer>(Arrays.asList(new Answer(answerText, answerNext))));
+            }
+            if (preconnect != null && !preconnect.isEmpty()) {
+                question.addEventCallback(UUID.randomUUID().toString(), "preconnect", preconnect);
+                //add use preconnect media property
+                MediaProperty mediaProperty = new MediaProperty();
+                mediaProperty.setMedium(MediaProperty.MediumType.BROADSOFT);
+                mediaProperty.addProperty(MediaProperty.MediaPropertyKey.USE_PRECONNECT, "true");
+                question.addMedia_Properties(mediaProperty);
+            }
+        }
+        return question.toJSON();
+    }
+    
+    public String getExitQuestion(String message) {
+
+        Question question = new Question();
+        question.setType("exit");
+        if (message != null) {
+            question.setQuestion_text(message);
+        }
         return question.toJSON();
     }
     

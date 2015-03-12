@@ -318,23 +318,15 @@ public class AdapterConfig {
         return null;
     }
 	
-	public static AdapterConfig findAdapterConfig(String adapterType,
-			String localAddress, String keyword) {
-		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-		Iterator<AdapterConfig> config = datastore.find()
-				.type(AdapterConfig.class)
-				.addFilter("myAddress", FilterOperator.EQUAL, localAddress)
-				.addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase())
-				.addFilter("keyword", FilterOperator.EQUAL, keyword)
-				.now();
-		if (config.hasNext()) {
-			return config.next();
-		}
-		log.severe("AdapterConfig not found:'" + adapterType + "':'"
-				+ localAddress + "':'"
-				+ keyword + "'");
-		return null;
-	}
+    public static AdapterConfig findAdapterConfig(String adapterType, String localAddress, String keyword) {
+
+        ArrayList<AdapterConfig> adapterConfigs = findAdapters(adapterType, localAddress, keyword);
+        if (adapterConfigs != null && !adapterConfigs.isEmpty()) {
+            return adapterConfigs.iterator().next();
+        }
+        log.severe("AdapterConfig not found:'" + adapterType + "':'" + localAddress + "':'" + keyword + "'");
+        return null;
+    }
 	
 	public static AdapterConfig findAdapterConfigByUsername(String username) {
 		TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();

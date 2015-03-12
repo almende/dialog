@@ -161,9 +161,6 @@ public class TestServlet extends HttpServlet
                     Map<String, String> answerAndCallback = new LinkedHashMap<String, String>();
                     answerAndCallback.put("1", TEST_SERVLET_PATH + "?questionType=" + QuestionInRequest.SIMPLE_COMMENT +
                                                "&question=" + "You chose 1");
-                    String referralForNextAddressWithPreconnect = String.format("%s?questionType=%s&question=You chose 2&address=%s&preconnect=%s", TEST_SERVLET_PATH, 
-                                                                                QuestionInRequest.REFERRAL, req.getParameter("address"), 
-                                                                                URLEncoder.encode(req.getRequestURL() + "?" + req.getQueryString(), "UTF-8"));
                     answerAndCallback.put("2", TEST_SERVLET_PATH + "?questionType=" + QuestionInRequest.EXIT + "&question=You chose 2");
                     result = getClosedQuestion(req.getParameter("question"), answerAndCallback);
                 default:

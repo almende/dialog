@@ -1,6 +1,12 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+13-3-2015 version 1.6.9
+- hotfix: preconnect issue: check to see real answer callstatus by looking up the child session
+
+12-3-2015 version 1.6.8
+- hotfix: added sessionKeys (both parent and current sessionKeys)
+
 12-3-2015 version 1.6.7
 - hotfix: preconnect issues with Twilio. added unit/integrations tests
 

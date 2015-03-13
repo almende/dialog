@@ -349,25 +349,53 @@ public class TwilioAdapter {
 
         Session session = Session.getSessionByExternalKey(callSid);
         List<String> callIgnored = Arrays.asList("no-answer", "busy", "canceled", "failed");
-        // Remove the referralSession
-        if ("completed".equals(dialCallStatus)) {
-
-            AdapterConfig config = session.getAdapterConfig();
-            finalizeCall(config, session, callSid, remoteID);
-        }
-        //if call is rejected. call the hangup event
-        else if (callIgnored.contains(dialCallStatus) && session != null && session.getQuestion() != null) {
-
-            session.addExtras("requester", session.getLocalAddress());
-            Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected",
-                                                                    session.getPublicExtras(), remoteID,
-                                                                    session.getKey());
-            AdapterConfig config = session.getAdapterConfig();
-            finalizeCall(config, session, callSid, remoteID);
-            return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session.getKey(), null);
-        }
 
         if (session != null) {
+            
+            //add a tag in the session saying its picked up
+            session.setCallPickedUpStatus(true);
+            session.storeSession();
+            /*
+             * Important note: Remove the referralSession. Twilio gives a
+             * "completed" status on a preconnect pickup-accept and a preconnect
+             * pickup-reject (for pickup-decline it gives a no-answer status)
+             */
+            if ("completed".equals(dialCallStatus)) {
+
+                AdapterConfig config = session.getAdapterConfig();
+
+                //check if this is the parent session to a linked child session due to a redirect
+                Session linkedChildSession = session.getLinkedChildSession();
+                //if the linked child session is found and not pickedup. trigger the next question
+                if (linkedChildSession != null && !linkedChildSession.isCallPickedUp()) {
+
+                    //handle the next question if there is any.. else stop costs
+                    Question answeredAndHungUpQuestion = session.getQuestion().event("hangup", "Call hungup",
+                                                                                     session.getPublicExtras(),
+                                                                                     remoteID, session.getKey());
+                    Response renderedNextQuestion = handleQuestion(answeredAndHungUpQuestion,
+                                                                   session.getAdapterConfig(), remoteID,
+                                                                   session.getKey(), null);
+                    // if its not a empty response (i.e a dont do anything request to twilio), then do something, instead of hangup :)
+                    if (renderedNextQuestion != null &&
+                        !(new TwiMLResponse()).toXML().equalsIgnoreCase(renderedNextQuestion.getEntity().toString())) {
+                        return renderedNextQuestion;
+                    }
+                }
+                finalizeCall(config, session, callSid, remoteID);
+            }
+            //if call is rejected. call the hangup event
+            else if (callIgnored.contains(dialCallStatus) && session.getQuestion() != null) {
+
+                session.addExtras("requester", session.getLocalAddress());
+                Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected",
+                                                                        session.getPublicExtras(), remoteID,
+                                                                        session.getKey());
+                AdapterConfig config = session.getAdapterConfig();
+                finalizeCall(config, session, callSid, remoteID);
+                return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session.getKey(), null);
+            }
+
             Question question = session.getQuestion();
             if (question != null) {
                 String responder = session.getRemoteAddress();
@@ -599,6 +627,7 @@ public class TwilioAdapter {
                 session.setRemoteAddress(remoteID);
                 session.setLocalAddress(config.getMyAddress());
                 session.storeSession();
+                
                 //flush the keys if ddrProcessing was successful
                 if (DDRUtils.stopDDRCosts(session.getKey(), true)) {
                     session.drop();

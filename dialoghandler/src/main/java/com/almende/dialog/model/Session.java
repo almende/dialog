@@ -35,6 +35,12 @@ public class Session{
     public static final String PARENT_SESSION_KEY = "parentSessionKey";
     public static final String CHILD_SESSION_KEY = "childSessionKey";
     public static final String TRACKING_TOKEN_KEY = "trackingToken";
+    /**
+     * Tag used by calling adapters to mark it in the session if a call is
+     * picked up or not. If there is a preconnect on the callee's end, then its
+     * marked as true only if a connection is setup.
+     */
+    private static final String IS_CALL_PICKED_UP = "isCallPickedUp";
     
     @Id
     public String key = "";
@@ -730,6 +736,37 @@ public class Session{
     
         internalSession = internalSession != null ? internalSession.toLowerCase() : null;
         this.internalSession = internalSession;
+    }
+
+    /**
+     * Returns true if the call associated with this session is answered
+     * @return
+     */
+    public boolean isCallPickedUp() {
+        String callStatus = getAllExtras().get(IS_CALL_PICKED_UP);
+        return Boolean.parseBoolean(callStatus);
+    }
+    
+    /**
+     * Sets a call pickup status for this session
+     * @param isCallPickedUp
+     */
+    public void setCallPickedUpStatus(boolean isCallPickedUp) {
+
+        addExtras(IS_CALL_PICKED_UP, String.valueOf(isCallPickedUp));
+    }
+    
+    /**
+     * Gets the child session linked this this session
+     * @return
+     */
+    public Session getLinkedChildSession() {
+
+        if (getAllExtras().get(CHILD_SESSION_KEY) != null) {
+            String childSessionKey = getAllExtras().get(CHILD_SESSION_KEY);
+            return getSession(childSessionKey);
+        }
+        return null;
     }
     
     /**

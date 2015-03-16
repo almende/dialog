@@ -1440,6 +1440,16 @@ public class VoiceXMLRESTProxy {
          */
         outputter.endTag();
         outputter.endTag();
+        
+        outputter.startTag("catch");
+        outputter.attribute("event", "connection.disconnect.hangup");
+        outputter.startTag("submit");
+        outputter.attribute("next", uploadURL);
+        outputter.attribute("namelist", "file");
+        outputter.attribute("method", "post");
+        outputter.attribute("enctype", "multipart/form-data");
+        outputter.endTag();
+        outputter.endTag();
 
         outputter.startTag("subdialog");
         outputter.attribute("name", "saveWav");

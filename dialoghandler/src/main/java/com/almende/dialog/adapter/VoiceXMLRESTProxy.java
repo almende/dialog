@@ -1449,6 +1449,12 @@ public class VoiceXMLRESTProxy {
         outputter.attribute("method", "post");
         outputter.attribute("enctype", "multipart/form-data");
         outputter.endTag();
+        outputter.startTag("goto");
+        outputter.attribute("next",
+                            getAnswerUrl() + "?questionId=" + question.getQuestion_id() + "&sessionKey=" +
+                                                            URLEncoder.encode(sessionKey, "UTF-8") + "&answerInput=" +
+                                                            URLEncoder.encode(storedAudiofile, "UTF-8"));
+        outputter.endTag();
         outputter.endTag();
 
         outputter.startTag("subdialog");

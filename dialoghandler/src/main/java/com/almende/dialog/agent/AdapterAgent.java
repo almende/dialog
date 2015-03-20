@@ -1,12 +1,15 @@
 package com.almende.dialog.agent;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
 import org.jivesoftware.smack.XMPPException;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.MailServlet;
@@ -14,6 +17,7 @@ import com.almende.dialog.adapter.TwitterServlet;
 import com.almende.dialog.adapter.TwitterServlet.TwitterEndpoint;
 import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.adapter.tools.Broadsoft;
+import com.almende.dialog.adapter.tools.Twilio;
 import com.almende.dialog.exception.ConflictException;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
@@ -32,6 +36,7 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.uuid.UUID;
 import com.askfast.commons.Status;
 import com.askfast.commons.agent.intf.AdapterAgentInterface;
+import com.askfast.commons.agent.intf.DialogAgentInterface;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
 import com.askfast.commons.entity.AdapterProviders;
@@ -265,8 +270,8 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
      * @return AdapterId
      * @throws Exception
      */
-    public String createTwilioAdapter(@Name("address") String address, @Name("accountSid") @Optional String accountSid,
-        @Name("authToken") @Optional String authToken, @Name("preferredLanguage") @Optional String preferredLanguage,
+    public String createTwilioAdapter(@Name("address") String address, @Name("accountSid") String accountSid,
+        @Name("authToken") String authToken, @Name("preferredLanguage") @Optional String preferredLanguage,
         @Name("accountId") @Optional String accountId, @Name("anonymous") @Optional Boolean anonymous) throws Exception {
 
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
@@ -274,21 +279,28 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
 
         String normAddress = address.replaceFirst("^0", "").replace("+31", "");
         String externalAddress = "+31" + normAddress;
+        
+        Twilio twilio = new Twilio(accountSid, authToken);
+        String id = twilio.buyPhoneNumber( address, getApplicationId() );
+        
+        if(id!=null) {
 
-        AdapterConfig config = new AdapterConfig();
-        config.setAdapterType(AdapterType.CALL.toString());
-        config.setMyAddress(externalAddress);
-        config.setAddress(externalAddress);
-        config.setPreferred_language(preferredLanguage);
-        config.setPublicKey(accountId);
-        config.setOwner(accountId);
-        config.setAccessToken(accountSid);
-        config.setAccessTokenSecret(authToken);
-        config.addAccount(accountId);
-        config.setAnonymous(anonymous);
-        config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO);
-        AdapterConfig newConfig = createAdapter(config);
-        return newConfig.getConfigId();
+            AdapterConfig config = new AdapterConfig();
+            config.setAdapterType(AdapterType.CALL.toString());
+            config.setMyAddress(externalAddress);
+            config.setAddress(externalAddress);
+            config.setPreferred_language(preferredLanguage);
+            config.setPublicKey(accountId);
+            config.setOwner(accountId);
+            config.setAccessToken(accountSid);
+            config.setAccessTokenSecret(authToken);
+            config.addAccount(accountId);
+            config.setAnonymous(anonymous);
+            config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO);
+            AdapterConfig newConfig = createAdapter(config);
+            return newConfig.getConfigId();
+        }
+        return null;
     }
 	
     public String createEmailAdapter( @Name( "emailAddress" ) String emailAddress, @Name( "password" ) String password,
@@ -937,5 +949,14 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
                                                                                     : (address + "@ask-charlotte.appspotmail.com");
         }
         return address;
+    }
+    
+    private DialogAgentInterface getDialogAgent(String id) {
+        return createAgentProxy( URI.create("local:"+id), DialogAgentInterface.class );
+    }
+    
+    private String getApplicationId() {
+        DialogAgentInterface dialogAgent = getDialogAgent( "dialog" );
+        return dialogAgent.getApplicationId();
     }
 }

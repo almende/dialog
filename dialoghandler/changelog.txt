@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+20-3-2015 version 1.6.10
+- feature: buy twilio number when creating the adapter
+
 13-3-2015 version 1.6.9
 - hotfix: preconnect issue: check to see real answer callstatus by looking up the child session
 

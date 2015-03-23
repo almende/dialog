@@ -636,6 +636,7 @@ public class VoiceXMLRESTProxy {
     public Response hangup(Session session) throws Exception {
 
         if (session != null) {
+            Thread.sleep( 1000 ); // Wait one sec to process the rest of the dialog
             log.info("call hangup with:" + session.getDirection() + ":" + session.getRemoteAddress() + ":" +
                      session.getLocalAddress());
             if (session.getQuestion() == null) {

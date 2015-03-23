@@ -636,7 +636,6 @@ public class VoiceXMLRESTProxy {
     public Response hangup(Session session) throws Exception {
 
         if (session != null) {
-            Thread.sleep( 1000 ); // Wait one sec to process the rest of the dialog
             log.info("call hangup with:" + session.getDirection() + ":" + session.getRemoteAddress() + ":" +
                      session.getLocalAddress());
             if (session.getQuestion() == null) {
@@ -938,6 +937,7 @@ public class VoiceXMLRESTProxy {
                                                                    ServerUtils.serialize(session)));
                                             //flush the keys if ddrProcessing was successful
                                             if (DDRUtils.stopDDRCosts(session.getKey(), true)) {
+                                                Thread.sleep( 1000 ); // Wait one seconds to process the rest of the dialog
                                                 session.drop();
                                             }
                                             hangup(session);

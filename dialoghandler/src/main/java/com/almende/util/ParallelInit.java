@@ -1,5 +1,6 @@
 package com.almende.util;
 
+import com.almende.dialog.db.MongoManager;
 import com.almende.dialog.util.AFHttpClient;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,13 +23,17 @@ public class ParallelInit {
 	public static boolean datastoreActive = false;
 	public static Thread datastoreThread = new DatastoreThread();
 	
+	public static MongoManager mm = null;
+	public static boolean mongoActive = false;
+	public static Thread mongoThread = new MongoThread();
+	
 	public static ObjectMapper om = new ObjectMapper();
 	
 	public ParallelInit(boolean isTest)
-    {
+        {
 	    ParallelInit.isTest = isTest;
 	    datastoreThread = new DatastoreThread( isTest );
-    }
+        }
 	
 	public static boolean startThreads(){
 		synchronized(conThread){
@@ -40,6 +45,9 @@ public class ParallelInit {
 		synchronized(datastoreThread){
 			if (!datastoreActive && !datastoreThread.isAlive()) datastoreThread.start();
 		}
+		synchronized(mongoThread){
+                    if (!mongoActive && !mongoThread.isAlive()) mongoThread.start();
+                }
 		synchronized(loadingRequest){
 			if (loadingRequest) {
 				loadingRequest=false;
@@ -82,6 +90,17 @@ public class ParallelInit {
 		}
 		return datastore;
 	}
+	
+	public static MongoManager getMongoManager(){
+            startThreads();
+            while (!mongoActive){
+                    try {
+                            Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                    }
+            }
+            return mm;
+        }
 	
 	public static ObjectMapper getObjectMapper(){
 		startThreads();

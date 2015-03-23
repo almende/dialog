@@ -11,9 +11,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
+import com.almende.dialog.accounts.Recording;
 import com.almende.dialog.adapter.CLXUSSDServlet;
 import com.almende.dialog.adapter.CMSmsServlet;
 import com.almende.dialog.adapter.MBSmsServlet;
@@ -601,15 +603,19 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     	getState().put("applicationId", applicationId);
     }
     
-	@Override
-	public String getDescription() {
-		return "Dialog handling agent";
-	}
-	
-	@Override
-	public String getVersion() {
-		return "1.4.2";
-	}
+    public Object getRecording(@Name("accountId") String accountId, @Name("filename") String filename) {
+        return Recording.getRecording( filename );
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Dialog handling agent";
+    }
+
+    @Override
+    public String getVersion() {
+        return "1.4.2";
+    }
 	
     public void consumeDialogInitiationQueue() {
 

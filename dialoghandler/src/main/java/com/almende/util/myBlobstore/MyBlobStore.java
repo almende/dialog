@@ -123,6 +123,11 @@ public class MyBlobStore {
 		return res;
 	}
 	
+	public void createFileReference(String id) {
+	    FileContentType fct = new FileContentType(id, null, id+".wav");
+            datastore.store(fct);
+	}
+	
 	public Map<String, List<BlobKey>> getUploads(HttpServletRequest req) {
 		String uuid = req.getRequestURI().replaceFirst("|.*/blob/|", "");
 		Map<String, List<BlobKey>> result = new HashMap<String, List<BlobKey>>();

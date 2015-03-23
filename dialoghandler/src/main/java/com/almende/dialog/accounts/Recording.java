@@ -7,6 +7,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
@@ -18,6 +20,7 @@ import javax.ws.rs.core.Response;
 
 import org.jongo.Jongo;
 import org.jongo.MongoCollection;
+import org.jongo.MongoCursor;
 
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -119,6 +122,19 @@ public class Recording {
         MongoCollection coll = getCollection();
         Recording recording = coll.findOne(query.toString()).as(Recording.class);
         return recording;
+    }
+    
+    public static Set<Recording> getRecordings(String accountId) {
+        ObjectNode query = ParallelInit.om.createObjectNode();
+        query.put( "account", accountId );
+        
+        MongoCollection coll = getCollection();
+        MongoCursor<Recording> cursor = coll.find(query.toString()).as(Recording.class);
+        Set<Recording> recordings = new HashSet<Recording>();
+        for(Recording recording : cursor) {
+            recordings.add( recording );
+        }
+        return recordings;
     }
     
     private static MongoCollection getCollection() {

@@ -17,6 +17,3 @@ com.almende.dialog.accounts.Recording
 
 com.almende.dialog.DDR
 com.almende.dialog.agent.LogWrapperAgent
-com.almende.util.myBlobstore.MyBlobStore
-#com.almende.dialog.util.UploadUtil
-com.almende.dialog.util.DownloadUtil

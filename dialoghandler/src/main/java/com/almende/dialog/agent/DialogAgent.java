@@ -604,7 +604,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     }
     
     public Object getRecording(@Name("accountId") String accountId, @Name("filename") String filename) {
-        return Recording.getRecording( filename );
+        return Recording.getRecordingByFilename( filename );
     }
     
     @Override

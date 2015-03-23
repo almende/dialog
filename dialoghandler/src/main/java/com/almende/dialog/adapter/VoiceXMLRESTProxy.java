@@ -1030,8 +1030,7 @@ public class VoiceXMLRESTProxy {
     @Path("upload")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces("application/voicexml+xml")
-    public Response doUpload(BufferedInMultiPart bimp, @QueryParam("questionId") String question_id, @QueryParam("answerId") String answer_id,
-                         @QueryParam("answerInput") String answer_input, @QueryParam("sessionKey") String sessionKey,
+    public Response doUpload(BufferedInMultiPart bimp, @QueryParam("questionId") String question_id, @QueryParam("sessionKey") String sessionKey,
                          @Context UriInfo ui, @Context HttpServletRequest req, @Context HttpServletResponse res)
                     throws URISyntaxException {
         
@@ -1040,7 +1039,7 @@ public class VoiceXMLRESTProxy {
         String reply = "<vxml><exit/></vxml>";
         Session session = Session.getSession(sessionKey);
         if (session != null) {
-            answer_input = storeAudioFile(bimp, session.getAccountId());
+            String answer_input = storeAudioFile(bimp, session.getAccountId(), session.getDdrRecordId());
             Question question = session.getQuestion();
             if (question != null) {
                 String responder = session.getRemoteAddress();
@@ -1056,8 +1055,7 @@ public class VoiceXMLRESTProxy {
                                                 question.getQuestion_expandedtext(session.getKey())), session);
                 }
                 String answerForQuestion = question.getQuestion_expandedtext(session.getKey());
-                question = question.answer(responder, session.getAdapterConfig().getConfigId(), answer_id,
-                                           answer_input, sessionKey);
+                question = question.answer(responder, session.getAdapterConfig().getConfigId(), null, answer_input, sessionKey);
                 //reload the session
                 session = Session.getSession(sessionKey);
                 session.setQuestion(question);
@@ -1517,7 +1515,6 @@ public class VoiceXMLRESTProxy {
         outputter.startTag("catch");
         outputter.attribute("event", "connection.disconnect.hangup");
         outputter.startTag("submit");
-        //outputter.attribute("name", "saveWav");
         outputter.attribute("next", UPLOAD_URL+"?questionId=" + question.getQuestion_id() + "&sessionKey=" +URLEncoder.encode(sessionKey, "UTF-8"));
         outputter.attribute("namelist", "file");
         outputter.attribute("method", "post");
@@ -1527,7 +1524,6 @@ public class VoiceXMLRESTProxy {
         
         outputter.startTag("filled");
         outputter.startTag("submit");
-        //outputter.attribute("name", "saveWav");
         outputter.attribute("next", UPLOAD_URL+"?questionId=" + question.getQuestion_id() + "&sessionKey=" +URLEncoder.encode(sessionKey, "UTF-8"));
         outputter.attribute("namelist", "file");
         outputter.attribute("method", "post");
@@ -1815,7 +1811,13 @@ public class VoiceXMLRESTProxy {
         return agentURL;
     }
 
-    private String storeAudioFile(BufferedInMultiPart bimp, String accountId) {
+    /**
+     * Store an incoming audio file and return the download url
+     * @param bimp
+     * @param accountId
+     * @return downloadUrl
+     */
+    private String storeAudioFile(BufferedInMultiPart bimp, String accountId, String ddrId) {
         
         String uuid = UUID.randomUUID().toString();
         
@@ -1840,13 +1842,13 @@ public class VoiceXMLRESTProxy {
                 out.flush();
                 out.close();
                 
-                recording = Recording.createRecording( new Recording(uuid, accountId, part.getContentType()) );
+                recording = Recording.createRecording( new Recording(uuid, accountId, part.getContentType(), ddrId) );
                 
         } catch (IOException e) {
                 e.printStackTrace();
         }
         
-        return host+"/dialoghandler/recording/"+recording.getFilename();
+        return host+"recording/"+recording.getFilename();
     }
     
     /**

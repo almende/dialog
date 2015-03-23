@@ -1058,22 +1058,24 @@ public class VoiceXMLRESTProxy {
                 question = question.answer(responder, session.getAdapterConfig().getConfigId(), null, answer_input, sessionKey);
                 //reload the session
                 session = Session.getSession(sessionKey);
-                session.setQuestion(question);
-                session.storeSession();
-                //check if ddr is in session. save the answer in the ddr
-                if (session.getDdrRecordId() != null) {
-                    try {
-                        DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
-                        if (ddrRecord != null) {
-                            ddrRecord.addAdditionalInfo(DDRRecord.ANSWER_INPUT_KEY + ":" + answerForQuestion,
-                                                        answer_input);
-                            ddrRecord.createOrUpdateWithLog(session);
+                if(session!=null) {
+                    session.setQuestion(question);
+                    session.storeSession();
+                    //check if ddr is in session. save the answer in the ddr
+                    if (session.getDdrRecordId() != null) {
+                        try {
+                            DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+                            if (ddrRecord != null) {
+                                ddrRecord.addAdditionalInfo(DDRRecord.ANSWER_INPUT_KEY + ":" + answerForQuestion,
+                                                            answer_input);
+                                ddrRecord.createOrUpdateWithLog(session);
+                            }
+                        }
+                        catch (Exception e) {
                         }
                     }
-                    catch (Exception e) {
-                    }
+                    return handleQuestion(question, session.getAdapterConfig(), responder, sessionKey);
                 }
-                return handleQuestion(question, session.getAdapterConfig(), responder, sessionKey);
             }
             else {
                 log.warning("No question found in session!");

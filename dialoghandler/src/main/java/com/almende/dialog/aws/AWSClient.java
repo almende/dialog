@@ -72,7 +72,8 @@ public class AWSClient{
             System.out.println("Error Message: " + ace.getMessage());
             return false;
         } catch (Exception e) {
-            System.out.println("Exception uploading file"); 
+            System.out.println("Exception uploading file");
+            System.out.println("Error message: "+e.getMessage());
             return false;
         }
     }

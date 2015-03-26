@@ -14,6 +14,7 @@ import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 
 public class AWSClient{
@@ -48,7 +49,8 @@ public class AWSClient{
             ByteArrayInputStream bis = new ByteArrayInputStream(fileData.get());
     
             s3Object.setObjectContent(bis);
-            client.putObject(new PutObjectRequest(bucketName, keyName, bis, omd));
+            PutObjectResult res = client.putObject(new PutObjectRequest(bucketName, keyName, bis, omd));
+            System.out.println("Uploaded file: "+keyName+" e-tag:" +res.getETag());
             s3Object.close();
             
             return true;

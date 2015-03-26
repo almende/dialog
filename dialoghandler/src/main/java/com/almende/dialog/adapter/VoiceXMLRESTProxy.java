@@ -1,6 +1,7 @@
 package com.almende.dialog.adapter;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
@@ -80,6 +81,7 @@ public class VoiceXMLRESTProxy {
     protected String TIMEOUT_URL = "timeout";
     protected String UPLOAD_URL = "upload";
     protected String EXCEPTION_URL = "exception";
+    @SuppressWarnings( "unused" )
     private String host = "";
 
     public static void killSession(Session session) {
@@ -1825,7 +1827,10 @@ public class VoiceXMLRESTProxy {
         List<FileItem> multipartfiledata = new ArrayList<FileItem>();
         
         try {
-            multipartfiledata = new ServletFileUpload(new DiskFileItemFactory()).parseRequest(request);
+            DiskFileItemFactory dff = new DiskFileItemFactory();
+            dff.setSizeThreshold( 16777216 ); // If the file is bigger then 16 Mb store to disk
+            dff.setRepository( new File("./blobstore/") );
+            multipartfiledata = new ServletFileUpload(dff).parseRequest(request);
         }
         catch ( FileUploadException e1 ) {
             log.warning("Failed to receive file");

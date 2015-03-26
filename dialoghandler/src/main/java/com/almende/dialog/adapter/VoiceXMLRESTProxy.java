@@ -1,10 +1,7 @@
 package com.almende.dialog.adapter;
 
 import java.io.ByteArrayInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
@@ -14,7 +11,6 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,8 +35,10 @@ import javax.ws.rs.core.Response.Status;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.wink.common.model.multipart.BufferedInMultiPart;
-import org.apache.wink.common.model.multipart.InPart;
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileUploadException;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
@@ -53,6 +51,7 @@ import com.almende.dialog.accounts.Recording;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
+import com.almende.dialog.aws.AWSClient;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
@@ -62,6 +61,7 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
+import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.Language;
@@ -77,7 +77,6 @@ public class VoiceXMLRESTProxy {
     private static final String DTMFGRAMMAR = "dtmf2hash";
     private static final String PLAY_TRIAL_AUDIO_KEY = "playTrialAccountAudio";
     private static final int MAX_RETRIES = 1;
-    private static final String BASEPATH = "./blobstore/";
     protected String TIMEOUT_URL = "timeout";
     protected String UPLOAD_URL = "upload";
     protected String EXCEPTION_URL = "exception";
@@ -1031,7 +1030,7 @@ public class VoiceXMLRESTProxy {
     @Path("upload")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces("application/voicexml+xml")
-    public Response doUpload(BufferedInMultiPart bimp, @QueryParam("questionId") String question_id, @QueryParam("sessionKey") String sessionKey,
+    public Response doUpload(@QueryParam("questionId") String question_id, @QueryParam("sessionKey") String sessionKey,
                          @Context UriInfo ui, @Context HttpServletRequest req, @Context HttpServletResponse res)
                     throws URISyntaxException {
         
@@ -1040,7 +1039,7 @@ public class VoiceXMLRESTProxy {
         String reply = "<vxml><exit/></vxml>";
         Session session = Session.getSession(sessionKey);
         if (session != null) {
-            String answer_input = storeAudioFile(bimp, session.getAccountId(), session.getDdrRecordId());
+            String answer_input = storeAudioFile(req, session.getAccountId(), session.getDdrRecordId());
             Question question = session.getQuestion();
             if (question != null) {
                 String responder = session.getRemoteAddress();
@@ -1820,38 +1819,39 @@ public class VoiceXMLRESTProxy {
      * @param accountId
      * @return downloadUrl
      */
-    private String storeAudioFile(BufferedInMultiPart bimp, String accountId, String ddrId) {
+    private String storeAudioFile(HttpServletRequest request, String accountId, String ddrId) {
         
         String uuid = UUID.randomUUID().toString();
+        List<FileItem> multipartfiledata = new ArrayList<FileItem>();
         
-        OutputStream out = null;
-        List<InPart> parts = bimp.getParts();
-        if (parts.size() != 1) {
+        try {
+            multipartfiledata = new ServletFileUpload(new DiskFileItemFactory()).parseRequest(request);
+        }
+        catch ( FileUploadException e1 ) {
+            log.warning("Failed to receive file");
+        }
+        
+        if (multipartfiledata.size() != 1) {
                 throw new WebApplicationException(Response.status(Status.BAD_REQUEST).build());
         }
-        Iterator<InPart> it = parts.iterator();
-        InPart part = (InPart) it.next();
-        byte[] bytes = null;
+        
         Recording recording = null;
-        try {
-                InputStream inputStream = part.getInputStream();
-                out = new FileOutputStream(BASEPATH + uuid);
-                int read = 0;
-                bytes = new byte[1024];
-                while ((read = inputStream.read(bytes)) != -1) {
-                        out.write(bytes, 0, read);
-                }
-                inputStream.close();
-                out.flush();
-                out.close();
-                
-                recording = Recording.createRecording( new Recording(uuid, accountId, part.getContentType(), ddrId) );
-                
-        } catch (IOException e) {
-                e.printStackTrace();
+        try{
+            FileItem fileData = multipartfiledata.get( 0 );
+            recording = Recording.createRecording( new Recording(uuid, accountId, fileData.getContentType(), ddrId) );
+
+            //upload to S3
+            AWSClient client = ParallelInit.getAWSClient();
+            if(!client.uploadFileParts(fileData, recording.getFilename()) ) {
+                recording.delete(); // Delete file if upload failed
+                return null;
+            }
+            
+        } catch(Exception e){
+            System.out.println(e.getMessage());
         }
         
-        return host+"recording/"+recording.getFilename();
+        return "http://"+Settings.HOST+"/account/"+accountId+"/recording/"+recording.getFilename();
     }
     
     /**

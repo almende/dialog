@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -603,8 +604,32 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     	getState().put("applicationId", applicationId);
     }
     
+    public void setAWSInfo(@Name("bucketName") String bucketName, @Name("accessKey") String accessKey,
+                           @Name("accessKeySecret") String accessKeySecret) {
+        Map<String, String> awsInfo = new HashMap<String, String>();
+        awsInfo.put( "bucketName", bucketName );
+        awsInfo.put( "accessKey", accessKey );
+        awsInfo.put( "accessKeySecret", accessKeySecret );
+        
+        getState().put( "awsInfo", awsInfo );
+    }
+    
+    public Map<String, String> getAWSInfo() {
+        Map<String, String> awsInfo = getState().get( "awsInfo", new TypeUtil<Map<String, String>>() {} );
+        if(awsInfo==null) {
+            awsInfo = new HashMap<String, String>();
+        }
+        return awsInfo;
+    }
+    
     public Object getRecording(@Name("accountId") String accountId, @Name("filename") String filename) {
-        return Recording.getRecordingByFilename( filename );
+        String id = filename.replace( ".wav", "" );
+        return Recording.getRecording( id, accountId );
+    }
+    
+    public ArrayNode getRecordings(@Name("accountId") String accountId) {
+        Set<Recording> recordings = Recording.getRecordings( accountId );
+        return JOM.getInstance().convertValue(recordings, ArrayNode.class);
     }
     
     @Override

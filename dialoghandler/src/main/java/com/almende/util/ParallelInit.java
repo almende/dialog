@@ -1,5 +1,6 @@
 package com.almende.util;
 
+import com.almende.dialog.aws.AWSClient;
 import com.almende.dialog.db.MongoManager;
 import com.almende.dialog.util.AFHttpClient;
 import com.fasterxml.jackson.core.JsonParser;
@@ -27,6 +28,10 @@ public class ParallelInit {
 	public static boolean mongoActive = false;
 	public static Thread mongoThread = new MongoThread();
 	
+	public static AWSClient awsClient = null;
+        public static boolean awsClientActive = false;
+        public static Thread awsThread = new AWSThread();
+	
 	public static ObjectMapper om = new ObjectMapper();
 	
 	public ParallelInit(boolean isTest)
@@ -48,6 +53,9 @@ public class ParallelInit {
 		synchronized(mongoThread){
                     if (!mongoActive && !mongoThread.isAlive()) mongoThread.start();
                 }
+		synchronized(awsThread) {
+		    if (!awsClientActive && !awsThread.isAlive()) awsThread.start();
+		}
 		synchronized(loadingRequest){
 			if (loadingRequest) {
 				loadingRequest=false;
@@ -101,6 +109,17 @@ public class ParallelInit {
             }
             return mm;
         }
+	
+	public static AWSClient getAWSClient() {
+	    startThreads();
+	    while(!awsClientActive) {
+	        try {
+                    Thread.sleep(100);
+                }  catch (InterruptedException e) {
+                }  
+	    }
+	    return awsClient;
+	}
 	
 	public static ObjectMapper getObjectMapper(){
 		startThreads();

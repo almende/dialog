@@ -1,9 +1,6 @@
 package com.almende.dialog.accounts;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -11,6 +8,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -22,7 +20,9 @@ import org.jongo.Jongo;
 import org.jongo.MongoCollection;
 import org.jongo.MongoCursor;
 
+import com.almende.dialog.aws.AWSClient;
 import com.almende.util.ParallelInit;
+import com.amazonaws.util.IOUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -64,9 +64,17 @@ public class Recording {
         return recording;
     }
     
+    public void delete() {
+        ObjectNode query = ParallelInit.getObjectMapper().createObjectNode();
+        query.put( "_id", id );
+        
+        MongoCollection recordings = getCollection();
+        recordings.remove( query.toString() );
+    }
+    
     @GET
     @Path("{filename}")
-    public Response getAudioRecording(@PathParam("filename") String filename, @QueryParam("download") Boolean download, 
+    public Response getAudioRecording(@PathParam("filename") String filename, @DefaultValue("false") @QueryParam("download") Boolean download, 
                                       @Context HttpServletResponse res) throws IOException {
         
         String id = filename.replace( ".wav", "" );
@@ -78,7 +86,27 @@ public class Recording {
             
         } else {
             
+            AWSClient client = ParallelInit.getAWSClient();
+            
             String contentType = recording.getContentType();
+            if(download && recording.getFilename().endsWith(".wav")) {
+                contentType = "audio/basic";
+            } else if(recording.getFilename().endsWith(".wav")) {
+                contentType = "audio/x-wav";
+            }
+            
+            res.setContentType(contentType);
+            
+            OutputStream out = new BufferedOutputStream(res.getOutputStream());
+            InputStream in = client.getFile( filename );
+            
+            IOUtils.copy(in, out);
+            
+            in.close();
+            out.flush();
+            
+            
+            /*String contentType = recording.getContentType();
             if(filename.endsWith(".wav")) {
                 contentType = "audio/basic";
             }                     
@@ -99,15 +127,25 @@ public class Recording {
                     out.write(buffer, 0, length);
             }
             in.close();
-            out.flush();
+            out.flush();*/
         
         }
         
         return null;
     }
     
+    public static Recording getRecording(String id, String accountId) {
+        ObjectNode query = ParallelInit.getObjectMapper().createObjectNode();
+        query.put( "_id", id );
+        query.put( "accountId", accountId );
+        
+        MongoCollection coll = getCollection();
+        Recording recording = coll.findOne(query.toString()).as(Recording.class);
+        return recording; 
+    }
+    
     public static Recording getRecording(String id) {
-        ObjectNode query = ParallelInit.om.createObjectNode();
+        ObjectNode query = ParallelInit.getObjectMapper().createObjectNode();
         query.put( "_id", id );
         
         MongoCollection coll = getCollection();
@@ -116,7 +154,7 @@ public class Recording {
     }
     
     public static Recording getRecordingByFilename(String filename) {
-        ObjectNode query = ParallelInit.om.createObjectNode();
+        ObjectNode query = ParallelInit.getObjectMapper().createObjectNode();
         query.put( "filename", filename );
         
         MongoCollection coll = getCollection();
@@ -125,8 +163,8 @@ public class Recording {
     }
     
     public static Set<Recording> getRecordings(String accountId) {
-        ObjectNode query = ParallelInit.om.createObjectNode();
-        query.put( "account", accountId );
+        ObjectNode query = ParallelInit.getObjectMapper().createObjectNode();
+        query.put( "accountId", accountId );
         
         MongoCollection coll = getCollection();
         MongoCursor<Recording> cursor = coll.find(query.toString()).as(Recording.class);
@@ -139,7 +177,7 @@ public class Recording {
     
     private static MongoCollection getCollection() {
 
-        Jongo jongo = ParallelInit.mm.getJongo();
+        Jongo jongo = ParallelInit.getMongoManager().getJongo();
         return jongo.getCollection("recording");
     }
     
@@ -173,18 +211,6 @@ public class Recording {
     
     public void setAccountId( String accountId ) {
         this.accountId = accountId;
-    }
-    
-    @JsonIgnore
-    public Integer getFileSize() {
-        File file = new File(BASEPATH + id);
-        return (int) file.length();
-    }
-    
-    @JsonIgnore
-    public String getFileHashCode() {
-        File file = new File(BASEPATH + id);
-        return Integer.toHexString(file.hashCode()).toUpperCase();
     }
     
     public String getDdrId() {

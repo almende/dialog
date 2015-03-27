@@ -1,6 +1,8 @@
 package com.almende.dialog.adapter.tools;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.almende.dialog.Settings;
@@ -9,8 +11,10 @@ import com.twilio.sdk.TwilioRestException;
 import com.twilio.sdk.resource.factory.CallFactory;
 import com.twilio.sdk.resource.factory.IncomingPhoneNumberFactory;
 import com.twilio.sdk.resource.instance.Account;
+import com.twilio.sdk.resource.instance.AvailablePhoneNumber;
 import com.twilio.sdk.resource.instance.Call;
 import com.twilio.sdk.resource.instance.IncomingPhoneNumber;
+import com.twilio.sdk.resource.list.AvailablePhoneNumberList;
 
 public class Twilio {
 
@@ -89,5 +93,21 @@ public class Twilio {
         }
         
         return null;
+    }
+    
+    public List<String> getFreePhoneNumbers(String countryCode, String contains) {
+        
+        HashMap<String, String> params = new HashMap<String, String>();
+        if(contains!=null) {
+            params.put( "Contains", contains );
+        }
+        
+        List<String> availableNumbers = new ArrayList<String>();
+        AvailablePhoneNumberList numbers = client.getAccount().getAvailablePhoneNumbers(params, countryCode, "Local"); 
+        for (AvailablePhoneNumber number : numbers) { 
+            availableNumbers.add( number.getPhoneNumber() );
+        }
+        
+        return availableNumbers;
     }
 }

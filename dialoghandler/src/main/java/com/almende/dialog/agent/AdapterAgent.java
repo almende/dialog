@@ -258,6 +258,27 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
         return newConfig.getConfigId();
     }
     
+    public List<String> createMultipleTwilioAdapters(@Name("accountSid") String accountSid, @Name("authToken") String authToken, 
+        @Name("count") Integer count, @Name("countryCode") String countryCode, 
+        @Name("contains") @Optional String contains, @Name("preferredLanguage") @Optional String preferredLanguage,
+        @Name("accountId") @Optional String accountId, @Name("anonymous") @Optional Boolean anonymous) throws Exception {
+        
+        List<String> boughtNumbers = new ArrayList<String>();
+        Twilio twilio = new Twilio(accountSid, authToken);
+        List<String> availableNumbers = twilio.getFreePhoneNumbers( countryCode, contains );
+        
+        if(availableNumbers.size()<count) {
+            throw new Exception("Can't buy more then: "+availableNumbers.size()+" numbers");
+        }
+        
+        for(int i=0; i<count; i++) {
+            String id = twilio.buyPhoneNumber( availableNumbers.get(i), getApplicationId() );
+            boughtNumbers.add( id );
+        }
+        
+        return boughtNumbers;
+    }
+    
     /**
      * Adds a new broadsoft adapter
      * 

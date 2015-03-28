@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.logging.Logger;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -15,36 +16,22 @@ import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.agent.Agent;
-import com.almende.eve.agent.annotation.ThreadSafe;
-import com.almende.eve.rpc.annotation.Access;
-import com.almende.eve.rpc.annotation.AccessType;
-import com.almende.eve.rpc.annotation.Name;
-import com.almende.eve.rpc.annotation.Optional;
-import com.almende.eve.rpc.jsonrpc.JSONRequest;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.eve.protocol.jsonrpc.annotation.Access;
+import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
+import com.almende.eve.protocol.jsonrpc.annotation.Name;
+import com.almende.eve.protocol.jsonrpc.annotation.Optional;
+import com.almende.eve.protocol.jsonrpc.formats.JSONRequest;
 import com.almende.util.TypeUtil;
+import com.almende.util.jackson.JOM;
 import com.askfast.commons.agent.intf.DDRRecordAgentInterface;
 import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Access(AccessType.PUBLIC)
-@ThreadSafe(true)
-public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
+public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInterface
 {
     private static final Logger log = Logger.getLogger( DDRRecordAgent.class.getName() );
     
-    @Override
-    protected void onCreate()
-    {
-        generateDefaultDDRTypes();
-        try {
-            startSchedulerForSubscriptions();
-        }
-        catch (Exception e) {
-            log.severe("Scheduler for checking subscriptions failed. Message: "+ e.toString());
-            e.printStackTrace();
-        }
-    }
     
     @Override
     protected void onInit() {
@@ -343,7 +330,7 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
             String schedulerId = getState().get(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId(),
                                                 String.class);
             if (schedulerId != null) {
-                getScheduler().cancelTask(schedulerId);
+                stopScheduledTask( schedulerId );
                 getState().remove(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId());
                 result.add(schedulerId);
                 if(deleteDDRPrice) {
@@ -402,7 +389,7 @@ public class DDRRecordAgent extends Agent implements DDRRecordAgentInterface
                 }
                 log.info(String.format("-------Starting scheduler for processing adapter subscriptions. DDRPrice: %s -------",
                                        ddrPrice.getId()));
-                id = getScheduler().createTask(req, interval, true, true);
+                id = schedule(req, interval, true);
                 getState().put(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId(), id);
             }
             catch (Exception e) {

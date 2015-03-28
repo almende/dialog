@@ -11,16 +11,16 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<param-value>eve.yaml</param-value>
 	</context-param>
 	<listener>
-		<listener-class>com.almende.eve.transport.http.AgentListener</listener-class>
+		<listener-class>com.almende.eve.deploy.EveListener</listener-class>
 	</listener>
 	<listener>
 		<listener-class>com.almende.dialog.adapter.ServletListner</listener-class>
 	</listener>
 	<servlet>
 		<servlet-name>AgentServlet</servlet-name>
-		<servlet-class>com.almende.eve.transport.http.AgentServlet</servlet-class>
+		<servlet-class>com.almende.eve.transport.http.DebugServlet</servlet-class>
 		<init-param>
-			<param-name>servlet_url</param-name>
+			<param-name>ServletUrl</param-name>
 			<param-value>http://localhost:8082/dialoghandler/agents/</param-value>
 		</init-param>
 		<load-on-startup>1</load-on-startup>
@@ -64,15 +64,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 		<filter-name>CORS</filter-name>
 		<url-pattern>/*</url-pattern>
 	</filter-mapping>
-
-	<servlet>
-		<servlet-name>SingleAgentServlet</servlet-name>
-		<servlet-class>com.almende.dialog.util.DialogEveServlet</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>SingleAgentServlet</servlet-name>
-		<url-pattern>/rpc/*</url-pattern>
-	</servlet-mapping>
+	
 	<servlet>
 		<servlet-name>mailhandler</servlet-name>
 		<servlet-class>com.almende.dialog.adapter.MailServlet</servlet-class>

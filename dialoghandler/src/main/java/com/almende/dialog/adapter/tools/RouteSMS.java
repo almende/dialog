@@ -11,7 +11,7 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.util.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.fasterxml.jackson.core.type.TypeReference;

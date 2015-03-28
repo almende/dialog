@@ -1,36 +1,30 @@
-# Eve configuration
-
-# environment specific settings
-environment:
-  Development:
-  Production:
-
-# transport services
-transport_services:
-- class: HttpService
-  servlet_url: http://keyserver.ask-fast.com/dialoghandler/agents/
-
-# state settings
-# the state is used to persist the agents state.
-state:
-  class: FileStateFactory
-  path: .eveagents
-  json: true
-cookies:
-  class: FileStateFactory
-  path: .evecookies
-tokens:
-  class: FileStateFactory
-  path: .evecookies
-
-# scheduler settings
-scheduler:
-  class: RunnableSchedulerFactory
-
-bootstrap:
-  agents:
-    dialog: com.almende.dialog.agent.DialogAgent
-    adapter: com.almende.dialog.agent.AdapterAgent
-    log: com.almende.dialog.agent.LogWrapperAgent
-    ddr: com.almende.dialog.agent.DDRRecordAgent
-    session: com.almende.dialog.agent.SessionAgent
+templates:  
+   defaultAgent:
+      state:
+         class: com.almende.eve.state.file.FileStateBuilder
+         path: .eveagents
+      transport:
+         class: com.almende.eve.transport.http.HttpTransportBuilder
+         servletUrl: http://localhost:8082/dialoghandler/agents/
+         doAuthentication: false
+      scheduler:
+         class: com.almende.eve.scheduling.PersistentSchedulerBuilder
+         state:
+           class: com.almende.eve.state.file.FileStateBuilder
+         
+agents:
+  - id: dialog
+    class: com.almende.dialog.agent.DialogAgent
+    extends: templates/defaultAgent
+  - id: adapter
+    class: com.almende.dialog.agent.AdapterAgent
+    extends: templates/defaultAgent
+  - id: log
+    class: com.almende.dialog.agent.LogWrapperAgent
+    extends: templates/defaultAgent
+  - id: ddr
+    class: com.almende.dialog.agent.DDRRecordAgent
+    extends: templates/defaultAgent
+  - id: session
+    class: com.almende.dialog.agent.SessionAgent
+    extends: templates/defaultAgent

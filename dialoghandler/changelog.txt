@@ -1,6 +1,15 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+1-4-2015 version 1.7.1
+- feature: store recording in s3
+- feature: download recording from the rest endpoint
+
+1-4-2015 version 1.7.0
+- feature: store recording in db
+- feature: moved testing to a standalone jetty
+- fix: hangup while audio recording broadsoft
+
 27-3-2015 version 1.6.11
 - feature: buy multiple twilio numbers when creating the adapter
 

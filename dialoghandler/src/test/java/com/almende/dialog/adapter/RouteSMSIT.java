@@ -37,7 +37,7 @@ public class RouteSMSIT extends TestFramework {
     private static final String simpleQuestion = "How are you?";
 
     @Before
-    public void setup() {
+    public void setup() throws Exception {
 
         super.setup();
         new DialogAgent().setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.ROUTE_SMS);

@@ -365,7 +365,8 @@ public class CMServletIT extends TestFramework {
                 assertEquals(linkedStatus.getReference(), linkeDeliveryStatus.getReference());
                 linkedStatusEntityChecked = true;
                 //save the parent sms delivery notification in the buffer
-                TestServlet.logForTest(smsDeliveryStatus.getReference() + "|" + smsDeliveryStatus.getRemoteAddress());
+                TestServlet.logForTest(AdapterType.SMS.toString(), smsDeliveryStatus.getReference() + "|" +
+                                                                   smsDeliveryStatus.getRemoteAddress());
             }
             else {
                 linkeDeliveryStatus = smsDeliveryStatus;
@@ -385,7 +386,7 @@ public class CMServletIT extends TestFramework {
 
         //initiate multiple address sms
         MultipleAddressStatusEntityTest();
-        String[] parentStatusDetails = TestServlet.getLogObject().toString().split("\\|");
+        String[] parentStatusDetails = TestServlet.getLogObject(AdapterType.SMS.toString()).toString().split("\\|");
         //check if the DLR acceptance works properly for both numbers
 
         String testXml = getTestSMSStatusXML(parentStatusDetails[1], parentStatusDetails[0]);
@@ -480,7 +481,7 @@ public class CMServletIT extends TestFramework {
         //send an outbound SMS
         ReceiveAppointmentNewSessionMessageTest();
 
-        String smsRequestXML = TestServlet.getLogObject().toString();
+        String smsRequestXML = TestServlet.getLogObject(AdapterType.SMS.toString()).toString();
         //fetch the sms reference
         DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
         DocumentBuilder newDocumentBuilder = newInstance.newDocumentBuilder();
@@ -505,8 +506,8 @@ public class CMServletIT extends TestFramework {
         cmSmsServlet.service(httpServletRequest, httpServletResponse);
 
         //assert that a POST call was performd on the callback
-        assertTrue(TestServlet.getLogObject() instanceof SMSDeliveryStatus);
-        SMSDeliveryStatus smsPayload = (SMSDeliveryStatus) TestServlet.getLogObject();
+        assertTrue(TestServlet.getLogObject(AdapterType.SMS.toString()) instanceof SMSDeliveryStatus);
+        SMSDeliveryStatus smsPayload = (SMSDeliveryStatus) TestServlet.getLogObject(AdapterType.SMS.toString());
         assertTrue(smsPayload != null);
         assertEquals("Are you available today?\n[ Yup | Nope ]", smsPayload.getSms());
         assertEquals("2009-06-15T13:45:30", smsPayload.getSentTimeStamp());
@@ -715,7 +716,7 @@ public class CMServletIT extends TestFramework {
         String simpleQuestion, String senderName) throws Exception {
 
         //fetch the xml generated
-        Document builder = getXMLDocumentBuilder(TestServlet.getLogObject().toString());
+        Document builder = getXMLDocumentBuilder(TestServlet.getLogObject(AdapterType.SMS.toString()).toString());
         NodeList messageNodeList = builder.getElementsByTagName("MESSAGES");
         NodeList customerNodeList = builder.getElementsByTagName("CUSTOMER");
         NodeList userNodeList = builder.getElementsByTagName("USER");

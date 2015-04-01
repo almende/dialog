@@ -8,6 +8,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -53,7 +54,7 @@ public class TestServlet extends HttpServlet
     
     //used for local caching of question for testing
     public static String responseQuestionString = "" ;
-    private static Object logObject;
+    private static Map<String, Object> logObject;
     
     private static final Logger log = Logger.getLogger( TestServlet.class.getSimpleName() );
     
@@ -116,7 +117,7 @@ public class TestServlet extends HttpServlet
                                                                                                    .length() + 1),
                                        "UTF-8");
         }
-        TestServlet.logForTest(result);
+        TestServlet.logForTest("question", result);
         resp.getWriter().write(result);
         resp.setHeader("Content-Type", MediaType.APPLICATION_JSON);
     }
@@ -181,7 +182,7 @@ public class TestServlet extends HttpServlet
         while ((line = reader.readLine()) != null) {
             jb.append(line);
         }
-        logForTest(jb.toString());
+        logForTest("postPayload", jb.toString());
         try {
             validatePayload(req.getRequestURL() + "?" + req.getQueryString(), new String(jb.toString()));
         }
@@ -243,15 +244,16 @@ public class TestServlet extends HttpServlet
      * cache stuff for local unit testing
      * @param log
      */
-    public static void logForTest(Object log)
+    public static void logForTest(String key, Object log)
     {
         TestServlet.log.info( "LogForTest: "+ log.toString() );
-        TestServlet.logObject = log;
+        logObject = logObject != null ? logObject : new HashMap<String, Object>();
+        logObject.put(key, log);
     }
 
-    public static Object getLogObject() {
+    public static Object getLogObject(String key) {
 
-        return logObject;
+        return logObject != null ? logObject.get(key) : null;
     }
     
     public static void clearLogObject() {

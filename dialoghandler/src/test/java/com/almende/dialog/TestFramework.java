@@ -2,9 +2,11 @@ package com.almende.dialog;
 
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.Method;
+import java.net.BindException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
+import java.util.logging.Logger;
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.InternetHeaders;
@@ -13,8 +15,13 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import org.custommonkey.xmlunit.XMLTestCase;
+import org.custommonkey.xmlunit.XMLUnit;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.webapp.WebAppContext;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.experimental.categories.Category;
 import org.w3c.dom.Document;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
@@ -32,7 +39,6 @@ import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
-import com.meterware.servletunit.ServletRunner;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 
@@ -42,8 +48,6 @@ import com.sun.jersey.api.client.WebResource;
  */
 public class TestFramework
 {
-	//TODO!
-//    private final LocalServiceTestHelper helper = new LocalServiceTestHelper( new LocalDatastoreServiceTestConfig() );
     protected static final String localAddressMail      = "info@dialog-handler.appspotmail.com";
     protected static final String localAddressChat      = "info@dialog-handler.appspotchat.com";
     protected static final String remoteAddressEmail    = "info@askcs.com";
@@ -51,11 +55,12 @@ public class TestFramework
     protected static final String remoteAddressVoice    = "0614765800";
     protected static final String TEST_PUBLIC_KEY    	= "agent1@ask-cs.com";
     protected static final String TEST_PRIVATE_KEY 		= "test_private_key";
-    
-    public static ThreadLocal<ServletRunner> servletRunner = new ThreadLocal<ServletRunner>();
+    private Server server = null;
+    protected final int jettyPort = 8082;
+    private static final Logger log = Logger.getLogger(TestFramework.class.toString());
     
     @Before
-    public void setup() {
+    public void setup() throws Exception {
 
         TestServlet.TEST_SERVLET_PATH = "http://localhost:8082/dialoghandler/unitTestServlet";
         new ParallelInit(true);
@@ -63,24 +68,29 @@ public class TestFramework
         if (ParallelInit.datastore != null) {
             ParallelInit.datastore.dropDatabase();
         }
-        servletRunner.remove();
-        if (servletRunner.get() == null) {
-            servletRunner.set(setupTestServlet());
-        }
         DialogAgent dialogAgent = new DialogAgent();
         dialogAgent.setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.CM);
         dialogAgent.setDefaultProviderSettings(AdapterType.CALL, AdapterProviders.BROADSOFT);
+        //check if server has to be started
+        Category integrationTestAnnotation = getClass().getAnnotation(Category.class);
+        if (integrationTestAnnotation != null &&
+            integrationTestAnnotation.toString().contains("com.almende.dialog.IntegrationTest")) {
+            
+            startJettyServer();
+        }
     }
     
     @After
-    public void tearDown()
-    {
-        if(ParallelInit.datastore != null)
-        {
+    public void tearDown() throws Exception {
+
+        if (ParallelInit.datastore != null) {
             ParallelInit.datastore.dropDatabase();
         }
-        servletRunner.remove();
         TestServlet.clearLogObject();
+        if (server != null) {
+            server.stop();
+            server.destroy();
+        }
     }
     
     public static String fetchResponse( String httpMethods, String url, String payload )
@@ -257,13 +267,6 @@ public class TestFramework
         mimeMultipart.addBodyPart( new MimeBodyPart( internetHeaders, value.getBytes()) );
     }
     
-    private ServletRunner setupTestServlet()
-    {
-        ServletRunner servletRunner = new ServletRunner();
-        servletRunner.registerServlet( "/unitTestServlet/*", TestServlet.class.getName() );
-        return servletRunner;
-    }
-    
     public static Document getXMLDocumentBuilder(String xmlContent) throws Exception
     {
         DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
@@ -281,5 +284,44 @@ public class TestFramework
         mimeMessage.addRecipient(javax.mail.Message.RecipientType.TO, new InternetAddress(remoteAddress));
         mimeMessage.setText(messageText);
         return mimeMessage;
+    }
+    
+    /**
+     * Asserts if the given XMLS are equals
+     * @param expected
+     * @param actual
+     * @throws Exception
+     */
+    protected void assertXMLGeneratedByTwilioLibrary(String expected, String actual) throws Exception {
+
+        XMLTestCase xmlTestCase = new XMLTestCase() {
+        };
+        XMLUnit.setIgnoreAttributeOrder(true);
+        XMLUnit.setIgnoreComments(true);
+        XMLUnit.setIgnoreWhitespace(true);
+        xmlTestCase.assertXMLEqual(expected, actual);
+    }
+    
+    /**
+     * Starts the jetty server within the test
+     * @return
+     * @throws Exception 
+     */
+    public void startJettyServer() throws Exception {
+
+        if (server == null || server.isRunning()) {
+            server = new Server(jettyPort);
+            server.setStopAtShutdown(true);
+            WebAppContext webAppContext = new WebAppContext("src/test/webapp/WEB-INF/web.xml", "/");
+            webAppContext.setResourceBase("src/test/webapp");
+            webAppContext.setClassLoader(getClass().getClassLoader());
+            server.setHandler(webAppContext);
+            try {
+                server.start();
+            }
+            catch (BindException ex) {
+                log.info(String.format("Jetty is already running on port: %s. Ignoring request", jettyPort));
+            }
+        }
     }
 }

@@ -234,7 +234,7 @@ public class RouteSmsServlet extends TextServlet {
                         String callbackPayload = ServerUtils.serialize(routeSMSStatus);
                         client.post(callbackPayload, routeSMSStatus.getCallback());
                         if (ServerUtils.isInUnitTestingEnvironment()) {
-                            TestServlet.logForTest(routeSMSStatus);
+                            TestServlet.logForTest(getAdapterType(), routeSMSStatus);
                         }
                         dialogLog.info(routeSMSStatus.getAdapterConfig(), String
                                                         .format("POST request with payload %s sent to: %s",

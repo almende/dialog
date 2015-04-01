@@ -12,7 +12,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Logger;
+
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -22,10 +24,12 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
+import com.almende.dialog.accounts.Recording;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
@@ -337,10 +341,6 @@ public class TwilioAdapter {
             log.warning(String.format("Answer input decode failed for: %s", answer_input));
         }
 
-        if (recordingUrl != null) {
-            answer_input = recordingUrl.replace(".wav", "") + ".wav";
-        }
-
         if (direction.equals("inbound")) {
             String tmpLocalId = new String(localID);
             localID = new String(remoteID);
@@ -351,6 +351,10 @@ public class TwilioAdapter {
         List<String> callIgnored = Arrays.asList("no-answer", "busy", "canceled", "failed");
 
         if (session != null) {
+            
+            if (recordingUrl != null) {
+                answer_input = storeAudioFile( recordingUrl.replace(".wav", "") + ".wav", session.getAccountId(), session.getDdrRecordId());
+            }
             
             //add a tag in the session saying its picked up
             session.setCallPickedUpStatus(true);
@@ -1272,6 +1276,20 @@ public class TwilioAdapter {
             return "";
         }
         return callerId;
+    }
+    
+    /**
+     * Store an incoming audio file and return the download url
+     * @param bimp
+     * @param accountId
+     * @return downloadUrl
+     */
+    private String storeAudioFile(String url, String accountId, String ddrId) {
+        
+        String uuid = UUID.randomUUID().toString();
+        Recording recording = Recording.createRecording( new Recording(uuid, accountId, url, "audio/wav", ddrId) );
+        
+        return "http://"+Settings.HOST+"/dialoghandler/rest/recording/"+recording.getId()+".wav";
     }
     
     /**

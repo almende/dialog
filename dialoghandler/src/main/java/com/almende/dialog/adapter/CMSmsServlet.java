@@ -277,7 +277,7 @@ public class CMSmsServlet extends TextServlet {
                     try {
                         String callbackPayload = ServerUtils.serialize(cmStatus);
                         if (ServerUtils.isInUnitTestingEnvironment()) {
-                            TestServlet.logForTest(cmStatus);
+                            TestServlet.logForTest(getAdapterType(), cmStatus);
                         }
                         webResource.type("text/plain").post(String.class, callbackPayload);
                         dialogLog.info(cmStatus.getAdapterConfig(), String

@@ -7,7 +7,7 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 
-public class ClientConThread extends Thread implements java.lang.Runnable {
+public class ClientConThread extends Thread {
 //	private static final Logger log = Logger
 //			.getLogger("DialogHandler");
 	@Override

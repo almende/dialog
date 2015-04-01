@@ -1,6 +1,7 @@
 package com.almende.dialog.adapter;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
@@ -15,8 +16,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -24,21 +27,32 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import javax.ws.rs.core.Response.Status;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileUploadException;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
+
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
+import com.almende.dialog.accounts.Recording;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
+import com.almende.dialog.aws.AWSClient;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
@@ -48,7 +62,7 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
-import com.almende.util.myBlobstore.MyBlobStore;
+import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.Language;
@@ -65,7 +79,9 @@ public class VoiceXMLRESTProxy {
     private static final String PLAY_TRIAL_AUDIO_KEY = "playTrialAccountAudio";
     private static final int MAX_RETRIES = 1;
     protected String TIMEOUT_URL = "timeout";
+    protected String UPLOAD_URL = "upload";
     protected String EXCEPTION_URL = "exception";
+    @SuppressWarnings( "unused" )
     private String host = "";
 
     public static void killSession(Session session) {
@@ -922,6 +938,7 @@ public class VoiceXMLRESTProxy {
                                                                    ServerUtils.serialize(session)));
                                             //flush the keys if ddrProcessing was successful
                                             if (DDRUtils.stopDDRCosts(session.getKey(), true)) {
+                                                Thread.sleep( 1000 ); // Wait one seconds to process the rest of the dialog
                                                 session.drop();
                                             }
                                             hangup(session);
@@ -1009,6 +1026,71 @@ public class VoiceXMLRESTProxy {
         }
         return Response.ok("<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>")
                                         .build();
+    }
+    
+    @POST
+    @Path("upload")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Produces("application/voicexml+xml")
+    public Response doUpload(@QueryParam("questionId") String question_id, @QueryParam("sessionKey") String sessionKey,
+                         @Context UriInfo ui, @Context HttpServletRequest req, @Context HttpServletResponse res)
+                    throws URISyntaxException {
+        
+        this.host = ui.getBaseUri().toString().replace(":80", "");
+        
+        String reply = "<vxml><exit/></vxml>";
+        Session session = Session.getSession(sessionKey);
+        if (session != null) {
+            String answer_input = storeAudioFile(req, session.getAccountId(), session.getDdrRecordId());
+            Question question = session.getQuestion();
+            if (question != null) {
+                String responder = session.getRemoteAddress();
+                if (session.killed) {
+                    log.warning("session is killed");
+                    return Response.status(Response.Status.BAD_REQUEST).build();
+                }
+                if (question.getType() != null && !question.getType().equalsIgnoreCase("comment")) {
+                    dialogLog.log(LogLevel.INFO,
+                                  session.getAdapterConfig(),
+                                  String.format("Answer input: %s from: %s to question: %s", answer_input,
+                                                session.getRemoteAddress(),
+                                                question.getQuestion_expandedtext(session.getKey())), session);
+                }
+                String answerForQuestion = question.getQuestion_expandedtext(session.getKey());
+                question = question.answer(responder, session.getAdapterConfig().getConfigId(), null, answer_input, sessionKey);
+                //reload the session
+                session = Session.getSession(sessionKey);
+                if(session!=null) {
+                    session.setQuestion(question);
+                    session.storeSession();
+                    //check if ddr is in session. save the answer in the ddr
+                    if (session.getDdrRecordId() != null) {
+                        try {
+                            DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+                            if (ddrRecord != null) {
+                                ddrRecord.addAdditionalInfo(DDRRecord.ANSWER_INPUT_KEY + ":" + answerForQuestion,
+                                                            answer_input);
+                                ddrRecord.createOrUpdateWithLog(session);
+                            }
+                        }
+                        catch (Exception e) {
+                        }
+                    }
+                    return handleQuestion(question, session.getAdapterConfig(), responder, sessionKey);
+                }
+            }
+            else {
+                log.warning("No question found in session!");
+            }
+        }
+        else {
+            log.warning("No session found for: " + sessionKey);
+            dialogLog.severe(null, "No session found!", session);
+        }
+        return Response.ok(reply).build();
+        
+        
+        
     }
 
     public class Return {
@@ -1401,12 +1483,12 @@ public class VoiceXMLRESTProxy {
 
         // Fetch the upload url
         //String host = this.host.replace("rest/", "");
-        String uuid = UUID.randomUUID().toString();
+        /*String uuid = UUID.randomUUID().toString();
         String filename = uuid + ".wav";
         String storedAudiofile = host + "download/" + filename;
 
         MyBlobStore store = new MyBlobStore();
-        String uploadURL = store.createUploadUrl(filename, "/dialoghandler/rest/download/audio.vxml");
+        String uploadURL = store.createUploadUrl(filename, "/dialoghandler/rest/download/audio.vxml");*/
 
         outputter.startTag("form");
         outputter.attribute("id", "ComposeMessage");
@@ -1432,16 +1514,30 @@ public class VoiceXMLRESTProxy {
             outputter.endTag();
             outputter.endTag();
         }
-        /*
-         * outputter.startTag("goto"); outputter.attribute("next",
-         * handleTimeoutURL
-         * +"?question_id="+question.getQuestion_id()+"&sessionKey="
-         * +sessionKey); outputter.endTag();
-         */
-        outputter.endTag();
-        outputter.endTag();
+        outputter.endTag(); // noinput
+        
+        outputter.startTag("catch");
+        outputter.attribute("event", "connection.disconnect.hangup");
+        outputter.startTag("submit");
+        outputter.attribute("next", UPLOAD_URL+"?questionId=" + question.getQuestion_id() + "&sessionKey=" +URLEncoder.encode(sessionKey, "UTF-8"));
+        outputter.attribute("namelist", "file");
+        outputter.attribute("method", "post");
+        outputter.attribute("enctype", "multipart/form-data");
+        outputter.endTag(); // submit
+        outputter.endTag(); // noinput
+        
+        outputter.startTag("filled");
+        outputter.startTag("submit");
+        outputter.attribute("next", UPLOAD_URL+"?questionId=" + question.getQuestion_id() + "&sessionKey=" +URLEncoder.encode(sessionKey, "UTF-8"));
+        outputter.attribute("namelist", "file");
+        outputter.attribute("method", "post");
+        outputter.attribute("enctype", "multipart/form-data");
+        outputter.endTag(); // submit
+        outputter.endTag(); // filled
+        
+        outputter.endTag(); // record
 
-        outputter.startTag("subdialog");
+        /*outputter.startTag("subdialog");
         outputter.attribute("name", "saveWav");
         outputter.attribute("src", uploadURL);
         outputter.attribute("namelist", "file");
@@ -1464,9 +1560,8 @@ public class VoiceXMLRESTProxy {
             outputter.attribute("src", prompt);
             outputter.endTag();
             outputter.endTag();
-        }
-        outputter.endTag();
-        outputter.endTag();
+        }*/
+        outputter.endTag(); // form
     }
 
     protected String renderExitQuestion(List<String> prompts, String sessionKey) {
@@ -1720,6 +1815,50 @@ public class VoiceXMLRESTProxy {
         return agentURL;
     }
 
+    /**
+     * Store an incoming audio file and return the download url
+     * @param bimp
+     * @param accountId
+     * @return downloadUrl
+     */
+    private String storeAudioFile(HttpServletRequest request, String accountId, String ddrId) {
+        
+        String uuid = UUID.randomUUID().toString();
+        List<FileItem> multipartfiledata = new ArrayList<FileItem>();
+        
+        try {
+            DiskFileItemFactory dff = new DiskFileItemFactory();
+            dff.setSizeThreshold( 16777216 ); // If the file is bigger then 16 Mb store to disk
+            dff.setRepository( new File("./blobstore/") );
+            multipartfiledata = new ServletFileUpload(dff).parseRequest(request);
+        }
+        catch ( FileUploadException e1 ) {
+            log.warning("Failed to receive file");
+        }
+        
+        if (multipartfiledata.size() != 1) {
+                throw new WebApplicationException(Response.status(Status.BAD_REQUEST).build());
+        }
+        
+        Recording recording = null;
+        try{
+            FileItem fileData = multipartfiledata.get( 0 );
+            recording = Recording.createRecording( new Recording(uuid, accountId, fileData.getContentType(), ddrId) );
+
+            //upload to S3
+            AWSClient client = ParallelInit.getAWSClient();
+            if(!client.uploadFileParts(fileData, recording.getFilename()) ) {
+                recording.delete(); // Delete file if upload failed
+                return null;
+            }
+            
+        } catch(Exception e){
+            System.out.println(e.getMessage());
+        }
+        
+        return "http://"+Settings.HOST+"/account/"+accountId+"/recording/"+recording.getFilename();
+    }
+    
     /**
      * method checks with broadsoft if the session is already in place. If it is
      * place, it returns at error message.

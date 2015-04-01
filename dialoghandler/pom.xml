@@ -22,7 +22,6 @@
 		<scribe.version>1.3.5</scribe.version>
 		<xmlenc.version>0.53</xmlenc.version>
 		<jxmail.version>1.4.7</jxmail.version>
-		<httpunit.version>1.7</httpunit.version>
 		<junit.version>4.11</junit.version>
 		<mockito.version>1.9.5</mockito.version>
 		<libphonenumber.version>5.9</libphonenumber.version>
@@ -40,6 +39,8 @@
 		<smack.version>3.1.0</smack.version>
 		<twilio.version>3.4.5</twilio.version>
 		<okhttp.version>2.2.0</okhttp.version>
+		<aws-sdk.version>1.9.25</aws-sdk.version>
+		<xmlunit.version>1.6</xmlunit.version>
 	</properties>
 
 	<organization>
@@ -117,12 +118,6 @@
 			<version>${jxmail.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>httpunit</groupId>
-			<artifactId>httpunit</artifactId>
-			<version>${httpunit.version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>${junit.version}</version>
@@ -188,10 +183,26 @@
 			<version>${twilio.version}</version>
 		</dependency>
 		<dependency>
-		  <groupId>com.squareup.okhttp</groupId>
-		  <artifactId>okhttp</artifactId>
-		  <version>${okhttp.version}</version>
+			<groupId>com.squareup.okhttp</groupId>
+			<artifactId>okhttp</artifactId>
+			<version>${okhttp.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk</artifactId>
+			<version>${aws-sdk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-fileupload</groupId>
+			<artifactId>commons-fileupload</artifactId>
+			<version>1.3</version>
+		</dependency>
+		<dependency>
+			<groupId>xmlunit</groupId>
+			<artifactId>xmlunit</artifactId>
+			<version>${xmlunit.version}</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
@@ -261,26 +272,26 @@
 					<contextPath>/</contextPath>
 				</configuration>
 
-				<executions>
-					<execution>
-						<id>start-jetty</id>
-						<phase>pre-integration-test</phase>
-						<goals>
-							<goal>run</goal>
-						</goals>
-						<configuration>
-							<scanIntervalSeconds>10</scanIntervalSeconds>
-							<daemon>true</daemon>
-						</configuration>
-					</execution>
-					<execution>
-						<id>stop-jetty</id>
-						<phase>post-integration-test</phase>
-						<goals>
-							<goal>stop</goal>
-						</goals>
-					</execution>
-				</executions>
+				<!-- <executions> -->
+				<!-- <execution> -->
+				<!-- <id>start-jetty</id> -->
+				<!-- <phase>pre-integration-test</phase> -->
+				<!-- <goals> -->
+				<!-- <goal>run</goal> -->
+				<!-- </goals> -->
+				<!-- <configuration> -->
+				<!-- <scanIntervalSeconds>10</scanIntervalSeconds> -->
+				<!-- <daemon>true</daemon> -->
+				<!-- </configuration> -->
+				<!-- </execution> -->
+				<!-- <execution> -->
+				<!-- <id>stop-jetty</id> -->
+				<!-- <phase>post-integration-test</phase> -->
+				<!-- <goals> -->
+				<!-- <goal>stop</goal> -->
+				<!-- </goals> -->
+				<!-- </execution> -->
+				<!-- </executions> -->
 			</plugin>
 
 			<!-- Make compiler UTF-8/ISO-8859-1 aware, set JVM to 1.7+ -->

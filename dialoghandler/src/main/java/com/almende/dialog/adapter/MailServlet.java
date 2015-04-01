@@ -367,7 +367,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                     transport.close();
                 }
                 else {
-                    TestServlet.logForTest(simpleMessage);
+                    TestServlet.logForTest(getAdapterType(), simpleMessage);
                 }
             }
         }
@@ -617,7 +617,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             transport.close();
         }
         else {
-            TestServlet.logForTest(simpleMessage);
+            TestServlet.logForTest(getAdapterType(), simpleMessage);
         }
     }
 

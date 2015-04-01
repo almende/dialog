@@ -1,9 +1,8 @@
 package com.almende.dialog.adapter;
 
-import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -20,6 +19,7 @@ import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
+import com.askfast.commons.entity.AdapterType;
 
 public class VoiceXMLServletTest extends TestFramework {
 
@@ -54,6 +54,12 @@ public class VoiceXMLServletTest extends TestFramework {
 
         assertEquals("answer?questionId=" + COMMENT_QUESTION_ID + "&sessionKey=" + sessionKey,
                      java.net.URLDecoder.decode(_goto.getAttributes().getNamedItem("next").getNodeValue(), "UTF-8"));
+        assertXMLGeneratedByTwilioLibrary(String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" "
+                                                                                        + "xmlns=\"http://www.w3.org/2001/vxml\"><form><block><prompt><audio src=\"%1$s\"/>"
+                                                                                        + "</prompt><goto next=\"answer?questionId=1&amp;sessionKey=%2$s\"/>"
+                                                                                        + "</block></form></vxml>",
+                                                        COMMENT_QUESTION_AUDIO, URLEncoder.encode(sessionKey, "UTF-8")),
+                                          result);
     }
 
     @Test
@@ -83,25 +89,34 @@ public class VoiceXMLServletTest extends TestFramework {
         Question question = getOpenAudioQuestion();
         AdapterConfig adapter = createBroadsoftAdapter();
         String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        
+
         String result = renderQuestion(question, adapter, sessionKey);
+        TestServlet.logForTest(AdapterType.CALL.toString(), COMMENT_QUESTION_AUDIO);
+        String expected = String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\">"
+                                                                        + "<form id=\"ComposeMessage\"><record name=\"file\" beep=\"true\" maxtime=\"15s\" dtmfterm=\"true\"><prompt timeout=\"5s\">"
+                                                                        + "<audio src=\"%1$s\"/></prompt><noinput><prompt><audio src=\"%1$s\"/></prompt></noinput>"
+                                                                        + "<catch event=\"connection.disconnect.hangup\"><submit next=\"upload?questionId=1&"
+                                                                        + "amp;sessionKey=%2$s\" namelist=\"file\" method=\"post\" enctype=\"multipart/form-data\"/>"
+                                                                        + "</catch><filled><submit next=\"upload?questionId=1&amp;sessionKey=%2$s\" namelist=\"file\" "
+                                                                        + "method=\"post\" enctype=\"multipart/form-data\"/></filled></record></form></vxml>",
+                                        COMMENT_QUESTION_AUDIO, URLEncoder.encode(sessionKey, "UTF-8"));
+        assertXMLGeneratedByTwilioLibrary(expected, result);
+    }
+    
+    /**
+     * Check if the session that is deleted during hte hangup even is not
+     * restored in the hangup call
+     * @throws Exception 
+     */
+    @Test
+    public void sessionRestoreOnHangupTest() throws Exception {
         
-        TestServlet.logForTest( COMMENT_QUESTION_AUDIO );
-        
-        Document doc = getXMLDocumentBuilder(result);
-        Node vxml = doc.getFirstChild();
-        Node form = vxml.getFirstChild();
-        
-        Node record = form.getFirstChild();
-        Node subdialog = record.getNextSibling();
-        
-        assertNotNull(doc);
-        assertEquals(doc.getChildNodes().getLength(), 1);
-        assertEquals(vxml.getNodeName(), "vxml");
-        assertEquals(form.getNodeName(), "form");
-        assertThat(form.getChildNodes().getLength(), not(4));
-        assertEquals(record.getNodeName(), "record");
-        assertEquals(subdialog.getNodeName(), "subdialog");
+        //create an adapter
+        AdapterConfig adapter = createBroadsoftAdapter();
+        //create a session
+        Session session = createSession(createSessionKey(adapter, remoteAddressVoice));
+        VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
+        voiceXMLRESTProxy.hangup(session);
     }
     
     private Question getCommentQuestion() {

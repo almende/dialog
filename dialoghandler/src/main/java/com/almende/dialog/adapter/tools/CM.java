@@ -15,6 +15,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
@@ -195,7 +196,7 @@ public class CM {
         log.info("XML created: " + sw.toString());
         //perform some unit by logging the XML generated
         if (ServerUtils.isInUnitTestingEnvironment()) {
-            TestServlet.logForTest(sw.toString());
+            TestServlet.logForTest(AdapterType.SMS.toString(), sw.toString());
         }
         return sw;
     }

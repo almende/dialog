@@ -14,7 +14,7 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.util.jackson.JOM;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.QueryResultIterator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;

@@ -16,7 +16,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
 import com.almende.dialog.model.AnswerPost;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.util.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;

@@ -3,18 +3,15 @@ package com.almende.dialog.agent;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.Logger;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.eve.agent.Agent;
-import com.almende.eve.agent.annotation.ThreadSafe;
-import com.almende.eve.rpc.annotation.Access;
-import com.almende.eve.rpc.annotation.AccessType;
-import com.almende.eve.rpc.annotation.Name;
-import com.almende.eve.rpc.jsonrpc.JSONRequest;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.eve.protocol.jsonrpc.annotation.Access;
+import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
+import com.almende.eve.protocol.jsonrpc.annotation.Name;
+import com.almende.eve.protocol.jsonrpc.formats.JSONRequest;
+import com.almende.util.jackson.JOM;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -25,9 +22,8 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.QueueingConsumer.Delivery;
 
-@ThreadSafe(true)
 @Access(AccessType.PUBLIC)
-public class SessionAgent extends Agent {
+public class SessionAgent extends ScheduleAgent {
 
     //create a single static connection for publishing ddrs
     private static ConnectionFactory rabbitMQConnectionFactory;
@@ -37,11 +33,6 @@ public class SessionAgent extends Agent {
     private static final String SESSION_SCHEDULER_KEY = "SESSION_SCHEDULER";
     private static final Logger log = Logger.getLogger("DialogHandler");
     private int sessionSchedulerCountForUnitTests = 0;
-    @Override
-    protected void onCreate() {
-
-        onInit();
-    }
 
     @Override
     protected void onInit() {
@@ -108,7 +99,7 @@ public class SessionAgent extends Agent {
                 ObjectNode params = JOM.createObjectNode();
                 params.put("sessionKey", sessionKey);
                 JSONRequest req = new JSONRequest("postProcessSessions", params);
-                String schedulerId = getScheduler().createTask(req, SESSION_SCHEDULER_INTERVAL, true, true);
+                String schedulerId = schedule( req, SESSION_SCHEDULER_INTERVAL, true );
                 addSessionData(sessionKey, schedulerId);
             }
             catch (Exception e) {
@@ -143,7 +134,7 @@ public class SessionAgent extends Agent {
             updateSessionScedulerRunCount > SESSION_SCHEDULER_MAX_COUNT) {
             if (!ServerUtils.isInUnitTestingEnvironment()) {
                 schedulerId = stopProcessSessions(sessionKey);
-                if (schedulerId == null) {
+                /*if (schedulerId == null) {
 
                     //fetch the tasks that are not canceled properly
                     Set<String> tasks = getScheduler().getTasks();
@@ -166,7 +157,7 @@ public class SessionAgent extends Agent {
                             }
                         }
                     }
-                }
+                }*/
             }
             //remove the session if its already processed
             log.info(String.format("Session %s processed. Deleting..", sessionKey));
@@ -190,7 +181,7 @@ public class SessionAgent extends Agent {
         String schedulerId = getSessionData(sessionKey, new TypeReference<String>() {
         });
         if (schedulerId != null) {
-            getScheduler().cancelTask(schedulerId);
+            stopScheduledTask(schedulerId);
         }
         Map<String, Object> allSessionData = getAllSessionData();
         if (allSessionData != null) {

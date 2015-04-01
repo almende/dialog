@@ -26,7 +26,7 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
-import com.almende.eve.rpc.jsonrpc.JSONRPCException;
+import com.almende.eve.protocol.jsonrpc.formats.JSONRPCException;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;

@@ -807,9 +807,12 @@ public class Question implements QuestionIntf {
      */
     public static String appendParentSessionKeyToURL(String sessionKey, String url) throws UnsupportedEncodingException {
 
+        // Add session key
+        url = ServerUtils.getURLWithQueryParams(url, "sessionKey", sessionKey);
+        
+        // try to add the parent session key
         Session session = Session.getSession(sessionKey);
         if (session != null) {
-            url = ServerUtils.getURLWithQueryParams(url, "sessionKey", sessionKey);
             String parentSessionKey = session.getAllExtras().get(Session.PARENT_SESSION_KEY);
             if (parentSessionKey != null) {
                 url = ServerUtils.getURLWithQueryParams(url, Session.PARENT_SESSION_KEY, parentSessionKey);

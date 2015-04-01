@@ -4,7 +4,9 @@ import java.io.StringWriter;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
+
 import org.znerd.xmlenc.XMLOutputter;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.example.agent.TestServlet;
@@ -12,8 +14,8 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
 import com.almende.util.ParallelInit;
+import com.almende.util.jackson.JOM;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;

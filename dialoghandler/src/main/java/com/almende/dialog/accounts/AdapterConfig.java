@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -19,13 +20,14 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.TimeUtils;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.util.jackson.JOM;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.QueryResultIterator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;

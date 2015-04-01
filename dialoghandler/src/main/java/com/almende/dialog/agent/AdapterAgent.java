@@ -23,15 +23,14 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
-import com.almende.eve.agent.Agent;
-import com.almende.eve.rpc.annotation.Access;
-import com.almende.eve.rpc.annotation.AccessType;
-import com.almende.eve.rpc.annotation.Name;
-import com.almende.eve.rpc.annotation.Optional;
-import com.almende.eve.rpc.jsonrpc.JSONRPCException;
-import com.almende.eve.rpc.jsonrpc.JSONRPCException.CODE;
-import com.almende.eve.rpc.jsonrpc.JSONRequest;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.eve.protocol.jsonrpc.annotation.Access;
+import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
+import com.almende.eve.protocol.jsonrpc.annotation.Name;
+import com.almende.eve.protocol.jsonrpc.annotation.Optional;
+import com.almende.eve.protocol.jsonrpc.formats.JSONRPCException;
+import com.almende.eve.protocol.jsonrpc.formats.JSONRPCException.CODE;
+import com.almende.eve.protocol.jsonrpc.formats.JSONRequest;
+import com.almende.util.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.uuid.UUID;
 import com.askfast.commons.Status;
@@ -44,7 +43,7 @@ import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 @Access(AccessType.PUBLIC)
-public class AdapterAgent extends Agent implements AdapterAgentInterface {
+public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface {
 	
     public static final int EMAIL_SCHEDULER_INTERVAL = 30 * 1000; //30seconds
     public static final int TWITTER_SCHEDULER_INTERVAL = 61 * 1000; //61seconds
@@ -60,7 +59,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
     public static final String ADAPTER_TYPE_PUSH = AdapterType.PUSH.toString();
     
     @Override
-    protected void onCreate()
+    protected void onBoot()
     {
         //start inbound schedulers for email and xmpp
         startAllInboundSceduler();
@@ -96,7 +95,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             try
             {
                 JSONRequest req = new JSONRequest( "checkInBoundEmails", null );
-                id = getScheduler().createTask( req, EMAIL_SCHEDULER_INTERVAL, true, true );
+                id = schedule( req, EMAIL_SCHEDULER_INTERVAL, true );
                 getState().put( "emailScedulerTaskId", id );
             }
             catch ( Exception e )
@@ -119,7 +118,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
     public String stopEmailInboundSceduler()
     {
         String schedulerId = getState().get("emailScedulerTaskId", String.class);
-        getScheduler().cancelTask(schedulerId);
+        stopScheduledTask( schedulerId );
         getState().remove( "emailScedulerTaskId" );
         return schedulerId;
     }
@@ -135,7 +134,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
             try
             {
                 JSONRequest req = new JSONRequest( "checkInBoundTwitterPosts", null );
-                id = getScheduler().createTask( req, TWITTER_SCHEDULER_INTERVAL, true, true );
+                id = schedule( req, TWITTER_SCHEDULER_INTERVAL, true );
                 getState().put( "twitterScedulerTaskId", id );
             }
             catch ( Exception e )
@@ -158,7 +157,7 @@ public class AdapterAgent extends Agent implements AdapterAgentInterface {
     {
         String schedulerId = getState().get("twitterScedulerTaskId", String.class);
         if (schedulerId != null) {
-            getScheduler().cancelTask(schedulerId);
+            stopScheduledTask( schedulerId );
         }
         getState().remove( "twitterScedulerTaskId" );
         return schedulerId;

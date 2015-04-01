@@ -12,7 +12,7 @@ import org.junit.Test;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.util.AFHttpClient;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.util.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;

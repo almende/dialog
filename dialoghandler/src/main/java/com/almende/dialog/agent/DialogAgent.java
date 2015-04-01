@@ -32,14 +32,13 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
-import com.almende.eve.agent.annotation.ThreadSafe;
-import com.almende.eve.rpc.annotation.Access;
-import com.almende.eve.rpc.annotation.AccessType;
-import com.almende.eve.rpc.annotation.Name;
-import com.almende.eve.rpc.annotation.Optional;
-import com.almende.eve.rpc.jsonrpc.JSONRPCException;
-import com.almende.eve.rpc.jsonrpc.JSONRPCException.CODE;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.eve.protocol.jsonrpc.annotation.Access;
+import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
+import com.almende.eve.protocol.jsonrpc.annotation.Name;
+import com.almende.eve.protocol.jsonrpc.annotation.Optional;
+import com.almende.eve.protocol.jsonrpc.formats.JSONRPCException;
+import com.almende.eve.protocol.jsonrpc.formats.JSONRPCException.CODE;
+import com.almende.util.jackson.JOM;
 import com.almende.util.TypeUtil;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.askfast.commons.agent.intf.DialogAgentInterface;
@@ -58,7 +57,6 @@ import com.rabbitmq.client.QueueingConsumer;
 import com.rabbitmq.client.QueueingConsumer.Delivery;
 
 @Access(AccessType.PUBLIC)
-@ThreadSafe(true)
 public class DialogAgent extends Agent implements DialogAgentInterface {
 
     private static final Logger log = Logger.getLogger(DialogAgent.class.getName());
@@ -630,16 +628,6 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     public ArrayNode getRecordings(@Name("accountId") String accountId) {
         Set<Recording> recordings = Recording.getRecordings( accountId );
         return JOM.getInstance().convertValue(recordings, ArrayNode.class);
-    }
-    
-    @Override
-    public String getDescription() {
-        return "Dialog handling agent";
-    }
-
-    @Override
-    public String getVersion() {
-        return "1.4.2";
     }
 	
     public void consumeDialogInitiationQueue() {

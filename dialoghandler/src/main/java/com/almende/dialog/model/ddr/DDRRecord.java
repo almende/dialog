@@ -19,7 +19,7 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.eve.rpc.jsonrpc.jackson.JOM;
+import com.almende.util.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AccountType;
 import com.fasterxml.jackson.annotation.JsonCreator;

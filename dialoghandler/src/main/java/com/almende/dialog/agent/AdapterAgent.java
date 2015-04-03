@@ -7,9 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import org.jivesoftware.smack.XMPPException;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.MailServlet;
@@ -57,13 +55,6 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
     public static final String ADAPTER_TYPE_TWITTER = AdapterType.TWITTER.toString();
     public static final String ADAPTER_TYPE_USSD = AdapterType.USSD.toString();
     public static final String ADAPTER_TYPE_PUSH = AdapterType.PUSH.toString();
-    
-    @Override
-    protected void onBoot()
-    {
-        //start inbound schedulers for email and xmpp
-        startAllInboundSceduler();
-    }
     
     /**
      * starts scedulers for all inbound services such as Email, Twitter, XMPP etc

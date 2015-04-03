@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.logging.Logger;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -15,7 +14,6 @@ import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
-import com.almende.eve.agent.Agent;
 import com.almende.eve.protocol.jsonrpc.annotation.Access;
 import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
 import com.almende.eve.protocol.jsonrpc.annotation.Name;
@@ -35,13 +33,16 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
     
     @Override
     protected void onInit() {
-        generateDefaultDDRTypes();
-        try {
-            startSchedulerForSubscriptions();
-        }
-        catch (Exception e) {
-            log.severe("Scheduler for checking subscriptions failed. Message: "+ e.toString());
-            e.printStackTrace();
+
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            generateDefaultDDRTypes();
+            try {
+                startSchedulerForSubscriptions();
+            }
+            catch (Exception e) {
+                log.severe("Scheduler for checking subscriptions failed. Message: " + e.toString());
+                e.printStackTrace();
+            }
         }
     }
     
@@ -127,14 +128,14 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * @param name
      * @throws Exception
      */
-    public Object createDDRType( @Name( "nameForDDR" ) String name, @Name( "ddrTypeCategory" ) String categoryString )
-    throws Exception
-    {
+    public Object createDDRType(@Name("nameForDDR") String name,
+                                                  @Name("ddrTypeCategory") String categoryString) throws Exception {
+
         DDRTypeCategory category = categoryString != null && !categoryString.isEmpty() ? DDRTypeCategory
-            .fromJson( categoryString ) : null;
+                                        .fromJson(categoryString) : null;
         DDRType ddrType = new DDRType();
-        ddrType.setName( name );
-        ddrType.setCategory( category );
+        ddrType.setName(name);
+        ddrType.setCategory(category);
         return ddrType.createOrUpdate();
     }
     

@@ -32,6 +32,7 @@ import com.almende.dialog.model.EventPost;
 import com.almende.dialog.model.MediaProperty;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.entity.Language;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 /**
@@ -41,7 +42,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 public class TestServlet extends HttpServlet
 {
     private static final long serialVersionUID = 1L;
-    public static String TEST_SERVLET_PATH = "http://localhost:8082/dialoghandler/unitTestServlet";
     public static final String APPOINTMENT_MAIN_QUESTION = "Are you available today?";
     public static final String OPEN_QUESTION_URL_WITH_SPACES = "/URL WITH SPACES";
     public static final String PLAIN_TEXT_QUESTION = "/PLAIN%20TEXT";
@@ -51,6 +51,7 @@ public class TestServlet extends HttpServlet
     public static final String APPOINTMENT_SECOND_QUESION = "How long are you available? (in mins)";
     public static final String APPOINTMENT_REJECT_RESPONSE = "Thanks for responding to the invitation!";
     public static final String APPOINTMENT_ACCEPTANCE_RESPONSE = "Thanks for accepting the invitation!";
+    public static String TEST_SERVLET_PATH;
     
     //used for local caching of question for testing
     public static String responseQuestionString = "" ;
@@ -109,7 +110,8 @@ public class TestServlet extends HttpServlet
             req.getPathInfo().startsWith(URLDecoder.decode(OPEN_QUESTION_URL_WITH_SPACES, "UTF-8"))) {
             String message = req.getPathInfo().substring(URLDecoder.decode(OPEN_QUESTION_URL_WITH_SPACES, "UTF-8")
                                                                                          .length() + 1);
-            result = getJsonSimpleOpenQuestion(TEST_SERVLET_PATH + PLAIN_TEXT_QUESTION + "/" + message);
+            String language = req.getParameter("lang");
+            result = getJsonSimpleOpenQuestion(TEST_SERVLET_PATH + PLAIN_TEXT_QUESTION + "/" + message, language);
         }
         else if (result == null || result.isEmpty() &&
                  req.getPathInfo().startsWith(URLDecoder.decode(PLAIN_TEXT_QUESTION, "UTF-8"))) {
@@ -139,10 +141,10 @@ public class TestServlet extends HttpServlet
                     result = getAppointmentQuestion(req.getParameter("question"));
                     break;
                 case SIMPLE_COMMENT:
-                    result = getJsonSimpleCommentQuestion(req.getParameter("question"));
+                    result = getJsonSimpleCommentQuestion(req.getParameter("question"), req.getParameter("lang"));
                     break;
                 case OPEN_QUESTION:
-                    result = getJsonSimpleOpenQuestion(req.getParameter("question"));
+                    result = getJsonSimpleOpenQuestion(req.getParameter("question"), req.getParameter("lang"));
                     break;
                 case PLAIN_TEXT_QUESION:
                     result = req.getParameter("question");
@@ -216,18 +218,17 @@ public class TestServlet extends HttpServlet
         super.doPut( req, resp );
     }
     
-    public static String getJsonSimpleCommentQuestion(String questionText)
-    {
+    public static String getJsonSimpleCommentQuestion(String questionText, String language) {
+
         Question question = new Question();
-        question.setQuestion_id( "1" );
-        question.setType( "comment" );
-        try
-        {
-            question.setQuestion_text( "text://" + URLDecoder.decode( questionText, "UTF-8" ));
+        question.setQuestion_id("1");
+        question.setType("comment");
+        question.setPreferred_language(Language.getByValue(language).getCode());
+        try {
+            question.setQuestion_text("text://" + URLDecoder.decode(questionText, "UTF-8"));
         }
-        catch ( UnsupportedEncodingException e )
-        {
-            Assert.fail( e.getLocalizedMessage() );
+        catch (UnsupportedEncodingException e) {
+            Assert.fail(e.getLocalizedMessage());
         }
         return question.toJSON();
     }
@@ -286,7 +287,7 @@ public class TestServlet extends HttpServlet
         }
     }
     
-    private String getJsonSimpleOpenQuestion(String questionText) throws UnsupportedEncodingException {
+    private String getJsonSimpleOpenQuestion(String questionText, String language) throws UnsupportedEncodingException {
 
         Question question = new Question();
         question.setQuestion_id("1");
@@ -302,6 +303,7 @@ public class TestServlet extends HttpServlet
         callback = ServerUtils.getURLWithQueryParams(callback, "question", "Simple%20Comment");
         question.setAnswers(new ArrayList<Answer>(Arrays.asList(new Answer("Test answer", callback))));
         question.generateIds();
+        question.setPreferred_language(Language.getByValue(language).getCode());
         question.addEventCallback(UUID.randomUUID().toString(), "timeout", callback);
         try {
             return ServerUtils.serialize(question);

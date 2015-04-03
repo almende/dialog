@@ -23,6 +23,8 @@ import com.almende.eve.agent.AgentHost;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.TTSInfo;
+import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
@@ -343,6 +345,69 @@ public class DDRUtils
         }
     }
     
+    /**
+     * Create a ddr for a TTS being processed being created and charge a monthly
+     * fee for example
+     * 
+     * @param adapterConfig
+     * @return
+     * @throws Exception
+     */
+    public static DDRRecord createDDRForTTS(String remoteAddress, Session session, TTSInfo ttsInfo, String message) {
+
+        if (session != null) {
+            try {
+                return createDDRForTTS(session.getAdapterConfig(), message, session.getAccountId(), true,
+                                       session.getKey(), ttsInfo.getProvider());
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(String.format("Creating ddrRecord for TTS failed. sessionKey: %s accountid: %s message: %s localAddress: %s remoteAddress: %s",
+                                         session.getKey(), session.getAccountId(), message, session.getLocalAddress(),
+                                         remoteAddress));
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * create a ddr for a TTS being processed being created and charge a monthly
+     * fee for example
+     * 
+     * @param adapterConfig
+     * @return
+     * @throws Exception
+     */
+    public static DDRRecord createDDRForTTS(AdapterConfig adapterConfig, String message, String accountId,
+                                            boolean publishCharges, String sessionKey, TTSProvider ttsProvider) throws Exception {
+
+        DDRType ttsDDRType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
+        DDRRecord ddrRecord = null;
+        if (ttsDDRType != null) {
+            List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ttsDDRType.getTypeId(),
+                                                             AdapterType.getByValue(adapterConfig.getAdapterType()),
+                                                             adapterConfig.getConfigId(), null, null);
+            if (ddrPrices != null && !ddrPrices.isEmpty()) {
+                DDRPrice ddrPrice = ddrPrices.iterator().next();
+                Double units = Math.ceil(message.length() / ddrPrice.getUnits());
+                units = units != null ? units : 1;
+                ddrRecord = new DDRRecord(ttsDDRType.getTypeId(), adapterConfig, accountId, units.intValue());
+                if (ttsProvider != null) {
+                    ddrRecord.addAdditionalInfo("TTSProvider", ttsProvider);
+                }
+                ddrRecord.createOrUpdate();
+            }
+            if (publishCharges) {
+                Double ddrCost = calculateDDRCost(ddrRecord);
+                publishDDREntryToQueue(ddrRecord.getAccountId(), ddrCost);
+            }
+            return ddrRecord;
+        }
+        else {
+            throw new Exception("No Subscription DDRType found");
+        }
+    }
+    
     public static void publishDDREntryToQueue( String accountId, Double totalCost ) throws Exception
     {
         if ( totalCost != null && totalCost > 0.0 )
@@ -506,6 +571,19 @@ public class DDRUtils
                 case INCOMING_COMMUNICATION_COST:
                 case OUTGOING_COMMUNICATION_COST:
                     return calculateCommunicationDDRCost(ddrRecord, false);
+                case TTS_COST: {
+                    Object ttsProviderObject = ddrRecord.getAdditionalInfo().get("TTSProvider");
+                    String ttsProvider = ttsProviderObject != null ? ttsProviderObject.toString() : null;
+                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType, adapterId,
+                                                                     UnitType.PART, ttsProvider);
+                    if (ddrPrices != null && !ddrPrices.isEmpty()) {
+                        DDRPrice ddrPrice = ddrPrices.iterator().next();
+                        return ddrPrice.getPrice() * ddrRecord.getQuantity();
+                    }
+                    else {
+                        return 0.0;
+                    }
+                }
                 case SUBSCRIPTION_COST:
                 case OTHER: {
                     List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType, adapterId, null,

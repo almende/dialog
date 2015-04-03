@@ -19,8 +19,8 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.util.jackson.JOM;
 import com.almende.util.ParallelInit;
+import com.almende.util.jackson.JOM;
 import com.askfast.commons.entity.AccountType;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -121,10 +121,18 @@ public class DDRRecord
     
     public DDRRecord(){}
     
-    public DDRRecord( String ddrTypeId, String adapterId, String accountId, Integer quantity )
-    {
+    public DDRRecord(String ddrTypeId, String adapterId, String accountId, Integer quantity) {
+
         this.ddrTypeId = ddrTypeId;
         this.adapterId = adapterId;
+        this.accountId = accountId;
+        this.quantity = quantity;
+    }
+    
+    public DDRRecord(String ddrTypeId, AdapterConfig adapterConfig, String accountId, Integer quantity) {
+
+        this.ddrTypeId = ddrTypeId;
+        this.adapterId = adapterConfig != null ? adapterConfig.getConfigId() : null;
         this.accountId = accountId;
         this.quantity = quantity;
     }

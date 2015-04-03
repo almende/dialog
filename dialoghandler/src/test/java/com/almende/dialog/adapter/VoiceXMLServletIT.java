@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,8 +16,9 @@ import java.util.UUID;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URIBuilder;
 import org.hamcrest.Matchers;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -40,6 +42,8 @@ import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.TTSInfo;
+import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
 
 @Category(IntegrationTest.class)
@@ -385,13 +389,38 @@ public class VoiceXMLServletIT extends TestFramework {
     @Test
     public void inboundPhoneCall_WithSecuredDialogAccessFailTest() throws Exception {
 
-        Response securedDialogResponse = performSecuredInboundCall("wrongUserName", "testpassword");
-        Assert.assertThat(securedDialogResponse.getEntity().toString(), Matchers
-                                        .containsString("<prompt><audio src=\"http://tts.ask-fast.com/api/parse?"
-                                                        + "text=Er%20is%20iets%20mis%20gegaan%20met%20het%20"
-                                                        + "ophalen%20van%20uw%20dialoog&amp;lang=nl-nl&amp;"
-                                                        + "codec=wav&amp;speed=0&amp;format=8khz_8bit_mono&amp;"
-                                                        + "type=.wav\"/></prompt>"));
+        Response securedDialogResponse = performSecuredInboundCall("wrongUserName", "testpassword", null, null);
+        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
+        String ttsURL = doc.getElementsByTagName("audio").item(0).getAttributes().getNamedItem("src").getTextContent();
+        URIBuilder uriBuilder = new URIBuilder(ttsURL);
+        for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
+            if (queryParams.getName().equals("text")) {
+                assertThat(queryParams.getValue(),
+                           Matchers.is("Er is iets mis gegaan met het ophalen van uw dialoog".replace(" ", "%20")));
+                continue;
+            }
+            else if (queryParams.getName().equals("codec")) {
+                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                continue;
+            }
+            else if (queryParams.getName().equals("speed")) {
+                assertThat(queryParams.getValue(), Matchers.is("0"));
+                continue;
+            }
+            else if (queryParams.getName().equals("format")) {
+                assertThat(queryParams.getValue(), Matchers.is("8khz_8bit_mono"));
+                continue;
+            }
+            else if (queryParams.getName().equals("type")) {
+                assertThat(queryParams.getValue(), Matchers.is(".wav"));
+                continue;
+            }
+            else if (queryParams.getName().equals("lang")) {
+                assertThat(queryParams.getValue(), Matchers.is("nl-nl"));
+                continue;
+            }
+            assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
+        }
     }
     
     /**
@@ -403,7 +432,7 @@ public class VoiceXMLServletIT extends TestFramework {
     @Test
     public void inboundPhoneCall_WithSecuredDialogAccessSuccessTest() throws Exception {
 
-        Response securedDialogResponse = performSecuredInboundCall("testuserName", "testpassword");
+        Response securedDialogResponse = performSecuredInboundCall("testuserName", "testpassword", null, null);
         assertTrue(securedDialogResponse != null);
         assertOpenQuestionWithDTMFType(securedDialogResponse.getEntity().toString());
     }
@@ -419,6 +448,66 @@ public class VoiceXMLServletIT extends TestFramework {
 
         String sessionKey = performSecuredOutBoundCall("wrongUserName", "testpassword");
         assertThat(sessionKey, Matchers.nullValue());
+    }
+    
+    /**
+     * This test is to check if the inbound functionality works for a dialog
+     * with the right credentials for the secured url access along with TTSInfo given in the dialog
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void inboundPhoneCall_WithSecuredDialogAndTTSInfoTest() throws Exception {
+
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setProvider(TTSProvider.ACAPELA);
+        ttsInfo.setVoiceUsed("testtest");
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        String message = "How are you doing? today";
+        url = ServerUtils.getURLWithQueryParams(url, "question", message);
+        Response securedDialogResponse = performSecuredInboundCall("testuserName", "testpassword", ttsInfo, url);
+        assertTrue(securedDialogResponse != null);
+        //make sure that the tts source generated has a service and voice
+        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
+        String ttsURL = doc.getElementsByTagName("audio").item(0).getAttributes().getNamedItem("src").getTextContent();
+        URIBuilder uriBuilder = new URIBuilder(ttsURL);
+        for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
+            if (queryParams.getName().equals("text")) {
+                assertThat(queryParams.getValue(), Matchers.is(URLEncoder.encode(message, "UTF-8").replace("+", "%20")));
+                continue;
+            }
+            else if (queryParams.getName().equals("codec")) {
+                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                continue;
+            }
+            else if (queryParams.getName().equals("speed")) {
+                assertThat(queryParams.getValue(), Matchers.is("0"));
+                continue;
+            }
+            else if (queryParams.getName().equals("format")) {
+                assertThat(queryParams.getValue(), Matchers.is("8khz_8bit_mono"));
+                continue;
+            }
+            else if (queryParams.getName().equals("type")) {
+                assertThat(queryParams.getValue(), Matchers.is(".wav"));
+                continue;
+            }
+            else if (queryParams.getName().equals("lang")) {
+                assertThat(queryParams.getValue(), Matchers.is("nl-nl"));
+                continue;
+            }
+            else if (queryParams.getName().equals("voice")) {
+                assertThat(queryParams.getValue(), Matchers.is("testtest"));
+                continue;
+            }
+            else if (queryParams.getName().equals("service")) {
+                assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
+                continue;
+            }
+            assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
+        }
     }
     
     /**
@@ -439,13 +528,15 @@ public class VoiceXMLServletIT extends TestFramework {
      * @throws Exception
      * @throws URISyntaxException
      */
-    private Response performSecuredInboundCall(String username, String password) throws UnsupportedEncodingException,
-        Exception, URISyntaxException {
+    private Response performSecuredInboundCall(String username, String password, TTSInfo ttsInfo, String url)
+    throws Exception {
 
-        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
-        url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
-        url = ServerUtils.getURLWithQueryParams(url, "secured", "true");
+        if (url == null) {
+            url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                    QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+            url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
+            url = ServerUtils.getURLWithQueryParams(url, "secured", "true");
+        }
 
         //create a dialog
         dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
@@ -454,6 +545,7 @@ public class VoiceXMLServletIT extends TestFramework {
         createDialog.setUserName(username);
         createDialog.setPassword(password);
         createDialog.setUseBasicAuth(true);
+        createDialog.setTtsInfo(ttsInfo);
         createDialog.storeOrUpdate();
 
         //create SMS adapter

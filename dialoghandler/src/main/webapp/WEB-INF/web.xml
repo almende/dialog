@@ -66,6 +66,19 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
 	</filter-mapping>
 	
 	<servlet>
+		<servlet-name>SingleAgentServlet</servlet-name>
+		<servlet-class>com.almende.dialog.util.DialogEveServlet</servlet-class>
+		<init-param>
+			<param-name>ServletUrl</param-name>
+			<param-value>http://localhost:8082/dialoghandler/agents/</param-value>
+		</init-param>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>SingleAgentServlet</servlet-name>
+		<url-pattern>/rpc/*</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>mailhandler</servlet-name>
 		<servlet-class>com.almende.dialog.adapter.MailServlet</servlet-class>
 	</servlet>

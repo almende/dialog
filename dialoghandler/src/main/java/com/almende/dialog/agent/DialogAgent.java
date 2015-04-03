@@ -12,7 +12,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -38,8 +37,8 @@ import com.almende.eve.protocol.jsonrpc.annotation.Name;
 import com.almende.eve.protocol.jsonrpc.annotation.Optional;
 import com.almende.eve.protocol.jsonrpc.formats.JSONRPCException;
 import com.almende.eve.protocol.jsonrpc.formats.JSONRPCException.CODE;
-import com.almende.util.jackson.JOM;
 import com.almende.util.TypeUtil;
+import com.almende.util.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.askfast.commons.agent.intf.DialogAgentInterface;
 import com.askfast.commons.entity.AdapterProviders;
@@ -656,7 +655,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
                             log.info(String.format("---------Received a dialog request to process: %s ---------",
                                                    new String(delivery.getBody())));
-                            HashMap<String, String> sessionTriggered = outboundCall(dialogDetails);
+                            HashMap<String, String> sessionTriggered = outboundCallWithDialogRequest(dialogDetails);
                             boolean isCallAdapter = false;
                             if (dialogDetails.getAdapterID() != null) {
                                 AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(dialogDetails
@@ -965,12 +964,14 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     }
     
     /**
-     * Triggers an outbound call by calling the appropriate call based on the {@link DialogRequestDetails#getMethod()}
+     * Triggers an outbound call by calling the appropriate call based on the
+     * {@link DialogRequestDetails#getMethod()}
+     * 
      * @param dialogDetails
      * @return
      * @throws Exception
      */
-    private HashMap<String, String> outboundCall(DialogRequestDetails dialogDetails) throws Exception {
+    private HashMap<String, String> outboundCallWithDialogRequest(DialogRequestDetails dialogDetails) throws Exception {
 
         HashMap<String, String> result = new HashMap<String, String>();
         if (dialogDetails != null && dialogDetails.getMethod() != null) {
@@ -989,11 +990,10 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                     break;
                 case "outboundCallWithList":
                     if (dialogDetails.getAddressList() != null && !dialogDetails.getAddressList().isEmpty()) {
-                        result = outboundCallWithList(dialogDetails.getAddressList(),
-                                                      dialogDetails.getSenderName(), dialogDetails.getSubject(),
-                                                      dialogDetails.getUrl(), dialogDetails.getAdapterType(),
-                                                      dialogDetails.getAdapterID(), dialogDetails.getAccountID(),
-                                                      dialogDetails.getBearerToken());
+                        result = outboundCallWithList(dialogDetails.getAddressList(), dialogDetails.getSenderName(),
+                                                      dialogDetails.getSubject(), dialogDetails.getUrl(),
+                                                      dialogDetails.getAdapterType(), dialogDetails.getAdapterID(),
+                                                      dialogDetails.getAccountID(), dialogDetails.getBearerToken());
                     }
                     else {
                         result.put("Error!. No addresses found", null);

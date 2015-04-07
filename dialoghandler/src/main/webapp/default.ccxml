@@ -3,6 +3,7 @@
   <var name="test" expr="''"/>
   
   <var name="remoteID" expr="''"/>
+  <var name="redirectID" expr="''"/>
   <var name="externalRemoteID" expr="''"/>
   <var name="localID" expr="''"/>
   <var name="direction" expr="'inbound'"/>
@@ -12,10 +13,12 @@
   <var name="outConn" expr="''" />
   <var name="dialogID" expr="''"/>
   <var name="holdDialogID" expr="''"/>
+  <var name="preconDialogID" expr="''"/>
   <var name="dialURL" expr="''" />
   <var name="results" expr="''" />
   <var name="vxmlScript" expr="'rest/vxml/new'" />
   <var name="holdVxmlScript" expr="'/dialoghandler/transfer.vxml'" />
+  <var name="preconVxmlScript" expr="'rest/vxml/preconnect'" />
   <var name="currentState" expr="'initial'" />
   
   <eventprocessor statevariable="currentState" >
@@ -61,7 +64,6 @@
     </transition>
 
     <transition state="connestablished" event="dialog.transfer">
-    
       <if cond="event$.type == 'blind'">
         <assign name="currentState" expr="'redirecting'" />
         <redirect connectionid="inConn" dest="event$.URI" />
@@ -70,8 +72,10 @@
           var remote = event$.URI;
           dialURL = remote;
           var strings = remote.split(':');
-          if(strings[0] == "tel")
-            dialURL = "sip:"+strings[1]+"@asb-02.voipit.nl";
+          if(strings[0] == "tel") {
+            redirectID = strings[1];
+            dialURL = "sip:"+redirectID+"@asb-02.voipit.nl";
+          }
         </script>
         <assign name="currentState" expr="'originatingcall'" />
         <unjoin id1="inConn" id2="dialogID" />
@@ -92,12 +96,42 @@
 	  </transition>
 	
 	  <transition state="originatingcall" event="connection.connected">
-	    <unjoin id1="inConn" id2="holdDialogID" />
+	    <assign name="currentState" expr="'preconnecting'" />
+	    <dialogstart src="preconVxmlScript" connectionid="outConn" dialogid="preconDialogID" namelist="direction localID remoteID redirectID"/>
+	  </transition>
+	  
+	  <transition state="preconnecting" event="connection.disconnected">
+	    <if cond="event$.connectionid == outConn" >
+          <join id1="inConn" id2="dialogID" />
+          <assign name="currentState" expr="'connestablished'" />
+          <assign name="results" expr="'far_end_disconnect'" />
+          <send name="'dialog.transfer.complete'"
+                target="dialogID"
+                targettype="'dialog'"
+                namelist="results" />
+        <else />
+          <disconnect connectionid="outConn"/>
+          <exit/>
+        </if>
+	  </transition>
+	  
+	  <transition state="preconnecting" event="dialog.exit"> 
 	    <join id1="inConn" id2="outConn" duplex="'full'"/>
 	    <send name="'dialog.transfer.connected'"
 	            target="dialogID"
 	            targettype="'dialog'"/>
 	    <assign name="currentState" expr="'conferenceestablished'" />
+	  </transition>
+	  
+	  <transition state="preconnecting" event="dialog.disconnect"> 
+	    <join id1="inConn" id2="dialogID" />
+	          <assign name="currentState" expr="'connestablished'" />
+	          <assign name="results" expr="'far_end_disconnect'" />
+	          <send name="'dialog.transfer.complete'"
+	                target="dialogID"
+	                targettype="'dialog'"
+	                namelist="results" />
+	    <disconnect connectionid="outConn"/>
 	  </transition>
 	
 	  <transition state="conferenceestablished" event="connection.disconnected">
@@ -128,8 +162,10 @@
     </transition>
 
     <transition state="connestablished" event="dialog.exit">
-      <disconnect connectionid="inConn"/>
-      <exit/>
+      <if cond="event$.dialogid == dialogID" >
+        <disconnect connectionid="inConn"/>
+        <exit/>
+      </if>
     </transition>
 
     <transition event="connection.failed">

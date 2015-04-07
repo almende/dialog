@@ -542,6 +542,53 @@ public class VoiceXMLRESTProxy {
         }
         return Response.ok(reply).build();
     }
+    
+    @Path("preconnect")
+    @GET
+    @Produces("application/voicexml")
+    public Response preconnect(@QueryParam("remoteID") String remoteID, @QueryParam("localID") String localID,
+                                        @QueryParam("redirectID") String redirectID, @Context UriInfo ui) {
+        
+        String reply = "<vxml><exit/></vxml>";
+        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
+        String formattedAddress = PhoneNumberUtils.formatNumber(redirectID, PhoneNumberFormat.E164);
+        String formattedRemoteAddress = PhoneNumberUtils.formatNumber(remoteID, PhoneNumberFormat.E164);
+        
+        String internalSessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + formattedAddress;
+        Session session = Session.getSessionByInternalKey(internalSessionKey);
+        // If the session is null it isn't created yet. Try getting it from the parent
+        if (session == null) { 
+            session = Session.getSessionByInternalKey( AdapterAgent.ADAPTER_TYPE_CALL , localID, formattedRemoteAddress);
+        }
+
+        if (session != null && session.getQuestion() != null) {
+            Question question = session.getQuestion();
+            String responder = session.getRemoteAddress();
+
+            if (session.killed) {
+                return Response.status(Response.Status.BAD_REQUEST).build();
+            }
+            dialogLog.log(LogLevel.INFO,
+                          session.getAdapterConfig(),
+                          String.format("Wrong answer received from: %s for question: %s", responder,
+                                        question.getQuestion_expandedtext(session.getKey())), session);
+
+            //answered(direction, remoteID, localID, session.getKey());
+
+            HashMap<String, String> extras = new HashMap<String, String>();
+            extras.put("sessionKey", session.getKey());
+            extras.put("requester", session.getLocalAddress());
+            question = question.event("preconnect", "preconnect event", extras, responder, session.getKey());
+            //reload the session
+            session = Session.getSession(session.getKey());
+            session.setQuestion(question);
+            session.storeSession();
+            return handleQuestion(question, config, formattedAddress, session.getKey());
+        } else {
+            log.warning("No session found for: "+internalSessionKey);
+        }
+        return Response.ok(reply).build();
+    }
 
     @Path("timeout")
     @GET
@@ -1579,15 +1626,18 @@ public class VoiceXMLRESTProxy {
                 outputter.startTag("prompt");
                 outputter.startTag("audio");
                 outputter.attribute("src", prompt);
-                outputter.endTag();
-                outputter.endTag();
+                outputter.endTag(); // audio
+                outputter.endTag(); // prompt
             }
-            outputter.startTag("exit");
-            outputter.endTag();
-
-            outputter.endTag();
-            outputter.endTag();
-            outputter.endTag();
+            outputter.endTag(); // block
+            
+            outputter.startTag("block");
+            outputter.startTag("disconnect");
+            outputter.endTag(); // block
+            outputter.endTag(); // disconnect
+            
+            outputter.endTag(); // form
+            outputter.endTag(); // vxml
             outputter.endDocument();
         }
         catch (Exception e) {

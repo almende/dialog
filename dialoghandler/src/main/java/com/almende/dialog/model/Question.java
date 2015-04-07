@@ -357,6 +357,10 @@ public class Question implements QuestionIntf {
 
                 newQ = om.readValue(newQuestionJSON, Question.class);
                 newQ.setPreferred_language(preferred_language);
+                
+                if(newQ.getType() == null) {
+                    newQ.setType( "comment" );
+                }
             }
             catch (ClientHandlerException ioe) {
                 dialogLog.severe(adapterID, String.format("Unable to load question from: %s. \n Error: %s",

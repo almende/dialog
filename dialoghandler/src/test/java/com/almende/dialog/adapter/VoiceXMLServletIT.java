@@ -86,7 +86,7 @@ public class VoiceXMLServletIT extends TestFramework {
         while (i++ < 10) {
             Response answerResponse = voiceXMLRESTProxy.answer(answerVariables.get("questionId"), null,
                                                                answerVariables.get("answerInput"),
-                                                               answerVariables.get("sessionKey"), uriInfo);
+                                                               answerVariables.get("sessionKey"), null, uriInfo);
             if (answerResponse.getEntity() != null) {
                 if (answerResponse.getEntity()
                                                 .toString()
@@ -368,7 +368,7 @@ public class VoiceXMLServletIT extends TestFramework {
         //mimick a fetch new dialog/ phone pickup
         String sessionKey2 = VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner(),
                                                     null);
-        voiceXMLRESTProxy.answer(UUID.randomUUID().toString(), null, "1", sessionKey2, uriInfo);
+        voiceXMLRESTProxy.answer(UUID.randomUUID().toString(), null, "1", sessionKey2, null, uriInfo);
 
         //validate that the session has it
         session = Session.getSession(sessionKey2);

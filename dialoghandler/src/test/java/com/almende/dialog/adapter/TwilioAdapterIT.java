@@ -32,10 +32,12 @@ import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
@@ -49,6 +51,7 @@ public class TwilioAdapterIT extends TestFramework {
 
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio";
     private DialogAgent dialogAgent = null;
+    private static final String TEST_MESSAGE = "How are you doing? today"; 
 
     /**
      * This test checks if a sequence of people are getting called properly when
@@ -185,8 +188,7 @@ public class TwilioAdapterIT extends TestFramework {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
-        String message = "How are you doing? today";
-        url = ServerUtils.getURLWithQueryParams(url, "question", message);
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
         Response securedDialogResponse = performSecuredInboundCall("inbound", "testuserName", "testpassword", ttsInfo,
                                                                    url);
         assertTrue(securedDialogResponse != null);
@@ -197,7 +199,7 @@ public class TwilioAdapterIT extends TestFramework {
         URIBuilder uriBuilder = new URIBuilder(URLDecoder.decode(ttsURL, "UTF-8").replace(" ", "%20"));
         for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
             if (queryParams.getName().equals("text")) {
-                assertThat(queryParams.getValue(), Matchers.is(message));
+                assertThat(queryParams.getValue(), Matchers.is(TEST_MESSAGE));
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
@@ -251,8 +253,7 @@ public class TwilioAdapterIT extends TestFramework {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
-        String message = "How are you doing? today";
-        url = ServerUtils.getURLWithQueryParams(url, "question", message);
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
         Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
                                                                    url);
         assertTrue(securedDialogResponse != null);
@@ -263,7 +264,7 @@ public class TwilioAdapterIT extends TestFramework {
         URIBuilder uriBuilder = new URIBuilder(URLDecoder.decode(ttsURL, "UTF-8").replace(" ", "%20"));
         for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
             if (queryParams.getName().equals("text")) {
-                assertThat(queryParams.getValue(), Matchers.is(message));
+                assertThat(queryParams.getValue(), Matchers.is(TEST_MESSAGE));
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
@@ -318,8 +319,7 @@ public class TwilioAdapterIT extends TestFramework {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
-        String message = "How are you doing? today";
-        url = ServerUtils.getURLWithQueryParams(url, "question", message);
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
         Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
                                                                    url);
         assertTrue(securedDialogResponse != null);
@@ -330,7 +330,7 @@ public class TwilioAdapterIT extends TestFramework {
         URIBuilder uriBuilder = new URIBuilder(URLDecoder.decode(ttsURL, "UTF-8").replace(" ", "%20"));
         for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
             if (queryParams.getName().equals("text")) {
-                assertThat(queryParams.getValue(), Matchers.is(message));
+                assertThat(queryParams.getValue(), Matchers.is(TEST_MESSAGE));
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
@@ -386,8 +386,7 @@ public class TwilioAdapterIT extends TestFramework {
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "lang", Language.FRENCH_FRANCE.getCode());
-        String message = "How are you doing? today";
-        url = ServerUtils.getURLWithQueryParams(url, "question", message);
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
         Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
                                                                    url);
         assertTrue(securedDialogResponse != null);
@@ -398,7 +397,7 @@ public class TwilioAdapterIT extends TestFramework {
         URIBuilder uriBuilder = new URIBuilder(URLDecoder.decode(ttsURL, "UTF-8").replace(" ", "%20"));
         for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
             if (queryParams.getName().equals("text")) {
-                assertThat(queryParams.getValue(), Matchers.is(message));
+                assertThat(queryParams.getValue(), Matchers.is(TEST_MESSAGE));
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
@@ -434,9 +433,8 @@ public class TwilioAdapterIT extends TestFramework {
     }
     
     /**
-     * This test is to check if the outbound functionality works for a dialog
-     * with language as English. But adapter is set to English and question
-     * parsed in French, parses TTS in french
+     * This test is to check if the outbound functionality will create ddr
+     * records for tts processing.
      * 
      * @throws Exception
      */
@@ -450,6 +448,34 @@ public class TwilioAdapterIT extends TestFramework {
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, ddrType.getTypeId(), null,
                                                              null, null, null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
+        DDRRecord ddrRecord = ddrRecords.iterator().next();
+        ddrRecord.setShouldGenerateCosts(true);
+        assertThat(ddrRecord.getTotalCost(),
+                   Matchers.is(DDRUtils.getCeilingAtPrecision(0.1 * TEST_MESSAGE.length(), 3)));
+    }
+    
+    /**
+     * This test is to check if the outbound functionality does not invoke ddr
+     * charges as there is no ddrPrice attached for the tts provider
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void ttsDoesNotInvokesCharges() throws Exception {
+
+        //create a ddrPrice for voice rss. 
+        DDRPrice ddrPrice = createTestDDRPrice(DDRTypeCategory.TTS_COST, 0.1, "ddr price for tts", UnitType.PART, null,
+                                               null);
+        ddrPrice.setKeyword(TTSProvider.VOICE_RSS.toString());
+        ddrPrice.createOrUpdate();
+        
+        //invoke an outbound call with acapella tts
+        outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
+        DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, ddrType.getTypeId(), null,
+                                                             null, null, null, null, null);
+        //make sure there is no costs involved, as the ddr price attached is for VoiceRSS tts and not acapela
+        assertThat(ddrRecords.size(), Matchers.is(0));
     }
 
     /**

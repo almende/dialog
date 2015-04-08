@@ -7,9 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import org.jivesoftware.smack.XMPPException;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.MailServlet;
@@ -901,7 +899,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         //add costs for creating this adapter
         DDRRecord ddrRecord = DDRUtils.createDDRRecordOnAdapterPurchase(config, true);
         //push the cost to hte queue
-        Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
+        Double totalCost = DDRUtils.calculateDDRCost(ddrRecord);
         DDRUtils.publishDDREntryToQueue(config.getOwner(), totalCost);
         //attach cost to ddr is prepaid type
         if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {

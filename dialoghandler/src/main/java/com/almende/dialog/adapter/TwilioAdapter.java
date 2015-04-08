@@ -374,7 +374,7 @@ public class TwilioAdapter {
                 if (linkedChildSession != null && !linkedChildSession.isCallPickedUp()) {
 
                     //handle the next question if there is any.. else stop costs
-                    Question answeredAndHungUpQuestion = session.getQuestion().event("hangup", "Call hungup",
+                    Question answeredAndHungUpQuestion = linkedChildSession.getQuestion().event("hangup", "Call hungup",
                                                                                      session.getPublicExtras(),
                                                                                      remoteID, session.getKey());
                     Response renderedNextQuestion = handleQuestion(answeredAndHungUpQuestion,

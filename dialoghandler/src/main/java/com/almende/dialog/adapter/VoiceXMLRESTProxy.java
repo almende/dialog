@@ -84,7 +84,7 @@ public class VoiceXMLRESTProxy {
     @SuppressWarnings( "unused" )
     private String host = "";
     
-    final Object sessionLock = new Object();
+    protected static final Object sessionLock = new Object();
 
     public static void killSession(Session session) {
 
@@ -496,8 +496,8 @@ public class VoiceXMLRESTProxy {
         }
         this.host = ui.getBaseUri().toString().replace(":80", "");
         String reply = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>";
-        Session session = Session.getSession(sessionKey);
         synchronized  (sessionLock) {
+            Session session = Session.getSession(sessionKey);
             if (session != null) {
                 
                 Question question = session.getQuestion();

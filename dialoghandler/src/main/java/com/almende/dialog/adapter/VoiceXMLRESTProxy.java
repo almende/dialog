@@ -590,33 +590,34 @@ public class VoiceXMLRESTProxy {
         //String formattedRemoteAddress = PhoneNumberUtils.formatNumber(remoteID, PhoneNumberFormat.E164);
         
         String internalSessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + formattedAddress;
-        Session session = Session.getSessionByInternalKey(internalSessionKey);
-
-        if (session != null && session.getQuestion() != null) {
-            Question question = session.getQuestion();
-            String responder = session.getRemoteAddress();
-
-            if (session.killed) {
-                return Response.status(Response.Status.BAD_REQUEST).build();
+        synchronized (sessionLock) {
+            Session session = Session.getSessionByInternalKey(internalSessionKey);
+            if (session != null && session.getQuestion() != null) {
+                Question question = session.getQuestion();
+                String responder = session.getRemoteAddress();
+    
+                if (session.killed) {
+                    return Response.status(Response.Status.BAD_REQUEST).build();
+                }
+                dialogLog.log(LogLevel.INFO,
+                              session.getAdapterConfig(),
+                              String.format("Wrong answer received from: %s for question: %s", responder,
+                                            question.getQuestion_expandedtext(session.getKey())), session);
+    
+                answered("transfer", formattedAddress, localID,  session.getKey());
+    
+                HashMap<String, String> extras = new HashMap<String, String>();
+                extras.put("sessionKey", session.getKey());
+                extras.put("requester", session.getLocalAddress());
+                question = question.event("preconnect", "preconnect event", extras, responder, session.getKey());
+                //reload the session
+                session = Session.getSession(session.getKey());
+                session.setQuestion(question);
+                session.storeSession();
+                return handleQuestion(question, config, formattedAddress, session.getKey());
+            } else {
+                log.warning("No session found for: "+internalSessionKey);
             }
-            dialogLog.log(LogLevel.INFO,
-                          session.getAdapterConfig(),
-                          String.format("Wrong answer received from: %s for question: %s", responder,
-                                        question.getQuestion_expandedtext(session.getKey())), session);
-
-            answered("transfer", formattedAddress, localID,  session.getKey());
-
-            HashMap<String, String> extras = new HashMap<String, String>();
-            extras.put("sessionKey", session.getKey());
-            extras.put("requester", session.getLocalAddress());
-            question = question.event("preconnect", "preconnect event", extras, responder, session.getKey());
-            //reload the session
-            session = Session.getSession(session.getKey());
-            session.setQuestion(question);
-            session.storeSession();
-            return handleQuestion(question, config, formattedAddress, session.getKey());
-        } else {
-            log.warning("No session found for: "+internalSessionKey);
         }
         return Response.ok(reply).build();
     }

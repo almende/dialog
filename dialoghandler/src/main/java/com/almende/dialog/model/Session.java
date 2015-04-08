@@ -41,6 +41,7 @@ public class Session{
      * marked as true only if a connection is setup.
      */
     private static final String IS_CALL_PICKED_UP = "isCallPickedUp";
+    private static final String IS_CALL_CONNECTED = "isCallConnected";
     
     @Id
     public String key = "";
@@ -754,6 +755,24 @@ public class Session{
     public void setCallPickedUpStatus(boolean isCallPickedUp) {
 
         addExtras(IS_CALL_PICKED_UP, String.valueOf(isCallPickedUp));
+    }
+    
+    /**
+     * Returns true if the call associated with this session is answered
+     * @return
+     */
+    public boolean isCallConnected() {
+        String callStatus = getAllExtras().get(IS_CALL_CONNECTED);
+        return Boolean.parseBoolean(callStatus);
+    }
+    
+    /**
+     * Sets a call pickup status for this session
+     * @param isCallConnected
+     */
+    public void setCallConnectedStatus(boolean isCallConnected) {
+
+        addExtras(IS_CALL_CONNECTED, String.valueOf(isCallConnected));
     }
     
     /**

@@ -14,11 +14,13 @@
   <var name="dialogID" expr="''"/>
   <var name="holdDialogID" expr="''"/>
   <var name="preconDialogID" expr="''"/>
+  <var name="connectedDialogID" expr="''"/>
   <var name="dialURL" expr="''" />
   <var name="results" expr="''" />
   <var name="vxmlScript" expr="'rest/vxml/new'" />
   <var name="holdVxmlScript" expr="'/dialoghandler/transfer.vxml'" />
   <var name="preconVxmlScript" expr="'rest/vxml/preconnect'" />
+  <var name="connectedVxmlScript" expr="'rest/vxml/connected'" />
   <var name="currentState" expr="'initial'" />
   
   <eventprocessor statevariable="currentState" >
@@ -104,7 +106,7 @@
 	    <if cond="event$.connectionid == outConn" >
           <join id1="inConn" id2="dialogID" />
           <assign name="currentState" expr="'connestablished'" />
-          <assign name="results" expr="'far_end_disconnect'" />
+          <assign name="results" expr="'event$.result'" />
           <send name="'dialog.transfer.complete'"
                 target="dialogID"
                 targettype="'dialog'"
@@ -115,18 +117,22 @@
         </if>
 	  </transition>
 	  
-	  <transition state="preconnecting" event="dialog.exit"> 
+	  <transition state="preconnecting" event="dialog.exit">
+	    <assign name="currentState" expr="'conferenceestablished'" />
+	  	<dialogstart src="connectedVxmlScript" connectionid="outConn" dialogid="connectedDialogID" namelist="direction localID remoteID redirectID"/>
+	  	<!--<send event="'http.get'" target="connectedVxmlScript" namelist="direction localID remoteID redirectID" />-->
 	    <join id1="inConn" id2="outConn" duplex="'full'"/>
+	    <assign name="results" expr="'completed'" />
 	    <send name="'dialog.transfer.connected'"
 	            target="dialogID"
-	            targettype="'dialog'"/>
-	    <assign name="currentState" expr="'conferenceestablished'" />
+	            targettype="'dialog'"
+	            namelist="results"/>
 	  </transition>
 	  
 	  <transition state="preconnecting" event="dialog.disconnect"> 
 	    <join id1="inConn" id2="dialogID" />
 	          <assign name="currentState" expr="'connestablished'" />
-	          <assign name="results" expr="'far_end_disconnect'" />
+	          <assign name="results" expr="'event$.result'" />
 	          <send name="'dialog.transfer.complete'"
 	                target="dialogID"
 	                targettype="'dialog'"

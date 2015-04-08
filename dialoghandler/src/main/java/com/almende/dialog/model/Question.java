@@ -420,7 +420,7 @@ public class Question implements QuestionIntf {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
                 String s = client.post(post, url.replace(" ", URLEncoder.encode(" ", "UTF-8")));
-                log.info("Received new question (event): " + s);
+                log.info("Received new question (event: "+eventType+"): " + s);
 
                 if (s != null && !s.equals("")) {
                     newQ = om.readValue(s, Question.class);

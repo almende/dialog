@@ -329,7 +329,8 @@ public class TwilioAdapter {
     public Response answer(@QueryParam("answerId") String answer_id, @QueryParam("Digits") String answer_input,
         @QueryParam("From") String localID, @QueryParam("To") String remoteID,
         @QueryParam("Direction") String direction, @QueryParam("RecordingUrl") String recordingUrl,
-        @QueryParam("DialCallStatus") String dialCallStatus, @QueryParam("CallSid") String callSid) {
+        @QueryParam("DialCallStatus") String dialCallStatus, @QueryParam("DialCallSid") String dialCallSid,
+        @QueryParam("CallSid") String callSid) {
 
         TwiMLResponse twiml = new TwiMLResponse();
         localID = checkAnonymousCallerId(localID);
@@ -364,40 +365,32 @@ public class TwilioAdapter {
              * "completed" status on a preconnect pickup-accept and a preconnect
              * pickup-reject (for pickup-decline it gives a no-answer status)
              */
-            if ("completed".equals(dialCallStatus)) {
+            if(dialCallStatus!=null) {
 
-                AdapterConfig config = session.getAdapterConfig();
-
-                //check if this is the parent session to a linked child session due to a redirect
+                
                 Session linkedChildSession = session.getLinkedChildSession();
                 //if the linked child session is found and not pickedup. trigger the next question
-                if (linkedChildSession != null && !linkedChildSession.isCallPickedUp()) {
-
-                    //handle the next question if there is any.. else stop costs
-                    Question answeredAndHungUpQuestion = linkedChildSession.getQuestion().event("hangup", "Call hungup",
-                                                                                     session.getPublicExtras(),
-                                                                                     remoteID, session.getKey());
-                    Response renderedNextQuestion = handleQuestion(answeredAndHungUpQuestion,
-                                                                   session.getAdapterConfig(), remoteID,
-                                                                   session.getKey(), null);
-                    // if its not a empty response (i.e a dont do anything request to twilio), then do something, instead of hangup :)
-                    if (renderedNextQuestion != null &&
-                        !(new TwiMLResponse()).toXML().equalsIgnoreCase(renderedNextQuestion.getEntity().toString())) {
-                        return renderedNextQuestion;
+                if (linkedChildSession != null) {
+                    if(!linkedChildSession.isCallPickedUp()) {
+                        dialCallStatus = "no-answer";
                     }
-                }
-                finalizeCall(config, session, callSid, remoteID);
-            }
-            //if call is rejected. call the hangup event
-            else if (callIgnored.contains(dialCallStatus) && session.getQuestion() != null) {
 
-                session.addExtras("requester", session.getLocalAddress());
-                Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected",
-                                                                        session.getPublicExtras(), remoteID,
-                                                                        session.getKey());
-                AdapterConfig config = session.getAdapterConfig();
-                finalizeCall(config, session, callSid, remoteID);
-                return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session.getKey(), null);
+                    AdapterConfig config = session.getAdapterConfig();
+                    //handle the next question if there is any.. else stop costs
+                    linkedChildSession.getQuestion().event("hangup", "Call hungup", linkedChildSession.getPublicExtras(), remoteID, linkedChildSession.getKey());
+                    finalizeCall(config, linkedChildSession, dialCallSid, remoteID);
+                }
+                
+                if (callIgnored.contains(dialCallStatus) && session.getQuestion() != null) {
+    
+                    session.addExtras("requester", session.getLocalAddress());
+                    Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected",
+                                                                            session.getPublicExtras(), remoteID,
+                                                                            session.getKey());
+                    AdapterConfig config = session.getAdapterConfig();
+                    finalizeCall(config, session, callSid, remoteID);
+                    return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session.getKey(), null);
+                }
             }
 
             Question question = session.getQuestion();

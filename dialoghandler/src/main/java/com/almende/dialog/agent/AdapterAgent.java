@@ -892,7 +892,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         //add costs for creating this adapter
         DDRRecord ddrRecord = DDRUtils.createDDRRecordOnAdapterPurchase(config, true);
         //push the cost to hte queue
-        Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
+        Double totalCost = DDRUtils.calculateDDRCost(ddrRecord);
         DDRUtils.publishDDREntryToQueue(config.getOwner(), totalCost);
         //attach cost to ddr is prepaid type
         if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {

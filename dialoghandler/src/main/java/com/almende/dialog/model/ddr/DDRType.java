@@ -1,6 +1,7 @@
 package com.almende.dialog.model.ddr;
 
 import java.util.List;
+import java.util.logging.Logger;
 import org.bson.types.ObjectId;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.twigmongo.FilterOperator;
@@ -16,6 +17,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
  */
 public class DDRType
 {
+    private static final Logger log = Logger.getLogger( DDRType.class.getSimpleName() );
+    
     /**
      * category of this type
      */
@@ -46,6 +49,10 @@ public class DDRType
          */
         SUBSCRIPTION_COST,
         /**
+         * cost applied for every time a TTS is being processed
+         */
+        TTS_COST,
+        /**
          * any other subsription cost
          */
         OTHER;
@@ -68,20 +75,18 @@ public class DDRType
      * create (if missing) or updates this document instance
      * @throws Exception throws an Exception if more than one DDRTypes are existing for this category
      */
-    public DDRType createOrUpdate() throws Exception
-    {
+    public DDRType createOrUpdate() throws Exception {
+
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        DDRType ddrType = getDDRType( category );
-        if ( ddrType != null )
-        {
+        DDRType ddrType = getDDRType(category);
+        if (ddrType != null) {
             ddrType.name = this.name;
-            datastore.storeOrUpdate( ddrType );
+            datastore.storeOrUpdate(ddrType);
             return ddrType;
         }
-        else 
-        {
+        else {
             typeId = typeId != null && !typeId.isEmpty() ? typeId : ObjectId.get().toStringMongod();
-            datastore.storeOrUpdate( this );
+            datastore.storeOrUpdate(this);
             return this;
         }
     }
@@ -100,20 +105,20 @@ public class DDRType
     
     /**
      * fetch the ddr type from the datastore based on the category it belongs to
+     * 
      * @param category
      * @return
      * @throws Exception
      */
-    public static DDRType getDDRType( DDRTypeCategory category ) throws Exception
-    {
+    public static DDRType getDDRType(DDRTypeCategory category) throws Exception {
+
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        RootFindCommand<DDRType> cmd = datastore.find().type( DDRType.class )
-            .addFilter( "category", FilterOperator.EQUAL, category.name() );
+        RootFindCommand<DDRType> cmd = datastore.find().type(DDRType.class)
+                                        .addFilter("category", FilterOperator.EQUAL, category.name());
         List<DDRType> ddrTypes = cmd.now().toArray();
-        if ( ddrTypes != null && ddrTypes.size() > 1 )
-        {
-            throw new Exception( String.format( "Multiple DDRTypes found with same category: %s. DDRTypes: %s",
-                category, ServerUtils.serialize( ddrTypes ) ) );
+        if (ddrTypes != null && ddrTypes.size() > 1) {
+            throw new Exception(String.format("Multiple DDRTypes found with same category: %s. DDRTypes: %s", category,
+                                              ServerUtils.serialize(ddrTypes)));
         }
         return ddrTypes != null && !ddrTypes.isEmpty() ? ddrTypes.iterator().next() : null;
     }

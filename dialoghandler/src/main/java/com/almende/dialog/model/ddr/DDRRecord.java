@@ -16,11 +16,10 @@ import org.mongojack.JacksonDBCollection;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.util.jackson.JOM;
 import com.almende.util.ParallelInit;
+import com.almende.util.jackson.JOM;
 import com.askfast.commons.entity.AccountType;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -121,14 +120,23 @@ public class DDRRecord
     
     public DDRRecord(){}
     
-    public DDRRecord( String ddrTypeId, String adapterId, String accountId, Integer quantity )
-    {
+    public DDRRecord(String ddrTypeId, String adapterId, String accountId, Integer quantity) {
+
         this.ddrTypeId = ddrTypeId;
         this.adapterId = adapterId;
         this.accountId = accountId;
         this.quantity = quantity;
     }
     
+    public DDRRecord(String ddrTypeId, AdapterConfig adapterConfig, String accountId, Integer quantity) {
+
+        this.ddrTypeId = ddrTypeId;
+        this.adapterId = adapterConfig != null ? adapterConfig.getConfigId() : null;
+        this.accountId = accountId;
+        this.quantity = quantity;
+    }
+    
+    @JsonIgnore
     public void createOrUpdate() {
 
         _id = _id != null && !_id.isEmpty() ? _id : org.bson.types.ObjectId.get().toStringMongod();
@@ -147,6 +155,7 @@ public class DDRRecord
     /**
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
      */
+    @JsonIgnore
     public void createOrUpdateWithLog(String sessionKey) {
 
         //fetch the Session
@@ -157,6 +166,7 @@ public class DDRRecord
     /**
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
      */
+    @JsonIgnore
     public void createOrUpdateWithLog(Session session) {
 
         createOrUpdate();
@@ -532,25 +542,13 @@ public class DDRRecord
             switch (ddrType.getCategory()) {
                 case INCOMING_COMMUNICATION_COST:
                 case OUTGOING_COMMUNICATION_COST:
-                    return DDRUtils.calculateCommunicationDDRCost(this, shouldIncludeServiceCosts);
+                    totalCost = DDRUtils.calculateDDRCost(this, shouldIncludeServiceCosts);
+                    break;
                 case ADAPTER_PURCHASE:
-                case SERVICE_COST: {
-                    //fetch the ddrPrice
-                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrTypeId, null, adapterId, UnitType.PART, null);
-                    if (ddrPrices != null && !ddrPrices.isEmpty()) {
-                        return DDRUtils.calculateDDRCost(this, ddrPrices.iterator().next());
-                    }
-                    break;
-                }
-                case SUBSCRIPTION_COST: {
-                    //fetch the ddrPrice
-                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrTypeId, null, adapterId, null, null);
-                    if (ddrPrices != null && !ddrPrices.isEmpty()) {
-                        return DDRUtils.calculateDDRCost(this, ddrPrices.iterator().next());
-                    }
-                    break;
-                }
+                case SERVICE_COST:
+                case SUBSCRIPTION_COST:
                 default:
+                    totalCost = DDRUtils.calculateDDRCost(this);
                     break;
             }
         }
@@ -558,10 +556,11 @@ public class DDRRecord
     }
     
     /**
-     * generally just used by JACKSON to (de)serialize the variable for all accounts except PRE_PAID. 
-     * Setting the value does not matter as the actual cost is calculated lazily when the {@link DDRRecord#shouldGenerateCosts} is set
-     * for all cases apart from for PRE_PAID customers.  
-     * to true
+     * Generally just used by JACKSON to (de)serialize the variable for all
+     * accounts except PRE_PAID. Setting the value does not matter as the actual
+     * cost is calculated lazily when the {@link DDRRecord#shouldGenerateCosts}
+     * is set for all cases apart from for PRE_PAID customers to true
+     * 
      * @param totalCost
      */
     public void setTotalCost(Double totalCost) {

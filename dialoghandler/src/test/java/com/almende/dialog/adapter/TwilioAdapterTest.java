@@ -28,13 +28,13 @@ import com.twilio.sdk.resource.instance.Call;
 
 public class TwilioAdapterTest extends TestFramework {
 	
-	Logger log = Logger.getLogger(TwilioAdapterTest.class.getName());
-	
-	protected static final String COMMENT_QUESTION_ID = "1";
+    Logger log = Logger.getLogger(TwilioAdapterTest.class.getName());
+
+    protected static final String COMMENT_QUESTION_ID = "1";
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio";
     protected static final String COMMENT_QUESTION_TEXT = "text://Hello World";
     protected static final String REFERRAL_PHONE_NUMBER = "tel:0643002549";
-    
+
     @Test
     public void renderCommentQuestionTest() throws Exception {
         
@@ -75,7 +75,7 @@ public class TwilioAdapterTest extends TestFramework {
         
         assertEquals("Say", say.getNodeName());
         assertEquals("Hello World", say.getTextContent());
-        assertEquals("nl-NL", say.getAttributes().getNamedItem("language").getTextContent());
+        assertEquals("nl-nl", say.getAttributes().getNamedItem("language").getTextContent());
         assertEquals("Redirect", redirect.getNodeName());
         assertTrue(redirect.getTextContent().endsWith("/dialoghandler/rest/twilio/answer"));
         

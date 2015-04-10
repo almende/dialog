@@ -14,7 +14,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -24,7 +23,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -43,6 +41,8 @@ import com.almende.dialog.util.TimeUtils;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.Language;
+import com.askfast.commons.entity.TTSInfo;
+import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.twilio.sdk.TwilioRestClient;
@@ -255,6 +255,7 @@ public class TwilioAdapter {
             ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
         }
         catch (Exception e) {
+            e.printStackTrace();
             String errorMessage = String.format("Creating DDR records failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
                                                 direction, config.getConfigId(), config.getMyAddress(),
                                                 formattedRemoteId, localID);
@@ -280,8 +281,11 @@ public class TwilioAdapter {
         }
         
         if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
-            Language language = ServerUtils.getLanguage(question, config, null);
-            String insufficientCreditMessage = ServerUtils.getInsufficientMessage(language);
+            
+            TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
+            String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
+            //create a ddr record for tts
+            DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
             return Response.ok(renderExitQuestion(question, Arrays.asList(insufficientCreditMessage), session.getKey()))
                                             .build();
         }
@@ -352,11 +356,12 @@ public class TwilioAdapter {
         List<String> callIgnored = Arrays.asList("no-answer", "busy", "canceled", "failed");
 
         if (session != null) {
-            
+
             if (recordingUrl != null) {
-                answer_input = storeAudioFile( recordingUrl.replace(".wav", "") + ".wav", session.getAccountId(), session.getDdrRecordId());
+                answer_input = storeAudioFile(recordingUrl.replace(".wav", "") + ".wav", session.getAccountId(),
+                                              session.getDdrRecordId());
             }
-            
+
             //add a tag in the session saying its picked up
             session.setCallPickedUpStatus(true);
             session.storeSession();
@@ -365,31 +370,31 @@ public class TwilioAdapter {
              * "completed" status on a preconnect pickup-accept and a preconnect
              * pickup-reject (for pickup-decline it gives a no-answer status)
              */
-            if(dialCallStatus!=null) {
+            if (dialCallStatus != null) {
 
-                
                 Session linkedChildSession = session.getLinkedChildSession();
                 //if the linked child session is found and not pickedup. trigger the next question
                 if (linkedChildSession != null) {
-                    if(!linkedChildSession.isCallPickedUp()) {
+                    if (!linkedChildSession.isCallPickedUp()) {
                         dialCallStatus = "no-answer";
                     }
 
-                    AdapterConfig config = session.getAdapterConfig();
                     //handle the next question if there is any.. else stop costs
-                    linkedChildSession.getQuestion().event("hangup", "Call hungup", linkedChildSession.getPublicExtras(), remoteID, linkedChildSession.getKey());
+                    linkedChildSession.getQuestion().event("hangup", "Call hungup",
+                                                           linkedChildSession.getPublicExtras(), remoteID,
+                                                           linkedChildSession.getKey());
+                    AdapterConfig config = session.getAdapterConfig();
                     finalizeCall(config, linkedChildSession, dialCallSid, remoteID);
                 }
-                
+
                 if (callIgnored.contains(dialCallStatus) && session.getQuestion() != null) {
-    
+
                     session.addExtras("requester", session.getLocalAddress());
                     Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected",
                                                                             session.getPublicExtras(), remoteID,
                                                                             session.getKey());
-                    AdapterConfig config = session.getAdapterConfig();
-                    finalizeCall(config, session, callSid, remoteID);
-                    return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session.getKey(), null);
+                    return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session.getKey(),
+                                          session.getPublicExtras());
                 }
             }
 
@@ -844,7 +849,7 @@ public class TwilioAdapter {
 
         TwiMLResponse twiml = new TwiMLResponse();
         try {
-            addPrompts(prompts, question.getPreferred_language(), twiml);
+            addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey);
             if (question != null && question.getAnswers() != null && !question.getAnswers().isEmpty()) {
                 Redirect redirect = new Redirect(getAnswerUrl());
                 redirect.setMethod("GET");
@@ -861,8 +866,7 @@ public class TwilioAdapter {
         TwiMLResponse twiml = new TwiMLResponse();
 
         try {
-            addPrompts( prompts, question.getPreferred_language(), twiml );
-
+            addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey);
             String redirectTimeoutProperty = question
                 .getMediaPropertyValue( MediumType.BROADSOFT,
                                         MediaPropertyKey.TIMEOUT );
@@ -947,8 +951,7 @@ public class TwilioAdapter {
         	gather.setFinishOnKey("");
         }
         try {
-            addPrompts(prompts, question.getPreferred_language(), gather);
-            
+            addPrompts(prompts, gather, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey);
             twiml.append(gather);
             Redirect redirect = new Redirect(getTimeoutUrl());
             redirect.setMethod("GET");
@@ -1005,8 +1008,7 @@ public class TwilioAdapter {
             gather.setTimeout(timeout);
 
             try {
-                addPrompts(prompts, question.getPreferred_language(), gather);
-
+                addPrompts(prompts, gather, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey);
                 twiml.append(gather);
                 Redirect redirect = new Redirect(getTimeoutUrl());
                 redirect.setMethod("GET");
@@ -1034,7 +1036,7 @@ public class TwilioAdapter {
     protected void renderVoiceMailQuestion(Question question, ArrayList<String> prompts, String sessionKey,
         TwiMLResponse twiml) {
 
-        addPrompts(prompts, question.getPreferred_language(), twiml);
+        addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey);
 
         Record record = new Record();
         record.setAction(getAnswerUrl());
@@ -1088,7 +1090,7 @@ public class TwilioAdapter {
     protected String renderExitQuestion(Question question, List<String> prompts, String sessionKey) {
 
         TwiMLResponse twiml = new TwiMLResponse();
-        addPrompts(prompts, question.getPreferred_language(), twiml);
+        addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey);
         try {
             twiml.append(new Hangup());
         }
@@ -1098,24 +1100,39 @@ public class TwilioAdapter {
         return twiml.toXML();
     }
     
-    protected void addPrompts(List<String> prompts, String language, Verb twiml) {
+    protected void addPrompts(List<String> prompts, Verb twiml, TTSInfo ttsInfo, Session session) {
 
-        String lang = language.contains("-") ? language : "nl-NL";
         try {
             for (String prompt : prompts) {
+                
+                Verb verbToAppend = null;
                 if (prompt.startsWith("http")) {
-                    twiml.append(new Play(prompt));
+                    verbToAppend = new Play(prompt);
                 }
                 else {
-                    Say say = new Say(prompt.replace("text://", ""));
-                    say.setLanguage(lang);
-                    twiml.append(say);
+                    if (ttsInfo != null && TTSProvider.ACAPELA.equals(ttsInfo.getProvider())) {
+                        DDRUtils.createDDRForTTS(session != null ? session.getRemoteAddress() : null, session, ttsInfo,
+                                                 prompt);
+                        verbToAppend = new Play(ServerUtils.getTTSURL(ttsInfo, prompt));
+                    }
+                    else {
+                        Say say = new Say(prompt.replace("text://", ""));
+                        say.setLanguage(Language.DUTCH.getCode());
+                        verbToAppend = say;
+                    }
                 }
+                twiml.append(verbToAppend);
             }
         }
         catch (TwiMLException e) {
             log.warning("failed to added prompts: " + e.getMessage());
         }
+    }
+    
+    protected void addPrompts(List<String> prompts, Verb twiml, TTSInfo ttsInfo, String sessionKey) {
+
+        Session session = Session.getSession(sessionKey);
+        addPrompts(prompts, twiml, ttsInfo, session);
     }
     
     private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, String sessionKey,
@@ -1167,8 +1184,11 @@ public class TwilioAdapter {
                         //check credits
                         if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
 
-                            Language language = ServerUtils.getLanguage(question, adapterConfig, null);
-                            String insufficientCreditMessage = ServerUtils.getInsufficientMessage(language);
+                            TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
+                            String insufficientCreditMessage = ServerUtils
+                                                            .getInsufficientMessage(ttsInfo.getLanguage());
+                            //create a ddr record for tts
+                            DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
                             return Response.ok(renderExitQuestion(null, Arrays.asList(insufficientCreditMessage),
                                                                   session.getKey())).build();
                         }

@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -31,11 +30,10 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -43,7 +41,6 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -66,6 +63,7 @@ import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.Language;
+import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 
@@ -384,9 +382,11 @@ public class VoiceXMLRESTProxy {
                                             session.getDdrRecordId(), session.getKey(), extraParams);
             }
             if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
-                Language language = ServerUtils.getLanguage(question, config, null);
-                String insufficientCreditMessage = ServerUtils.getInsufficientMessage(language);
-                String ttsurl = getTTSURL(insufficientCreditMessage, language.getCode(), null, null, null);
+                TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
+                String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
+                //create a ddr record for tts
+                DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
+                String ttsurl = ServerUtils.getTTSURL(ttsInfo, insufficientCreditMessage);
                 return Response.ok(renderExitQuestion(Arrays.asList(ttsurl), session.getKey())).build();
             }
             session.setStartUrl(url);
@@ -1092,7 +1092,12 @@ public class VoiceXMLRESTProxy {
         @QueryParam("f") @DefaultValue("8khz_8bit_mono") String format, @Context HttpServletRequest req,
         @Context HttpServletResponse resp) throws IOException, URISyntaxException {
 
-        String ttsURL = getTTSURL(textForSpeech, language, contentType, speed, format);
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setCodec(contentType);
+        ttsInfo.setFormat(format);
+        ttsInfo.setLanguage(Language.getByValue(language));
+        ttsInfo.setSpeed(speed);
+        String ttsURL = ServerUtils.getTTSURL(ttsInfo, textForSpeech);
         return Response.seeOther(new URI(ttsURL)).build();
     }
 
@@ -1707,7 +1712,7 @@ public class VoiceXMLRESTProxy {
             session.storeSession();
 
             //convert all text prompts to speech 
-            convertTextsToTTSURLS(question, res);
+            convertTextsToTTSURLS(question, res, session);
 
             if (question.getType().equalsIgnoreCase("closed")) {
                 result = renderClosedQuestion(question, res.prompts, sessionKey);
@@ -1745,19 +1750,22 @@ public class VoiceXMLRESTProxy {
      * @param question
      * @param res
      */
-    private void convertTextsToTTSURLS(Question question, Return res) {
+    private void convertTextsToTTSURLS(Question question, Return res, Session session) {
 
         if (res.prompts != null) {
-            String language = question.getPreferred_language().contains("-") ? question.getPreferred_language()
-                                                                            : "nl-nl";
-            String ttsSpeedProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
-                                                                     MediaPropertyKey.TSS_SPEED);
+            String ttsSpeedProperty = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TSS_SPEED);
             ttsSpeedProperty = ttsSpeedProperty != null ? ttsSpeedProperty : "0";
             ArrayList<String> promptsCopy = new ArrayList<String>();
+
+            //fetch the ttsInfo from session
+            TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
             for (String prompt : res.prompts) {
                 if (!prompt.startsWith("dtmfKey://")) {
                     if (!prompt.endsWith(".wav")) {
-                        promptsCopy.add(getTTSURL(prompt, language, "wav", ttsSpeedProperty, null));
+                        //create a ddr record for tts
+                        DDRUtils.createDDRForTTS(session != null ? session.getRemoteAddress() : null, session, ttsInfo,
+                                                 prompt);
+                        promptsCopy.add(ServerUtils.getTTSURL(ttsInfo, prompt));
                     }
                     else {
                         promptsCopy.add(prompt);
@@ -1790,9 +1798,11 @@ public class VoiceXMLRESTProxy {
         String redirectedId = PhoneNumberUtils.formatNumber(question.getUrl().replace("tel:", ""), null);
 
         if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
-            Language language = ServerUtils.getLanguage(question, adapterConfig, null);
-            String insufficientCreditMessage = ServerUtils.getInsufficientMessage(language);
-            String ttsurl = getTTSURL(insufficientCreditMessage, language.getCode(), null, null, null);
+            TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
+            String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
+            //create a ddr record for tts
+            DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
+            String ttsurl = ServerUtils.getTTSURL(ttsInfo, insufficientCreditMessage);
             return renderExitQuestion(Arrays.asList(ttsurl), session.getKey());
         }
         if (redirectedId != null) {
@@ -1861,30 +1871,6 @@ public class VoiceXMLRESTProxy {
         timeMap.put("answerTime", answerTime);
         timeMap.put("releaseTime", releaseTime);
         return timeMap;
-    }
-
-    /**
-     * returns the TTS URL from tts.ask-fast
-     * 
-     * @param textForSpeech
-     * @param language
-     * @param contentType
-     * @return
-     */
-    private String getTTSURL(String textForSpeech, String language, String contentType, String speed, String format) {
-
-        speed = (speed != null && !speed.isEmpty()) ? speed : "0";
-        contentType = (contentType != null && !contentType.isEmpty()) ? contentType : "wav";
-        format = (format != null && !format.isEmpty()) ? format : "8khz_8bit_mono";
-        try {
-            textForSpeech = URLEncoder.encode(textForSpeech.replace("text://", ""), "UTF-8").replace("+", "%20");
-        }
-        catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-            log.severe(e.getLocalizedMessage());
-        }
-        return "http://tts.ask-fast.com/api/parse?text=" + textForSpeech + "&lang=" + language + "&codec=" +
-               contentType + "&speed=" + speed + "&format=" + format + "&type=.wav";
     }
 
     /**

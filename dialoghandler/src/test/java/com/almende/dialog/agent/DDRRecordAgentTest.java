@@ -111,6 +111,8 @@ public class DDRRecordAgentTest extends TestFramework
      */
     @Test
     public void subscriptionDDRsAreCreatedHourlyTest() throws Exception{
+        
+        ddrRecordAgent = new DDRRecordAgent();
         DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
         //create an adapter
         getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 0.5, "Test", UnitType.PART, null, null);
@@ -163,18 +165,19 @@ public class DDRRecordAgentTest extends TestFramework
      * @return
      * @throws Exception
      */
-    protected DDRPrice getTestDDRPrice( DDRTypeCategory category, double price, String name, UnitType unitType,
-        AdapterType adapterType, String adapterId ) throws Exception
-    {
+    protected DDRPrice getTestDDRPrice(DDRTypeCategory category, double price, String name, UnitType unitType,
+                                       AdapterType adapterType, String adapterId) throws Exception {
 
-        Object ddrPriceObject = ddrRecordAgent.createDDRPriceWithNewDDRType(name, category.name(),
+        Object ddrPriceObject = ddrRecordAgent
+                                        .createDDRPriceWithNewDDRType(name, category.name(),
                                                                       TimeUtils.getServerCurrentTimeInMillis(),
                                                                       TimeUtils.getCurrentServerTimePlusMinutes(100),
                                                                       price, 0, 10, 1, unitType.name(),
                                                                       adapterType != null ? adapterType.name() : null,
                                                                       adapterId, null);
-        TypeUtil<DDRPrice> injector = new TypeUtil<DDRPrice>(){};
-        return injector.inject( ddrPriceObject );
+        TypeUtil<DDRPrice> injector = new TypeUtil<DDRPrice>() {
+        };
+        return injector.inject(ddrPriceObject);
     }
     
     /** get ddr records for this accountId

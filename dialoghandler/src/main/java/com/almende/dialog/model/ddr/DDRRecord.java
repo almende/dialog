@@ -18,6 +18,7 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.jackson.JOM;
 import com.askfast.commons.entity.AccountType;
@@ -144,10 +145,11 @@ public class DDRRecord
         JacksonDBCollection<DDRRecord, String> collection = getCollection();
         DDRRecord existingDDRRecord = collection.findOneById(_id);
         //update if existing
-        if(existingDDRRecord != null){
+        if (existingDDRRecord != null) {
             collection.updateById(_id, this);
         }
         else { //create one if missing
+            this.start = this.start != null ? this.start : TimeUtils.getServerCurrentTimeInMillis();
             collection.insert(this);
         }
     }
@@ -244,11 +246,14 @@ public class DDRRecord
         if (endTime != null) {
             queryList.add(DBQuery.lessThanEquals("start", endTime));
         }
+        
+        
         Query[] dbQueries = new Query[queryList.size()];
         for (int queryCounter = 0; queryCounter < queryList.size(); queryCounter++) {
             dbQueries[queryCounter] = queryList.get(queryCounter);
         }
         DBCursor<DDRRecord> ddrCursor = collection.find(DBQuery.and(dbQueries));
+        
         if(sessionKeys != null) {
             ddrCursor = ddrCursor.in("sessionKeys", sessionKeys);
         }

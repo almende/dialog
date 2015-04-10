@@ -401,6 +401,8 @@ public class DDRUtils
                         if (ttsProvider != null) {
                             ddrRecord.addAdditionalInfo("TTSProvider", ttsProvider);
                         }
+                        ddrRecord.addAdditionalInfo("message", message);
+                        ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
                         ddrRecord.createOrUpdate();
                         break;
                     }

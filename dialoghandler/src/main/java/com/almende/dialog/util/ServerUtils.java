@@ -310,7 +310,7 @@ public class ServerUtils
 
         String language = Language.getByValue(null).getCode();
         String speed = "0";
-        String codec = "wav";
+        String codec = "WAV";
         String format = "8khz_8bit_mono";
         String voice = null;
         String serviceProvider = null;
@@ -324,13 +324,13 @@ public class ServerUtils
             serviceProvider = ttsInfo.getProvider() != null ? ttsInfo.getProvider().name() : null;
             format = ttsInfo.getFormat();
         }
-        try {
+        /*try {
             textForSpeech = URLEncoder.encode(textForSpeech.replace("text://", ""), "UTF-8").replace("+", "%20");
         }
         catch (UnsupportedEncodingException e) {
             e.printStackTrace();
             log.severe(e.getLocalizedMessage());
-        }
+        }*/
         String url = "http://tts.ask-fast.com/api/parse";
         try {
             url = ServerUtils.getURLWithQueryParams(url, "text", textForSpeech);

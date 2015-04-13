@@ -324,6 +324,7 @@ public class ServerUtils
             serviceProvider = ttsInfo.getProvider() != null ? ttsInfo.getProvider().name() : null;
             format = ttsInfo.getFormat();
         }
+        textForSpeech = textForSpeech.replace("text://", "");
         /*try {
             textForSpeech = URLEncoder.encode(textForSpeech.replace("text://", ""), "UTF-8").replace("+", "%20");
         }

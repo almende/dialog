@@ -1228,8 +1228,9 @@ public class VoiceXMLRESTProxy {
                 break; //Jump from forloop
             }
             else if (question.getType().equalsIgnoreCase("comment")) {
-                //question = question.answer(null, adapterID, null, null);
-                break;
+                // If it is a comment directly read the next question, because we can append the prompts.
+                question = question.answer( null, adapterID, null, null, sessionKey );
+                //break;
             }
             else if (question.getType().equalsIgnoreCase("referral")) {
                 if (question.getUrl() != null && !question.getUrl().startsWith("tel:")) {

@@ -1115,7 +1115,9 @@ public class TwilioAdapter {
                     if (ttsInfo != null && TTSProvider.ACAPELA.equals(ttsInfo.getProvider())) {
                         DDRUtils.createDDRForTTS(session != null ? session.getRemoteAddress() : null, session, ttsInfo,
                                                  prompt);
-                        verbToAppend = new Play(ServerUtils.getTTSURL(ttsInfo, prompt));
+                        String url = ServerUtils.getTTSURL(ttsInfo, prompt);
+                        url = url.replace( "&", "&amp;" );
+                        verbToAppend = new Play(url);
                     }
                     else {
                         Say say = new Say(prompt.replace("text://", ""));

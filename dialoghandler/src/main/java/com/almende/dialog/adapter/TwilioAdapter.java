@@ -1107,6 +1107,8 @@ public class TwilioAdapter {
                 
                 Verb verbToAppend = null;
                 if (prompt.startsWith("http")) {
+                    // Replace all the & with &amp; because of xml validity
+                    prompt = prompt.replace( "&", "&amp;" );
                     verbToAppend = new Play(prompt);
                 }
                 else {

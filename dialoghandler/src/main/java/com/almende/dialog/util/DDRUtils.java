@@ -619,13 +619,13 @@ public class DDRUtils
                                                         session.getKey());
                         //push session to queue when the call is picked up but no costs are attached or
                         //when the ddrRecord is found but no answerTimestamp is seen. (Try to process it again later: when the answer ccxml comes in later on)
-                        boolean candidateToBePushedToQueue = false;
+//                        boolean candidateToBePushedToQueue = false;
                         if (ddrRecord == null && session.getAnswerTimestamp() != null) {
                             String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
                                                                 session.getKey());
                             log.severe(errorMessage);
                             dialogLog.severe(adapterConfig, errorMessage, session);
-                            candidateToBePushedToQueue = true;
+//                            candidateToBePushedToQueue = true;
                         }
                         else if (ddrRecord != null && session.getAnswerTimestamp() == null &&
                                  session.getReleaseTimestamp() != null) {
@@ -633,12 +633,12 @@ public class DDRUtils
                             String warningMessage = String.format("No costs added. Looks like a immediate hangup! Hangup timestamp: %s found. But answerTimestamp not found for session: %s",
                                                                   session.getReleaseTimestamp(), session.getKey());
                             log.warning(warningMessage);
-                            candidateToBePushedToQueue = true;
+//                            candidateToBePushedToQueue = true;
                         }
-                        if (candidateToBePushedToQueue && pushToQueue) { //push the session details to queue
-                            session.pushSessionToQueue();
-                            return result;
-                        }
+//                        if (candidateToBePushedToQueue && pushToQueue) { //push the session details to queue
+//                            session.pushSessionToQueue();
+//                            return result;
+//                        }
 
                         //publish charges
                         Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
@@ -656,9 +656,9 @@ public class DDRUtils
                                                             session.getKey());
                         log.severe(errorMessage);
                         dialogLog.severe(adapterConfig, errorMessage, session);
-                        if (pushToQueue) { //push the session details to queue
-                            session.pushSessionToQueue();
-                        }
+//                        if (pushToQueue) { //push the session details to queue
+//                            session.pushSessionToQueue();
+//                        }
                     }
                 }
                 //text adapter. delete the session if question is null
@@ -675,9 +675,9 @@ public class DDRUtils
                 e.printStackTrace();
                 log.severe(errorMessage);
                 dialogLog.severe(session.getAdapterConfig(), errorMessage, session);
-                if (pushToQueue) { //push the session details to queue
-                    session.pushSessionToQueue();
-                }
+//                if (pushToQueue) { //push the session details to queue
+//                    session.pushSessionToQueue();
+//                }
             }
         }
         

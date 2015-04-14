@@ -8,7 +8,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -395,8 +394,7 @@ public class VoiceXMLServletIT extends TestFramework {
         URIBuilder uriBuilder = new URIBuilder(ttsURL);
         for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
             if (queryParams.getName().equals("text")) {
-                assertThat(queryParams.getValue(),
-                           Matchers.is("Er is iets mis gegaan met het ophalen van uw dialoog".replace(" ", "%20")));
+                assertThat(queryParams.getValue(), Matchers.is("Er is iets mis gegaan met het ophalen van uw dialoog"));
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
@@ -475,7 +473,7 @@ public class VoiceXMLServletIT extends TestFramework {
         URIBuilder uriBuilder = new URIBuilder(ttsURL);
         for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
             if (queryParams.getName().equals("text")) {
-                assertThat(queryParams.getValue(), Matchers.is(URLEncoder.encode(message, "UTF-8").replace("+", "%20")));
+                assertThat(queryParams.getValue(), Matchers.is(message));
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {

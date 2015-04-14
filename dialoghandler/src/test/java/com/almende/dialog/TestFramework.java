@@ -36,6 +36,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.TypeUtil;
+import com.askfast.commons.Status;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
@@ -156,7 +157,8 @@ public class TestFramework
     }
     
     public static AdapterConfig createAdapterConfig(String adapterType, String owner,
-        Collection<String> linkedAccounts, String myAddress, String initiatAgentURL) throws Exception {
+                                                    Collection<String> linkedAccounts, String myAddress,
+                                                    String initiatAgentURL) throws Exception {
 
         AdapterConfig adapterConfig = new AdapterConfig();
         adapterConfig.setAdapterType(adapterType);
@@ -164,6 +166,7 @@ public class TestFramework
         adapterConfig.setOwner(owner);
         adapterConfig.setAccounts(linkedAccounts);
         adapterConfig.setInitialAgentURL(initiatAgentURL);
+        adapterConfig.setStatus(Status.ACTIVE);
         String adapterConfigString = adapterConfig.createConfig(ServerUtils.serialize(adapterConfig)).getEntity()
                                         .toString();
         return ServerUtils.deserialize(adapterConfigString, AdapterConfig.class);

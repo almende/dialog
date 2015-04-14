@@ -7,7 +7,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -194,8 +193,7 @@ public class TwilioAdapterIT extends TestFramework {
                                                                    url);
         assertTrue(securedDialogResponse != null);
         //make sure that the tts source generated has a service and voice
-        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString()
-                                        .replace("&", URLEncoder.encode("&", "UTF-8")));
+        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
         String ttsURL = doc.getFirstChild().getFirstChild().getTextContent();
         URIBuilder uriBuilder = new URIBuilder(URLDecoder.decode(ttsURL, "UTF-8").replace(" ", "%20"));
         for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
@@ -259,8 +257,7 @@ public class TwilioAdapterIT extends TestFramework {
                                                                    url);
         assertTrue(securedDialogResponse != null);
         //make sure that the tts source generated has a service and voice
-        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString()
-                                        .replace("&", URLEncoder.encode("&", "UTF-8")));
+        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
         String ttsURL = doc.getFirstChild().getFirstChild().getTextContent();
         URIBuilder uriBuilder = new URIBuilder(URLDecoder.decode(ttsURL, "UTF-8").replace(" ", "%20"));
         for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
@@ -325,8 +322,7 @@ public class TwilioAdapterIT extends TestFramework {
                                                                    url);
         assertTrue(securedDialogResponse != null);
         //make sure that the tts source generated has a service and voice
-        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString()
-                                        .replace("&", URLEncoder.encode("&", "UTF-8")));
+        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
         String ttsURL = doc.getFirstChild().getFirstChild().getTextContent();
         URIBuilder uriBuilder = new URIBuilder(URLDecoder.decode(ttsURL, "UTF-8").replace(" ", "%20"));
         for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
@@ -392,8 +388,7 @@ public class TwilioAdapterIT extends TestFramework {
                                                                    url);
         assertTrue(securedDialogResponse != null);
         //make sure that the tts source generated has a service and voice
-        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString()
-                                        .replace("&", URLEncoder.encode("&", "UTF-8")));
+        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
         String ttsURL = doc.getFirstChild().getFirstChild().getTextContent();
         URIBuilder uriBuilder = new URIBuilder(URLDecoder.decode(ttsURL, "UTF-8").replace(" ", "%20"));
         for (NameValuePair queryParams : uriBuilder.getQueryParams()) {

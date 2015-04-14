@@ -1210,8 +1210,8 @@ public class VoiceXMLRESTProxy {
             }
             else if (question.getType().equalsIgnoreCase("comment")) {
                 // If it is a comment directly read the next question, because we can append the prompts.
-                question = question.answer( null, adapterID, null, null, sessionKey );
-                //break;
+                //question = question.answer( null, adapterID, null, null, sessionKey );
+                break;
             }
             else if (question.getType().equalsIgnoreCase("referral")) {
                 if (question.getUrl() != null && !question.getUrl().startsWith("tel:")) {

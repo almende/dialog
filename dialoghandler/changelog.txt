@@ -1,6 +1,12 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+14-4-2015 version 1.8.0
+- feature: preconnect functionality for broadsoft
+- feature: choose different tts provider per dialog
+- fix: don't update shared adapters
+- fix: change the recording url for twilio recordings
+
 1-4-2015 version 1.7.1
 - feature: store recording in s3
 - feature: download recording from the rest endpoint

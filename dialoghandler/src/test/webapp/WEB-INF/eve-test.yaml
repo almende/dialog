@@ -14,14 +14,14 @@ transport_services:
 # the state is used to persist the agents state.
 state:
   class: FileStateFactory
-  path: .eveagents
+  path: .testeveagents
   json: true
 cookies:
   class: FileStateFactory
-  path: .evecookies
+  path: .testevecookies
 tokens:
   class: FileStateFactory
-  path: .evecookies
+  path: .testevecookies
 
 # scheduler settings
 scheduler:

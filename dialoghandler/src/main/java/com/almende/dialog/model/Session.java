@@ -22,15 +22,12 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
 
 public class Session{
 
     private static final Logger log = Logger.getLogger("DialogHandler");
-    private static ConnectionFactory rabbitMQConnectionFactory;
-    private static final String SESSION_QUEUE_NAME = "SESSION_POST_PROCESS_QUEUE";
+//    private static ConnectionFactory rabbitMQConnectionFactory;
+//    private static final String SESSION_QUEUE_NAME = "SESSION_POST_PROCESS_QUEUE";
     public static final String SESSION_KEY = "sessionKey";
     public static final String PARENT_SESSION_KEY = "parentSessionKey";
     public static final String CHILD_SESSION_KEY = "childSessionKey";
@@ -41,6 +38,7 @@ public class Session{
      * marked as true only if a connection is setup.
      */
     private static final String IS_CALL_PICKED_UP = "isCallPickedUp";
+    private static final String IS_CALL_CONNECTED = "isCallConnected";
     
     @Id
     public String key = "";
@@ -688,24 +686,24 @@ public class Session{
         this.creationTimestamp = creationTimestamp;
     }
     
-    public void pushSessionToQueue() {
-
-        try {
-            log.info(String.format("---------Pushing session for post processing: %s---------", key));
-            rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory
-                                                                         : new ConnectionFactory();
-            rabbitMQConnectionFactory.setHost("localhost");
-            Connection connection = rabbitMQConnectionFactory.newConnection();
-            Channel channel = connection.createChannel();
-            channel.queueDeclare(SESSION_QUEUE_NAME, false, false, false, null);
-            channel.basicPublish("", SESSION_QUEUE_NAME, null, key.getBytes());
-            channel.close();
-            connection.close();
-        }
-        catch (Exception e) {
-            log.severe("Error seen: " + e.getLocalizedMessage());
-        }
-    }
+//    public void pushSessionToQueue() {
+//
+//        try {
+//            log.info(String.format("---------Pushing session for post processing: %s---------", key));
+//            rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory
+//                                                                         : new ConnectionFactory();
+//            rabbitMQConnectionFactory.setHost("localhost");
+//            Connection connection = rabbitMQConnectionFactory.newConnection();
+//            Channel channel = connection.createChannel();
+//            channel.queueDeclare(SESSION_QUEUE_NAME, false, false, false, null);
+//            channel.basicPublish("", SESSION_QUEUE_NAME, null, key.getBytes());
+//            channel.close();
+//            connection.close();
+//        }
+//        catch (Exception e) {
+//            log.severe("Error seen: " + e.getLocalizedMessage());
+//        }
+//    }
     
     public String getLocalName() {
     
@@ -754,6 +752,24 @@ public class Session{
     public void setCallPickedUpStatus(boolean isCallPickedUp) {
 
         addExtras(IS_CALL_PICKED_UP, String.valueOf(isCallPickedUp));
+    }
+    
+    /**
+     * Returns true if the call associated with this session is answered
+     * @return
+     */
+    public boolean isCallConnected() {
+        String callStatus = getAllExtras().get(IS_CALL_CONNECTED);
+        return Boolean.parseBoolean(callStatus);
+    }
+    
+    /**
+     * Sets a call pickup status for this session
+     * @param isCallConnected
+     */
+    public void setCallConnectedStatus(boolean isCallConnected) {
+
+        addExtras(IS_CALL_CONNECTED, String.valueOf(isCallConnected));
     }
     
     /**

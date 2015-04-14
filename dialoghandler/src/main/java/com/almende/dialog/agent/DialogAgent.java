@@ -84,24 +84,24 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     private static final Integer MAXIMUM_DEFAULT_DIALOG_ALLOWED = 2;
     
     @Override
-    protected void onInit() {
+    protected void onBoot() {
 
         Thread dialogProcessorThread = new Thread(
         //run the process to listen to incoming ddr records/processings
-                                                  new Runnable() {
+        new Runnable() {
 
-                                                      @Override
-                                                      public void run() {
+            @Override
+            public void run() {
 
-                                                          try {
-                                                              consumeDialogInitiationQueue();
-                                                          }
-                                                          catch (Exception e) {
-                                                              log.severe("Dialog processing of queue failed!. Error: " +
-                                                                         e.getLocalizedMessage());
-                                                          }
-                                                      }
-                                                  });
+                try {
+                    consumeDialogInitiationQueue();
+                }
+                catch ( Exception e ) {
+                    log.severe( "Dialog processing of queue failed!. Error: " +
+                                e.getLocalizedMessage() );
+                }
+            }
+        } );
         dialogProcessorThread.start();
     }
     
@@ -641,7 +641,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             channel.queueDeclare(DIALOG_PROCESS_QUEUE_NAME, false, false, false, null);
             QueueingConsumer consumer = new QueueingConsumer(channel);
             channel.basicConsume(DIALOG_PROCESS_QUEUE_NAME, true, consumer);
-            
+            log.info("Waiting for incomming dialog initiations...");
             while (true) {
                 Integer currentSessionsCountInQueue = getCurrentSessionsCountInQueue();
                 Integer maxSessionsAllowedInQueue = getMaxSessionsAllowedInQueue();

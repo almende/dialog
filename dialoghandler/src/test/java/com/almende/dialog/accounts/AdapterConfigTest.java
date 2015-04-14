@@ -1,14 +1,18 @@
 package com.almende.dialog.accounts;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
+
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.util.AFHttpClient;
@@ -16,6 +20,7 @@ import com.almende.util.jackson.JOM;
 import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
+import com.askfast.commons.Status;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -183,12 +188,16 @@ public class AdapterConfigTest extends TestFramework
         //fetch the adapter again by the removed accountId
         ArrayNode adapterNodes = adapterAgent.getAdapters(removedAccountId, null, null);
         allAdapters = JOM.getInstance().convertValue(adapterNodes, new TypeReference<Collection<AdapterConfig>>() {});
-        assertTrue(allAdapters.size() == 0);
+        assertEquals(0, allAdapters.size());
         
         //fetch the adapter again by the owner accountId
         adapterNodes = adapterAgent.getAdapters(ownerID, null, null);
         allAdapters = JOM.getInstance().convertValue(adapterNodes, new TypeReference<Collection<AdapterConfig>>() {});
-        assertTrue(allAdapters.size() == 1);
+        assertEquals(1, allAdapters.size());
+        
+        //check if the unlinked adapter is still ACTIVE
+        adapter = allAdapters.get(0);
+        assertEquals(Status.ACTIVE, adapter.getStatus());
     }
     
     /**

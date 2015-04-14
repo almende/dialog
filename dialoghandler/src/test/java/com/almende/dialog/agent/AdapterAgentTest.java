@@ -54,7 +54,8 @@ public class AdapterAgentTest extends TestFramework
     @Test
     public void updatingEmptyInitialAgentURLTest() throws Exception {
         String testMessage = "testMessage";
-        String url = ServerUtils.getURLWithQueryParams( TestServlet.TEST_SERVLET_PATH, "questionType", QuestionInRequest.SIMPLE_COMMENT.name() );
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       TestServlet.QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
         createEmailAdapter( "askfasttest@gmail.com", "", null, null, null, null, null, null, null,
             TEST_PRIVATE_KEY, url );

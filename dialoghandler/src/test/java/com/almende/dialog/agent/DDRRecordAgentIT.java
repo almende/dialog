@@ -27,6 +27,7 @@ import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
+import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
@@ -434,44 +435,53 @@ public class DDRRecordAgentIT extends TestFramework {
         session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localAddressBroadsoft +
                                                                                   "@ask.ask.voipit.nl",
                                                   formattedRemoteAddressVoice);
-        assertThat(session, Matchers.notNullValue());
-        assertThat(session.getStartTimestamp(), Matchers.notNullValue());
-        assertThat(session.getAnswerTimestamp(), Matchers.nullValue());
-        assertThat(session.getReleaseTimestamp(), Matchers.notNullValue());
-        assertThat(session.getCreationTimestamp(), Matchers.notNullValue());
-        String ddrRecordId = session.getDdrRecordId();
+//        assertThat(session, Matchers.notNullValue());
+//        assertThat(session.getStartTimestamp(), Matchers.notNullValue());
+//        assertThat(session.getAnswerTimestamp(), Matchers.nullValue());
+//        assertThat(session.getReleaseTimestamp(), Matchers.notNullValue());
+//        assertThat(session.getCreationTimestamp(), Matchers.notNullValue());
 
-        //send answer ccxml
-        String answerXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" xmlns:xsi1=" +
-                           "\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>246</sequenceNumber><subscriberId>" +
-                           localAddressBroadsoft +
-                           "@ask.ask.voipit.nl</subscriberId><applicationId>cc</applicationId><subscriptionId>" +
-                           adapterConfig.getXsiSubscription() +
-                           "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=\"http://schema.broadsoft.com/xsi-events\">" +
-                           "<eventName>CallSessionEvent</eventName><call><callId>callhalf-12914431715:1</callId><extTrackingId>10668830:1" +
-                           "</extTrackingId><personality>Originator</personality><callState>Active</callState><remoteParty><address>tel:" +
-                           remoteAddressVoice +
-                           "</address><callType>Network</callType></remoteParty><addressOfRecord>0854881000@ask.ask.voipit.nl</addressOfRecord>" +
-                           "<endPoint xsi1:type=\"xsi:AccessEndpoint\"><addressOfRecord>0854881000@ask.ask.voipit.nl</addressOfRecord></endPoint>" +
-                           "<appearance>2</appearance><startTime>1401809063943</startTime><answerTime>1401809061002</answerTime></call></eventData>" +
-                           "</Event>";
-        voiceXMLRESTProxy.receiveCCMessage(answerXML);
+//        //send answer ccxml
+//        String answerXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" xmlns:xsi1=" +
+//                           "\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>246</sequenceNumber><subscriberId>" +
+//                           localAddressBroadsoft +
+//                           "@ask.ask.voipit.nl</subscriberId><applicationId>cc</applicationId><subscriptionId>" +
+//                           adapterConfig.getXsiSubscription() +
+//                           "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=\"http://schema.broadsoft.com/xsi-events\">" +
+//                           "<eventName>CallSessionEvent</eventName><call><callId>callhalf-12914431715:1</callId><extTrackingId>10668830:1" +
+//                           "</extTrackingId><personality>Originator</personality><callState>Active</callState><remoteParty><address>tel:" +
+//                           remoteAddressVoice +
+//                           "</address><callType>Network</callType></remoteParty><addressOfRecord>0854881000@ask.ask.voipit.nl</addressOfRecord>" +
+//                           "<endPoint xsi1:type=\"xsi:AccessEndpoint\"><addressOfRecord>0854881000@ask.ask.voipit.nl</addressOfRecord></endPoint>" +
+//                           "<appearance>2</appearance><startTime>1401809063943</startTime><answerTime>1401809061002</answerTime></call></eventData>" +
+//                           "</Event>";
+//        voiceXMLRESTProxy.receiveCCMessage(answerXML);
         
         //force start the processing of Session
-        sessionAgent.postProcessSessions(session.getKey());
+//        sessionAgent.postProcessSessions(session.getKey());
 
         //assert that a session doesnt exist and is processed
-        session = Session.getSession(session.getKey());
-        assertThat(session, Matchers.nullValue());
+        Collection<Session> sessions = Session.getAllSessions();
+        assertThat(sessions, Matchers.emptyCollectionOf(Session.class));
         
         //check that all ddrs are processed
-        DDRRecord ddrRecord = DDRRecord.getDDRRecord(ddrRecordId, resultMap.get( ACCOUNT_ID_KEY ));
-        ddrRecord.setShouldGenerateCosts(true);
-        assertThat(ddrRecord, Matchers.notNullValue());
-        assertThat(ddrRecord.getStart(), Matchers.notNullValue());
-        assertThat(ddrRecord.getDuration(), Matchers.notNullValue());
-        assertThat(ddrRecord.getTotalCost(), Matchers.notNullValue());
-        assertThat(ddrRecord.getStatusForAddress(formattedRemoteAddressVoice), Matchers.is(CommunicationStatus.FINISHED));
+        Collection<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null,resultMap.get( ACCOUNT_ID_KEY ), null, null, null, null, null, null, null, null);
+        assertThat(ddrRecords.size(), Matchers.is(2));
+        for (DDRRecord ddrRecord : ddrRecords) {
+            
+            DDRType ddrType = DDRType.getDDRType(ddrRecord.getDdrTypeId());
+            if (DDRTypeCategory.INCOMING_COMMUNICATION_COST.equals(ddrType.getCategory()) ||
+                DDRTypeCategory.OUTGOING_COMMUNICATION_COST.equals(ddrType.getCategory())) {
+                
+                ddrRecord.setShouldGenerateCosts(true);
+                assertThat(ddrRecord, Matchers.notNullValue());
+                assertThat(ddrRecord.getStart(), Matchers.notNullValue());
+                assertThat(ddrRecord.getDuration(), Matchers.is(0L));
+                assertThat(ddrRecord.getTotalCost(), Matchers.is(0.0));
+                assertThat(ddrRecord.getStatusForAddress(formattedRemoteAddressVoice),
+                           Matchers.is(CommunicationStatus.MISSED));
+            }
+        }
     }
 
     private Map<String, String> createDDRPricesAndAdapterAndSendOutBound(UnitType unitType, AdapterType adapterType,

@@ -36,6 +36,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.TypeUtil;
+import com.askfast.commons.Status;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
@@ -56,13 +57,13 @@ public class TestFramework
     protected static final String TEST_PUBLIC_KEY    	= "agent1@ask-cs.com";
     protected static final String TEST_PRIVATE_KEY 		= "test_private_key";
     private Server server = null;
-    protected final int jettyPort = 8082;
+    public static final int jettyPort = 8078;
     private static final Logger log = Logger.getLogger(TestFramework.class.toString());
     
     @Before
     public void setup() throws Exception {
 
-        TestServlet.TEST_SERVLET_PATH = "http://localhost:8082/dialoghandler/unitTestServlet";
+        TestServlet.TEST_SERVLET_PATH = "http://localhost:" + TestFramework.jettyPort + "/unitTestServlet";
         new ParallelInit(true);
         ParallelInit.getDatastore();
         if (ParallelInit.datastore != null) {
@@ -71,11 +72,12 @@ public class TestFramework
         DialogAgent dialogAgent = new DialogAgent();
         dialogAgent.setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.CM);
         dialogAgent.setDefaultProviderSettings(AdapterType.CALL, AdapterProviders.BROADSOFT);
+        
         //check if server has to be started
         Category integrationTestAnnotation = getClass().getAnnotation(Category.class);
         if (integrationTestAnnotation != null &&
             integrationTestAnnotation.toString().contains("com.almende.dialog.IntegrationTest")) {
-            
+
             startJettyServer();
         }
     }
@@ -155,7 +157,8 @@ public class TestFramework
     }
     
     public static AdapterConfig createAdapterConfig(String adapterType, String owner,
-        Collection<String> linkedAccounts, String myAddress, String initiatAgentURL) throws Exception {
+                                                    Collection<String> linkedAccounts, String myAddress,
+                                                    String initiatAgentURL) throws Exception {
 
         AdapterConfig adapterConfig = new AdapterConfig();
         adapterConfig.setAdapterType(adapterType);
@@ -163,6 +166,7 @@ public class TestFramework
         adapterConfig.setOwner(owner);
         adapterConfig.setAccounts(linkedAccounts);
         adapterConfig.setInitialAgentURL(initiatAgentURL);
+        adapterConfig.setStatus(Status.ACTIVE);
         String adapterConfigString = adapterConfig.createConfig(ServerUtils.serialize(adapterConfig)).getEntity()
                                         .toString();
         return ServerUtils.deserialize(adapterConfigString, AdapterConfig.class);

@@ -17,6 +17,7 @@ import org.apache.http.client.utils.URIBuilder;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
@@ -24,6 +25,7 @@ import com.almende.util.ParallelInit;
 import com.askfast.commons.Status;
 import com.askfast.commons.entity.Account;
 import com.askfast.commons.entity.Language;
+import com.askfast.commons.entity.TTSInfo;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -158,25 +160,27 @@ public class ServerUtils
      * @throws UnsupportedEncodingException
      */
     public static String getURLWithQueryParams(String url, String queryKey, String queryValue)
-        throws UnsupportedEncodingException {
+    throws UnsupportedEncodingException {
 
-        try {
-            url = url.replace(" ", URLEncoder.encode(" ", "UTF-8"));
-            URIBuilder uriBuilder = new URIBuilder(new URI(url));
-            URIBuilder returnResult = new URIBuilder(new URI(url)).removeQuery();
-            returnResult.addParameter(queryKey, queryValue);
-            for (NameValuePair nameValue : uriBuilder.getQueryParams()) {
+        if (queryKey != null && queryValue != null) {
+            try {
+                url = url.replace(" ", URLEncoder.encode(" ", "UTF-8"));
+                URIBuilder uriBuilder = new URIBuilder(new URI(url));
+                URIBuilder returnResult = new URIBuilder(new URI(url)).removeQuery();
+                returnResult.addParameter(queryKey, queryValue);
+                for (NameValuePair nameValue : uriBuilder.getQueryParams()) {
 
-                if (!nameValue.getName().equals(queryKey)) {
-                    returnResult.addParameter(nameValue.getName(), nameValue.getValue());
+                    if (!nameValue.getName().equals(queryKey)) {
+                        returnResult.addParameter(nameValue.getName(), nameValue.getValue());
+                    }
                 }
+                return returnResult.toString();
             }
-            return returnResult.toString();
+            catch (Exception e) {
+                e.printStackTrace();
+            }
         }
-        catch (Exception e) {
-            e.printStackTrace();
-            return url;
-        }
+        return url;
     }
     
     /**
@@ -253,6 +257,7 @@ public class ServerUtils
      * @return
      */
     public static String getInsufficientMessage(Language language) {
+        language = language != null ? language : Language.getByValue(null);
         switch (language) {
             case DUTCH:
                 return "Uw account heeft geen tegoed meer.";
@@ -263,19 +268,23 @@ public class ServerUtils
     
     /**
      * Gets the language based on the following order of precedence <br>
-     * 1. {@link Question#getPreferred_language()} <br>
-     * 2. {@link AdapterConfig#getPreferred_language()} <br>
-     * 3. {@link Account#getLanguage()}
+     * 1. {@link TTSInfo#getLanguage()} <br>
+     * 2. {@link Question#getPreferred_language()} <br>
+     * 3. {@link AdapterConfig#getPreferred_language()} <br>
+     * 4. {@link Account#getLanguage()}
      * 
      * @param question
      * @param config
      * @param account
      * @return
      */
-    public static Language getLanguage(Question question, AdapterConfig config, Account account) {
+    public static Language getLanguage(Question question, TTSInfo ttsInfo, AdapterConfig config, Account account) {
 
         String language = null;
-        if (question != null) {
+        if (ttsInfo != null) {
+            language = ttsInfo.getLanguage().getCode();
+        }
+        else if (question != null) {
             language = question.getPreferred_language();
         }
         else if (config != null) {
@@ -285,5 +294,89 @@ public class ServerUtils
             return account.getLanguage();
         }
         return Language.getByValue(language);
+    }
+    
+    /**
+     * returns the TTS URL from tts.ask-fast
+     * 
+     * @param ttsInfo
+     * 
+     * @param textForSpeech
+     * @param language
+     * @param contentType
+     * @return
+     */
+    public static String getTTSURL(TTSInfo ttsInfo, String textForSpeech) {
+
+        String language = Language.getByValue(null).getCode();
+        String speed = "0";
+        String codec = "WAV";
+        String format = "8khz_8bit_mono";
+        String voice = null;
+        String serviceProvider = null;
+
+        if (ttsInfo != null) {
+            language = ttsInfo.getLanguage().getCode();
+            speed = ttsInfo.getSpeed();
+            codec = ttsInfo.getCodec();
+            format = ttsInfo.getFormat();
+            voice = ttsInfo.getVoiceUsed();
+            serviceProvider = ttsInfo.getProvider() != null ? ttsInfo.getProvider().name() : null;
+            format = ttsInfo.getFormat();
+        }
+        
+        textForSpeech = textForSpeech.replace("text://", "");
+        
+        String url = "http://tts.ask-fast.com/api/parse";
+        try {
+            url = ServerUtils.getURLWithQueryParams(url, "text", textForSpeech);
+            url = ServerUtils.getURLWithQueryParams(url, "lang", language);
+            url = ServerUtils.getURLWithQueryParams(url, "codec", codec);
+            url = ServerUtils.getURLWithQueryParams(url, "speed", speed);
+            url = ServerUtils.getURLWithQueryParams(url, "format", format);
+            url = ServerUtils.getURLWithQueryParams(url, "voice", voice);
+            url = ServerUtils.getURLWithQueryParams(url, "service", serviceProvider);
+            url += "&type=.wav";
+        }
+        catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return url;
+    }
+    
+    /**
+     * Returns a ttsInfo if it finds one in the session. If not returns a new
+     * instance with the language format got from:
+     * {@link ServerUtils#getLanguage(Question, TTSInfo, AdapterConfig, Account)}
+     * 
+     * @param session
+     * @return
+     */
+    public static TTSInfo getTTSInfoFromSession(Question question, Session session) {
+
+        TTSInfo ttsInfo = Dialog.getTTSInfoFromSession(session);
+        question = question != null ? question : session != null ? session.getQuestion() : null;
+        Language language = getLanguage(question, ttsInfo, session != null ? session.getAdapterConfig() : null, null);
+        if (ttsInfo != null) {
+            ttsInfo.setLanguage(language);
+        }
+        else {
+            ttsInfo = new TTSInfo();
+            ttsInfo.setLanguage(language);
+        }
+        return ttsInfo;
+    }
+
+    /**
+     * Returns a ttsInfo if it finds one in the session. If not returns a new
+     * instance with the language format got from:
+     * {@link ServerUtils#getLanguage(Question, TTSInfo, AdapterConfig, Account)}
+     * 
+     * @param session
+     * @return
+     */
+    public static TTSInfo getTTSInfoFromSession(Question question, String sessionKey) {
+
+        return getTTSInfoFromSession(question, Session.getSession(sessionKey));
     }
 }

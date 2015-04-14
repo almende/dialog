@@ -20,6 +20,7 @@ import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
+import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.intf.DialogInterface;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -30,6 +31,7 @@ public class Dialog implements DialogInterface {
 
     static final Logger log = Logger.getLogger(Dialog.class.getName());
     public static final String DIALOG_BASIC_AUTH_HEADER_KEY = "DIALOG_BASIC_AUTH_HEADER";
+    public static final String DIALOG_ID_KEY = "DIALOG_ID";
     
     @Id
     public String id = null;
@@ -41,6 +43,7 @@ public class Dialog implements DialogInterface {
     String password = null;
     Boolean useBasicAuth = false;
     private HTTPMethods method = HTTPMethods.GET;
+    private TTSInfo ttsInfo = null;
     
     public Dialog() {
 
@@ -136,6 +139,16 @@ public class Dialog implements DialogInterface {
     public void setUseBasicAuth(Boolean useBasicAuth) {
     
         this.useBasicAuth = useBasicAuth;
+    }
+    
+    public TTSInfo getTtsInfo() {
+
+        return ttsInfo;
+    }
+
+    public void setTtsInfo(TTSInfo ttsInfo) {
+
+        this.ttsInfo = ttsInfo;
     }
 
     /**
@@ -348,9 +361,12 @@ public class Dialog implements DialogInterface {
      */
     public static void addDialogCredentialsToSession(Dialog dialog, Session session) {
 
-        if (dialog != null && session != null && dialog.getUseBasicAuth()) {
-            String credential = Credentials.basic(dialog.getUserName(), dialog.getPassword());
-            session.getAllExtras().put(DIALOG_BASIC_AUTH_HEADER_KEY, credential);
+        if (dialog != null && session != null) {
+            if (dialog.getUseBasicAuth()) {
+                String credential = Credentials.basic(dialog.getUserName(), dialog.getPassword());
+                session.addExtras(DIALOG_BASIC_AUTH_HEADER_KEY, credential);
+            }
+            session.addExtras(DIALOG_ID_KEY, dialog.getId());
             session.storeSession();
         }
     }
@@ -368,6 +384,45 @@ public class Dialog implements DialogInterface {
             Session session = Session.getSession(sessionKey);
             if (session != null) {
                 return session.getAllExtras().get(DIALOG_BASIC_AUTH_HEADER_KEY);
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Returns the TTSInfo in the session corresponding to
+     * {@link Dialog#DIALOG_ID_KEY}
+     * 
+     * @param sessionKey
+     * @return
+     */
+    public static TTSInfo getTTSInfoFromSession(String sessionKey) {
+
+        if (sessionKey != null) {
+            Session session = Session.getSession(sessionKey);
+            return getTTSInfoFromSession(session);
+        }
+        return null;
+    }
+    
+    /**
+     * Returns the TTSInfo in the session corresponding to
+     * {@link Dialog#DIALOG_ID_KEY}
+     * 
+     * @param sessionKey
+     * @return
+     */
+    public static TTSInfo getTTSInfoFromSession(Session session) {
+
+        if (session != null) {
+            if (session != null) {
+                String dialogId = session.getAllExtras().get(DIALOG_ID_KEY);
+                if(dialogId != null) {
+                    Dialog dialog = Dialog.getDialog(dialogId, session.getAccountId());
+                    if(dialog != null) {
+                        return dialog.getTtsInfo();
+                    }
+                }
             }
         }
         return null;

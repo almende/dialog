@@ -23,6 +23,8 @@ import com.almende.eve.agent.AgentHost;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.TTSInfo;
+import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
@@ -36,6 +38,7 @@ import com.twilio.sdk.resource.instance.Call;
  * Helper functions for creating DDR records and processing of them
  * @author Shravan
  */
+@SuppressWarnings("deprecation")
 public class DDRUtils
 {
     private static final Logger log = Logger.getLogger( DDRUtils.class.getSimpleName() );
@@ -331,12 +334,85 @@ public class DDRUtils
                 newestDDRRecord.setStart(serverCurrentTime.getMillis());
                 //publish charges if needed
                 if(publishCharges) {
-                    Double ddrCost = calculateDDRCost(newestDDRRecord);
+                    Double ddrCost = calculateDDRCost(newestDDRRecord, false);
                     publishDDREntryToQueue(newestDDRRecord.getAccountId(), ddrCost);
                 }
                 newestDDRRecord.createOrUpdate();
             }
             return newestDDRRecord;
+        }
+        else {
+            throw new Exception("No Subscription DDRType found");
+        }
+    }
+    
+    /**
+     * Create a ddr for a TTS being processed being created and charge a monthly
+     * fee for example
+     * 
+     * @param adapterConfig
+     * @return
+     * @throws Exception
+     */
+    public static DDRRecord createDDRForTTS(String remoteAddress, Session session, TTSInfo ttsInfo, String message) {
+
+        if (session != null) {
+            try {
+                return createDDRForTTS(session.getAdapterConfig(), message, session.getAccountId(), true,
+                                       session.getKey(), ttsInfo.getProvider());
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(String.format("Creating ddrRecord for TTS failed. sessionKey: %s accountid: %s message: %s localAddress: %s remoteAddress: %s",
+                                         session.getKey(), session.getAccountId(), message, session.getLocalAddress(),
+                                         remoteAddress));
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * create a ddr for a TTS being processed being created and charge a monthly
+     * fee for example
+     * 
+     * @param adapterConfig
+     * @return
+     * @throws Exception
+     */
+    public static DDRRecord createDDRForTTS(AdapterConfig adapterConfig, String message, String accountId,
+                                            boolean publishCharges, String sessionKey, TTSProvider ttsProvider) throws Exception {
+
+        DDRType ttsDDRType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
+        DDRRecord ddrRecord = null;
+        if (ttsDDRType != null) {
+            List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ttsDDRType.getTypeId(),
+                                                             AdapterType.getByValue(adapterConfig.getAdapterType()),
+                                                             adapterConfig.getConfigId(), null, null);
+            if (ddrPrices != null) {
+                for (DDRPrice ddrPrice : ddrPrices) {
+                    //pick the ddr price which matches the tts provider. 
+                    if (ddrPrice.getKeyword() == null ||
+                        (ttsProvider != null && ddrPrice.getKeyword().equalsIgnoreCase(ttsProvider.toString()))) {
+
+                        message = message.replaceFirst("text://", "");
+                        Double units = Math.ceil(message.length() / ddrPrice.getUnits());
+                        units = units != null ? units : 1;
+                        ddrRecord = new DDRRecord(ttsDDRType.getTypeId(), adapterConfig, accountId, units.intValue());
+                        if (ttsProvider != null) {
+                            ddrRecord.addAdditionalInfo("TTSProvider", ttsProvider);
+                        }
+                        ddrRecord.addAdditionalInfo("message", message);
+                        ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
+                        ddrRecord.createOrUpdate();
+                        break;
+                    }
+                }
+            }
+            if (publishCharges && ddrRecord != null) {
+                Double ddrCost = calculateDDRCost(ddrRecord, false);
+                publishDDREntryToQueue(ddrRecord.getAccountId(), ddrCost);
+            }
+            return ddrRecord;
         }
         else {
             throw new Exception("No Subscription DDRType found");
@@ -393,91 +469,23 @@ public class DDRUtils
     }
     
     /**
-     * calculates the cost for the given ddrRecord based on the linked DDRPrice.
+     * calculates the cost associated with this DDRRecord bsaed on the linked
+     * DDRPrice. This does not add the servicecosts. Use the
+     * {@link DDRUtils#calculateCommunicationDDRCost(DDRRecord, Boolean)} for
+     * it. <br>
      * DDRPrice with the most recent {@link DDRPrice#getEndTime() endTime} is
      * chosen if the {@link DDRRecord#getStart() startTime} doesnt fall between
      * {@link DDRPrice#getStartTime() startTime} and
-     * {@link DDRPrice#getEndTime() endTime}. <br>
-     * Following costs can be added: <br>
-     * 1. {@link DDRTypeCategory#INCOMING_COMMUNICATION_COST} If its an incoming ddr <br>
-     *  or {@link DDRTypeCategory#OUTGOING_COMMUNICATION_COST} If its an outgoing ddr <br>
-     * 2. {@link DDRTypeCategory#START_UP_COST} if its a ddr record linked to calling <br>
-     * 3. {@link DDRTypeCategory#SERVICE_COST} per dialog cost if includeServiceCosts is true <br>
-     * @param ddrRecord
-     * @param includeServiceCosts includes the service cost for this ddr too, if true. The service cost is 
-     * ignored if it is lesser than the communiciation cost
-     * @return
+     * {@link DDRPrice#getEndTime() endTime}
+     * 
+     * @return cost incurred for this ddrRecord
      * @throws Exception
      */
-    public static Double calculateCommunicationDDRCost( DDRRecord ddrRecord, Boolean includeServiceCosts ) throws Exception
-    {
-        double result = 0.0;
-        AdapterConfig config = null;
-        if ( ddrRecord != null)
-        {
-            DDRType ddrType = ddrRecord.getDdrType();
-            config = ddrRecord.getAdapter();
-            List<DDRPrice> communicationDDRPrices = null;
-            if(config.isCallAdapter())
-            {
-                String toAddress = null;
-                //for a calling ddr record, it must always have one address in the toList
-                if( ddrRecord.getToAddress().keySet().size() == 1)
-                {
-                    toAddress = ddrRecord.getToAddress().keySet().iterator().next();
-                    PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType( toAddress );
-                    String keyword = null;
-                    if(!numberType.equals(PhoneNumberType.UNKNOWN))
-                    {
-                        PhoneNumber phoneNumber = PhoneNumberUtils.getPhoneNumberProto( toAddress, null );
-                        keyword = phoneNumber.getCountryCode() + "|" + numberType.name().toUpperCase(); 
-                    }
-                    communicationDDRPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(),
-                                                                   AdapterType.getByValue(config.getAdapterType()),
-                                                                   config.getConfigId(), null, keyword);
-                }
-                else
-                {
-                    log.severe( "Multiple addresses found in the toAddress field for CALL: "
-                        + ddrRecord.getToAddressString() );
-                }
-            }
-            else
-            {
-                communicationDDRPrices = DDRPrice.getDDRPrices( ddrType.getTypeId(),
-                    AdapterType.getByValue( config.getAdapterType() ), config.getConfigId(), null, null );
-            }
-            if ( communicationDDRPrices != null && !communicationDDRPrices.isEmpty() && ddrRecord.getAccountId() != null )
-            {
-                //use the ddrPrice that has the most recent start date and matches the keyword based on the 
-                //to address, if it is mobile or landline
-                DDRPrice selectedDDRPrice = null;
-                boolean isDDRPriceInTimerange = false;
-                for ( DDRPrice ddrPrice : communicationDDRPrices )
-                {
-                    //pick a price whose start and endTimestamp falls in that of the ddrRecords
-                    if ( ddrRecord.getStart() != null && ddrPrice.isValidForTimestamp( ddrRecord.getStart() ) )
-                    {
-                        selectedDDRPrice = ddrPrice;
-                        isDDRPriceInTimerange = true;
-                        break;
-                    }
-                    //TODO: should check for other mechanisms that fetch the closet offer to the ddrRecord timestamp
-                    selectedDDRPrice = ddrPrice; //else pick the last ddrPrice in the list
-                }
-                if (!isDDRPriceInTimerange) {
-                    log.warning(String.format("No DDRPrice date range match for DDRRecord: %s. In turn fetched: %s of type: %s with price: %s",
-                                              ddrRecord.getId(), selectedDDRPrice.getId(),
-                                              selectedDDRPrice.getUnitType(), selectedDDRPrice.getPrice()));
-                }
-                result = calculateDDRCost( ddrRecord, selectedDDRPrice );
-            }
-            result = applyStartUpCost(result, config, ddrRecord.getDirection());
-            result = applyServiceCharges(ddrRecord, includeServiceCosts, result, config);
-        }
-        return getCeilingAtPrecision(result, 3);
-    }
+    public static Double calculateDDRCost(DDRRecord ddrRecord) throws Exception {
 
+        return calculateDDRCost(ddrRecord, false);
+    }
+    
     /**
      * calculates the cost associated with this DDRRecord bsaed on the linked DDRPrice. This does not 
      * add the servicecosts. Use the {@link DDRUtils#calculateCommunicationDDRCost(DDRRecord, Boolean)} for it. <br>
@@ -489,41 +497,60 @@ public class DDRUtils
      * @return cost incurred for this ddrRecord
      * @throws Exception
      */
-    public static Double calculateDDRCost(DDRRecord ddrRecord) throws Exception {
+    public static Double calculateDDRCost(DDRRecord ddrRecord, Boolean includeServiceCharges) throws Exception {
 
-        DDRType ddrType = ddrRecord.getDdrType();
-        AdapterConfig adapter = ddrRecord.getAdapter();
-        if (ddrType != null) {
-            AdapterType adapterType = adapter != null ? AdapterType.getByValue(adapter.getAdapterType()) : null;
-            String adapterId = adapter != null ? adapter.getConfigId() : null;
-            switch (ddrType.getCategory()) {
-                case ADAPTER_PURCHASE:
-                case SERVICE_COST: {
-                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType, adapterId,
-                                                                     UnitType.PART, null);
-                    return !ddrPrices.isEmpty() ? ddrPrices.iterator().next().getPrice() : 0.0;
+        if (ddrRecord != null) {
+            DDRType ddrType = ddrRecord.getDdrType();
+            AdapterConfig adapter = ddrRecord.getAdapter();
+            if (ddrType != null) {
+                AdapterType adapterType = adapter != null ? AdapterType.getByValue(adapter.getAdapterType()) : null;
+                String adapterId = adapter != null ? adapter.getConfigId() : null;
+                switch (ddrType.getCategory()) {
+                    case ADAPTER_PURCHASE:
+                    case SERVICE_COST: {
+                        List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType, adapterId,
+                                                                         UnitType.PART, null);
+                        return !ddrPrices.isEmpty() ? ddrPrices.iterator().next().getPrice() : 0.0;
+                    }
+                    case INCOMING_COMMUNICATION_COST:
+                    case OUTGOING_COMMUNICATION_COST:
+                        return calculateCommunicationDDRCost(ddrRecord, includeServiceCharges);
+                    case TTS_COST: {
+                        Object ttsProviderObject = ddrRecord.getAdditionalInfo().get("TTSProvider");
+                        String ttsProvider = ttsProviderObject != null ? ttsProviderObject.toString() : null;
+                        List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType, adapterId,
+                                                                         UnitType.PART, ttsProvider);
+                        if (ddrPrices != null && !ddrPrices.isEmpty()) {
+                            DDRPrice ddrPrice = ddrPrices.iterator().next();
+                            return ddrPrice.getPrice() * ddrRecord.getQuantity();
+                        }
+                        else {
+                            return 0.0;
+                        }
+                    }
+                    case SUBSCRIPTION_COST:
+                    case OTHER: {
+                        List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType, adapterId,
+                                                                         null, null);
+                        return !ddrPrices.isEmpty() ? ddrPrices.iterator().next().getPrice() : 0.0;
+                    }
+                    default:
+                        String errorMessage = String.format("No DDRTypes found for this DDRRecord id: %s and ddrTypeId: %s",
+                                                            ddrRecord.getId(), ddrRecord.getDdrTypeId());
+                        log.severe(errorMessage);
+                        throw new Exception(errorMessage);
                 }
-                case INCOMING_COMMUNICATION_COST:
-                case OUTGOING_COMMUNICATION_COST:
-                    return calculateCommunicationDDRCost(ddrRecord, false);
-                case SUBSCRIPTION_COST:
-                case OTHER: {
-                    List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType, adapterId, null,
-                                                                     null);
-                    return !ddrPrices.isEmpty() ? ddrPrices.iterator().next().getPrice() : 0.0;
-                }
-                default:
-                    String errorMessage = String.format("No DDRTypes found for this DDRRecord id: %s and ddrTypeId: %s",
-                                                        ddrRecord.getId(), ddrRecord.getDdrTypeId());
-                    log.severe(errorMessage);
-                    throw new Exception(errorMessage);
+            }
+            else {
+                String errorMessage = String.format("No DDRTypes found for this DDRRecord id: %s and ddrTypeId: %s",
+                                                    ddrRecord.getId(), ddrRecord.getDdrTypeId());
+                log.severe(errorMessage);
+                throw new Exception(errorMessage);
             }
         }
         else {
-            String errorMessage = String.format("No DDRTypes found for this DDRRecord id: %s and ddrTypeId: %s",
-                                                ddrRecord.getId(), ddrRecord.getDdrTypeId());
-            log.severe(errorMessage);
-            throw new Exception(errorMessage);
+            log.severe("No DDRRecordfound.. returning 0.0 as costs");
+            return 0.0;
         }
     }
     
@@ -548,70 +575,6 @@ public class DDRUtils
             return ddrPrices != null && !ddrPrices.isEmpty() ? ddrPrices.iterator().next() : null;
         }
         return null;
-    }
-    
-    /**
-     * calculates the total cost for this ddrRecord and ddr price 
-     * @param ddrRecord
-     * @param ddrPrice
-     * @return the total cost chargeable
-     * @throws Exception
-     */
-    public static Double calculateDDRCost(DDRRecord ddrRecord, DDRPrice ddrPrice) throws Exception
-    {
-        DDRType ddrType = DDRType.getDDRType( ddrRecord.getDdrTypeId() );
-        Double totalCost = null;
-        if(ddrType != null && ddrPrice != null )
-        {
-            switch ( ddrType.getCategory() )
-            {
-                case INCOMING_COMMUNICATION_COST:
-                case OUTGOING_COMMUNICATION_COST:
-                {
-                    Double totalTime = null;
-                    double duration_double = ddrRecord.getDuration() != null ? ddrRecord.getDuration().doubleValue() : 0.0;
-                    switch ( ddrPrice.getUnitType() )
-                    {
-                        case SECOND:
-                            totalTime = duration_double / 1000; //in secs
-                            break;
-                        case MINUTE:
-                            totalTime = duration_double / ( 60 * 1000 ); //in mins
-                            break;
-                        case HOUR:
-                            totalTime = duration_double / ( 60 * 60 * 1000 ); //in hrs
-                            break;
-                        case DAY:
-                            totalTime = duration_double / ( 24 * 60 * 60 * 1000 ); //in days
-                            break;
-                        case MONTH:
-                            int monthOfYear = TimeUtils.getServerCurrentTime().getMonthOfYear();
-                            int totalDays = Calendar.getInstance( TimeUtils.getServerTimeZone() ).getActualMaximum(
-                                monthOfYear );
-                            totalTime = duration_double / ( totalDays * 24 * 60 * 60 * 1000 ); //in months
-                            break;
-                        case PART:
-                            totalTime = 1.0;
-                            break;
-                        default:
-                            throw new Exception( "DDR not implemented for this UnitType: " + ddrPrice.getUnitType() );
-                    }
-                    double noOfComsumedUnits = Math.ceil( totalTime ) / ( (double) ddrPrice.getUnits() );
-                    totalCost = ddrRecord.getQuantity() * Math.ceil( noOfComsumedUnits ) * ddrPrice.getPrice();
-                    break;
-                }
-                case ADAPTER_PURCHASE:
-                case SERVICE_COST:
-                case SUBSCRIPTION_COST:
-                    totalCost = ddrPrice.getPrice();
-                    break;
-                default:
-                    throw new Exception( "DDR not implemented for this category: " + ddrType.getCategory() );
-            }
-            //add the selected ddrPrice into the additionalInfo for tracking purposes
-            ddrRecord.addAdditionalInfo("ddrPriceId", ddrPrice.getId());
-        }
-        return totalCost;
     }
     
     /**
@@ -656,13 +619,13 @@ public class DDRUtils
                                                         session.getKey());
                         //push session to queue when the call is picked up but no costs are attached or
                         //when the ddrRecord is found but no answerTimestamp is seen. (Try to process it again later: when the answer ccxml comes in later on)
-                        boolean candidateToBePushedToQueue = false;
+//                        boolean candidateToBePushedToQueue = false;
                         if (ddrRecord == null && session.getAnswerTimestamp() != null) {
                             String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
                                                                 session.getKey());
                             log.severe(errorMessage);
                             dialogLog.severe(adapterConfig, errorMessage, session);
-                            candidateToBePushedToQueue = true;
+//                            candidateToBePushedToQueue = true;
                         }
                         else if (ddrRecord != null && session.getAnswerTimestamp() == null &&
                                  session.getReleaseTimestamp() != null) {
@@ -670,12 +633,12 @@ public class DDRUtils
                             String warningMessage = String.format("No costs added. Looks like a immediate hangup! Hangup timestamp: %s found. But answerTimestamp not found for session: %s",
                                                                   session.getReleaseTimestamp(), session.getKey());
                             log.warning(warningMessage);
-                            candidateToBePushedToQueue = true;
+//                            candidateToBePushedToQueue = true;
                         }
-                        if (candidateToBePushedToQueue && pushToQueue) { //push the session details to queue
-                            session.pushSessionToQueue();
-                            return result;
-                        }
+//                        if (candidateToBePushedToQueue && pushToQueue) { //push the session details to queue
+//                            session.pushSessionToQueue();
+//                            return result;
+//                        }
 
                         //publish charges
                         Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
@@ -693,9 +656,9 @@ public class DDRUtils
                                                             session.getKey());
                         log.severe(errorMessage);
                         dialogLog.severe(adapterConfig, errorMessage, session);
-                        if (pushToQueue) { //push the session details to queue
-                            session.pushSessionToQueue();
-                        }
+//                        if (pushToQueue) { //push the session details to queue
+//                            session.pushSessionToQueue();
+//                        }
                     }
                 }
                 //text adapter. delete the session if question is null
@@ -712,9 +675,9 @@ public class DDRUtils
                 e.printStackTrace();
                 log.severe(errorMessage);
                 dialogLog.severe(session.getAdapterConfig(), errorMessage, session);
-                if (pushToQueue) { //push the session details to queue
-                    session.pushSessionToQueue();
-                }
+//                if (pushToQueue) { //push the session details to queue
+//                    session.pushSessionToQueue();
+//                }
             }
         }
         
@@ -898,5 +861,150 @@ public class DDRUtils
             Call callDetails = twilioAccount.getCall(session.getExternalSession());
             TwilioAdapter.updateSessionWithCallTimes(session, callDetails);
         }
+    }
+    
+    /**
+     * calculates the total cost for this ddrRecord and ddr price
+     * 
+     * @param ddrRecord
+     * @param ddrPrice
+     * @return the total cost chargeable
+     * @throws Exception
+     */
+    private static Double calculateCommunicationDDRCost(DDRRecord ddrRecord, DDRPrice ddrPrice) throws Exception {
+
+        DDRType ddrType = DDRType.getDDRType(ddrRecord.getDdrTypeId());
+        Double totalCost = null;
+        if (ddrType != null && ddrPrice != null) {
+            switch (ddrType.getCategory()) {
+                case INCOMING_COMMUNICATION_COST:
+                case OUTGOING_COMMUNICATION_COST: {
+                    Double totalTime = null;
+                    double duration_double = ddrRecord.getDuration() != null ? ddrRecord.getDuration().doubleValue()
+                                                                            : 0.0;
+                    switch (ddrPrice.getUnitType()) {
+                        case SECOND:
+                            totalTime = duration_double / 1000; //in secs
+                            break;
+                        case MINUTE:
+                            totalTime = duration_double / (60 * 1000); //in mins
+                            break;
+                        case HOUR:
+                            totalTime = duration_double / (60 * 60 * 1000); //in hrs
+                            break;
+                        case DAY:
+                            totalTime = duration_double / (24 * 60 * 60 * 1000); //in days
+                            break;
+                        case MONTH:
+                            int monthOfYear = TimeUtils.getServerCurrentTime().getMonthOfYear();
+                            int totalDays = Calendar.getInstance(TimeUtils.getServerTimeZone())
+                                                            .getActualMaximum(monthOfYear);
+                            totalTime = duration_double / (totalDays * 24 * 60 * 60 * 1000); //in months
+                            break;
+                        case PART:
+                            totalTime = 1.0;
+                            break;
+                        default:
+                            throw new Exception("DDR not implemented for this UnitType: " + ddrPrice.getUnitType());
+                    }
+                    double noOfComsumedUnits = Math.ceil(totalTime) / ((double) ddrPrice.getUnits());
+                    totalCost = ddrRecord.getQuantity() * Math.ceil(noOfComsumedUnits) * ddrPrice.getPrice();
+                    break;
+                }
+                default:
+                    throw new Exception("DDR not implemented for this category: " + ddrType.getCategory());
+            }
+            //add the selected ddrPrice into the additionalInfo for tracking purposes
+            //DO NOT add a save here. As this method might have been called from the getter itself
+            ddrRecord.addAdditionalInfo("ddrPriceId", ddrPrice.getId());
+        }
+        return totalCost;
+    }
+    
+    /**
+     * calculates the cost for the given ddrRecord based on the linked DDRPrice.
+     * DDRPrice with the most recent {@link DDRPrice#getEndTime() endTime} is
+     * chosen if the {@link DDRRecord#getStart() startTime} doesnt fall between
+     * {@link DDRPrice#getStartTime() startTime} and
+     * {@link DDRPrice#getEndTime() endTime}. <br>
+     * Following costs can be added: <br>
+     * 1. {@link DDRTypeCategory#INCOMING_COMMUNICATION_COST} If its an incoming ddr <br>
+     *  or {@link DDRTypeCategory#OUTGOING_COMMUNICATION_COST} If its an outgoing ddr <br>
+     * 2. {@link DDRTypeCategory#START_UP_COST} if its a ddr record linked to calling <br>
+     * 3. {@link DDRTypeCategory#SERVICE_COST} per dialog cost if includeServiceCosts is true <br>
+     * @param ddrRecord
+     * @param includeServiceCosts includes the service cost for this ddr too, if true. The service cost is 
+     * ignored if it is lesser than the communiciation cost
+     * @return
+     * @throws Exception
+     */
+    private static Double calculateCommunicationDDRCost( DDRRecord ddrRecord, Boolean includeServiceCosts ) throws Exception
+    {
+        double result = 0.0;
+        AdapterConfig config = null;
+        if ( ddrRecord != null)
+        {
+            DDRType ddrType = ddrRecord.getDdrType();
+            config = ddrRecord.getAdapter();
+            List<DDRPrice> communicationDDRPrices = null;
+            if(config.isCallAdapter())
+            {
+                String toAddress = null;
+                //for a calling ddr record, it must always have one address in the toList
+                if( ddrRecord.getToAddress().keySet().size() == 1)
+                {
+                    toAddress = ddrRecord.getToAddress().keySet().iterator().next();
+                    PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType( toAddress );
+                    String keyword = null;
+                    if(!numberType.equals(PhoneNumberType.UNKNOWN))
+                    {
+                        PhoneNumber phoneNumber = PhoneNumberUtils.getPhoneNumberProto( toAddress, null );
+                        keyword = phoneNumber.getCountryCode() + "|" + numberType.name().toUpperCase(); 
+                    }
+                    communicationDDRPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(),
+                                                                   AdapterType.getByValue(config.getAdapterType()),
+                                                                   config.getConfigId(), null, keyword);
+                }
+                else
+                {
+                    log.severe( "Multiple addresses found in the toAddress field for CALL: "
+                        + ddrRecord.getToAddressString() );
+                }
+            }
+            else
+            {
+                communicationDDRPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(),
+                                                               AdapterType.getByValue(config.getAdapterType()),
+                                                               config.getConfigId(), null, null);
+            }
+            if ( communicationDDRPrices != null && !communicationDDRPrices.isEmpty() && ddrRecord.getAccountId() != null )
+            {
+                //use the ddrPrice that has the most recent start date and matches the keyword based on the 
+                //to address, if it is mobile or landline
+                DDRPrice selectedDDRPrice = null;
+                boolean isDDRPriceInTimerange = false;
+                for ( DDRPrice ddrPrice : communicationDDRPrices )
+                {
+                    //pick a price whose start and endTimestamp falls in that of the ddrRecords
+                    if ( ddrRecord.getStart() != null && ddrPrice.isValidForTimestamp( ddrRecord.getStart() ) )
+                    {
+                        selectedDDRPrice = ddrPrice;
+                        isDDRPriceInTimerange = true;
+                        break;
+                    }
+                    //TODO: should check for other mechanisms that fetch the closet offer to the ddrRecord timestamp
+                    selectedDDRPrice = ddrPrice; //else pick the last ddrPrice in the list
+                }
+                if (!isDDRPriceInTimerange) {
+                    log.warning(String.format("No DDRPrice date range match for DDRRecord: %s. In turn fetched: %s of type: %s with price: %s",
+                                              ddrRecord.getId(), selectedDDRPrice.getId(),
+                                              selectedDDRPrice.getUnitType(), selectedDDRPrice.getPrice()));
+                }
+                result = calculateCommunicationDDRCost( ddrRecord, selectedDDRPrice );
+            }
+            result = applyStartUpCost(result, config, ddrRecord.getDirection());
+            result = applyServiceCharges(ddrRecord, includeServiceCosts, result, config);
+        }
+        return getCeilingAtPrecision(result, 3);
     }
 }

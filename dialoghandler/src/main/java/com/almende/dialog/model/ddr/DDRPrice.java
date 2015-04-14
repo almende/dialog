@@ -91,8 +91,8 @@ public class DDRPrice
      * @param unitType optional field. If no prices are fetched for this unitType a generic one will be returned.
      * @return
      */
-    public static List<DDRPrice> getDDRPrices( String ddrTypeId, AdapterType adapterType, String adapterId, UnitType unitType,
-        String keyword)
+    public static List<DDRPrice> getDDRPrices(String ddrTypeId, AdapterType adapterType, String adapterId,
+                                              UnitType unitType, String keyword)
     {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         RootFindCommand<DDRPrice> query = datastore.find().type( DDRPrice.class );

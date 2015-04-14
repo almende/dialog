@@ -1,33 +1,56 @@
 package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URIBuilder;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+import org.w3c.dom.Document;
 import com.almende.dialog.IntegrationTest;
 import com.almende.dialog.Settings;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
+import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DDRRecordAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.Language;
+import com.askfast.commons.entity.TTSInfo;
+import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
 
 @Category(IntegrationTest.class)
 public class TwilioAdapterIT extends TestFramework {
 
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio";
+    private DialogAgent dialogAgent = null;
+    private static final String TEST_MESSAGE = "How are you doing? today"; 
 
     /**
      * This test checks if a sequence of people are getting called properly when
@@ -64,6 +87,7 @@ public class TwilioAdapterIT extends TestFramework {
 
         //create dialog
         Dialog dialog = new Dialog("Sequencial dialog", url);
+        dialog.setOwner(TEST_PUBLIC_KEY);
         dialog.storeOrUpdate();
 
         //update adapter with dialog
@@ -103,21 +127,21 @@ public class TwilioAdapterIT extends TestFramework {
         Response preconnect = twilioAdapter.preconnect(adapterConfig.getMyAddress(), TEST_PUBLIC_KEY,
                                                        remoteAddressVoice, "outbound-dial", testCallId1);
         assertXMLGeneratedByTwilioLibrary(String.format("<Response><Gather method=\"GET\" numDigits=\"1\" finishOnKey=\"\" action=\"http://%s/dialoghandler/rest/twilio/answer\" "
-                                                                                        + "timeout=\"5\"><Say language=\"nl-NL\">%s</Say><Say language=\"nl-NL\">"
-                                                                                        + "%s</Say><Say language=\"nl-NL\">%s</Say></Gather><Redirect method=\"GET\">"
+                                                                                        + "timeout=\"5\"><Say language=\"nl-nl\">%s</Say><Say language=\"nl-nl\">"
+                                                                                        + "%s</Say><Say language=\"nl-nl\">%s</Say></Gather><Redirect method=\"GET\">"
                                                                                         + "http://%s/dialoghandler/rest/twilio/timeout</Redirect></Response>",
                                                         Settings.HOST, "Incoming call", "1", "2", Settings.HOST),
                                           preconnect.getEntity().toString());
 
         //answer the preconnect with the ignore reply
         Response answer = twilioAdapter.answer(null, "2", adapterConfig.getMyAddress(), remoteAddressVoice,
-                                               "outbound-dial", null, "in-progress", testCallId1);
+                                               "outbound-dial", null, null, null, testCallId1);
         assertEquals("<Response><Say language=\"nl-nl\">You chose 2</Say><Hangup></Hangup></Response>".toLowerCase(),
                      answer.getEntity().toString().toLowerCase());
 
         //mock new redirect call to the second number
         answer = twilioAdapter.answer(null, null, adapterConfig.getMyAddress(), inboundAddress, "inbound", null,
-                                      "in-progress", testCallId);
+                                      null, null, testCallId);
 
         //a new referral session must have been created from testCallId as the parent external sessionId
         Session sessionFromParentExternalId = Session.getSessionFromParentExternalId(testCallId2, testCallId);
@@ -134,15 +158,375 @@ public class TwilioAdapterIT extends TestFramework {
         preconnect = twilioAdapter.preconnect(adapterConfig.getMyAddress(), TEST_PUBLIC_KEY, secondRemoteAddress,
                                               "outbound-dial", testCallId2);
         assertXMLGeneratedByTwilioLibrary(String.format("<Response><Gather numDigits=\"1\" finishOnKey=\"\" action=\"http://%s/dialoghandler/rest/twilio/answer\" "
-                                                                                        + "method=\"GET\" timeout=\"5\"><Say language=\"nl-NL\">%s</Say><Say language=\"nl-NL\">"
-                                                                                        + "%s</Say><Say language=\"nl-NL\">%s</Say></Gather><Redirect method=\"GET\">"
+                                                                                        + "method=\"GET\" timeout=\"5\"><Say language=\"nl-nl\">%s</Say><Say language=\"nl-nl\">"
+                                                                                        + "%s</Say><Say language=\"nl-nl\">%s</Say></Gather><Redirect method=\"GET\">"
                                                                                         + "http://%s/dialoghandler/rest/twilio/timeout</Redirect></Response>",
                                                         Settings.HOST, "Incoming call", "1", "2", Settings.HOST),
                                           preconnect.getEntity().toString());
 
-        answer = twilioAdapter.answer(null, "1", adapterConfig.getMyAddress(), inboundAddress, "inbound", null,
-                                      "in-progress", testCallId2);
-        assertXMLGeneratedByTwilioLibrary("<Response><Say language=\"nl-NL\">You chose 1</Say></Response>", answer
+        answer = twilioAdapter.answer(null, "1", adapterConfig.getMyAddress(), inboundAddress, "inbound", null, null,
+                                      null, testCallId2);
+        assertXMLGeneratedByTwilioLibrary("<Response><Say language=\"nl-nl\">You chose 1</Say></Response>", answer
                                         .getEntity().toString());
+    }
+
+    /**
+     * This test is to check if the inbound functionality works for a dialog
+     * with the right credentials for the secured url access along with TTSInfo
+     * given in the dialog
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void inboundPhoneCall_WithSecuredDialogAndTTSInfoTest() throws Exception {
+
+        new DDRRecordAgent().generateDefaultDDRTypes();
+
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setProvider(TTSProvider.ACAPELA);
+        ttsInfo.setVoiceUsed("testtest");
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
+        Response securedDialogResponse = performSecuredInboundCall("inbound", "testuserName", "testpassword", ttsInfo,
+                                                                   url);
+        assertTrue(securedDialogResponse != null);
+        //make sure that the tts source generated has a service and voice
+        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
+        String ttsURL = doc.getFirstChild().getFirstChild().getTextContent();
+        URIBuilder uriBuilder = new URIBuilder(URLDecoder.decode(ttsURL, "UTF-8").replace(" ", "%20"));
+        for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
+            if (queryParams.getName().equals("text")) {
+                assertThat(queryParams.getValue(), Matchers.is(TEST_MESSAGE));
+                continue;
+            }
+            else if (queryParams.getName().equals("codec")) {
+                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                continue;
+            }
+            else if (queryParams.getName().equals("speed")) {
+                assertThat(queryParams.getValue(), Matchers.is("0"));
+                continue;
+            }
+            else if (queryParams.getName().equals("format")) {
+                assertThat(queryParams.getValue(), Matchers.is("8khz_8bit_mono"));
+                continue;
+            }
+            else if (queryParams.getName().equals("type")) {
+                assertThat(queryParams.getValue(), Matchers.is(".wav"));
+                continue;
+            }
+            else if (queryParams.getName().equals("lang")) {
+                assertThat(queryParams.getValue(), Matchers.is("nl-nl"));
+                continue;
+            }
+            else if (queryParams.getName().equals("voice")) {
+                assertThat(queryParams.getValue(), Matchers.is("testtest"));
+                continue;
+            }
+            else if (queryParams.getName().equals("service")) {
+                assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
+                continue;
+            }
+            assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
+        }
+    }
+
+    /**
+     * This test is to check if the outbound functionality works for a dialog
+     * with the right credentials for the secured url access along with TTSInfo
+     * given in the dialog
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void outboundPhoneCall_WithSecuredDialogAndTTSInfoTest() throws Exception {
+
+        new DDRRecordAgent().generateDefaultDDRTypes();
+
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setProvider(TTSProvider.ACAPELA);
+        ttsInfo.setVoiceUsed("testtest");
+        ttsInfo.setSpeed("0");
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
+        Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
+                                                                   url);
+        assertTrue(securedDialogResponse != null);
+        //make sure that the tts source generated has a service and voice
+        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
+        String ttsURL = doc.getFirstChild().getFirstChild().getTextContent();
+        URIBuilder uriBuilder = new URIBuilder(URLDecoder.decode(ttsURL, "UTF-8").replace(" ", "%20"));
+        for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
+            if (queryParams.getName().equals("text")) {
+                assertThat(queryParams.getValue(), Matchers.is(TEST_MESSAGE));
+                continue;
+            }
+            else if (queryParams.getName().equals("codec")) {
+                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                continue;
+            }
+            else if (queryParams.getName().equals("speed")) {
+                assertThat(queryParams.getValue(), Matchers.is("0"));
+                continue;
+            }
+            else if (queryParams.getName().equals("format")) {
+                assertThat(queryParams.getValue(), Matchers.is("8khz_8bit_mono"));
+                continue;
+            }
+            else if (queryParams.getName().equals("type")) {
+                assertThat(queryParams.getValue(), Matchers.is(".wav"));
+                continue;
+            }
+            else if (queryParams.getName().equals("lang")) {
+                assertThat(queryParams.getValue(), Matchers.is("nl-nl"));
+                continue;
+            }
+            else if (queryParams.getName().equals("voice")) {
+                assertThat(queryParams.getValue(), Matchers.is("testtest"));
+                continue;
+            }
+            else if (queryParams.getName().equals("service")) {
+                assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
+                continue;
+            }
+            assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
+        }
+    }
+
+    /**
+     * This test is to check if the outbound functionality works for a dialog
+     * with language as English. But adapter is set to French, and question is
+     * set to Dutch still parses TTS in English
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void outboundPhoneCall_WithEnglishLanguageTest() throws Exception {
+
+        new DDRRecordAgent().generateDefaultDDRTypes();
+
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setProvider(TTSProvider.ACAPELA);
+        ttsInfo.setVoiceUsed("testtest");
+        ttsInfo.setSpeed("0");
+        ttsInfo.setLanguage(Language.ENGLISH_UNITEDSTATES);
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
+        Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
+                                                                   url);
+        assertTrue(securedDialogResponse != null);
+        //make sure that the tts source generated has a service and voice
+        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
+        String ttsURL = doc.getFirstChild().getFirstChild().getTextContent();
+        URIBuilder uriBuilder = new URIBuilder(URLDecoder.decode(ttsURL, "UTF-8").replace(" ", "%20"));
+        for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
+            if (queryParams.getName().equals("text")) {
+                assertThat(queryParams.getValue(), Matchers.is(TEST_MESSAGE));
+                continue;
+            }
+            else if (queryParams.getName().equals("codec")) {
+                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                continue;
+            }
+            else if (queryParams.getName().equals("speed")) {
+                assertThat(queryParams.getValue(), Matchers.is("0"));
+                continue;
+            }
+            else if (queryParams.getName().equals("format")) {
+                assertThat(queryParams.getValue(), Matchers.is("8khz_8bit_mono"));
+                continue;
+            }
+            else if (queryParams.getName().equals("type")) {
+                assertThat(queryParams.getValue(), Matchers.is(".wav"));
+                continue;
+            }
+            else if (queryParams.getName().equals("lang")) {
+                assertThat(queryParams.getValue(), Matchers.is("en-us"));
+                continue;
+            }
+            else if (queryParams.getName().equals("voice")) {
+                assertThat(queryParams.getValue(), Matchers.is("testtest"));
+                continue;
+            }
+            else if (queryParams.getName().equals("service")) {
+                assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
+                continue;
+            }
+            assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
+        }
+    }
+
+    /**
+     * This test is to check if the outbound functionality works for a dialog
+     * with language as French. But adapter is set to English and question
+     * parsed in Dutch, parses TTS in French
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest() throws Exception {
+
+        new DDRRecordAgent().generateDefaultDDRTypes();
+
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setProvider(TTSProvider.ACAPELA);
+        ttsInfo.setVoiceUsed("testtest");
+        ttsInfo.setSpeed("0");
+        ttsInfo.setLanguage(Language.FRENCH_FRANCE);
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "lang", Language.DUTCH.getCode());
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
+        Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
+                                                                   url);
+        assertTrue(securedDialogResponse != null);
+        //make sure that the tts source generated has a service and voice
+        Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
+        String ttsURL = doc.getFirstChild().getFirstChild().getTextContent();
+        URIBuilder uriBuilder = new URIBuilder(URLDecoder.decode(ttsURL, "UTF-8").replace(" ", "%20"));
+        for (NameValuePair queryParams : uriBuilder.getQueryParams()) {
+            if (queryParams.getName().equals("text")) {
+                assertThat(queryParams.getValue(), Matchers.is(TEST_MESSAGE));
+                continue;
+            }
+            else if (queryParams.getName().equals("codec")) {
+                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                continue;
+            }
+            else if (queryParams.getName().equals("speed")) {
+                assertThat(queryParams.getValue(), Matchers.is("0"));
+                continue;
+            }
+            else if (queryParams.getName().equals("format")) {
+                assertThat(queryParams.getValue(), Matchers.is("8khz_8bit_mono"));
+                continue;
+            }
+            else if (queryParams.getName().equals("type")) {
+                assertThat(queryParams.getValue(), Matchers.is(".wav"));
+                continue;
+            }
+            else if (queryParams.getName().equals("lang")) {
+                assertThat(queryParams.getValue(), Matchers.is("fr-fr"));
+                continue;
+            }
+            else if (queryParams.getName().equals("voice")) {
+                assertThat(queryParams.getValue(), Matchers.is("testtest"));
+                continue;
+            }
+            else if (queryParams.getName().equals("service")) {
+                assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
+                continue;
+            }
+            assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
+        }
+    }
+    
+    /**
+     * This test is to check if the outbound functionality will create ddr
+     * records for tts processing.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void ttsInvokesCharges() throws Exception {
+
+        //create a ddrPrice
+        createTestDDRPrice(DDRTypeCategory.TTS_COST, 0.1, "ddr price for tts", UnitType.PART, null, null);
+        outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
+        DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, ddrType.getTypeId(), null,
+                                                             null, null, null, null, null);
+        assertThat(ddrRecords.size(), Matchers.is(1));
+        DDRRecord ddrRecord = ddrRecords.iterator().next();
+        ddrRecord.setShouldGenerateCosts(true);
+        assertThat(ddrRecord.getTotalCost(),
+                   Matchers.is(DDRUtils.getCeilingAtPrecision(0.1 * TEST_MESSAGE.length(), 3)));
+    }
+    
+    /**
+     * This test is to check if the outbound functionality does not invoke ddr
+     * charges as there is no ddrPrice attached for the tts provider
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void ttsDoesNotInvokesCharges() throws Exception {
+
+        //create a ddrPrice for voice rss. 
+        DDRPrice ddrPrice = createTestDDRPrice(DDRTypeCategory.TTS_COST, 0.1, "ddr price for tts", UnitType.PART, null,
+                                               null);
+        ddrPrice.setKeyword(TTSProvider.VOICE_RSS.toString());
+        ddrPrice.createOrUpdate();
+        
+        //invoke an outbound call with acapella tts
+        outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
+        DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, ddrType.getTypeId(), null,
+                                                             null, null, null, null, null);
+        //make sure there is no costs involved, as the ddr price attached is for VoiceRSS tts and not acapela
+        assertThat(ddrRecords.size(), Matchers.is(0));
+    }
+
+    /**
+     * @throws UnsupportedEncodingException
+     * @throws Exception
+     * @throws URISyntaxException
+     */
+    private Response performSecuredInboundCall(String direction, String username, String password, TTSInfo ttsInfo,
+                                               String url) throws Exception {
+
+        if (url == null) {
+            url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                    QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+            url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
+            url = ServerUtils.getURLWithQueryParams(url, "secured", "true");
+        }
+
+        //create a dialog
+        dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
+        dialogAgent.createDialog(TEST_PUBLIC_KEY, "Test secured dialog", url);
+        Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+        createDialog.setUserName(username);
+        createDialog.setPassword(password);
+        createDialog.setUseBasicAuth(true);
+        createDialog.setTtsInfo(ttsInfo);
+        createDialog.storeOrUpdate();
+
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+        adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
+        adapterConfig.setDialogId(createDialog.getId());
+        adapterConfig.update();
+
+        //mock the Context
+        String remoteAddress = remoteAddressVoice;
+        String localAddress = localAddressBroadsoft;
+        UriInfo uriInfo = Mockito.mock(UriInfo.class);
+        Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
+        String callSid = UUID.randomUUID().toString();
+        if (direction.equals("outbound")) {
+            HashMap<String, String> outboundCall = dialogAgent.outboundCall(remoteAddressVoice, "test", null,
+                                                                            createDialog.getId(), null,
+                                                                            adapterConfig.getConfigId(),
+                                                                            TEST_PUBLIC_KEY, null);
+            String sessionKey = outboundCall.values().iterator().next();
+            Session session = Session.getSession(sessionKey);
+            callSid = session.getExternalSession();
+        }
+        else {
+            String tmpLocalId = new String(localAddress);
+            localAddress = new String(remoteAddress);
+            remoteAddress = tmpLocalId;
+        }
+        return new TwilioAdapter().getNewDialog(callSid, UUID.randomUUID().toString(), localAddress, remoteAddress,
+                                                direction, null);
     }
 }

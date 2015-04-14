@@ -357,6 +357,10 @@ public class Question implements QuestionIntf {
 
                 newQ = om.readValue(newQuestionJSON, Question.class);
                 newQ.setPreferred_language(preferred_language);
+                
+                if(newQ.getType() == null) {
+                    newQ.setType( "comment" );
+                }
             }
             catch (ClientHandlerException ioe) {
                 dialogLog.severe(adapterID, String.format("Unable to load question from: %s. \n Error: %s",
@@ -416,7 +420,7 @@ public class Question implements QuestionIntf {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
                 String s = client.post(post, url.replace(" ", URLEncoder.encode(" ", "UTF-8")));
-                log.info("Received new question (event): " + s);
+                log.info("Received new question (event: "+eventType+"): " + s);
 
                 if (s != null && !s.equals("")) {
                     newQ = om.readValue(s, Question.class);

@@ -33,87 +33,103 @@ abstract public class TextServlet extends HttpServlet {
     protected static final com.almende.dialog.Logger logger = new com.almende.dialog.Logger();
     protected static final int LOOP_DETECTION = 10;
     protected static final String DEMODIALOG = "/charlotte/";
-    
+
     /**
      * @deprecated use
      *             {@link TextServlet#broadcastMessage(String,String,String, String, String, Map, AdapterConfig)
      *             broadcastMessage} instead.
      */
     @Deprecated
-    protected abstract int sendMessage(String message, String subject, String from, String fromName, String to,
-        String toName, Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception;
-	
+    protected abstract int
+                                    sendMessage(String message, String subject, String from, String fromName,
+                                                String to, String toName, Map<String, Object> extras,
+                                                AdapterConfig config, String accountId) throws Exception;
 
     /**
-     * Overridden by all text based communication channel servlets for broadcasting the same message to multiple addresses
-     * @param message The message to be sent. This can be a url also
-     * @param subject This is used only by the email servlet 
-     * @param from This is the address from which a broadcast is sent
-     * @param senderName The sendername, used only by the email servlet, SMS
-     * @param addressNameMap 
+     * Overridden by all text based communication channel servlets for
+     * broadcasting the same message to multiple addresses
+     * 
+     * @param message
+     *            The message to be sent. This can be a url also
+     * @param subject
+     *            This is used only by the email servlet
+     * @param from
+     *            This is the address from which a broadcast is sent
+     * @param senderName
+     *            The sendername, used only by the email servlet, SMS
+     * @param addressNameMap
      *            Map with address (e.g. phonenumber or email) as Key and name
-     *            as value. The name is useful for email and not used for SMS etc
-     * @param extras Some extra properties that can be used for processing.
-     * @param Config the adapterConfig which is used to perform this broadcast
-     * @param accountId AccoundId initiating this broadcast
+     *            as value. The name is useful for email and not used for SMS
+     *            etc
+     * @param extras
+     *            Some extra properties that can be used for processing.
+     * @param Config
+     *            the adapterConfig which is used to perform this broadcast
+     * @param accountId
+     *            AccoundId initiating this broadcast
      * @return
      * @throws Exception
      */
     protected abstract int broadcastMessage(String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
-        throws Exception;
+                                            Map<String, String> addressNameMap, Map<String, Object> extras,
+                                            AdapterConfig config, String accountId) throws Exception;
 
-    protected abstract DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId,
-        String fromAddress, String message, String sessionKey) throws Exception;
+    protected abstract
+                                    DDRRecord
+                                    createDDRForIncoming(AdapterConfig adapterConfig, String accountId,
+                                                         String fromAddress, String message, String sessionKey)
+                                                                                                               throws Exception;
 
     protected abstract DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception;
+                                                      Map<String, String> toAddress, String message,
+                                                      Map<String, String> sessionKeyMap) throws Exception;
 
     protected abstract TextMessage receiveMessage(HttpServletRequest req, HttpServletResponse resp) throws Exception;
-	
-	protected abstract String getServletPath();
-	
-	protected abstract String getAdapterType();
-	
-	protected abstract String getProviderType();
-	
-	protected abstract void doErrorPost(HttpServletRequest req,
-			HttpServletResponse res) throws IOException;
-	
-	private String	host	= "";
-	
-	protected class Return {
-		String		reply;
-		Question	question;
-		
-		public Return(String reply, Question question) {
-			this.reply = reply;
-			this.question = question;
-		}
-	}
-	
-	/**
-	 * info for generating a Return when a user enters
-	 * an escape command as input. E.g. /reset
-	 * 
-	 * @author Shravan
-	 */
-	private class EscapeInputCommand {
-		boolean	skip;
-		String	body;
-		String	preferred_language;
-		String	reply;
-		
-		@Override
-		public String toString() {
-			return String.format(
-					"Skip: %s body: %s preferred_lang: %s reply %s", skip,
-					body, preferred_language, reply);
-		}
-	}
-	
+
+    protected abstract String getServletPath();
+
+    protected abstract String getAdapterType();
+
+    protected abstract String getProviderType();
+
+    protected abstract void doErrorPost(HttpServletRequest req, HttpServletResponse res) throws IOException;
+
+    private String host = "";
+
+    protected class Return {
+
+        String reply;
+        Question question;
+
+        public Return(String reply, Question question) {
+
+            this.reply = reply;
+            this.question = question;
+        }
+    }
+
+    /**
+     * info for generating a Return when a user enters an escape command as
+     * input. E.g. /reset
+     * 
+     * @author Shravan
+     */
+    private class EscapeInputCommand {
+
+        boolean skip;
+        String body;
+        String preferred_language;
+        String reply;
+
+        @Override
+        public String toString() {
+
+            return String.format("Skip: %s body: %s preferred_lang: %s reply %s", skip, body, preferred_language, reply);
+        }
+    }
+
     public Return formQuestion(Question question, String adapterID, String address, String ddrRecordId,
-        String sessionKey) {
+                               String sessionKey) {
 
         String reply = "";
 
@@ -157,7 +173,7 @@ abstract public class TextServlet extends HttpServlet {
         }
         return new Return(reply, question);
     }
-	
+
     /**
      * Just overrides the
      * {@link TextServlet#startDialog(Map, Map, Map, String, String, String, AdapterConfig, String)}
@@ -170,13 +186,16 @@ abstract public class TextServlet extends HttpServlet {
      *            url. Else a Dialog of this id is fetched. Any text with prefix
      *            text:// is converted to a URL endpoint automatically. A GET
      *            HTTPRequest is performed and expected a question JSON.
-     * @param config AdapterConfig linked to this outbound call
-     * @param accountId AccountId initiating this call
+     * @param config
+     *            AdapterConfig linked to this outbound call
+     * @param accountId
+     *            AccountId initiating this call
      * @return
      * @throws Exception
      */
-    public String startDialog(String address, String dialogIdOrUrl, AdapterConfig config, String accountId)
-        throws Exception {
+    public String
+                                    startDialog(String address, String dialogIdOrUrl, AdapterConfig config,
+                                                String accountId) throws Exception {
 
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(address, "");
@@ -187,7 +206,7 @@ abstract public class TextServlet extends HttpServlet {
         }
         return null;
     }
-	
+
     /**
      * Method used to broadcast the same message to multiple addresses
      * 
@@ -218,9 +237,12 @@ abstract public class TextServlet extends HttpServlet {
      * @return
      * @throws Exception
      */
-    public HashMap<String, String> startDialog(Map<String, String> addressNameMap,
-        Map<String, String> addressCcNameMap, Map<String, String> addressBccNameMap, String dialogIdOrUrl,
-        String senderName, String subject, AdapterConfig config, String accountId) throws Exception {
+    public HashMap<String, String>
+                                    startDialog(Map<String, String> addressNameMap,
+                                                Map<String, String> addressCcNameMap,
+                                                Map<String, String> addressBccNameMap, String dialogIdOrUrl,
+                                                String senderName, String subject, AdapterConfig config,
+                                                String accountId) throws Exception {
 
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
         addressCcNameMap = addressCcNameMap != null ? addressCcNameMap : new HashMap<String, String>();
@@ -355,12 +377,11 @@ abstract public class TextServlet extends HttpServlet {
         return sessionKeyMap;
     }
 
-
     public static void killSession(Session session) {
 
         session.drop();
     }
-	
+
     @Override
     public void service(HttpServletRequest req, HttpServletResponse res) throws IOException {
 
@@ -400,7 +421,7 @@ abstract public class TextServlet extends HttpServlet {
             e.printStackTrace();
         }
     }
-	
+
     /**
      * Processes any incoming messages (based on a Dialog) and takes actions
      * like sending, broadcasting corresponding messages.
@@ -437,8 +458,10 @@ abstract public class TextServlet extends HttpServlet {
             return count;
         }
         config = session.getAdapterConfig();
-        String fromName = session.getLocalName() != null && !session.getLocalName().isEmpty() ? 
-                                        session.getLocalName() : getSenderName(null, config, null, null);
+        String fromName = session.getLocalName() != null && !session.getLocalName().isEmpty() ? session.getLocalName()
+                                                                                             : getSenderName(null,
+                                                                                                             config,
+                                                                                                             null, null);
         // TODO: Remove this check, this is now to support backward
         // compatibility (write patch)
         if (config == null) {
@@ -485,7 +508,7 @@ abstract public class TextServlet extends HttpServlet {
             if (escapeInput.preferred_language == null) {
                 escapeInput.preferred_language = "nl";
             }
-            
+
             // Here we can add extra parameters in the future
             Map<String, String> extraParams = new HashMap<String, String>();
 
@@ -534,7 +557,7 @@ abstract public class TextServlet extends HttpServlet {
             if (question == null) {
                 //dont flush the session yet if its an sms. the DLR callback needs a session.
                 //instead just mark the session that it can be killed 
-                if(AdapterAgent.ADAPTER_TYPE_SMS.equalsIgnoreCase(config.getAdapterType())) {
+                if (AdapterAgent.ADAPTER_TYPE_SMS.equalsIgnoreCase(config.getAdapterType())) {
                     //refetch session
                     session = Session.getSessionByInternalKey(Session.getInternalSessionKey(config, address));
                     session.setKilled(true);
@@ -551,7 +574,7 @@ abstract public class TextServlet extends HttpServlet {
         }
         return count;
     }
-	
+
     /**
      * processses any escape command entered by the user
      * 
@@ -610,12 +633,12 @@ abstract public class TextServlet extends HttpServlet {
         session.storeSession();
         return result;
     }
-	
+
     protected String getNoConfigMessage() {
 
         return "Sorry, I can't find the account associated with this chat address...";
     }
-	
+
     private String getNickname(Question question, String sessionKey) {
 
         String nickname = null;
@@ -626,7 +649,7 @@ abstract public class TextServlet extends HttpServlet {
 
         return nickname;
     }
-	
+
     /**
      * sends a message and charges the owner of the adapter for outbound
      * communication
@@ -645,8 +668,8 @@ abstract public class TextServlet extends HttpServlet {
      * @throws Exception
      */
     private int sendMessageAndAttachCharge(String message, String subject, String from, String fromName, String to,
-        String toName, Map<String, Object> extras, AdapterConfig config, String accountId, String sessionKey)
-        throws Exception {
+                                           String toName, Map<String, Object> extras, AdapterConfig config,
+                                           String accountId, String sessionKey) throws Exception {
 
         Map<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(to, toName);
@@ -655,7 +678,7 @@ abstract public class TextServlet extends HttpServlet {
         return broadcastMessageAndAttachCharge(message, subject, from, fromName, addressNameMap, extras, config,
                                                accountId, sessionKeyMap);
     }
-	    
+
     /**
      * First creates a ddr record, broadcasts a message and charges the owner of
      * the adapter for outbound communication
@@ -672,8 +695,9 @@ abstract public class TextServlet extends HttpServlet {
      * @throws Exception
      */
     private int broadcastMessageAndAttachCharge(String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId,
-        Map<String, String> sessionKeyMap) throws Exception {
+                                                Map<String, String> addressNameMap, Map<String, Object> extras,
+                                                AdapterConfig config, String accountId,
+                                                Map<String, String> sessionKeyMap) throws Exception {
 
         //create all the ddrRecords first
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
@@ -710,7 +734,7 @@ abstract public class TextServlet extends HttpServlet {
             ddrRecord.createOrUpdate();
             extras.put(DDRRecord.DDR_RECORD_KEY, ddrRecord.getId());
         }
-        
+
         //update the sessions to the extras
         if (sessionKeyMap != null && !sessionKeyMap.isEmpty()) {
             extras.put(Session.SESSION_KEY, sessionKeyMap);
@@ -718,7 +742,7 @@ abstract public class TextServlet extends HttpServlet {
         //broadcast the message if its not a test environment
         Integer count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId);
         //push the cost to hte queue
-        Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
+        Double totalCost = DDRUtils.calculateDDRCost(ddrRecord, true);
         DDRUtils.publishDDREntryToQueue(accountId, totalCost);
         //attach cost to ddr is prepaid type
         if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
@@ -727,9 +751,9 @@ abstract public class TextServlet extends HttpServlet {
         }
         return count;
     }
-    
+
     private TextMessage receiveMessageAndAttachCharge(HttpServletRequest req, HttpServletResponse resp)
-        throws Exception {
+                                                                                                       throws Exception {
 
         TextMessage receiveMessage = receiveMessage(req, resp);
         try {
@@ -776,7 +800,7 @@ abstract public class TextServlet extends HttpServlet {
             }
 
             //push the cost to hte queue
-            Double totalCost = DDRUtils.calculateCommunicationDDRCost(ddrRecord, true);
+            Double totalCost = DDRUtils.calculateDDRCost(ddrRecord, true);
             DDRUtils.publishDDREntryToQueue(session.getAccountId(), totalCost);
             //attach cost to ddr is prepaid type
             if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
@@ -786,13 +810,14 @@ abstract public class TextServlet extends HttpServlet {
         }
         catch (Exception e) {
             e.printStackTrace();
-            log.severe("DDR processing failed for this incoming message. Message: "+ e.toString());
+            log.severe("DDR processing failed for this incoming message. Message: " + e.toString());
         }
         return receiveMessage;
     }
 
     /**
      * collates all the addresses in the cc and bcc
+     * 
      * @param extras
      * @return
      */
@@ -828,7 +853,7 @@ abstract public class TextServlet extends HttpServlet {
         }
         return addressNameMap;
     }
-    
+
     /**
      * assign senderName with localAdress, if senderName is missing priority is
      * as: nickname (from Question) >> senderName (as requested from API) >>
@@ -852,7 +877,7 @@ abstract public class TextServlet extends HttpServlet {
         }
         return "ASK-Fast";
     }
-    
+
     /**
      * Returns the first remote address by looking into the addresses in to, cc
      * and bcc list
@@ -864,8 +889,8 @@ abstract public class TextServlet extends HttpServlet {
      * @return
      */
     private String fetchFirstRemoteAddress(final Map<String, String> addressNameMap,
-        final Map<String, String> addressCcNameMap, final Map<String, String> addressBccNameMap,
-        final String loadAddress) {
+                                           final Map<String, String> addressCcNameMap,
+                                           final Map<String, String> addressBccNameMap, final String loadAddress) {
 
         String firstAddressAddress = null;
         if (loadAddress != null) {

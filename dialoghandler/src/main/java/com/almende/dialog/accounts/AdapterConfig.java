@@ -8,7 +8,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -20,7 +19,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
@@ -730,22 +728,22 @@ public class AdapterConfig {
         }
 	
     /**
-     * Removes the accountId from the shared accounts list and reset the adapter
-     * to {@link com.askfast.commons.Status#INACTIVE}. If this accountId matches
-     * the ownerId, makes the next shared account in the list as the owner. If
-     * no accounts are found. Makes this adapter free.
+     * Removes the accountId from the shared accounts list. If the account Id
+     * also matches the owner, it resets the adapter to
+     * {@link com.askfast.commons.Status#INACTIVE}. Also, if no accounts are
+     * found. Makes this adapter free.
      * 
      * @param accountId
      */
     public void removeAccount(String accountId) {
 
         if (accountId != null) {
-            status = com.askfast.commons.Status.INACTIVE;
             if (accounts != null) {
                 accounts.remove(accountId);
             }
             //if owner is same as this accountId, free the adapter
             if (accountId.equals(owner)) {
+                status = com.askfast.commons.Status.INACTIVE;
                 owner = null;
                 accounts = null;
             }

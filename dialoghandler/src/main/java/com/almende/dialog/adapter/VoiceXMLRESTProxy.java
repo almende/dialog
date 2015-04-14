@@ -905,10 +905,10 @@ public class VoiceXMLRESTProxy {
                                                  !releaseCause.getTextContent().equalsIgnoreCase("Temporarily Unavailable") 
                                                  && !releaseCause.getTextContent().equalsIgnoreCase("User Not Found"))) {
 
-                                                /*session.setDirection(direction);
+                                                session.setDirection(direction);
                                                 session.setAnswerTimestamp(answerTimeString);
                                                 session.setStartTimestamp(startTimeString);
-                                                if (session.getQuestion() == null) {
+                                                /*if (session.getQuestion() == null) {
                                                     
                                                     Question questionFromIncomingCall = Session
                                                                                     .getQuestionFromDifferentSession(config.getConfigId(),
@@ -919,10 +919,9 @@ public class VoiceXMLRESTProxy {
                                                         session.setQuestion(questionFromIncomingCall);
                                                         session.storeSession();
                                                     }
-                                                }
+                                                }*/
                                                 session.storeSession();
-                                                answered(direction, address, config.getMyAddress(), startTimeString,
-                                                         answerTimeString, session.getKey());*/
+                                                answered(direction, address, config.getMyAddress(), session.getKey());
                                             }
                                             //a reject from the remote user. initiate a hangup event
                                             //                                        else{
@@ -940,28 +939,15 @@ public class VoiceXMLRESTProxy {
                                         direction = "outbound";
 
                                         //TODO: move this to internal mechanism to check if call is started!
-                                        if (releaseCause.getTextContent().equals("Server Failure")) {
+                                        if (releaseCause.getTextContent().equals("Server Failure") ||
+                                            releaseCause.getTextContent().equals("Request Failure")) {
+
                                             log.severe("Need to restart the call!!!! ReleaseCause: " +
                                                        releaseCause.getTextContent());
 
                                             int retry = session.getRetryCount() != null ? session.getRetryCount() : 0;
                                             if (retry < MAX_RETRIES) {
 
-                                                Broadsoft bs = new Broadsoft(config);
-                                                String extSession = bs.startCall(address, session);
-                                                log.info("Restarted call extSession: " + extSession);
-                                                retry++;
-                                                session.setRetryCount(retry);
-                                            }
-                                            else {
-                                                // TODO: Send mail to support!!!
-                                                log.severe("Retries failed!!!");
-                                            }
-                                        }
-                                        else if (releaseCause.getTextContent().equals("Request Failure")) {
-                                            log.severe("Restart call?? ReleaseCause: " + releaseCause.getTextContent());
-                                            int retry = session.getRetryCount() != null ? session.getRetryCount() : 0;
-                                            if (retry < MAX_RETRIES) {
                                                 Broadsoft bs = new Broadsoft(config);
                                                 String extSession = bs.startCall(address, session);
                                                 log.info("Restarted call extSession: " + extSession);
@@ -989,13 +975,8 @@ public class VoiceXMLRESTProxy {
                                         else {
                                             if (personality.getTextContent().equals("Originator") &&
                                                 fullAddress.startsWith("sip:")) {
-                                                if (session.getAnswerTimestamp() == null &&
-                                                    session.getStartTimestamp() != null &&
-                                                    session.getReleaseTimestamp() != null) {
-                                                    callReleased = true;
-                                                }
-                                                log.info(String.format("Probably a disconnect of a sip. %s hangup event",
-                                                                       callReleased ? "calling" : "not calling"));
+
+                                                log.info("Probably a disconnect of a sip. not calling hangup event");
                                             }
                                             else if (personality.getTextContent().equals("Originator") &&
                                                      fullAddress.startsWith("tel:")) {

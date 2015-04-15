@@ -136,15 +136,15 @@
 	  </transition>
 	  
 	  <transition state="preconnecting" event="dialog.disconnect"> 
-	  	<if cond="event$.dialogid == dialogID" >
-	    <join id1="inConn" id2="dialogID" />
+	     <if cond="event$.dialogid == preconDialogID" >
+	    	  <join id1="inConn" id2="dialogID" />
 	          <assign name="currentState" expr="'connestablished'" />
 	          <assign name="results" expr="'event$.result'" />
 	          <send name="'dialog.transfer.complete'"
 	                target="dialogID"
 	                targettype="'dialog'"
 	                namelist="results" />
-	    <disconnect connectionid="outConn"/>
+	    	  <disconnect connectionid="outConn"/>
 	    </if>
 	  </transition>
 	

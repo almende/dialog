@@ -1307,7 +1307,7 @@ public class TwilioAdapter {
         String uuid = UUID.randomUUID().toString();
         Recording recording = Recording.createRecording( new Recording(uuid, accountId, url, "audio/wav", ddrId) );
         
-        return "http://"+Settings.HOST+"/account/"+accountId+"recording/"+recording.getId()+".wav";
+        return "http://"+Settings.HOST+"/account/"+accountId+"/recording/"+recording.getId()+".wav";
     }
     
     /**

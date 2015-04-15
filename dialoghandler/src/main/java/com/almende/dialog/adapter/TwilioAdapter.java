@@ -379,10 +379,10 @@ public class TwilioAdapter {
                         dialCallStatus = "no-answer";
                     }
 
-                    //handle the next question if there is any.. else stop costs
-                    linkedChildSession.getQuestion().event("hangup", "Call hungup",
-                                                           linkedChildSession.getPublicExtras(), remoteID,
-                                                           linkedChildSession.getKey());
+                    //                    //handle the next question if there is any.. else stop costs
+                    //                    linkedChildSession.getQuestion().event("hangup", "Call hungup",
+                    //                                                           linkedChildSession.getPublicExtras(), remoteID,
+                    //                                                           linkedChildSession.getKey());
                     AdapterConfig config = session.getAdapterConfig();
                     finalizeCall(config, linkedChildSession, dialCallSid, remoteID);
                 }

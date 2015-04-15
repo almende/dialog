@@ -118,18 +118,25 @@
 	  </transition>
 	  
 	  <transition state="preconnecting" event="dialog.exit">
-	    <assign name="currentState" expr="'conferenceestablished'" />
+	    <assign name="currentState" expr="'preconnected'" />
 	  	<dialogstart src="connectedVxmlScript" connectionid="outConn" dialogid="connectedDialogID" namelist="direction localID remoteID redirectID"/>
 	  	<!--<send event="'http.get'" target="connectedVxmlScript" namelist="direction localID remoteID redirectID" />-->
-	    <join id1="inConn" id2="outConn" duplex="'full'"/>
-	    <assign name="results" expr="'completed'" />
-	    <send name="'dialog.transfer.connected'"
-	            target="dialogID"
-	            targettype="'dialog'"
-	            namelist="results"/>
+	  </transition>
+	  
+	  <transition state="preconnected" event="dialog.exit">
+	    <if cond="event$.dialogid == connectedDialogID" >
+		    <assign name="currentState" expr="'conferenceestablished'" />
+		    <join id1="inConn" id2="outConn" duplex="'full'"/>
+		    <assign name="results" expr="'completed'" />
+		    <send name="'dialog.transfer.connected'"
+		            target="dialogID"
+		            targettype="'dialog'"
+		            namelist="results"/>
+	    </if>
 	  </transition>
 	  
 	  <transition state="preconnecting" event="dialog.disconnect"> 
+	  	<if cond="event$.dialogid == dialogID" >
 	    <join id1="inConn" id2="dialogID" />
 	          <assign name="currentState" expr="'connestablished'" />
 	          <assign name="results" expr="'event$.result'" />
@@ -138,6 +145,7 @@
 	                targettype="'dialog'"
 	                namelist="results" />
 	    <disconnect connectionid="outConn"/>
+	    </if>
 	  </transition>
 	
 	  <transition state="conferenceestablished" event="connection.disconnected">

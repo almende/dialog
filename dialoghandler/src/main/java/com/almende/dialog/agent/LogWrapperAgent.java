@@ -20,8 +20,8 @@ import com.almende.eve.protocol.jsonrpc.annotation.Access;
 import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
 import com.almende.eve.protocol.jsonrpc.annotation.Name;
 import com.almende.eve.protocol.jsonrpc.annotation.Optional;
-import com.almende.util.jackson.JOM;
 import com.almende.util.ParallelInit;
+import com.almende.util.jackson.JOM;
 import com.askfast.commons.agent.intf.LogAgentInterface;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -42,13 +42,13 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface {
     private static final String NO_ADAPTER_MESSAGE = "This account has no adapters";
 
     @Override
-    public ArrayNode getLogs(@Name("accountId") String accountId, @Name("id") @Optional String adapterID,
-        @Name("type") @Optional String adapterType, @Name("level") @Optional String level,
-        @Name("end") @Optional Long endTime, @Name("offset") @Optional Integer offset,
-        @Name("limit") @Optional Integer limit) throws Exception {
+    public ArrayNode getLogs(@Name("accountId") String accountId, @Name("ddrRecordId") @Optional String ddrRecordId,
+        @Name("id") @Optional String adapterID, @Name("type") @Optional String adapterType,
+        @Name("level") @Optional String level, @Name("end") @Optional Long endTime,
+        @Name("offset") @Optional Integer offset, @Name("limit") @Optional Integer limit) throws Exception {
 
         LogLevel logLevel = LogLevel.fromJson(level);
-        List<Log> logs = getLogsAsList(accountId, adapterID, adapterType, logLevel, endTime, offset, limit);
+        List<Log> logs = getLogsAsList(accountId, ddrRecordId, adapterID, adapterType, logLevel, endTime, offset, limit);
         return JOM.getInstance().convertValue(logs, ArrayNode.class);
     }
 
@@ -108,12 +108,14 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface {
 
     @GET
     @Produces("application/json")
-    public Response getLogsResponse(@QueryParam("accountID") String accountId, @QueryParam("id") String adapterID,
+    public Response getLogsResponse(@QueryParam("accountID") String accountId,
+        @QueryParam("ddrRecordId") String ddrRecordId, @QueryParam("id") String adapterID,
         @QueryParam("type") String adapterType, @QueryParam("level") LogLevel level, @QueryParam("end") Long endTime,
         @QueryParam("offset") Integer offset, @QueryParam("limit") Integer limit) throws Exception {
 
         try {
-            List<Log> logs = getLogsAsList(accountId, adapterID, adapterType, level, endTime, offset, limit);
+            List<Log> logs = getLogsAsList(accountId, ddrRecordId, adapterID, adapterType, level, endTime, offset,
+                limit);
             ObjectMapper om = ParallelInit.getObjectMapper();
             String result = "";
             try {
@@ -137,19 +139,28 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface {
 
     
     /**
-     * Fetches all the logs corresponding to the accountId and other corresponding given parameters.
-     * @param accountId if null, throws exception
-     * @param adapterID if null, tries to fetch all the adapters for the given accountId. 
-     * @param adapterType if null, tries to fetch all the adpaters for the given accountId.
-     * @param level 
+     * Fetches all the logs corresponding to the accountId and other
+     * corresponding given parameters.
+     * 
+     * @param accountId
+     *            if null, throws exception
+     * @param ddrRecordID
+     *            if not null, only fetches those ddr records for this recordId
+     * @param adapterID
+     *            if null, tries to fetch all the adapters for the given
+     *            accountId.
+     * @param adapterType
+     *            if null, tries to fetch all the adpaters for the given
+     *            accountId.
+     * @param level
      * @param endTime
-     * @param offset 
+     * @param offset
      * @param limit
      * @return a List of fetched logs
      * @throws Exception
      */
-    private List<Log> getLogsAsList(String accountId, String adapterID, String adapterType, LogLevel level,
-        Long endTime, Integer offset, Integer limit) throws Exception {
+    private List<Log> getLogsAsList(String accountId, String ddrRecordID, String adapterID, String adapterType,
+        LogLevel level, Long endTime, Integer offset, Integer limit) throws Exception {
 
         Collection<String> adapterIDs = new HashSet<String>();
         if (accountId != null) {
@@ -163,15 +174,15 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface {
             }
             else {
                 ArrayList<AdapterConfig> accountAdapters = AdapterConfig.findAdapterByAccount(accountId, adapterType,
-                                                                                              null);
+                    null);
                 for (AdapterConfig adapterConfig : accountAdapters) {
                     adapterIDs.add(adapterConfig.getConfigId());
                 }
             }
             //fetch logs for each of the adapters
             if (adapterIDs != null && !adapterIDs.isEmpty()) {
-                return Logger.find(accountId, adapterIDs, getMinSeverityLogLevelFor(level), adapterType, endTime,
-                                   offset, limit);
+                return Logger.find(accountId, ddrRecordID, adapterIDs, getMinSeverityLogLevelFor(level), adapterType,
+                    endTime, offset, limit);
             }
             else {
                 log.severe(NO_ADAPTER_MESSAGE);

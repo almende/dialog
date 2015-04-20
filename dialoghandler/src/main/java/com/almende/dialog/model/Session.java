@@ -740,6 +740,7 @@ public class Session{
      * Returns true if the call associated with this session is answered
      * @return
      */
+    @JsonIgnore
     public boolean isCallPickedUp() {
         String callStatus = getAllExtras().get(IS_CALL_PICKED_UP);
         return Boolean.parseBoolean(callStatus);
@@ -758,6 +759,7 @@ public class Session{
      * Returns true if the call associated with this session is answered
      * @return
      */
+    @JsonIgnore
     public boolean isCallConnected() {
         String callStatus = getAllExtras().get(IS_CALL_CONNECTED);
         return Boolean.parseBoolean(callStatus);
@@ -776,6 +778,7 @@ public class Session{
      * Gets the child session linked this this session
      * @return
      */
+    @JsonIgnore
     public Session getLinkedChildSession() {
 
         if (getAllExtras().get(CHILD_SESSION_KEY) != null) {

@@ -2,7 +2,9 @@ package com.almende.dialog.model.impl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Logger;
+
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
@@ -21,7 +23,7 @@ public class Q_fields implements QuestionIntf {
 	String question_id;
 	String question_text;
 	String type;
-	String url;
+	ArrayList<String> url;
 	String requester;
 	String data;
 	String token;
@@ -44,7 +46,7 @@ public class Q_fields implements QuestionIntf {
 		return type;
 	}
 	@Override
-	public String getUrl() {
+	public List<String> getUrl() {
 		return url;
 	}
 	@Override
@@ -111,9 +113,16 @@ public class Q_fields implements QuestionIntf {
 	public void setType(String type) {
 		this.type = type;
 	}
+	@SuppressWarnings( "unchecked" )
 	@Override
-	public void setUrl(String url) {
-		this.url = url;
+	public void setUrl(Object url) {
+	    if(url instanceof String) {
+	        this.url = new ArrayList<>();
+	        this.url.add((String) url); 
+	    } else if (url instanceof List) {
+	        this.url = (ArrayList<String>) url;
+	    }
+		
 	}
 	@Override
 	public void setAnswers(ArrayList<Answer> answers) {

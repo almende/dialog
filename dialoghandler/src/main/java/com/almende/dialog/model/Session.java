@@ -1,11 +1,13 @@
 package com.almende.dialog.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.TextServlet;
@@ -144,7 +146,7 @@ public class Session{
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         Session session = datastore.load(Session.class, key.toLowerCase());
         if (session != null) {
-            log.info("Deleing session with id: "+ session.getKey());
+            log.info("Deleting session with id: "+ session.getKey());
             datastore.delete(session);
         }
     }
@@ -773,16 +775,49 @@ public class Session{
     }
     
     /**
+     * Add a child session key to this session for reference
+     * @param childSessionKey
+     */
+    public void addChildSessionKey(String childSessionKey) {
+        String childSessionKeys = getAllExtras().get(CHILD_SESSION_KEY);
+        if(childSessionKeys==null || childSessionKeys.isEmpty()) {
+            childSessionKeys = childSessionKey;
+        } else {
+            childSessionKeys += ","+childSessionKey;
+        }
+        getAllExtras().put( CHILD_SESSION_KEY, childSessionKeys );
+    }
+    
+    /**
+     * Get all the child sessions linked to this session
+     * @return List with session keys
+     */
+    @JsonIgnore
+    public List<String> getChildSessionKeys() {
+        String keys = getAllExtras().get( CHILD_SESSION_KEY );
+        if(keys==null || keys.isEmpty()) {
+            return new ArrayList<String>();
+        } else {
+            return Arrays.asList( keys.split( "," ));
+        }
+    }
+    
+    
+    /**
      * Gets the child session linked this this session
      * @return
      */
-    public Session getLinkedChildSession() {
+    public List<Session> getLinkedChildSession() {
 
-        if (getAllExtras().get(CHILD_SESSION_KEY) != null) {
-            String childSessionKey = getAllExtras().get(CHILD_SESSION_KEY);
-            return getSession(childSessionKey);
+        List<Session> sessions = new ArrayList<Session>();
+        List<String> childSessionKeys = getChildSessionKeys();   
+        for(String childSessionKey : childSessionKeys) {
+            Session session = getSession(childSessionKey);
+            if(session!=null) {
+                sessions.add( session );
+            }
         }
-        return null;
+        return sessions;
     }
     
     /**
@@ -794,21 +829,24 @@ public class Session{
      * @param parentExternalKey Used to load the child session via a parent session
      * @return
      */
-    public static Session getSessionFromParentExternalId(String childExternalKey, String parentExternalKey) {
+    public static Session getSessionFromParentExternalId(String childExternalKey, String parentExternalKey, String remoteID) {
 
         //fetch the parent session for this preconnect
         Session parentSession = Session.getSessionByExternalKey(parentExternalKey);
-        Session childSession = null;
         if (parentSession != null) {
-            String referredSessionKey = parentSession.getAllExtras().get(Session.CHILD_SESSION_KEY);
-            if (referredSessionKey != null) {
-                childSession = Session.getSession(referredSessionKey);
-                if (childSession != null && childSession.getExternalSession() == null) {
-                    childSession.setExternalSession(childExternalKey);
-                    childSession.storeSession();
+            
+            List<Session> childSessions = parentSession.getLinkedChildSession();
+            for(Session childSession : childSessions) {
+                if(childSession.getRemoteAddress().equals(remoteID)) {
+                    // Set the externalKey from the childSession
+                    if (childSession != null && childSession.getExternalSession() == null) {
+                        childSession.setExternalSession(childExternalKey);
+                        childSession.storeSession();
+                    }
+                    return childSession;
                 }
             }
         }
-        return childSession;
+        return null;
     }
 }

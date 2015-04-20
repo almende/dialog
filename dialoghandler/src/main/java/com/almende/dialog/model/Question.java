@@ -7,8 +7,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
@@ -134,7 +136,7 @@ public class Question implements QuestionIntf {
     public static Question fromJSON(String json, String adapterID, String ddrRecordId, String sessionKey) {
 
         Question question = null;
-        if (json != null) {
+        if (json != null && !json.isEmpty()) {
             try {
                 question = om.readValue(json, Question.class);
             }
@@ -454,7 +456,7 @@ public class Question implements QuestionIntf {
     }
 
     @Override
-    public String getUrl() {
+    public List<String> getUrl() {
 
         return question.getUrl();
     }
@@ -526,7 +528,7 @@ public class Question implements QuestionIntf {
     }
 
     @Override
-    public void setUrl(String url) {
+    public void setUrl(Object url) {
 
         question.setUrl(url);
     }

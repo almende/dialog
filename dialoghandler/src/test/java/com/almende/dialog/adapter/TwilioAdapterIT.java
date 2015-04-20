@@ -3,6 +3,7 @@ package com.almende.dialog.adapter;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -120,8 +121,8 @@ public class TwilioAdapterIT extends TestFramework {
                                                         PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
                                           newInboundResponse.getEntity().toString());
 
-        Mockito.when(twilioAdapter.fetchSessionFromParent(null, null, null))
-                                        .thenReturn(Session.getSessionFromParentExternalId(testCallId1, testCallId));
+        Mockito.when(twilioAdapter.fetchSessionFromParent(null, null, null, null))
+                                        .thenReturn(Session.getSessionFromParentExternalId(testCallId1, testCallId, PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
 
         //select to ignore the call in the preconnect options
         Response preconnect = twilioAdapter.preconnect(adapterConfig.getMyAddress(), TEST_PUBLIC_KEY,
@@ -144,7 +145,7 @@ public class TwilioAdapterIT extends TestFramework {
                                       null, null, testCallId);
 
         //a new referral session must have been created from testCallId as the parent external sessionId
-        Session sessionFromParentExternalId = Session.getSessionFromParentExternalId(testCallId2, testCallId);
+        Session sessionFromParentExternalId = Session.getSessionFromParentExternalId(testCallId2, testCallId, PhoneNumberUtils.formatNumber(secondRemoteAddress, null));
         Assert.assertThat(sessionFromParentExternalId, Matchers.notNullValue());
 
         assertXMLGeneratedByTwilioLibrary(String.format("<Response><Play>%s</Play><Dial action=\"http://%s/dialoghandler/rest/twilio/answer\" method=\"GET\"  "
@@ -255,7 +256,7 @@ public class TwilioAdapterIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
         Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
                                                                    url);
-        assertTrue(securedDialogResponse != null);
+        assertNotNull(securedDialogResponse);
         //make sure that the tts source generated has a service and voice
         Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
         String ttsURL = doc.getFirstChild().getFirstChild().getTextContent();

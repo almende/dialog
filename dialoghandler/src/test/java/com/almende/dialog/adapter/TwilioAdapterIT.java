@@ -203,7 +203,7 @@ public class TwilioAdapterIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
-                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                assertThat(queryParams.getValue(), Matchers.is("WAV"));
                 continue;
             }
             else if (queryParams.getName().equals("speed")) {
@@ -267,7 +267,7 @@ public class TwilioAdapterIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
-                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                assertThat(queryParams.getValue(), Matchers.is("WAV"));
                 continue;
             }
             else if (queryParams.getName().equals("speed")) {
@@ -332,7 +332,7 @@ public class TwilioAdapterIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
-                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                assertThat(queryParams.getValue(), Matchers.is("WAV"));
                 continue;
             }
             else if (queryParams.getName().equals("speed")) {
@@ -398,7 +398,7 @@ public class TwilioAdapterIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
-                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                assertThat(queryParams.getValue(), Matchers.is("WAV"));
                 continue;
             }
             else if (queryParams.getName().equals("speed")) {

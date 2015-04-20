@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -12,9 +13,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.hamcrest.Matchers;
@@ -23,6 +26,7 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+
 import com.almende.dialog.IntegrationTest;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -49,6 +53,7 @@ import com.askfast.commons.utils.PhoneNumberUtils;
 public class VoiceXMLServletIT extends TestFramework {
 
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio.wav";
+    protected static final String COMMENT_QUESTION_ID = "1";
     private DialogAgent dialogAgent = null;
     
     /**
@@ -398,7 +403,7 @@ public class VoiceXMLServletIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
-                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                assertThat(queryParams.getValue(), Matchers.is("WAV"));
                 continue;
             }
             else if (queryParams.getName().equals("speed")) {
@@ -477,7 +482,7 @@ public class VoiceXMLServletIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
-                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                assertThat(queryParams.getValue(), Matchers.is("WAV"));
                 continue;
             }
             else if (queryParams.getName().equals("speed")) {

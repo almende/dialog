@@ -2,13 +2,16 @@ package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy.Return;
@@ -20,11 +23,14 @@ import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.utils.PhoneNumberUtils;
 
 public class VoiceXMLServletTest extends TestFramework {
 
     protected static final String COMMENT_QUESTION_ID = "1";
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio.wav";
+
+    protected static final String secondRemoteAddress = "0612345678";
 
     @Test
     public void renderCommentQuestionTest() throws Exception {
@@ -32,8 +38,9 @@ public class VoiceXMLServletTest extends TestFramework {
         Question question = getCommentQuestion();
         AdapterConfig adapter = createBroadsoftAdapter();
         String sessionKey = createSessionKey(adapter, remoteAddressVoice);
+        Session session = createSession(sessionKey);
         
-        String result = renderQuestion(question, adapter, sessionKey);
+        String result = renderQuestion(question, adapter, sessionKey, remoteAddressVoice, session);
         
         Document doc = getXMLDocumentBuilder(result);
         Node vxml = doc.getFirstChild();
@@ -63,9 +70,48 @@ public class VoiceXMLServletTest extends TestFramework {
     }
 
     @Test
-    public void renderReferralQuestionTest() {
-
-    }
+    public void renderReferralQuestionTest() throws Exception {
+        Question question = getReferralQuestion( false, false, false );
+        AdapterConfig adapter = createBroadsoftAdapter();
+        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
+        Session session = createSession(sessionKey);
+        
+        String result = renderQuestion( question, adapter, sessionKey, remoteAddressVoice, session );
+        System.out.println("Res: "+result);
+        String expected = String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\">"
+                                        + "<form><transfer name=\"thisCall\" dest=\"tel:%s\" bridge=\"true\" connecttimeout=\"40s\">"
+                                        + "<prompt><audio src=\"http://audio.wav\"/></prompt>"
+                                        + "<filled><if cond=\"thisCall=='unknown'\">"
+                                        + "<goto next=\"answer?questionId=%s&amp;sessionKey=%s&amp;callStatus=completed\"/>"
+                                        + "<else/><goto expr=\"'answer?questionId=%s&amp;sessionKey=%s&amp;callStatus=' + thisCall\"/>"
+                                        + "</if></filled></transfer></form></vxml>",
+                                        PhoneNumberUtils.formatNumber( remoteAddressVoice, null ),
+                                        COMMENT_QUESTION_ID, URLEncoder.encode(session.getKey(), "UTF-8"),
+                                        COMMENT_QUESTION_ID, URLEncoder.encode(session.getKey(), "UTF-8"));
+        assertXMLGeneratedByTwilioLibrary( expected, result );
+    }  
+    
+    @Test
+    public void renderMultiReferralQuestionTest() throws Exception {
+        Question question = getReferralQuestion( false, false, true );
+        AdapterConfig adapter = createBroadsoftAdapter();
+        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
+        Session session = createSession(sessionKey);
+        
+        String result = renderQuestion( question, adapter, sessionKey, remoteAddressVoice, session );
+        System.out.println("Res: "+result);
+        String expected = String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\">"
+                                        + "<form><transfer name=\"thisCall\" dest=\"tel:%s\" bridge=\"true\" connecttimeout=\"40s\">"
+                                        + "<prompt><audio src=\"http://audio.wav\"/></prompt>"
+                                        + "<filled><if cond=\"thisCall=='unknown'\">"
+                                        + "<goto next=\"answer?questionId=%s&amp;sessionKey=%s&amp;callStatus=completed\"/>"
+                                        + "<else/><goto expr=\"'answer?questionId=%s&amp;sessionKey=%s&amp;callStatus=' + thisCall\"/>"
+                                        + "</if></filled></transfer></form></vxml>",
+                                        PhoneNumberUtils.formatNumber( remoteAddressVoice, null ),
+                                        COMMENT_QUESTION_ID, URLEncoder.encode(session.getKey(), "UTF-8"),
+                                        COMMENT_QUESTION_ID, URLEncoder.encode(session.getKey(), "UTF-8"));
+        assertXMLGeneratedByTwilioLibrary( expected, result );
+    } 
 
     @Test
     public void renderClosedQuestionTest() {
@@ -79,7 +125,7 @@ public class VoiceXMLServletTest extends TestFramework {
         AdapterConfig adapter = createBroadsoftAdapter();
         String sessionKey = createSessionKey(adapter, remoteAddressVoice);
         Session session = createSession(sessionKey);
-        String result = renderQuestion(question, adapter, session.getKey());
+        String result = renderQuestion(question, adapter, session.getKey(), remoteAddressVoice, session);
         assertOpenQuestionWithDTMFType( result );
     }
 
@@ -89,8 +135,9 @@ public class VoiceXMLServletTest extends TestFramework {
         Question question = getOpenAudioQuestion();
         AdapterConfig adapter = createBroadsoftAdapter();
         String sessionKey = createSessionKey(adapter, remoteAddressVoice);
+        Session session = createSession(sessionKey);
 
-        String result = renderQuestion(question, adapter, sessionKey);
+        String result = renderQuestion(question, adapter, sessionKey, remoteAddressVoice, session);
         TestServlet.logForTest(AdapterType.CALL.toString(), COMMENT_QUESTION_AUDIO);
         String expected = String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\">"
                                                                         + "<form id=\"ComposeMessage\"><record name=\"file\" beep=\"true\" maxtime=\"15s\" dtmfterm=\"true\"><prompt timeout=\"5s\">"
@@ -170,7 +217,42 @@ public class VoiceXMLServletTest extends TestFramework {
         return question;
     }
     
-    private String renderQuestion(Question question, AdapterConfig adapter, String sessionKey) throws Exception {
+    private Question getReferralQuestion( boolean useExternalCallerId, boolean usePreconnect,boolean simultaneousRing ) {
+
+        Question question = new Question();
+        question.setQuestion_id( COMMENT_QUESTION_ID );
+        question.setType( "referral" );
+        question.setQuestion_text( COMMENT_QUESTION_AUDIO );
+        
+        if(simultaneousRing) {
+            question.setUrl( new ArrayList<String>(Arrays.asList( "tel:" + remoteAddressVoice, "tel:"+secondRemoteAddress)) );
+            
+        } else {
+            question.setUrl( "tel:" + remoteAddressVoice );
+        }
+
+        Answer answer1 = new Answer( "http://answer.wav", "/next" );
+        question.setAnswers( new ArrayList<Answer>( Arrays.asList( answer1 ) ) );
+
+        MediaProperty mp = new MediaProperty();
+        mp.setMedium( MediumType.BROADSOFT );
+
+        if ( useExternalCallerId ) {
+            mp.addProperty( MediaPropertyKey.USE_EXTERNAL_CALLERID, "true" );
+        }
+
+        if ( usePreconnect ) {
+            mp.addProperty( MediaPropertyKey.USE_PRECONNECT, "true" );
+        }
+
+        question.addMedia_Properties( mp );
+
+        // set the answers in the question
+        question.generateIds();
+        return question;
+    }
+    
+    private String renderQuestion(Question question, AdapterConfig adapter, String sessionKey, String remoteID, Session session) throws Exception {
 
         VoiceXMLRESTProxy servlet = new VoiceXMLRESTProxy();
         Return res = servlet.formQuestion(question, adapter.getConfigId(), remoteAddressVoice, null, sessionKey);
@@ -179,7 +261,9 @@ public class VoiceXMLServletTest extends TestFramework {
             return servlet.renderComment(res.question, res.prompts, sessionKey);
         }
         else if (question.getType().equalsIgnoreCase("referral")) {
-
+            if (question.getUrl() != null && question.getUrl().size() > 0 && question.getUrl().get(0).startsWith("tel:")) {
+                return servlet.renderReferralQuestion(question, adapter, remoteID, res, session);
+            }
         }
         else if (question.getType().equalsIgnoreCase("open")) {
             return servlet.renderOpenQuestion(res.question, res.prompts, sessionKey);

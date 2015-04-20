@@ -248,14 +248,20 @@ public class CMServletIT extends TestFramework {
         //collect all ddrRecord ids and log ids
         HashSet<String> ownerDDRRecordIds = new HashSet<String>();
         HashSet<String> ownerLogIds = new HashSet<String>();
+        HashSet<String> ownerLogIdsForDDRRecordId = new HashSet<String>();
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
                                                              null, null);
         for (DDRRecord ddrRecord : ddrRecords) {
             ownerDDRRecordIds.add(ddrRecord.get_Id());
         }
-        List<Log> logs = Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null);
+        List<Log> logs = Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null, null);
         for (Log log : logs) {
             ownerLogIds.add(log.getLogId());
+        }
+        String ddrRecordId = ownerDDRRecordIds.iterator().next();
+        logs = Logger.find(TEST_PUBLIC_KEY, ddrRecordId, null, null, null, null, null, null);
+        for (Log log : logs) {
+            ownerLogIdsForDDRRecordId.add(log.getLogId());
         }
 
         //add another user as a shared owner of this adapter
@@ -281,16 +287,23 @@ public class CMServletIT extends TestFramework {
         for (DDRRecord ddrRecord : ddrRecordsReFetch) {
             assertTrue(ownerDDRRecordIds.contains(ddrRecord.get_Id()));
         }
-        List<Log> logsRefetch = Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null);
+        List<Log> logsRefetch = Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null, null);
         assertEquals(logsRefetch.size(), logs.size());
         for (Log log : logsRefetch) {
             assertTrue(ownerLogIds.contains(log.getLogId()));
+        }
+        
+        List<Log> logsRefetchForDDRRecordId = Logger.find(TEST_PUBLIC_KEY, ddrRecordId, null, null, null, null, null,
+            null);
+        assertEquals(logsRefetchForDDRRecordId.size(), logs.size());
+        for (Log log : logsRefetchForDDRRecordId) {
+            assertTrue(logsRefetchForDDRRecordId.contains(log.getLogId()));
         }
 
         //check that there are logs formed with shared account
         ddrRecords = DDRRecord.getDDRRecords(null, TEST_PRIVATE_KEY, null, null, null, null, null, null, null, null);
         assertTrue(ddrRecords.size() > 0);
-        logs = Logger.find(TEST_PRIVATE_KEY, null, null, null, null, null, null);
+        logs = Logger.find(TEST_PRIVATE_KEY, null, null, null, null, null, null, null);
         assertTrue(logs.size() > 0);
     }
     

@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.TextServlet;
@@ -742,6 +741,7 @@ public class Session{
      * Returns true if the call associated with this session is answered
      * @return
      */
+    @JsonIgnore
     public boolean isCallPickedUp() {
         String callStatus = getAllExtras().get(IS_CALL_PICKED_UP);
         return Boolean.parseBoolean(callStatus);
@@ -760,6 +760,7 @@ public class Session{
      * Returns true if the call associated with this session is answered
      * @return
      */
+    @JsonIgnore
     public boolean isCallConnected() {
         String callStatus = getAllExtras().get(IS_CALL_CONNECTED);
         return Boolean.parseBoolean(callStatus);
@@ -805,16 +806,17 @@ public class Session{
     
     /**
      * Gets the child session linked this this session
+     * 
      * @return
      */
     public List<Session> getLinkedChildSession() {
 
         List<Session> sessions = new ArrayList<Session>();
-        List<String> childSessionKeys = getChildSessionKeys();   
-        for(String childSessionKey : childSessionKeys) {
+        List<String> childSessionKeys = getChildSessionKeys();
+        for (String childSessionKey : childSessionKeys) {
             Session session = getSession(childSessionKey);
-            if(session!=null) {
-                sessions.add( session );
+            if (session != null) {
+                sessions.add(session);
             }
         }
         return sessions;

@@ -140,12 +140,31 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
     }
     
     /**
-     * get all the DDR Type. Access to this 
+     * Get all the DDR Type. Available in the system
+     * 
      * @param name
+     * @param category
+     * @return returns a collection of all the ddrTypes matching the given
+     *         parameters
+     * @throws Exception
      */
-    public Object getAllDDRTypes()
-    {
-        return DDRType.getAllDDRTypes();
+    @Override
+    public Object getAllDDRTypes(@Name("name") @Optional String name, @Name("category") @Optional String category)
+        throws Exception {
+
+        ArrayList<DDRType> result = new ArrayList<DDRType>();
+        if (category != null) {
+            DDRTypeCategory ddrTypeCategory = DDRTypeCategory.fromJson(category);
+            DDRType ddrType = DDRType.getDDRType(ddrTypeCategory);
+            result.addAll(addDDRTypeIfNameMatches(name, ddrType));
+        }
+        else {
+            List<DDRType> allDDRTypes = DDRType.getAllDDRTypes();
+            for (DDRType ddrType : allDDRTypes) {
+                result.addAll(addDDRTypeIfNameMatches(name, ddrType));
+            }
+        }
+        return result;
     }
     
     /**
@@ -268,6 +287,7 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * @param units 
      * @param unitType 
      */
+    @Override
     public Object getDDRPrices( @Name( "ddrTypeId" ) @Optional String ddrTypeId,
         @Name( "adapterType" ) @Optional String adapterTypeString, @Name( "adapterId" ) @Optional String adapterId,
         @Name( "unitType" ) @Optional String unitTypeString, @Name( "keyword" ) @Optional String keyword )
@@ -403,4 +423,30 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         }
         return id;
     }
+    
+    /**
+     * Adds a ddrType if the name is contained in the {@link DDRType#getName()}.
+     * If name is null, it just returns the given ddrTYpe
+     * 
+     * @param name
+     * @param result
+     * @param ddrType
+     * @return
+     */
+    private ArrayList<DDRType> addDDRTypeIfNameMatches(String name, DDRType ddrType) {
+
+        ArrayList<DDRType> result = new ArrayList<DDRType>();
+        if (ddrType != null) {
+            if (name != null && !name.isEmpty()) {
+                if (ddrType.getName().contains(name)) {
+                    result.add(ddrType);
+                }
+            }
+            else {
+                result.add(ddrType);
+            }
+        }
+        return result;
+    }
+
 }

@@ -532,11 +532,20 @@ public class TwilioAdapter {
             extras.put("sessionKey", session.getKey());
             extras.put("requester", session.getLocalAddress());
             question = question.event("preconnect", "preconnect event", extras, responder, session.getKey());
+            // If there is no preconnect the isCallPickedUp is never set
+            if(question==null) {
+                session.setCallPickedUpStatus(true);
+                session.storeSession();
+            }
+            
             //reload the session
             session = Session.getSession(session.getKey());
             session.setQuestion(question);
             session.storeSession();
             return handleQuestion(question, session.getAdapterConfig(), responder, session.getKey(), null);
+        } else {
+            session.setCallPickedUpStatus(true);
+            session.storeSession();
         }
         return Response.ok(reply).build();
     }

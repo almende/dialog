@@ -1,8 +1,8 @@
 DialogHandler
 https://github.com/almende/dialog/
 
-20-4-2014 version 1.8.2
-- hotfix: Added methods for easier fetch logs.
+21-4-2014 version 1.8.1
+- hotfix: fix referral without preconnect for twilio adapter
 
 16-4-2014 version 1.8.1
 - hotfix: broadsoft preconnect connect 2-legs correctly

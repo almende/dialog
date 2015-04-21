@@ -1,6 +1,11 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+16-4-2014 version 1.8.1
+- hotfix: broadsoft preconnect connect 2-legs correctly
+- hotfix: Fix typo in twilio recording url
+- hotfix: don't send the hangup twice when preconnect ends
+
 14-4-2015 version 1.8.0
 - feature: preconnect functionality for broadsoft
 - feature: choose different tts provider per dialog

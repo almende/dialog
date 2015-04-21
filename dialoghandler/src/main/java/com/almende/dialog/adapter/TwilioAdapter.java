@@ -373,20 +373,16 @@ public class TwilioAdapter {
             if (dialCallStatus != null) {
 
                 Session linkedChildSession = session.getLinkedChildSession();
-                //if the linked child session is found and not pickedup. trigger the next question
                 if (linkedChildSession != null) {
                     if (!linkedChildSession.isCallPickedUp()) {
                         dialCallStatus = "no-answer";
                     }
 
-                    //handle the next question if there is any.. else stop costs
-                    linkedChildSession.getQuestion().event("hangup", "Call hungup",
-                                                           linkedChildSession.getPublicExtras(), remoteID,
-                                                           linkedChildSession.getKey());
                     AdapterConfig config = session.getAdapterConfig();
                     finalizeCall(config, linkedChildSession, dialCallSid, remoteID);
                 }
 
+                //if the linked child session is found and not pickedup. trigger the next question
                 if (callIgnored.contains(dialCallStatus) && session.getQuestion() != null) {
 
                     session.addExtras("requester", session.getLocalAddress());
@@ -1307,7 +1303,7 @@ public class TwilioAdapter {
         String uuid = UUID.randomUUID().toString();
         Recording recording = Recording.createRecording( new Recording(uuid, accountId, url, "audio/wav", ddrId) );
         
-        return "http://"+Settings.HOST+"/account/"+accountId+"recording/"+recording.getId()+".wav";
+        return "http://"+Settings.HOST+"/account/"+accountId+"/recording/"+recording.getId()+".wav";
     }
     
     /**

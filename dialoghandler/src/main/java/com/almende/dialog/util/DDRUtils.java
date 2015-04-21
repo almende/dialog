@@ -398,6 +398,7 @@ public class DDRUtils
                         Double units = Math.ceil(message.length() / ddrPrice.getUnits());
                         units = units != null ? units : 1;
                         ddrRecord = new DDRRecord(ttsDDRType.getTypeId(), adapterConfig, accountId, units.intValue());
+                        ddrRecord.addSessionKey(sessionKey);
                         if (ttsProvider != null) {
                             ddrRecord.addAdditionalInfo("TTSProvider", ttsProvider);
                         }

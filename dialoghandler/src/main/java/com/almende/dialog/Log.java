@@ -49,7 +49,7 @@ public class Log implements Serializable {
         if (sessionKey != null) {
             Session session = Session.getSession(sessionKey);
             AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
-            if (session != null && session.getTrackingToken() != null) {
+            if (session != null) {
                 this.logId = new UUID().toString();
                 this.level = level;
                 this.adapterID = adapterID;

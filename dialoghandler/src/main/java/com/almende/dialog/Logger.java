@@ -169,7 +169,7 @@ public class Logger {
 
         List<Log> resultLogs = new ArrayList<Log>();
         try {
-            if (adapters != null) {
+            if (adapters != null && !adapters.isEmpty()) {
                 log.info(String.format("Initial adapters size %s", adapters.size()));
                 int startingIndex = 0;
                 int endIndex = adapters.size() <= adapter_chunk_size ? adapters.size() : adapter_chunk_size;

@@ -167,6 +167,12 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         return result;
     }
     
+    @Override
+    public Object getDDRType(@Name("id") String id) throws Exception {
+
+        return DDRType.getDDRType(id);
+    }
+    
     /**
      * create a new Price Type. Access to this must be from root account 
      * @param ddrTypeId

@@ -43,7 +43,7 @@ public class LogWrapperAgent extends Agent implements LogAgentInterface {
 
     @Override
     public ArrayNode getLogs(@Name("accountId") String accountId, @Name("ddrRecordId") @Optional String ddrRecordId,
-        @Name("id") @Optional String adapterID, @Name("type") @Optional String adapterType,
+        @Name("adapterId") @Optional String adapterID, @Name("type") @Optional String adapterType,
         @Name("level") @Optional String level, @Name("end") @Optional Long endTime,
         @Name("offset") @Optional Integer offset, @Name("limit") @Optional Integer limit) throws Exception {
 

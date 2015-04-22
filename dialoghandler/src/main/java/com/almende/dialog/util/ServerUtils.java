@@ -268,8 +268,8 @@ public class ServerUtils
     
     /**
      * Gets the language based on the following order of precedence <br>
-     * 1. {@link TTSInfo#getLanguage()} <br>
-     * 2. {@link Question#getPreferred_language()} <br>
+     * 1. {@link Question#getPreferred_language()} <br>
+     * 2. {@link TTSInfo#getLanguage()} <br>
      * 3. {@link AdapterConfig#getPreferred_language()} <br>
      * 4. {@link Account#getLanguage()}
      * 
@@ -281,13 +281,13 @@ public class ServerUtils
     public static Language getLanguage(Question question, TTSInfo ttsInfo, AdapterConfig config, Account account) {
 
         String language = null;
-        if (ttsInfo != null) {
-            language = ttsInfo.getLanguage().getCode();
-        }
-        else if (question != null) {
+        if (question != null && question.getPreferred_language() != null) {
             language = question.getPreferred_language();
         }
-        else if (config != null) {
+        else if (ttsInfo != null && ttsInfo.getLanguage() != null) {
+            language = ttsInfo.getLanguage().getCode();
+        } 
+        else if (config != null && config.getPreferred_language() != null) {
             language = config.getPreferred_language();
         }
         else if (account != null && account.getLanguage() != null) {

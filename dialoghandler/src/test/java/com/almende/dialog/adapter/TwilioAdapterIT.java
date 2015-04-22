@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
+
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -11,16 +12,20 @@ import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
+
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.w3c.dom.Document;
+
 import com.almende.dialog.IntegrationTest;
 import com.almende.dialog.Settings;
 import com.almende.dialog.TestFramework;
@@ -37,6 +42,7 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.almende.dialog.sim.TwilioSimulator;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.entity.AdapterProviders;
@@ -45,6 +51,10 @@ import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.twilio.sdk.verbs.Gather;
+import com.twilio.sdk.verbs.Redirect;
+import com.twilio.sdk.verbs.Say;
+import com.twilio.sdk.verbs.TwiMLResponse;
 
 @Category(IntegrationTest.class)
 public class TwilioAdapterIT extends TestFramework {
@@ -169,6 +179,101 @@ public class TwilioAdapterIT extends TestFramework {
                                       null, testCallId2);
         assertXMLGeneratedByTwilioLibrary("<Response><Say language=\"nl-nl\">You chose 1</Say></Response>", answer
                                         .getEntity().toString());
+    }
+    
+    @Test
+    public void inboundPhoneCall_CommentTest() throws Exception {
+        
+        //new DDRRecordAgent().generateDefaultDDRTypes();
+        
+        String accountSid = UUID.randomUUID().toString();
+        String callSid = UUID.randomUUID().toString();
+        TwilioSimulator simulator = new TwilioSimulator(TestFramework.host, accountSid );
+     
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                QuestionInRequest.SIMPLE_COMMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
+        url = ServerUtils.getURLWithQueryParams(url, "lang", Language.ENGLISH_UNITEDSTATES.getCode());
+
+        //create a dialog
+        Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+        adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
+        adapterConfig.setDialogId(createDialog.getId());
+        adapterConfig.update();
+        
+        String resp = simulator.initiateInboundCall( callSid, remoteAddressVoice, localAddressBroadsoft );
+        System.out.println(resp);
+        TwiMLResponse expected = new TwiMLResponse();
+        Say say = new Say( TEST_MESSAGE );
+        say.setLanguage( Language.ENGLISH_UNITEDSTATES.getCode() );
+        expected.append(say);
+        
+        
+        assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+    }
+    
+    @Test
+    public void inboundPhoneCall_ClosedTest() throws Exception {
+        
+        //new DDRRecordAgent().generateDefaultDDRTypes();
+        
+        String accountSid = UUID.randomUUID().toString();
+        String callSid = UUID.randomUUID().toString();
+        TwilioSimulator simulator = new TwilioSimulator(TestFramework.host, accountSid );
+     
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                QuestionInRequest.CLOSED_YES_NO.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
+        url = ServerUtils.getURLWithQueryParams(url, "lang", Language.ENGLISH_UNITEDSTATES.getCode());
+
+        //create a dialog
+        Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+
+        //create Twilio adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+        adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
+        adapterConfig.setDialogId(createDialog.getId());
+        adapterConfig.update();
+        
+        String resp = simulator.initiateInboundCall( callSid, remoteAddressVoice, localAddressBroadsoft );
+        
+        String lang = Language.ENGLISH_UNITEDSTATES.getCode();
+        TwiMLResponse expected = new TwiMLResponse();
+        Gather gather = new Gather();
+        gather.getAttributes().put( "action", TestFramework.host+"/rest/twilio/answer" );
+        gather.getAttributes().put( "numDigits", "1" );
+        gather.getAttributes().put( "finishOnKey", "" );
+        gather.getAttributes().put( "method", "GET" );
+        gather.getAttributes().put( "timeout", "5" );
+        Say say = new Say( TEST_MESSAGE );
+        say.setLanguage( lang );
+        gather.append(say);
+        say = new Say( "1" );
+        say.setLanguage( lang );
+        gather.append(say);
+        say = new Say( "2" );
+        say.setLanguage( lang );
+        gather.append(say);
+        expected.append(gather);
+        Redirect redirect = new Redirect(TestFramework.host+"/rest/twilio/timeout");
+        redirect.getAttributes().put( "method", "GET" );
+        expected.append(redirect);
+        
+        assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+        
+        resp = simulator.nextQuestion( "1" );
+        
+        expected = new TwiMLResponse();
+        say = new Say( "You chose 1" );
+        say.setLanguage( lang );
+        expected.append(say);
+        
+        assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
     }
 
     /**
@@ -379,11 +484,11 @@ public class TwilioAdapterIT extends TestFramework {
         ttsInfo.setProvider(TTSProvider.ACAPELA);
         ttsInfo.setVoiceUsed("testtest");
         ttsInfo.setSpeed("0");
-        ttsInfo.setLanguage(Language.FRENCH_FRANCE);
+        ttsInfo.setLanguage(Language.DUTCH);
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
-        url = ServerUtils.getURLWithQueryParams(url, "lang", Language.DUTCH.getCode());
+        url = ServerUtils.getURLWithQueryParams(url, "lang", Language.FRENCH_FRANCE.getCode());
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
         Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
                                                                    url);

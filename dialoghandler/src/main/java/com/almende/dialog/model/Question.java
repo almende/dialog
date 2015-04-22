@@ -39,7 +39,7 @@ public class Question implements QuestionIntf {
     private static HashMap<String, Integer> questionReloadCounter = new HashMap<String, Integer>();
 
     QuestionIntf question;
-    private String preferred_language = "nl";
+    private String preferred_language = null;
 
     private Collection<MediaProperty> media_properties;
 

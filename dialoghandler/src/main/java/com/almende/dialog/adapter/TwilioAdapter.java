@@ -253,7 +253,9 @@ public class TwilioAdapter {
                                                                             formattedRemoteId, 1, url, session.getKey());
             }
             session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
-            ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+            if(ddrRecord!=null) {
+                ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+            }
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -265,7 +267,9 @@ public class TwilioAdapter {
                              session != null ? session.getKey() : null);
         }
         finally {
-            ddrRecord.createOrUpdate();
+            if (ddrRecord != null) {
+                ddrRecord.createOrUpdate();
+            }
             session.setStartUrl(url);
             session.setDirection(direction);
             session.setRemoteAddress(formattedRemoteId);
@@ -890,7 +894,8 @@ public class TwilioAdapter {
 
         TwiMLResponse twiml = new TwiMLResponse();
         try {
-            addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey);
+            
+            addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey );
             if (question != null && question.getAnswers() != null && !question.getAnswers().isEmpty()) {
                 Redirect redirect = new Redirect(getAnswerUrl());
                 redirect.setMethod("GET");
@@ -1163,11 +1168,15 @@ public class TwilioAdapter {
                         String url = ServerUtils.getTTSURL(ttsInfo, prompt);
                         url = url.replace( "&", "&amp;" );
                         verbToAppend = new Play(url);
-                    }
-                    else {
+                    } else {
+                        
                         Say say = new Say(prompt.replace("text://", ""));
                         say.setLanguage(Language.DUTCH.getCode());
                         verbToAppend = say;
+                        
+                        if(ttsInfo!=null) {
+                            say.setLanguage(ttsInfo.getLanguage().getCode());
+                        }
                     }
                 }
                 twiml.append(verbToAppend);

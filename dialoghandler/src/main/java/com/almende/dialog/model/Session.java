@@ -809,6 +809,7 @@ public class Session{
      * 
      * @return
      */
+    @JsonIgnore
     public List<Session> getLinkedChildSession() {
 
         List<Session> sessions = new ArrayList<Session>();

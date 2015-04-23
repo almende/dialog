@@ -378,13 +378,17 @@ public class TwilioAdapter {
             if (dialCallStatus != null) {
 
                 boolean isConnected = false;
+                boolean isConnectionMade = false;
+                
                 List<Session> linkedChildSessions = session.getLinkedChildSession();
                 for(Session linkedChildSession : linkedChildSessions) {
                     // Check if one of the child sessions was picked up
                     if (linkedChildSession.isCallPickedUp()) {
                         isConnected = true;
                     }
-
+                    if (linkedChildSession.isCallConnected()) {
+                        isConnectionMade = true;
+                    }
                     // There is a call dialcallstatus so the child has ended let's finalize it
                     AdapterConfig config = session.getAdapterConfig();
                     if(dialCallSid.equals( linkedChildSession.getExternalSession() )) {
@@ -394,8 +398,12 @@ public class TwilioAdapter {
                     }
                 }
                 // If the status is completed but the call was picked up we interpret it as no-answer
-                if(dialCallStatus.equals("completed") && !isConnected) {
+                if (dialCallStatus.equals("completed") && !isConnected) {
                     dialCallStatus = "no-answer";
+                }
+                if ("completed".equals(dialCallStatus) && isConnectionMade) {
+                    session.setCallConnectedStatus(true);
+                    session.storeSession();
                 }
 
                 //if the linked child session is found and not pickedup. trigger the next question
@@ -457,9 +465,18 @@ public class TwilioAdapter {
                 }
                 //the answered event is triggered if there are no next requests to process and the previous question 
                 //was not an exit question (which would also give a null question on question.answer())
-                if (question == null && !isExit) {
+                if(question != null && !"exit".equalsIgnoreCase(question.getType())) {
+                    session.setCallConnectedStatus(true);
+                }
+                else if (question == null && !isExit && session.isCallConnected()) {
+                    session.setCallConnectedStatus(true);
+                    session.storeSession();
                     answered(direction, remoteID, localID, session.getKey());
                 }
+                else {
+                    session.setCallConnectedStatus(false);
+                }
+                session.storeSession();
                 return handleQuestion(question, session.getAdapterConfig(), responder, session.getKey(), null);
             }
             else {

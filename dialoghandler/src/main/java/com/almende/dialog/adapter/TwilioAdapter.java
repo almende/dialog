@@ -411,6 +411,8 @@ public class TwilioAdapter {
             }
 
             Question question = session.getQuestion();
+            log.info(String.format("Question before answer is: %s", ServerUtils.serializeWithoutException(question)));
+            
             if (question != null) {
                 String responder = session.getRemoteAddress();
                 if (session.killed) {
@@ -432,6 +434,9 @@ public class TwilioAdapter {
                 }
                 question = question.answer(responder, session.getAdapterConfig().getConfigId(), answer_id,
                                            answer_input, session.getKey());
+                
+                log.info(String.format("Question after answer is: %s, isExit: %s",
+                                       ServerUtils.serializeWithoutException(question), isExit));
                 //reload the session
                 session = Session.getSession(session.getKey());
                 session.setQuestion(question);

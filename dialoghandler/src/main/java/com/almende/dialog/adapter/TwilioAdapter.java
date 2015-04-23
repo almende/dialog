@@ -425,6 +425,11 @@ public class TwilioAdapter {
                                                 question.getQuestion_expandedtext(session.getKey())), session);
                 }
                 String answerForQuestion = question.getQuestion_expandedtext(session.getKey());
+                
+                boolean isExit = false;
+                if ("exit".equalsIgnoreCase(question.getType())) {
+                    isExit = true;
+                }
                 question = question.answer(responder, session.getAdapterConfig().getConfigId(), answer_id,
                                            answer_input, session.getKey());
                 //reload the session
@@ -444,6 +449,11 @@ public class TwilioAdapter {
                     catch (Exception e) {
                         e.printStackTrace();
                     }
+                }
+                //the answered event is triggered if there are no next requests to process and the previous question 
+                //was not an exit question (which would also give a null question on question.answer())
+                if (question == null && !isExit) {
+                    answered(direction, remoteID, localID, session.getKey());
                 }
                 return handleQuestion(question, session.getAdapterConfig(), responder, session.getKey(), null);
             }
@@ -515,13 +525,13 @@ public class TwilioAdapter {
         String reply = twiml.toXML();
         return Response.ok(reply).build();
     }
-	
+
     @Path("preconnect")
     @GET
     @Produces("application/xml")
     public Response preconnect(@QueryParam("From") String localID, @QueryParam("AccountSid") String accountSid,
-        @QueryParam("To") String remoteID,
-        @QueryParam("Direction") String direction, @QueryParam("CallSid") String callSid) {
+        @QueryParam("To") String remoteID, @QueryParam("Direction") String direction,
+        @QueryParam("CallSid") String callSid) {
 
         String reply = (new TwiMLResponse()).toXML();
         Session session = Session.getSessionByExternalKey(callSid);
@@ -530,38 +540,45 @@ public class TwilioAdapter {
             session = fetchSessionFromParent(localID, remoteID, accountSid, callSid);
         }
 
-        if (session != null && session.getQuestion() != null) {
-            Question question = session.getQuestion();
-            String responder = session.getRemoteAddress();
+        if (session != null) {
+            if (session.getQuestion() != null) {
+                Question question = session.getQuestion();
+                String responder = session.getRemoteAddress();
 
-            if (session.killed) {
-                return Response.status(Response.Status.BAD_REQUEST).build();
+                if (session.killed) {
+                    return Response.status(Response.Status.BAD_REQUEST).build();
+                }
+                dialogLog.log(LogLevel.INFO,
+                              session.getAdapterConfig(),
+                              String.format("Wrong answer received from: %s for question: %s", responder,
+                                            question.getQuestion_expandedtext(session.getKey())), session);
+
+                HashMap<String, String> extras = new HashMap<String, String>();
+                extras.put("sessionKey", session.getKey());
+                extras.put("requester", session.getLocalAddress());
+                question = question.event("preconnect", "preconnect event", extras, responder, session.getKey());
+                // If there is no preconnect the isCallPickedUp is never set
+                if (question == null) {
+                    session.setCallPickedUpStatus(true);
+                    session.storeSession();
+                    answered(direction, remoteID, localID, session.getKey());
+                }
+
+                //reload the session
+                session = Session.getSession(session.getKey());
+                session.setQuestion(question);
+                session.storeSession();
+                return handleQuestion(question, session.getAdapterConfig(), responder, session.getKey(), null);
             }
-            dialogLog.log(LogLevel.INFO,
-                          session.getAdapterConfig(),
-                          String.format("Wrong answer received from: %s for question: %s", responder,
-                                        question.getQuestion_expandedtext(session.getKey())), session);
-
-            answered(direction, remoteID, localID, session.getKey());
-
-            HashMap<String, String> extras = new HashMap<String, String>();
-            extras.put("sessionKey", session.getKey());
-            extras.put("requester", session.getLocalAddress());
-            question = question.event("preconnect", "preconnect event", extras, responder, session.getKey());
-            // If there is no preconnect the isCallPickedUp is never set
-            if(question==null) {
+            else {
                 session.setCallPickedUpStatus(true);
                 session.storeSession();
+                answered(direction, remoteID, localID, session.getKey());
             }
-            
-            //reload the session
-            session = Session.getSession(session.getKey());
-            session.setQuestion(question);
-            session.storeSession();
-            return handleQuestion(question, session.getAdapterConfig(), responder, session.getKey(), null);
-        } else {
-            session.setCallPickedUpStatus(true);
-            session.storeSession();
+        }
+        else {
+            log.severe(String.format("No session found for: localID: %s, remoteID: %s, callSid: %s", localID, remoteID,
+                                     callSid));
         }
         return Response.ok(reply).build();
     }

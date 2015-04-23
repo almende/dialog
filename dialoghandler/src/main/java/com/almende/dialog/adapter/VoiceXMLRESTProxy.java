@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -35,7 +34,6 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -43,7 +41,6 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -553,6 +550,10 @@ public class VoiceXMLRESTProxy {
                                                 question.getQuestion_expandedtext(session.getKey())), session);
                 }
                 String answerForQuestion = question.getQuestion_expandedtext(session.getKey());
+                boolean isExit = false;
+                if ("exit".equalsIgnoreCase(question.getType())) {
+                    isExit = true;
+                }
                 question = question.answer(responder, session.getAdapterConfig().getConfigId(), answer_id,
                                            answer_input, sessionKey);
                 //reload the session
@@ -570,7 +571,14 @@ public class VoiceXMLRESTProxy {
                         }
                     }
                     catch (Exception e) {
+                        e.printStackTrace();
                     }
+                }
+                //the answered event is triggered if there are no next requests to process and the previous question 
+                //was not an exit question (which would also give a null question on question.answer())
+                if (question == null && !isExit) {
+                    answered(session.getDirection(), session.getRemoteAddress(), session.getLocalAddress(),
+                             session.getKey());
                 }
                 return handleQuestion(question, session.getAdapterConfig(), responder, sessionKey);
             }
@@ -589,40 +597,53 @@ public class VoiceXMLRESTProxy {
     @GET
     @Produces("application/voicexml")
     public Response preconnect(@QueryParam("remoteID") String remoteID, @QueryParam("localID") String localID,
-                                        @QueryParam("redirectID") String redirectID, @Context UriInfo ui) {
-        
+        @QueryParam("redirectID") String redirectID, @Context UriInfo ui) {
+
         String reply = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>";
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
         String formattedAddress = PhoneNumberUtils.formatNumber(redirectID, PhoneNumberFormat.E164);
-        //String formattedRemoteAddress = PhoneNumberUtils.formatNumber(remoteID, PhoneNumberFormat.E164);
-        
+
         String internalSessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + formattedAddress;
         Session session = Session.getSessionByInternalKey(internalSessionKey);
-        if (session != null && session.getQuestion() != null) {
-            Question question = session.getQuestion();
-            String responder = session.getRemoteAddress();
+        if (session != null) {
+            if (session.getQuestion() != null) {
+                Question question = session.getQuestion();
+                String responder = session.getRemoteAddress();
 
-            if (session.killed) {
-                return Response.status(Response.Status.BAD_REQUEST).build();
+                if (session.killed) {
+                    return Response.status(Response.Status.BAD_REQUEST).build();
+                }
+                dialogLog.log(LogLevel.INFO,
+                              session.getAdapterConfig(),
+                              String.format("Wrong answer received from: %s for question: %s", responder,
+                                            question.getQuestion_expandedtext(session.getKey())), session);
+
+                answered("transfer", formattedAddress, localID, session.getKey());
+
+                HashMap<String, String> extras = new HashMap<String, String>();
+                extras.put("sessionKey", session.getKey());
+                extras.put("requester", session.getLocalAddress());
+                question = question.event("preconnect", "preconnect event", extras, responder, session.getKey());
+                // If there is no preconnect the isCallPickedUp is never set
+                if (question == null) {
+                    session.setCallPickedUpStatus(true);
+                    session.storeSession();
+                    answered(session.getDirection(), formattedAddress, localID, session.getKey());
+                }
+                //reload the session
+                session = Session.getSession(session.getKey());
+                session.setQuestion(question);
+                session.storeSession();
+                return handleQuestion(question, config, formattedAddress, session.getKey());
             }
-            dialogLog.log(LogLevel.INFO,
-                          session.getAdapterConfig(),
-                          String.format("Wrong answer received from: %s for question: %s", responder,
-                                        question.getQuestion_expandedtext(session.getKey())), session);
-
-            answered("transfer", formattedAddress, localID,  session.getKey());
-
-            HashMap<String, String> extras = new HashMap<String, String>();
-            extras.put("sessionKey", session.getKey());
-            extras.put("requester", session.getLocalAddress());
-            question = question.event("preconnect", "preconnect event", extras, responder, session.getKey());
-            //reload the session
-            session = Session.getSession(session.getKey());
-            session.setQuestion(question);
-            session.storeSession();
-            return handleQuestion(question, config, formattedAddress, session.getKey());
-        } else {
-            log.warning("No session found for: "+internalSessionKey);
+            else {
+                session.setCallPickedUpStatus(true);
+                session.storeSession();
+                answered(session.getDirection(), formattedAddress, localID, session.getKey());
+            }
+        }
+        else {
+            log.warning("No session found for: " + internalSessionKey);
         }
         return Response.ok(reply).build();
     }

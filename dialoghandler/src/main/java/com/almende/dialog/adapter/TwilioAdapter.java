@@ -436,15 +436,10 @@ public class TwilioAdapter {
                 }
                 String answerForQuestion = question.getQuestion_expandedtext(session.getKey());
                 
-                boolean isExit = false;
-                if ("exit".equalsIgnoreCase(question.getType())) {
-                    isExit = true;
-                }
                 question = question.answer(responder, session.getAdapterConfig().getConfigId(), answer_id,
                                            answer_input, session.getKey());
                 
-                log.info(String.format("Question after answer is: %s, isExit: %s",
-                                       ServerUtils.serializeWithoutException(question), isExit));
+                log.info(String.format("Question after answer is: %s", ServerUtils.serializeWithoutException(question)));
                 //reload the session
                 session = Session.getSession(session.getKey());
                 session.setQuestion(question);
@@ -467,10 +462,6 @@ public class TwilioAdapter {
                 //was not an exit question (which would also give a null question on question.answer())
                 if(question != null && !"exit".equalsIgnoreCase(question.getType())) {
                     session.setCallConnectedStatus(true);
-                }
-                else if (question == null && !isExit && session.isCallConnected()) {
-                    session.setCallConnectedStatus(true);
-                    session.storeSession();
                     answered(direction, remoteID, localID, session.getKey());
                 }
                 else {

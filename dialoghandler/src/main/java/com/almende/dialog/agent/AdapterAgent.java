@@ -32,12 +32,14 @@ import com.almende.util.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.uuid.UUID;
 import com.askfast.commons.Status;
+import com.askfast.commons.agent.ScheduleAgent;
 import com.askfast.commons.agent.intf.AdapterAgentInterface;
 import com.askfast.commons.agent.intf.DialogAgentInterface;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.ScheduledTask;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 @Access(AccessType.PUBLIC)
@@ -103,6 +105,17 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
     }
     
     /**
+     * Get details about emails check task
+     * @return 
+     * @return
+     */
+    public ScheduledTask getEmailInboundScedulerDetails() {
+
+        String emailScedulerTaskId = getState().get("emailScedulerTaskId", String.class);
+        return getScheduledTaskDetails(emailScedulerTaskId);
+    }
+    
+    /**
      * stops the scheduler which checks for inbound emails
      * @return scheduler id
      */
@@ -153,6 +166,17 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         getState().remove( "twitterScedulerTaskId" );
         return schedulerId;
     }
+    
+    /**
+    * Get details about twitter check task
+     * @return 
+    * @return
+    */
+   public ScheduledTask getTwitterInboundScedulerDetails() {
+
+       String twitterScedulerTaskId = getState().get("twitterScedulerTaskId", String.class);
+       return getScheduledTaskDetails(twitterScedulerTaskId);
+   }
 
     /**
      * check inbound email

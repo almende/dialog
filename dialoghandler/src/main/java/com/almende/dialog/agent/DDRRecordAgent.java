@@ -21,8 +21,10 @@ import com.almende.eve.protocol.jsonrpc.annotation.Optional;
 import com.almende.eve.protocol.jsonrpc.formats.JSONRequest;
 import com.almende.util.TypeUtil;
 import com.almende.util.jackson.JOM;
+import com.askfast.commons.agent.ScheduleAgent;
 import com.askfast.commons.agent.intf.DDRRecordAgentInterface;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.ScheduledTask;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Access(AccessType.PUBLIC)
@@ -374,6 +376,17 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         if (adapterConfig.getOwner() != null && !adapterConfig.getOwner().isEmpty()) {
             DDRUtils.createDDRForSubscription(adapterConfig, true);
         }
+    }
+    
+    /**
+     * Get details about subscription tasks running
+     * @return 
+     * @return
+     */
+    public ScheduledTask getSubsriptionCostScedulerDetails(@Name("ddrPriceId") String ddrPriceId) {
+
+        String id = getState().get(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPriceId, String.class);
+        return getScheduledTaskDetails(id);
     }
     
     /**

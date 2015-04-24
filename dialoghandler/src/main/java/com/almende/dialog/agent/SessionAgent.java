@@ -9,6 +9,7 @@ import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
 import com.almende.eve.protocol.jsonrpc.annotation.Name;
 import com.almende.util.TypeUtil;
 import com.almende.util.jackson.JOM;
+import com.askfast.commons.agent.ScheduleAgent;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 @Access(AccessType.PUBLIC)

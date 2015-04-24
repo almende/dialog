@@ -83,7 +83,7 @@ public class Log implements Serializable {
      */
     public Log(LogLevel level, AdapterConfig adapter, String message, Session session) {
 
-        if (session != null && session.getTrackingToken() != null) {
+        if (session != null) {
             this.logId = new UUID().toString();
             this.level = level;
             //fetch the adapter type if empty

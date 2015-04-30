@@ -105,8 +105,7 @@ public class TwilioAdapterIT extends TestFramework {
 
         //trigger an incoming call        
         Response newInboundResponse = twilioAdapter.getNewDialogPost(testCallId, TEST_PUBLIC_KEY, inboundAddress,
-                                                                     adapterConfig.getMyAddress(), "inbound", null,
-                                                                     null);
+                                                                     adapterConfig.getMyAddress(), "inbound", null);
         //validate that a session is created with a ddr record
         List<Session> allSessions = Session.getAllSessions();
         Assert.assertThat(allSessions.size(), Matchers.is(2));
@@ -629,6 +628,6 @@ public class TwilioAdapterIT extends TestFramework {
             remoteAddress = tmpLocalId;
         }
         return new TwilioAdapter().getNewDialog(callSid, UUID.randomUUID().toString(), localAddress, remoteAddress,
-                                                direction, null, null);
+                                                direction, null);
     }
 }

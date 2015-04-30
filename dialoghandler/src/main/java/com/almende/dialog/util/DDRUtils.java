@@ -585,8 +585,8 @@ public class DDRUtils
      * processed successfully
      * @return true if the session can be dropped on hangup
      */
-    public static boolean stopDDRCosts( String sessionKey, boolean pushToQueue )
-    {
+    public static boolean stopDDRCosts(String sessionKey) {
+
         Session session = Session.getSession(sessionKey);
         boolean result = false;
         if (session != null) {
@@ -605,42 +605,31 @@ public class DDRUtils
                 if (adapterConfig.isCallAdapter()) {
                     //update session with call times if missing
                     if (AdapterProviders.TWILIO.equals(adapterConfig.getProvider()) &&
-                        (session.getStartTimestamp() == null || session.getReleaseTimestamp() == null || session
-                                                        .getAnswerTimestamp() == null)) {
+                        (session.getStartTimestamp() == null || session.getReleaseTimestamp() == null || session.getAnswerTimestamp() == null)) {
 
                         updateSessionWithTwilioCallTimes(session, adapterConfig);
                     }
                     if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
                         session.getDirection() != null) {
                         ddrRecord = updateDDRRecordOnCallStops(session.getDdrRecordId(), adapterConfig,
-                                                       session.getAccountId(), Long.parseLong(session.getStartTimestamp()),
-                                                       session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
-                                                                                            : null,
-                                                        Long.parseLong(session.getReleaseTimestamp()),
-                                                        session.getKey());
-                        //push session to queue when the call is picked up but no costs are attached or
-                        //when the ddrRecord is found but no answerTimestamp is seen. (Try to process it again later: when the answer ccxml comes in later on)
-//                        boolean candidateToBePushedToQueue = false;
+                                                               session.getAccountId(),
+                                                               Long.parseLong(session.getStartTimestamp()),
+                                                               session.getAnswerTimestamp() != null ? Long.parseLong(session.getAnswerTimestamp())
+                                                                   : null,
+                                                               Long.parseLong(session.getReleaseTimestamp()), session.getKey());
                         if (ddrRecord == null && session.getAnswerTimestamp() != null) {
                             String errorMessage = String.format("No costs added to communication currently for session: %s, as no ddr record is found",
                                                                 session.getKey());
                             log.severe(errorMessage);
                             dialogLog.severe(adapterConfig, errorMessage, session);
-//                            candidateToBePushedToQueue = true;
                         }
                         else if (ddrRecord != null && session.getAnswerTimestamp() == null &&
-                                 session.getReleaseTimestamp() != null) {
+                            session.getReleaseTimestamp() != null) {
 
                             String warningMessage = String.format("No costs added. Looks like a immediate hangup! Hangup timestamp: %s found. But answerTimestamp not found for session: %s",
                                                                   session.getReleaseTimestamp(), session.getKey());
                             log.warning(warningMessage);
-//                            candidateToBePushedToQueue = true;
                         }
-//                        if (candidateToBePushedToQueue && pushToQueue) { //push the session details to queue
-//                            session.pushSessionToQueue();
-//                            return result;
-//                        }
-
                         //publish charges
                         Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
                         //attach cost to ddr is prepaid type
@@ -657,31 +646,25 @@ public class DDRUtils
                                                             session.getKey());
                         log.severe(errorMessage);
                         dialogLog.severe(adapterConfig, errorMessage, session);
-//                        if (pushToQueue) { //push the session details to queue
-//                            session.pushSessionToQueue();
-//                        }
                     }
                 }
                 //text adapter. delete the session if question is null
-                else if(session.getQuestion() == null){
+                else if (session.getQuestion() == null) {
                     session.drop();
                     result = true;
                 }
             }
             catch (Exception e) {
-                String errorMessage = String.format("Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s \n Error: %s. Pushing to queue",
+                String errorMessage = String.format("Applying charges failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s \n Error: %s.",
                                                     session.getDirection(), session.getAdapterID(),
                                                     adapterConfig.getMyAddress(), session.getRemoteAddress(),
                                                     session.getLocalAddress(), e.getLocalizedMessage());
                 e.printStackTrace();
                 log.severe(errorMessage);
                 dialogLog.severe(session.getAdapterConfig(), errorMessage, session);
-//                if (pushToQueue) { //push the session details to queue
-//                    session.pushSessionToQueue();
-//                }
             }
         }
-        
+
         //clear the session from the dialog publish queue
         try {
             Agent agent = AgentHost.getInstance().getAgent("dialog");
@@ -852,13 +835,12 @@ public class DDRUtils
         throws ParseException {
 
         String accessToken = adapterConfig.getAccessToken();
-        accessToken = accessToken != null ? accessToken : session.getAllExtras()
-                                        .get(AdapterConfig.ACCESS_TOKEN_KEY);
+        accessToken = accessToken != null ? accessToken : session.getAllExtras().get(AdapterConfig.ACCESS_TOKEN_KEY);
         String accessTokenSecret = adapterConfig.getAccessTokenSecret();
-        accessTokenSecret = accessTokenSecret != null ? accessTokenSecret : session.getAllExtras()
-                                        .get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY);
+        accessTokenSecret = accessTokenSecret != null ? accessTokenSecret
+            : session.getAllExtras().get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY);
         Account twilioAccount = TwilioAdapter.getTwilioAccount(accessToken, accessTokenSecret);
-        if (twilioAccount != null) {
+        if (twilioAccount != null && session != null && session.getExternalSession() != null) {
             Call callDetails = twilioAccount.getCall(session.getExternalSession());
             TwilioAdapter.updateSessionWithCallTimes(session, callDetails);
         }

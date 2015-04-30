@@ -1,10 +1,9 @@
 package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -12,20 +11,16 @@ import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.w3c.dom.Document;
-
 import com.almende.dialog.IntegrationTest;
 import com.almende.dialog.Settings;
 import com.almende.dialog.TestFramework;
@@ -110,7 +105,8 @@ public class TwilioAdapterIT extends TestFramework {
 
         //trigger an incoming call        
         Response newInboundResponse = twilioAdapter.getNewDialogPost(testCallId, TEST_PUBLIC_KEY, inboundAddress,
-                                                                     adapterConfig.getMyAddress(), "inbound", null);
+                                                                     adapterConfig.getMyAddress(), "inbound", null,
+                                                                     null);
         //validate that a session is created with a ddr record
         List<Session> allSessions = Session.getAllSessions();
         Assert.assertThat(allSessions.size(), Matchers.is(2));
@@ -633,6 +629,6 @@ public class TwilioAdapterIT extends TestFramework {
             remoteAddress = tmpLocalId;
         }
         return new TwilioAdapter().getNewDialog(callSid, UUID.randomUUID().toString(), localAddress, remoteAddress,
-                                                direction, null);
+                                                direction, null, null);
     }
 }

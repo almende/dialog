@@ -164,7 +164,7 @@ public class DDRRecord
         Session session = Session.getSession(sessionKey);
         createOrUpdateWithLog(session);
     }
-    
+
     /**
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
      */

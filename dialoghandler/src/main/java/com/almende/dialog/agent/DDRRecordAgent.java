@@ -403,25 +403,22 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
                 ObjectNode params = JOM.createObjectNode();
                 params.put("adapterId", ddrPrice.getAdapterId());
                 JSONRequest req = new JSONRequest("applySubscriptionChargesForAdapters", params);
-                Integer interval = null;
+                ScheduleFrequency frequency = null;
                 switch (ddrPrice.getUnitType()) {
-                    case SECOND:
-                        interval = 1000;
-                        break;
                     case MINUTE:
-                        interval = 60 * 1000;
+                        frequency = ScheduleFrequency.MINUTELY;
                         break;
                     case HOUR:
-                        interval = 60 * 60 * 1000;
+                        frequency = ScheduleFrequency.HOURLY;
                         break;
                     case DAY:
-                        interval = 24 * 60 * 60 * 1000;
+                        frequency = ScheduleFrequency.DAILY;
                         break;
                     case MONTH:
-                        interval = 30 * 24 * 60 * 60 * 1000;
+                        frequency = ScheduleFrequency.MONTHLY;
                         break;
                     case YEAR:
-                        interval = 12 * 30 * 24 * 60 * 60 * 1000;
+                        frequency = ScheduleFrequency.YEARLY;
                         break;
                     default:
                         throw new Exception("DDR cannot be created for Subsciption for UnitType: " +
@@ -429,7 +426,7 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
                 }
                 log.info(String.format("-------Starting scheduler for processing adapter subscriptions. DDRPrice: %s -------",
                                        ddrPrice.getId()));
-                id = schedule(req, interval, true);
+                id = schedule(req, TimeUtils.getServerCurrentTimeInMillis(), frequency);
                 getState().put(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId(), id);
             }
             catch (Exception e) {

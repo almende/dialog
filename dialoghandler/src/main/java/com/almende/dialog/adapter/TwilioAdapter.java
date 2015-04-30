@@ -709,7 +709,7 @@ public class TwilioAdapter {
                 }
                 
                 //flush the keys if ddrProcessing was successful
-                if (DDRUtils.stopDDRCosts(session.getKey(), true)) {
+                if (DDRUtils.stopDDRCosts(session.getKey())) {
                     session.drop();
                 }
                 hangup(session);

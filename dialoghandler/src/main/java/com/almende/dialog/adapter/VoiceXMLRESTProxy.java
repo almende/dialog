@@ -1047,7 +1047,7 @@ public class VoiceXMLRESTProxy {
                                             log.info(String.format("Call ended. session updated: %s",
                                                                    ServerUtils.serialize(session)));
                                             //flush the keys if ddrProcessing was successful
-                                            if (DDRUtils.stopDDRCosts(session.getKey(), true)) {
+                                            if (DDRUtils.stopDDRCosts(session.getKey())) {
                                                 Thread.sleep( 1000 ); // Wait one seconds to process the rest of the dialog
                                                 session.drop();
                                             }

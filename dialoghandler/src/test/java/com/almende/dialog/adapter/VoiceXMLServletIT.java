@@ -5,7 +5,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -13,11 +12,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
 import org.hamcrest.Matchers;
@@ -26,9 +23,9 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-
 import com.almende.dialog.IntegrationTest;
 import com.almende.dialog.Log;
+import com.almende.dialog.LogLevel;
 import com.almende.dialog.Logger;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -178,10 +175,6 @@ public class VoiceXMLServletIT extends TestFramework {
         assertThat(session, notNullValue());
         assertThat(session.getDdrRecordId(), Matchers.notNullValue());
         
-        List<DDRRecord> allDdrRecords = DDRRecord.getDDRRecords(null, null, null, null, null, null, null, null, null,
-                                                                null);
-        assertThat(allDdrRecords.isEmpty(), Matchers.is(true));
-        
         //mock the Context
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
@@ -244,14 +237,64 @@ public class VoiceXMLServletIT extends TestFramework {
         //make sure that all the logs belong to atleast one ddrRecord
         int logsCount = 0;
         long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        boolean isDDRLogFound = false;
         for (DDRRecord ddrRecord : ddrRecords) {
             List<Log> logsForDDRRecord = Logger.find(TEST_PUBLIC_KEY, ddrRecord.getId(), null, null, null, null, null,
                                                      null);
             logsCount += logsForDDRRecord.size();
+            for (Log log : logsForDDRRecord) {
+                assertThat(log.getAccountId(), Matchers.is(ddrRecord.getAccountId()));
+                assertThat(log.getAccountId(), Matchers.notNullValue());
+                if(LogLevel.DDR.equals(log.getLevel())) {
+                    isDDRLogFound = true;
+                }
+            }
         }
+        assertThat(isDDRLogFound, Matchers.is(true));
         long endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
         log.info(String.format("Fetch by ddrRecord took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
         assertThat(logsCount, Matchers.is(allLogs.size()));
+        assertThat(logsCount, Matchers.not(0));
+
+        //test the difference in timings to fetch all
+        startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null, null);
+        endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        log.info(String.format("Fetch by accountId took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
+    }
+    
+    @Test
+    public void everyLogMustHaveAccountId() throws Exception {
+
+        //trigger an outbound call
+        outboundPhoneCallMissingDDRTest();
+        //fetch all the ddrRecords
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        List<Log> allLogs = Logger.findAllLogs();
+        assertThat(allLogs.size(), Matchers.not(0));
+
+        //make sure that all the logs belong to atleast one ddrRecord
+        int logsCount = 0;
+        long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        boolean isDDRLogFound = false;
+        for (DDRRecord ddrRecord : ddrRecords) {
+            List<Log> logsForDDRRecord = Logger.find(TEST_PUBLIC_KEY, ddrRecord.getId(), null, null, null, null, null,
+                                                     null);
+            logsCount += logsForDDRRecord.size();
+            for (Log log : logsForDDRRecord) {
+                assertThat(log.getAccountId(), Matchers.is(ddrRecord.getAccountId()));
+                assertThat(log.getAccountId(), Matchers.notNullValue());
+                if (LogLevel.DDR.equals(log.getLevel())) {
+                    isDDRLogFound = true;
+                }
+            }
+        }
+        assertThat(isDDRLogFound, Matchers.is(true));
+        long endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        log.info(String.format("Fetch by ddrRecord took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
+        assertThat(logsCount, Matchers.is(allLogs.size()));
+        assertThat(logsCount, Matchers.not(0));
 
         //test the difference in timings to fetch all
         startTimestamp = TimeUtils.getServerCurrentTimeInMillis();

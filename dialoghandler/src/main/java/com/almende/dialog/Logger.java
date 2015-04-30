@@ -111,8 +111,6 @@ public class Logger {
             if (devLog.getSessionKey() != null) {
                 MongoCollection collection = getCollection();
                 collection.insert(devLog);
-//                //TODO: remove in live 
-                log.info("New log added: "+ ServerUtils.serializeWithoutException(devLog));
             }
         }
     }
@@ -130,8 +128,6 @@ public class Logger {
             MongoCollection collection = getCollection();
             Log devLog = new Log(level, adapter, message, session);
             collection.insert(devLog);
-            //TODO: remove in live 
-            log.info("New log added: "+ ServerUtils.serializeWithoutException(devLog));
         }
     }
     
@@ -143,8 +139,6 @@ public class Logger {
 
         MongoCollection collection = getCollection();
         collection.save(devLog);
-        //TODO: remove in live 
-        log.info("Log updated " + ServerUtils.serializeWithoutException(devLog));
     }
 
     /**

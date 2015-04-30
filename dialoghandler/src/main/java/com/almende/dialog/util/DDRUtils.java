@@ -1,6 +1,5 @@
 package com.almende.dialog.util;
 
-import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
@@ -9,7 +8,6 @@ import java.util.Map;
 import java.util.logging.Logger;
 import org.joda.time.DateTime;
 import com.almende.dialog.accounts.AdapterConfig;
-import com.almende.dialog.adapter.TwilioAdapter;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
@@ -31,8 +29,6 @@ import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
-import com.twilio.sdk.resource.instance.Account;
-import com.twilio.sdk.resource.instance.Call;
 
 /**
  * Helper functions for creating DDR records and processing of them
@@ -607,7 +603,8 @@ public class DDRUtils
                     if (AdapterProviders.TWILIO.equals(adapterConfig.getProvider()) &&
                         (session.getStartTimestamp() == null || session.getReleaseTimestamp() == null || session.getAnswerTimestamp() == null)) {
 
-                        updateSessionWithTwilioCallTimes(session, adapterConfig);
+                        //TODO: must be removed probably... just here to test the answerTimestmap and releaseTimestamp
+                        new Exception("session must already have an answer timestamp and release timestamp").printStackTrace();
                     }
                     if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&
                         session.getDirection() != null) {
@@ -824,26 +821,6 @@ public class DDRUtils
             }
         }
         return selecteDdrRecord;
-    }
-    
-    /** Updates the call times in the session for a twilio adapter
-     * @param session
-     * @param adapterConfig
-     * @throws ParseException
-     */
-    private static void updateSessionWithTwilioCallTimes(Session session, AdapterConfig adapterConfig)
-        throws ParseException {
-
-        String accessToken = adapterConfig.getAccessToken();
-        accessToken = accessToken != null ? accessToken : session.getAllExtras().get(AdapterConfig.ACCESS_TOKEN_KEY);
-        String accessTokenSecret = adapterConfig.getAccessTokenSecret();
-        accessTokenSecret = accessTokenSecret != null ? accessTokenSecret
-            : session.getAllExtras().get(AdapterConfig.ACCESS_TOKEN_SECRET_KEY);
-        Account twilioAccount = TwilioAdapter.getTwilioAccount(accessToken, accessTokenSecret);
-        if (twilioAccount != null && session != null && session.getExternalSession() != null) {
-            Call callDetails = twilioAccount.getCall(session.getExternalSession());
-            TwilioAdapter.updateSessionWithCallTimes(session, callDetails);
-        }
     }
     
     /**

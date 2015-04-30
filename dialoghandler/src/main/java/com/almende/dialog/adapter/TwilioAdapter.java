@@ -98,7 +98,6 @@ public class TwilioAdapter {
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
         // If it is a broadcast don't provide the remote address because it is deceiving.
         String loadAddress = "";
-        Session session = null;
         if (addressNameMap == null || addressNameMap.isEmpty()) {
             throw new Exception("No address given. Error in call request");
         }
@@ -110,7 +109,7 @@ public class TwilioAdapter {
         String firstRemoteAddress = loadAddress != null ? new String(loadAddress) : new String(addressNameMap.keySet()
                                         .iterator().next());
         firstRemoteAddress = PhoneNumberUtils.formatNumber(firstRemoteAddress, null);
-        session = Session.getOrCreateSession(config, firstRemoteAddress);
+        Session session = Session.getOrCreateSession(config, firstRemoteAddress);
         session.setAccountId(accountId);
         session.storeSession();
         String url = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
@@ -300,6 +299,7 @@ public class TwilioAdapter {
             question = Question.getError(config.getPreferred_language());
         }
         session.setQuestion(question);
+        session.storeSession();
 
         if (session.getQuestion() != null) {
             return handleQuestion(question, config, formattedRemoteId, session.getKey(), extraParams);
@@ -1261,37 +1261,38 @@ public class TwilioAdapter {
                         newRemoteID = adapterConfig.getMyAddress();
                     }
                     
-                    for(int i=0; i<question.getUrl().size(); i++) {
+                    for (int i = 0; i < question.getUrl().size(); i++) {
                         String url = question.getUrl().get(i);
-                    //for(String url : question.getUrl()) {
-                        if(url.startsWith("tel:")) {
+                        //for(String url : question.getUrl()) {
+                        if (url.startsWith("tel:")) {
                             // added for release0.4.2 to store the question in the
                             // session,
                             // for triggering an answered event
                             // Check with remoteID we are going to use for the call
-        
-                            log.info(String.format("current session key before referral is: %s and remoteId %s", sessionKey,
-                                                   remoteID));
+
+                            log.info(String.format("current session key before referral is: %s and remoteId %s",
+                                                   sessionKey, remoteID));
                             String redirectedId = PhoneNumberUtils.formatNumber(url.replace("tel:", ""), null);
                             if (redirectedId != null) {
-                                
+
                                 //check credits
                                 if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
-        
+
                                     TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
-                                    String insufficientCreditMessage = ServerUtils
-                                                                    .getInsufficientMessage(ttsInfo.getLanguage());
+                                    String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
                                     //create a ddr record for tts
                                     DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
-                                    return Response.ok(renderExitQuestion(null, Arrays.asList(insufficientCreditMessage),
+                                    return Response.ok(renderExitQuestion(null,
+                                                                          Arrays.asList(insufficientCreditMessage),
                                                                           session.getKey())).build();
                                 }
-                                question.getUrl().set( i, redirectedId );
-                                updateSessionOnRedirect(question, adapterConfig, remoteID, session, newRemoteID, redirectedId);
+                                question.getUrl().set(i, "tel:" + redirectedId);
+                                updateSessionOnRedirect(question, adapterConfig, remoteID, session, newRemoteID,
+                                                        redirectedId);
                             }
                             else {
-                                log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ", url
-                                                                .replace("tel:", "")));
+                                log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ",
+                                                         url.replace("tel:", "")));
                             }
                         }
                     }
@@ -1333,7 +1334,6 @@ public class TwilioAdapter {
         // trigger the answered event
         session.addExtras("referredCalledId", referralToId);
         session.setQuestion(question);
-        session.setRemoteAddress(referralFromID);
 
         // create a new ddr record and session to catch the
         // redirect
@@ -1341,6 +1341,8 @@ public class TwilioAdapter {
         referralSession.addExtras("originalRemoteId", originalRemoteID);
         referralSession.addExtras("redirect", "true");
         referralSession.setAccountId(session.getAccountId());
+        referralSession.storeSession();
+        
         if (session.getDirection() != null) {
             DDRRecord ddrRecord = null;
             String urls = StringUtils.join( question.getUrl(), "," );

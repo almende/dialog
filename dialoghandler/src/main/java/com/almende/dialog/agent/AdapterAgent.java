@@ -874,6 +874,26 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
     }
     
     /**
+     * Updates the dialog linked to this adapter
+     * 
+     * @return
+     * @throws Exception
+     */
+    public AdapterConfig setDialogToAdapter(@Name("accountId") String accountId, @Name("adapterId") String adapterId,
+        @Name("dialogId") String dialogId) throws Exception {
+
+        AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
+        if (config != null && accountId.equals(config.getOwner())) {
+            Dialog dialog = Dialog.getDialog(dialogId, accountId);
+            if (dialog != null) {
+                config.setDialogId(dialogId);
+                config.update();
+            }
+        }
+        return config;
+    }
+    
+    /**
      * saves the AdapterConfig in the datastore
      * 
      * @param config

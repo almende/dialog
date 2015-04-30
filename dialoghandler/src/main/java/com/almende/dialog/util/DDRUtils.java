@@ -601,9 +601,9 @@ public class DDRUtils
                 if (adapterConfig.isCallAdapter()) {
                     //update session with call times if missing
                     if (AdapterProviders.TWILIO.equals(adapterConfig.getProvider()) &&
-                        (session.getStartTimestamp() == null || session.getReleaseTimestamp() == null || session.getAnswerTimestamp() == null)) {
+                        (session.getStartTimestamp() == null || session.getReleaseTimestamp() == null)) {
 
-                        //TODO: must be removed probably... just here to test the answerTimestmap and releaseTimestamp
+                        //TODO: must be removed probably... just here to test the answerTimestmap
                         new Exception("session must already have an answer timestamp and release timestamp").printStackTrace();
                     }
                     if (session.getStartTimestamp() != null && session.getReleaseTimestamp() != null &&

@@ -670,8 +670,8 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
                 config.setAccountType(adapter.getAccountType());
             }
             //allow keywords to be changed only for sms adapters
-            if (adapter.getAdapterType() != null) {
-                AdapterType adapterType = AdapterType.fromJson(adapter.getAdapterType());
+            if (config.getAdapterType() != null) {
+                AdapterType adapterType = AdapterType.fromJson(config.getAdapterType());
                 switch (adapterType) {
                     case EMAIL:
                     case PUSH:

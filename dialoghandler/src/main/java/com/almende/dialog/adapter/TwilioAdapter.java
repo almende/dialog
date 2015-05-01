@@ -547,13 +547,15 @@ public class TwilioAdapter {
     @Produces("application/xml")
     public Response preconnect(@QueryParam("From") String localID, @QueryParam("AccountSid") String accountSid,
         @QueryParam("To") String remoteID, @QueryParam("Direction") String direction,
-        @QueryParam("CallSid") String callSid) {
+        @QueryParam("CallSid") String callSid, @QueryParam("ParentCallSid") String parentCallSid) {
 
+        long beforePreconnect = TimeUtils.getServerCurrentTimeInMillis();
+        
         String reply = (new TwiMLResponse()).toXML();
         Session session = Session.getSessionByExternalKey(callSid);
         //fetch session from parent call
         if (session == null) {
-            session = fetchSessionFromParent(localID, remoteID, accountSid, callSid);
+            session = fetchSessionFromParent(localID, remoteID, accountSid, callSid, parentCallSid);
         }
 
         if (session != null) {
@@ -584,6 +586,9 @@ public class TwilioAdapter {
                 session = Session.getSession(session.getKey());
                 session.setQuestion(question);
                 session.storeSession();
+                long afterPreconnectEvent = TimeUtils.getServerCurrentTimeInMillis();
+                log.info(String.format("It took %s for the preconnect event to finish",
+                                       (afterPreconnectEvent - beforePreconnect) / 1000.0));
                 return handleQuestion(question, session.getAdapterConfig(), responder, session.getKey(), null);
             }
             else {
@@ -1422,16 +1427,25 @@ public class TwilioAdapter {
      * @param callSid
      * @return
      */
-    public Session fetchSessionFromParent(String localID, String remoteID, String accountSid, String callSid) {
+    public Session fetchSessionFromParent(String localID, String remoteID, String accountSid, String callSid,
+        String parentCallSid) {
 
         try {
-            AdapterConfig adapterConfig = AdapterConfig.findAdapterConfig(AdapterType.CALL.toString(), localID, null);
-            //fetch the parent session for this preconnect
-            Account twilioAccount = getTwilioAccount(accountSid != null ? accountSid : adapterConfig.getAccessToken(),
-                                                     adapterConfig.getAccessTokenSecret());
-            if (twilioAccount != null) {
-                Call call = twilioAccount.getCall(callSid);
-                return Session.getSessionFromParentExternalId(callSid, call.getParentCallSid(), remoteID);
+            if (parentCallSid == null) {
+
+                AdapterConfig adapterConfig = AdapterConfig.findAdapterConfig(AdapterType.CALL.toString(), localID,
+                                                                              null);
+                //fetch the parent session for this preconnect
+                Account twilioAccount = getTwilioAccount(accountSid != null ? accountSid
+                                                             : adapterConfig.getAccessToken(),
+                                                         adapterConfig.getAccessTokenSecret());
+                if (twilioAccount != null) {
+                    Call call = twilioAccount.getCall(callSid);
+                    parentCallSid = call.getParentCallSid();
+                }
+            }
+            if (parentCallSid != null) {
+                return Session.getSessionFromParentExternalId(callSid, parentCallSid, remoteID);
             }
         }
         catch (Exception e) {

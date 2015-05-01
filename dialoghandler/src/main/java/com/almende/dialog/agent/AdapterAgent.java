@@ -684,6 +684,11 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
                         if (adapter.getKeyword() != null) {
                             config.setKeyword(adapter.getKeyword());
                         }
+                        //set the adapter myAddress if the accountId given is the owner
+                        //This should be allowed only for an SMS adapter
+                        if (adapter.getMyAddress() != null && accountId.equalsIgnoreCase(config.getOwner())) {
+                            config.setMyAddress(adapter.getMyAddress());
+                        }
                         break;
                     default:
                         //no updates needed for other adapter types

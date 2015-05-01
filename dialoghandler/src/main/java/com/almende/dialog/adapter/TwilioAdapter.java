@@ -34,6 +34,7 @@ import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
+import com.almende.dialog.model.QuestionEventRunner;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
@@ -63,10 +64,11 @@ import com.twilio.sdk.verbs.Verb;
 
 @Path("twilio")
 public class TwilioAdapter {
-	protected static final Logger log = Logger.getLogger(VoiceXMLRESTProxy.class.getName());
-	protected static final com.almende.dialog.Logger dialogLog =  new com.almende.dialog.Logger();
-	private static final int LOOP_DETECTION=10;
-	protected String TIMEOUT_URL="timeout";
+    
+    protected static final Logger log = Logger.getLogger(VoiceXMLRESTProxy.class.getName());
+    protected static final com.almende.dialog.Logger dialogLog = new com.almende.dialog.Logger();
+    private static final int LOOP_DETECTION = 10;
+    protected String TIMEOUT_URL = "timeout";
 	//protected String EXCEPTION_URL="exception";
 	
     /**
@@ -391,9 +393,10 @@ public class TwilioAdapter {
                     }
                     // There is a call dialcallstatus so the child has ended let's finalize it
                     AdapterConfig config = session.getAdapterConfig();
-                    if(dialCallSid.equals( linkedChildSession.getExternalSession() )) {
+                    if (dialCallSid != null && dialCallSid.equals(linkedChildSession.getExternalSession())) {
                         finalizeCall(config, linkedChildSession, dialCallSid, null);
-                    } else {
+                    }
+                    else {
                         finalizeCall(config, linkedChildSession, null, null);
                     }
                 }
@@ -633,13 +636,18 @@ public class TwilioAdapter {
         //for direction = transfer (redirect event), json should not be null        
         //make sure that the answered call is not triggered twice
         if (session != null && session.getQuestion() != null && !isEventTriggered("answered", session)) {
+            
             String responder = session.getRemoteAddress();
             String referredCalledId = session.getAllExtras().get("referredCalledId");
             HashMap<String, Object> timeMap = new HashMap<String, Object>();
             timeMap.put("referredCalledId", referredCalledId);
             timeMap.put("sessionKey", sessionKey);
             timeMap.put("requester", session.getLocalAddress());
-            session.getQuestion().event("answered", "Answered", timeMap, responder, session.getKey());
+            QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "answered",
+                                                                              "Answered", responder, timeMap,
+                                                                              session.getKey());
+            Thread questionEventRunnerThread = new Thread(questionEventRunner);
+            questionEventRunnerThread.start();
             dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
                           String.format("Call from: %s answered by: %s", session.getLocalAddress(), responder), session);
         }
@@ -960,7 +968,7 @@ public class TwilioAdapter {
             List<String> urls = question.getUrl();           
             for(String url : urls) {
 
-                com.twilio.sdk.verbs.Number number = new com.twilio.sdk.verbs.Number( url );
+                com.twilio.sdk.verbs.Number number = new com.twilio.sdk.verbs.Number(url.replace("tel:", "").trim());
                 number.setMethod( "GET" );
                 number.setUrl( getPreconnectUrl() );
                 dial.append( number );

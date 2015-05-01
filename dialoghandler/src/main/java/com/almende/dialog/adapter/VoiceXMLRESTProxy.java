@@ -54,6 +54,7 @@ import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
+import com.almende.dialog.model.QuestionEventRunner;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
@@ -618,8 +619,6 @@ public class VoiceXMLRESTProxy {
                               String.format("Wrong answer received from: %s for question: %s", responder,
                                             question.getQuestion_expandedtext(session.getKey())), session);
 
-                answered("transfer", formattedAddress, localID, session.getKey());
-
                 HashMap<String, String> extras = new HashMap<String, String>();
                 extras.put("sessionKey", session.getKey());
                 extras.put("requester", session.getLocalAddress());
@@ -812,7 +811,11 @@ public class VoiceXMLRESTProxy {
             timeMap.put("referredCalledId", referredCalledId);
             timeMap.put("sessionKey", sessionKey);
             timeMap.put("requester", session.getLocalAddress());
-            session.getQuestion().event("answered", "Answered", timeMap, responder, session.getKey());
+            QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "answered",
+                                                                              "Answered", responder, timeMap,
+                                                                              session.getKey());
+            Thread questionEventRunnerThread = new Thread(questionEventRunner);
+            questionEventRunnerThread.start();
             dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
                           String.format("Call from: %s answered by: %s", session.getLocalAddress(), responder), session);
         }

@@ -7,6 +7,7 @@ import org.jongo.marshall.jackson.JacksonMapper;
 
 import com.mongodb.DB;
 import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 import com.mongodb.ServerAddress;
 
 public class MongoManager {
@@ -25,6 +26,18 @@ public class MongoManager {
         }
 
         return mm;
+    }
+    
+    public void init( String url) {
+        try {
+            MongoClientURI uri = new MongoClientURI( url );
+            mongo = new MongoClient( uri );
+            db = mongo.getDB( uri.getDatabase() );
+            jongo = new Jongo( db, new JacksonMapper.Builder().addModifier(new CustomMapperModifier()).build() );
+        }
+        catch ( UnknownHostException e ) {
+            e.printStackTrace();
+        }
     }
     
     public void init(String host, int port, String database) {              

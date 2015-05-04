@@ -8,6 +8,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
 
 public class DatastoreThread extends Thread implements java.lang.Runnable {
     private static final Logger LOG = Logger.getLogger( "DialogHandler" );
@@ -28,11 +29,26 @@ public class DatastoreThread extends Thread implements java.lang.Runnable {
     @Override
     public void run()
     {
-        int port = 27017;
+        String url = System.getenv( "DIALOG_HANDLER_MONGO_URL" );
+        if(url==null) {
+            url = System.getenv( "MONGO_URL" );
+        }
+        String host = "localhost:27017";
+        String db = (isTest ? TEST_DB_NAME : DB_NAME);
+        if(url!=null) {
+            MongoClientURI uri = new MongoClientURI( url );
+            if(uri.getHosts().size()>0) {
+                host = uri.getHosts().get( 0 );
+            }
+            if(uri.getDatabase()!=null) {
+                db = uri.getDatabase();
+            }
+        }
+        
         MongoClient mongo = null;
         try
         {
-            mongo = new MongoClient( "localhost", port );
+            mongo = new MongoClient( host );
         }
         catch ( IOException e )
         {
@@ -40,7 +56,7 @@ public class DatastoreThread extends Thread implements java.lang.Runnable {
         }
         if ( mongo != null )
         {
-            ParallelInit.datastore = mongo.getDB( isTest ? TEST_DB_NAME : DB_NAME );
+            ParallelInit.datastore = mongo.getDB( db );
             ParallelInit.datastoreActive = true;
         }
     }

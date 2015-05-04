@@ -1174,8 +1174,14 @@ public class VoiceXMLRESTProxy {
                                                 session.getRemoteAddress(),
                                                 question.getQuestion_expandedtext(session.getKey())), session);
                 }
+                
                 String answerForQuestion = question.getQuestion_expandedtext(session.getKey());
-                question = question.answer(responder, session.getAdapterConfig().getConfigId(), null, answer_input, sessionKey);
+                // If the recording is empty end the call.
+                if(answer_input!=null) {
+                    question = question.answer(responder, session.getAdapterConfig().getConfigId(), null, answer_input, sessionKey);
+                } else {
+                    question = null;
+                }
                 //reload the session
                 session = Session.getSession(sessionKey);
                 if(session!=null) {

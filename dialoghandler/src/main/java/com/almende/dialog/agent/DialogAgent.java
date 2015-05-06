@@ -625,8 +625,10 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         return Recording.getRecording( id, accountId );
     }
     
-    public ArrayNode getRecordings(@Name("accountId") String accountId) {
-        Set<Recording> recordings = Recording.getRecordings( accountId );
+    public ArrayNode getRecordings(@Name("accountId") String accountId,
+                                   @Name("ddrId") @Optional String ddrId,
+                                   @Name("adapterId") @Optional String adapterId) {
+        Set<Recording> recordings = Recording.getRecordings( accountId, ddrId, adapterId );
         return JOM.getInstance().convertValue(recordings, ArrayNode.class);
     }
 	

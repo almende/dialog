@@ -366,7 +366,7 @@ public class TwilioAdapter {
 
             if (recordingUrl != null) {
                 answer_input = storeAudioFile(recordingUrl.replace(".wav", "") + ".wav", session.getAccountId(),
-                                              session.getDdrRecordId());
+                                              session.getDdrRecordId(), session.getAdapterID());
             }
 
             //add a tag in the session saying its picked up
@@ -1410,10 +1410,10 @@ public class TwilioAdapter {
      * @param accountId
      * @return downloadUrl
      */
-    private String storeAudioFile(String url, String accountId, String ddrId) {
+    private String storeAudioFile(String url, String accountId, String ddrId, String adapterId) {
         
         String uuid = UUID.randomUUID().toString();
-        Recording recording = Recording.createRecording( new Recording(uuid, accountId, url, "audio/wav", ddrId) );
+        Recording recording = Recording.createRecording( new Recording(uuid, accountId, url, "audio/wav", ddrId, adapterId) );
         
         return "http://"+Settings.HOST+"/account/"+accountId+"/recording/"+recording.getId()+".wav";
     }

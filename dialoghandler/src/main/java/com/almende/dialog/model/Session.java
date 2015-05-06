@@ -824,6 +824,31 @@ public class Session{
     }
     
     /**
+     * Gets the parent session linked this this session
+     * @return
+     */
+    @JsonIgnore
+    public Session getParentSession() {
+
+        String parentSessionKey = getParentSessionKey();
+        if (parentSessionKey != null) {
+            return getSession(parentSessionKey);
+        }
+        return null;
+    }
+    
+    /**
+     * Gets the parent session key is found
+     * 
+     * @return
+     */
+    @JsonIgnore
+    public String getParentSessionKey() {
+
+        return getAllExtras().get(PARENT_SESSION_KEY);
+    }
+    
+    /**
      * Used to fetch the session created because of a referral communication.
      * The parentExternalKey is used to fetch the parent sesison and then the
      * child (linked/referred) session is fetched

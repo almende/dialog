@@ -647,6 +647,9 @@ public class TwilioAdapter {
             HashMap<String, Object> timeMap = new HashMap<String, Object>();
             timeMap.put("referredCalledId", referredCalledId);
             timeMap.put("sessionKey", sessionKey);
+            if (session.getParentSessionKey() != null) {
+                timeMap.put(Session.PARENT_SESSION_KEY, session.getParentSessionKey());
+            }
             timeMap.put("requester", session.getLocalAddress());
             QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "answered",
                                                                               "Answered", responder, timeMap,

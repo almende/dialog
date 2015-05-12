@@ -773,7 +773,11 @@ public class TwilioAdapter {
                 Response hangupResponse = handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(),
                                                          session.getKey(), null);
                 timeMap.put("requester", session.getLocalAddress());
-                session.getQuestion().event("hangup", "Hangup", timeMap, session.getRemoteAddress(), session.getKey());
+                QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "hanup",
+                                                                                  "Hangup", session.getRemoteAddress(), timeMap,
+                                                                                  session.getKey());
+                Thread questionEventRunnerThread = new Thread(questionEventRunner);
+                questionEventRunnerThread.start();
                 dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
                               String.format("Call hungup from: %s", session.getRemoteAddress()), session);
                 return hangupResponse;

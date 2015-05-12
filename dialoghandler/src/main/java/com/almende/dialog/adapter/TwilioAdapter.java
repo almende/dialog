@@ -773,9 +773,9 @@ public class TwilioAdapter {
                 Response hangupResponse = handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(),
                                                          session.getKey(), null);
                 timeMap.put("requester", session.getLocalAddress());
-                QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "hanup",
-                                                                                  "Hangup", session.getRemoteAddress(), timeMap,
-                                                                                  session.getKey());
+                QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "hangup",
+                                                                                  "Hangup", session.getRemoteAddress(),
+                                                                                  timeMap, session.getKey());
                 Thread questionEventRunnerThread = new Thread(questionEventRunner);
                 questionEventRunnerThread.start();
                 dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),

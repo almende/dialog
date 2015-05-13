@@ -10,8 +10,19 @@ public class MongoThread extends Thread {
 
     @Override
     public void run() {
+        String url = System.getenv( "DIALOG_HANDLER_MONGO_URL" );
+        if(url==null) {
+            url = System.getenv( "MONGO_URL" );
+        }
         ParallelInit.mm = MongoManager.getInstance();
-        ParallelInit.mm.init( host, port, database );
-        ParallelInit.mongoActive = true;
+        if(url!=null) {
+            ParallelInit.mm.init( url );
+            ParallelInit.mongoActive = true;
+            System.out.println("Use MONGO_DIALOG_HANDLER_URL: "+url);
+        } else {
+            
+            ParallelInit.mm.init( host, port, database );
+            ParallelInit.mongoActive = true;
+        }
     }
 }

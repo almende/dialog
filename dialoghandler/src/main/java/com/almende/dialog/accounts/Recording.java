@@ -37,22 +37,24 @@ public class Recording {
     private String contentType = null;
     private String accountId = null;
     private String ddrId = null;
+    private String adapterId = null;
     
     private Long creationTime = null;
     
     public Recording() {}
     
-    public Recording(String id, String accountId, String contentType, String ddrId) {
-        this(id, accountId, id+".wav", contentType, ddrId);
+    public Recording(String id, String accountId, String contentType, String ddrId, String adapterId) {
+        this(id, accountId, id+".wav", contentType, ddrId, adapterId);
     }
     
-    public Recording(String id, String accountId, String filename, String contentType, String ddrId) {
+    public Recording(String id, String accountId, String filename, String contentType, String ddrId, String adapterId) {
         
         this.id = id;
         this.filename = filename;
         this.contentType = contentType;
         this.accountId = accountId;
         this.ddrId = ddrId;
+        this.adapterId = adapterId;
         
         this.creationTime = System.currentTimeMillis();
     }
@@ -162,9 +164,17 @@ public class Recording {
         return recording;
     }
     
-    public static Set<Recording> getRecordings(String accountId) {
+    public static Set<Recording> getRecordings(String accountId, String ddrId, String adapterId) {
         ObjectNode query = ParallelInit.getObjectMapper().createObjectNode();
         query.put( "accountId", accountId );
+        
+        if(ddrId!=null) {
+            query.put( "ddrId", ddrId );
+        }
+        
+        if(adapterId!=null) {
+            query.put( "adapterId", adapterId );
+        }
         
         MongoCollection coll = getCollection();
         MongoCursor<Recording> cursor = coll.find(query.toString()).as(Recording.class);
@@ -219,6 +229,14 @@ public class Recording {
     
     public void setDdrId( String ddrId ) {
         this.ddrId = ddrId;
+    }
+    
+    public String getAdapterId() {
+        return adapterId;
+    }
+    
+    public void setAdapterId( String adapterId ) {
+        this.adapterId = adapterId;
     }
     
     public Long getCreationTime() {

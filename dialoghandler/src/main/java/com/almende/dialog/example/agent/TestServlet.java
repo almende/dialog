@@ -223,7 +223,9 @@ public class TestServlet extends HttpServlet
         Question question = new Question();
         question.setQuestion_id("1");
         question.setType("comment");
-        question.setPreferred_language(Language.getByValue(language).getCode());
+        if(language!=null) {
+            question.setPreferred_language(Language.getByValue(language).getCode());
+        }
         try {
             question.setQuestion_text("text://" + URLDecoder.decode(questionText, "UTF-8"));
         }

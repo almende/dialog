@@ -44,7 +44,7 @@ public class DDRRecordAgentTest extends TestFramework
 
         //create another DDTYpe with the same category
         ddrRecordAgent.createDDRType( "Test DDRType1", DDRTypeCategory.ADAPTER_PURCHASE.name() );
-        Object allDDRTypes = ddrRecordAgent.getAllDDRTypes();
+        Object allDDRTypes = ddrRecordAgent.getAllDDRTypes(null, null);
         TypeUtil<Collection<DDRType>> typesInjector = new TypeUtil<Collection<DDRType>>()
         {
         };

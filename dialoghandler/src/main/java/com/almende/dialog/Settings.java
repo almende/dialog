@@ -22,6 +22,7 @@ public class Settings {
 	static {
 		if (ServerUtils.isInUnitTestingEnvironment()) {
 			KEYSERVER = null;
+			HOST = "localhost:8078";
 		}
 	}
 }

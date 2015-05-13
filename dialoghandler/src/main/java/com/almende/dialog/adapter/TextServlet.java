@@ -162,7 +162,7 @@ abstract public class TextServlet extends HttpServlet {
                 question = question.answer(null, adapterID, null, null, null);
             }
             else if (question.getType().equalsIgnoreCase("referral")) {
-                question = Question.fromURL(question.getUrl(), adapterID, address, ddrRecordId, sessionKey, null);
+                question = Question.fromURL(question.getUrl().get(0), adapterID, address, ddrRecordId, sessionKey, null);
             }
             else if (question.getType().equalsIgnoreCase("exit")) {
                 break;

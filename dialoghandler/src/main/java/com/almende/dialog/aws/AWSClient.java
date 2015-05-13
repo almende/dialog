@@ -3,6 +3,7 @@ package com.almende.dialog.aws;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.util.logging.Logger;
 
 import org.apache.commons.fileupload.FileItem;
 
@@ -17,10 +18,12 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 
-public class AWSClient{
+public class AWSClient {
 
-    AmazonS3 client = null;
-    String bucketName = null;
+    private static Logger log = Logger.getLogger( AWSClient.class.getSimpleName() );
+    
+    private AmazonS3 client = null;
+    private String bucketName = null;
     
     public AWSClient() {
     }
@@ -38,6 +41,12 @@ public class AWSClient{
     }
     
     public boolean uploadFileParts(FileItem fileData, String keyName) {
+        // If file is empty don't upload it
+        if(fileData.getSize()<10) {
+            log.warning("File (almost) empty so not storing it size: "+fileData.getSize());
+            return false;
+        }
+        
         try {
             S3Object s3Object = new S3Object();
     

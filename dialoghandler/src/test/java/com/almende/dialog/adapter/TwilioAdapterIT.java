@@ -1,6 +1,7 @@
 package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import java.io.UnsupportedEncodingException;
@@ -36,6 +37,7 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
+import com.almende.dialog.sim.TwilioSimulator;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.entity.AdapterProviders;
@@ -44,13 +46,17 @@ import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.twilio.sdk.verbs.Gather;
+import com.twilio.sdk.verbs.Redirect;
+import com.twilio.sdk.verbs.Say;
+import com.twilio.sdk.verbs.TwiMLResponse;
 
 @Category(IntegrationTest.class)
 public class TwilioAdapterIT extends TestFramework {
 
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio";
     private DialogAgent dialogAgent = null;
-    private static final String TEST_MESSAGE = "How are you doing? today"; 
+    private static final String TEST_MESSAGE = "How are you doing? today";
 
     /**
      * This test checks if a sequence of people are getting called properly when
@@ -113,23 +119,24 @@ public class TwilioAdapterIT extends TestFramework {
 
         //new inbound call should trigger a redirect with preconnect 
         assertXMLGeneratedByTwilioLibrary(String.format("<Response><Play>%s</Play><Dial method=\"GET\" action=\"http://%s/dialoghandler/rest/twilio/answer\"  "
-                                                                                        + "callerId =\"%s\" timeout=\"30\"><Number method=\"GET\" url=\"http://%s/dialoghandler/rest/twilio/preconnect\">"
-                                                                                        + "%s</Number></Dial></Response>",
-                                                        COMMENT_QUESTION_AUDIO, Settings.HOST,
-                                                        adapterConfig.getMyAddress(), Settings.HOST,
+                                                            + "callerId =\"%s\" timeout=\"30\"><Number method=\"GET\" url=\"http://%s/dialoghandler/rest/twilio/preconnect\">"
+                                                            + "%s</Number></Dial></Response>", COMMENT_QUESTION_AUDIO,
+                                                        Settings.HOST, adapterConfig.getMyAddress(), Settings.HOST,
                                                         PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
                                           newInboundResponse.getEntity().toString());
 
-        Mockito.when(twilioAdapter.fetchSessionFromParent(null, null, null))
-                                        .thenReturn(Session.getSessionFromParentExternalId(testCallId1, testCallId));
+        Mockito.when(twilioAdapter.fetchSessionFromParent(null, null, null, null, null))
+               .thenReturn(Session.getSessionFromParentExternalId(testCallId1, testCallId,
+                                                                  PhoneNumberUtils.formatNumber(remoteAddressVoice,
+                                                                                                null)));
 
         //select to ignore the call in the preconnect options
         Response preconnect = twilioAdapter.preconnect(adapterConfig.getMyAddress(), TEST_PUBLIC_KEY,
-                                                       remoteAddressVoice, "outbound-dial", testCallId1);
+                                                       remoteAddressVoice, "outbound-dial", testCallId1, testCallId);
         assertXMLGeneratedByTwilioLibrary(String.format("<Response><Gather method=\"GET\" numDigits=\"1\" finishOnKey=\"\" action=\"http://%s/dialoghandler/rest/twilio/answer\" "
-                                                                                        + "timeout=\"5\"><Say language=\"nl-nl\">%s</Say><Say language=\"nl-nl\">"
-                                                                                        + "%s</Say><Say language=\"nl-nl\">%s</Say></Gather><Redirect method=\"GET\">"
-                                                                                        + "http://%s/dialoghandler/rest/twilio/timeout</Redirect></Response>",
+                                                            + "timeout=\"5\"><Say language=\"nl-nl\">%s</Say><Say language=\"nl-nl\">"
+                                                            + "%s</Say><Say language=\"nl-nl\">%s</Say></Gather><Redirect method=\"GET\">"
+                                                            + "http://%s/dialoghandler/rest/twilio/timeout</Redirect></Response>",
                                                         Settings.HOST, "Incoming call", "1", "2", Settings.HOST),
                                           preconnect.getEntity().toString());
 
@@ -140,34 +147,130 @@ public class TwilioAdapterIT extends TestFramework {
                      answer.getEntity().toString().toLowerCase());
 
         //mock new redirect call to the second number
-        answer = twilioAdapter.answer(null, null, adapterConfig.getMyAddress(), inboundAddress, "inbound", null,
-                                      null, null, testCallId);
+        answer = twilioAdapter.answer(null, null, adapterConfig.getMyAddress(), inboundAddress, "inbound", null, null,
+                                      null, testCallId);
 
         //a new referral session must have been created from testCallId as the parent external sessionId
-        Session sessionFromParentExternalId = Session.getSessionFromParentExternalId(testCallId2, testCallId);
+        Session sessionFromParentExternalId = Session.getSessionFromParentExternalId(testCallId2,
+                                                                                     testCallId,
+                                                                                     PhoneNumberUtils.formatNumber(secondRemoteAddress,
+                                                                                                                   null));
         Assert.assertThat(sessionFromParentExternalId, Matchers.notNullValue());
 
         assertXMLGeneratedByTwilioLibrary(String.format("<Response><Play>%s</Play><Dial action=\"http://%s/dialoghandler/rest/twilio/answer\" method=\"GET\"  "
-                                                                                        + "callerId =\"%s\" timeout=\"30\"><Number method=\"GET\" url=\"http://%s/dialoghandler/rest/twilio/preconnect\">"
-                                                                                        + "%s</Number></Dial></Response>",
-                                                        COMMENT_QUESTION_AUDIO, Settings.HOST,
-                                                        adapterConfig.getMyAddress(), Settings.HOST,
+                                                            + "callerId =\"%s\" timeout=\"30\"><Number method=\"GET\" url=\"http://%s/dialoghandler/rest/twilio/preconnect\">"
+                                                            + "%s</Number></Dial></Response>", COMMENT_QUESTION_AUDIO,
+                                                        Settings.HOST, adapterConfig.getMyAddress(), Settings.HOST,
                                                         PhoneNumberUtils.formatNumber(secondRemoteAddress, null)),
                                           answer.getEntity().toString());
 
         preconnect = twilioAdapter.preconnect(adapterConfig.getMyAddress(), TEST_PUBLIC_KEY, secondRemoteAddress,
-                                              "outbound-dial", testCallId2);
+                                              "outbound-dial", testCallId2, testCallId);
         assertXMLGeneratedByTwilioLibrary(String.format("<Response><Gather numDigits=\"1\" finishOnKey=\"\" action=\"http://%s/dialoghandler/rest/twilio/answer\" "
-                                                                                        + "method=\"GET\" timeout=\"5\"><Say language=\"nl-nl\">%s</Say><Say language=\"nl-nl\">"
-                                                                                        + "%s</Say><Say language=\"nl-nl\">%s</Say></Gather><Redirect method=\"GET\">"
-                                                                                        + "http://%s/dialoghandler/rest/twilio/timeout</Redirect></Response>",
+                                                            + "method=\"GET\" timeout=\"5\"><Say language=\"nl-nl\">%s</Say><Say language=\"nl-nl\">"
+                                                            + "%s</Say><Say language=\"nl-nl\">%s</Say></Gather><Redirect method=\"GET\">"
+                                                            + "http://%s/dialoghandler/rest/twilio/timeout</Redirect></Response>",
                                                         Settings.HOST, "Incoming call", "1", "2", Settings.HOST),
                                           preconnect.getEntity().toString());
 
         answer = twilioAdapter.answer(null, "1", adapterConfig.getMyAddress(), inboundAddress, "inbound", null, null,
                                       null, testCallId2);
-        assertXMLGeneratedByTwilioLibrary("<Response><Say language=\"nl-nl\">You chose 1</Say></Response>", answer
-                                        .getEntity().toString());
+        assertXMLGeneratedByTwilioLibrary("<Response><Say language=\"nl-nl\">You chose 1</Say></Response>",
+                                          answer.getEntity().toString());
+    }
+
+    @Test
+    public void inboundPhoneCall_CommentTest() throws Exception {
+
+        //new DDRRecordAgent().generateDefaultDDRTypes();
+
+        String accountSid = UUID.randomUUID().toString();
+        String callSid = UUID.randomUUID().toString();
+        TwilioSimulator simulator = new TwilioSimulator(TestFramework.host, accountSid);
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
+        url = ServerUtils.getURLWithQueryParams(url, "lang", Language.ENGLISH_UNITEDSTATES.getCode());
+
+        //create a dialog
+        Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+        adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
+        adapterConfig.setDialogId(createDialog.getId());
+        adapterConfig.update();
+
+        String resp = simulator.initiateInboundCall(callSid, remoteAddressVoice, localAddressBroadsoft);
+        System.out.println(resp);
+        TwiMLResponse expected = new TwiMLResponse();
+        Say say = new Say(TEST_MESSAGE);
+        say.setLanguage(Language.ENGLISH_UNITEDSTATES.getCode());
+        expected.append(say);
+
+        assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+    }
+
+    @Test
+    public void inboundPhoneCall_ClosedTest() throws Exception {
+
+        //new DDRRecordAgent().generateDefaultDDRTypes();
+
+        String accountSid = UUID.randomUUID().toString();
+        String callSid = UUID.randomUUID().toString();
+        TwilioSimulator simulator = new TwilioSimulator(TestFramework.host, accountSid);
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.CLOSED_YES_NO.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
+        url = ServerUtils.getURLWithQueryParams(url, "lang", Language.ENGLISH_UNITEDSTATES.getCode());
+
+        //create a dialog
+        Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+
+        //create Twilio adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+        adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
+        adapterConfig.setDialogId(createDialog.getId());
+        adapterConfig.update();
+
+        String resp = simulator.initiateInboundCall(callSid, remoteAddressVoice, localAddressBroadsoft);
+
+        String lang = Language.ENGLISH_UNITEDSTATES.getCode();
+        TwiMLResponse expected = new TwiMLResponse();
+        Gather gather = new Gather();
+        gather.getAttributes().put("action", TestFramework.host + "/rest/twilio/answer");
+        gather.getAttributes().put("numDigits", "1");
+        gather.getAttributes().put("finishOnKey", "");
+        gather.getAttributes().put("method", "GET");
+        gather.getAttributes().put("timeout", "5");
+        Say say = new Say(TEST_MESSAGE);
+        say.setLanguage(lang);
+        gather.append(say);
+        say = new Say("1");
+        say.setLanguage(lang);
+        gather.append(say);
+        say = new Say("2");
+        say.setLanguage(lang);
+        gather.append(say);
+        expected.append(gather);
+        Redirect redirect = new Redirect(TestFramework.host + "/rest/twilio/timeout");
+        redirect.getAttributes().put("method", "GET");
+        expected.append(redirect);
+
+        assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+
+        resp = simulator.nextQuestion("1");
+
+        expected = new TwiMLResponse();
+        say = new Say("You chose 1");
+        say.setLanguage(lang);
+        expected.append(say);
+
+        assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
     }
 
     /**
@@ -202,7 +305,7 @@ public class TwilioAdapterIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
-                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                assertThat(queryParams.getValue(), Matchers.is("WAV"));
                 continue;
             }
             else if (queryParams.getName().equals("speed")) {
@@ -255,7 +358,7 @@ public class TwilioAdapterIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
         Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
                                                                    url);
-        assertTrue(securedDialogResponse != null);
+        assertNotNull(securedDialogResponse);
         //make sure that the tts source generated has a service and voice
         Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
         String ttsURL = doc.getFirstChild().getFirstChild().getTextContent();
@@ -266,7 +369,7 @@ public class TwilioAdapterIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
-                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                assertThat(queryParams.getValue(), Matchers.is("WAV"));
                 continue;
             }
             else if (queryParams.getName().equals("speed")) {
@@ -331,7 +434,7 @@ public class TwilioAdapterIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
-                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                assertThat(queryParams.getValue(), Matchers.is("WAV"));
                 continue;
             }
             else if (queryParams.getName().equals("speed")) {
@@ -378,11 +481,11 @@ public class TwilioAdapterIT extends TestFramework {
         ttsInfo.setProvider(TTSProvider.ACAPELA);
         ttsInfo.setVoiceUsed("testtest");
         ttsInfo.setSpeed("0");
-        ttsInfo.setLanguage(Language.FRENCH_FRANCE);
+        ttsInfo.setLanguage(Language.DUTCH);
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
-        url = ServerUtils.getURLWithQueryParams(url, "lang", Language.DUTCH.getCode());
+        url = ServerUtils.getURLWithQueryParams(url, "lang", Language.FRENCH_FRANCE.getCode());
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
         Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
                                                                    url);
@@ -397,7 +500,7 @@ public class TwilioAdapterIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
-                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                assertThat(queryParams.getValue(), Matchers.is("WAV"));
                 continue;
             }
             else if (queryParams.getName().equals("speed")) {
@@ -427,7 +530,7 @@ public class TwilioAdapterIT extends TestFramework {
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
-    
+
     /**
      * This test is to check if the outbound functionality will create ddr
      * records for tts processing.
@@ -449,7 +552,7 @@ public class TwilioAdapterIT extends TestFramework {
         assertThat(ddrRecord.getTotalCost(),
                    Matchers.is(DDRUtils.getCeilingAtPrecision(0.1 * TEST_MESSAGE.length(), 3)));
     }
-    
+
     /**
      * This test is to check if the outbound functionality does not invoke ddr
      * charges as there is no ddrPrice attached for the tts provider
@@ -464,7 +567,7 @@ public class TwilioAdapterIT extends TestFramework {
                                                null);
         ddrPrice.setKeyword(TTSProvider.VOICE_RSS.toString());
         ddrPrice.createOrUpdate();
-        
+
         //invoke an outbound call with acapella tts
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
@@ -480,7 +583,7 @@ public class TwilioAdapterIT extends TestFramework {
      * @throws URISyntaxException
      */
     private Response performSecuredInboundCall(String direction, String username, String password, TTSInfo ttsInfo,
-                                               String url) throws Exception {
+        String url) throws Exception {
 
         if (url == null) {
             url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",

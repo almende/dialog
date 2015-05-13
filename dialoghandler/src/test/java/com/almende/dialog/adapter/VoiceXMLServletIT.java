@@ -24,6 +24,9 @@ import org.mockito.Mockito;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import com.almende.dialog.IntegrationTest;
+import com.almende.dialog.Log;
+import com.almende.dialog.LogLevel;
+import com.almende.dialog.Logger;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -39,6 +42,7 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.TTSInfo;
@@ -49,7 +53,9 @@ import com.askfast.commons.utils.PhoneNumberUtils;
 public class VoiceXMLServletIT extends TestFramework {
 
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio.wav";
+    protected static final String COMMENT_QUESTION_ID = "1";
     private DialogAgent dialogAgent = null;
+    private static final java.util.logging.Logger log = java.util.logging.Logger.getLogger(VoiceXMLServletIT.class.getName());
     
     /**
      * this test is to check the bug which rethrows the same question when an
@@ -117,7 +123,7 @@ public class VoiceXMLServletIT extends TestFramework {
      * @throws Exception
      */
     @Test
-    public void outboundPhoneCall_RepeatedBroadsoftSubsciptionFailTestTest() throws Exception {
+    public void outboundPhoneCall_RepeatedBroadsoftSubsciptionFailTest() throws Exception {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
@@ -169,10 +175,6 @@ public class VoiceXMLServletIT extends TestFramework {
         assertThat(session, notNullValue());
         assertThat(session.getDdrRecordId(), Matchers.notNullValue());
         
-        List<DDRRecord> allDdrRecords = DDRRecord.getDDRRecords(null, null, null, null, null, null, null, null, null,
-                                                                null);
-        assertThat(allDdrRecords.isEmpty(), Matchers.is(true));
-        
         //mock the Context
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
@@ -213,6 +215,92 @@ public class VoiceXMLServletIT extends TestFramework {
         assertThat(ddrRecord, Matchers.notNullValue());
         assertThat(ddrRecord.getDuration(), Matchers.greaterThan(0L));
         assertThat(ddrRecord.getStart(), Matchers.is(1401809070192L));
+    }
+    
+    /**
+     * This test is used to simulate the situation when an outbound call is
+     * triggered. All The logs fetched correspond to this ddrRecordId
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void outboundPhoneCallCheckDDRAndLogsTest() throws Exception {
+
+        //trigger an outbound call
+        outboundPhoneCallMissingDDRTest();
+        //fetch all the ddrRecords
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        List<Log> allLogs = Logger.findAllLogs();
+        assertThat(allLogs.size(), Matchers.not(0));
+
+        //make sure that all the logs belong to atleast one ddrRecord
+        int logsCount = 0;
+        long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        boolean isDDRLogFound = false;
+        for (DDRRecord ddrRecord : ddrRecords) {
+            List<Log> logsForDDRRecord = Logger.find(TEST_PUBLIC_KEY, ddrRecord.getId(), null, null, null, null, null,
+                                                     null);
+            logsCount += logsForDDRRecord.size();
+            for (Log log : logsForDDRRecord) {
+                assertThat(log.getAccountId(), Matchers.is(ddrRecord.getAccountId()));
+                assertThat(log.getAccountId(), Matchers.notNullValue());
+                if(LogLevel.DDR.equals(log.getLevel())) {
+                    isDDRLogFound = true;
+                }
+            }
+        }
+        assertThat(isDDRLogFound, Matchers.is(true));
+        long endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        log.info(String.format("Fetch by ddrRecord took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
+        assertThat(logsCount, Matchers.is(allLogs.size()));
+        assertThat(logsCount, Matchers.not(0));
+
+        //test the difference in timings to fetch all
+        startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null, null);
+        endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        log.info(String.format("Fetch by accountId took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
+    }
+    
+    @Test
+    public void everyLogMustHaveAccountId() throws Exception {
+
+        //trigger an outbound call
+        outboundPhoneCallMissingDDRTest();
+        //fetch all the ddrRecords
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        List<Log> allLogs = Logger.findAllLogs();
+        assertThat(allLogs.size(), Matchers.not(0));
+
+        //make sure that all the logs belong to atleast one ddrRecord
+        int logsCount = 0;
+        long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        boolean isDDRLogFound = false;
+        for (DDRRecord ddrRecord : ddrRecords) {
+            List<Log> logsForDDRRecord = Logger.find(TEST_PUBLIC_KEY, ddrRecord.getId(), null, null, null, null, null,
+                                                     null);
+            logsCount += logsForDDRRecord.size();
+            for (Log log : logsForDDRRecord) {
+                assertThat(log.getAccountId(), Matchers.is(ddrRecord.getAccountId()));
+                assertThat(log.getAccountId(), Matchers.notNullValue());
+                if (LogLevel.DDR.equals(log.getLevel())) {
+                    isDDRLogFound = true;
+                }
+            }
+        }
+        assertThat(isDDRLogFound, Matchers.is(true));
+        long endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        log.info(String.format("Fetch by ddrRecord took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
+        assertThat(logsCount, Matchers.is(allLogs.size()));
+        assertThat(logsCount, Matchers.not(0));
+
+        //test the difference in timings to fetch all
+        startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null, null);
+        endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        log.info(String.format("Fetch by accountId took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
     }
     
     /**
@@ -398,7 +486,7 @@ public class VoiceXMLServletIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
-                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                assertThat(queryParams.getValue(), Matchers.is("WAV"));
                 continue;
             }
             else if (queryParams.getName().equals("speed")) {
@@ -477,7 +565,7 @@ public class VoiceXMLServletIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("codec")) {
-                assertThat(queryParams.getValue(), Matchers.is("wav"));
+                assertThat(queryParams.getValue(), Matchers.is("WAV"));
                 continue;
             }
             else if (queryParams.getName().equals("speed")) {

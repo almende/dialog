@@ -164,7 +164,7 @@ public class DDRRecord
         Session session = Session.getSession(sessionKey);
         createOrUpdateWithLog(session);
     }
-    
+
     /**
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
      */
@@ -542,7 +542,9 @@ public class DDRRecord
 
         //generate the costs at runtime, only when requested and when the accountTYpe is not prepaid. Prepaid accounts
         //have fixed costs
-        if (shouldGenerateCosts && (accountType == null || !accountType.equals(AccountType.PRE_PAID))) {
+        if (Boolean.TRUE.equals(shouldGenerateCosts) &&
+            (accountType == null || !accountType.equals(AccountType.PRE_PAID))) {
+            
             DDRType ddrType = getDdrType();
             switch (ddrType.getCategory()) {
                 case INCOMING_COMMUNICATION_COST:

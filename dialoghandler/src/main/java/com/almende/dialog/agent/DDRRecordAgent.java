@@ -21,8 +21,10 @@ import com.almende.eve.protocol.jsonrpc.annotation.Optional;
 import com.almende.eve.protocol.jsonrpc.formats.JSONRequest;
 import com.almende.util.TypeUtil;
 import com.almende.util.jackson.JOM;
+import com.askfast.commons.agent.ScheduleAgent;
 import com.askfast.commons.agent.intf.DDRRecordAgentInterface;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.ScheduledTask;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Access(AccessType.PUBLIC)
@@ -140,12 +142,37 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
     }
     
     /**
-     * get all the DDR Type. Access to this 
+     * Get all the DDR Type. Available in the system
+     * 
      * @param name
+     * @param category
+     * @return returns a collection of all the ddrTypes matching the given
+     *         parameters
+     * @throws Exception
      */
-    public Object getAllDDRTypes()
-    {
-        return DDRType.getAllDDRTypes();
+    @Override
+    public Object getAllDDRTypes(@Name("name") @Optional String name, @Name("category") @Optional String category)
+        throws Exception {
+
+        ArrayList<DDRType> result = new ArrayList<DDRType>();
+        if (category != null) {
+            DDRTypeCategory ddrTypeCategory = DDRTypeCategory.fromJson(category);
+            DDRType ddrType = DDRType.getDDRType(ddrTypeCategory);
+            result.addAll(addDDRTypeIfNameMatches(name, ddrType));
+        }
+        else {
+            List<DDRType> allDDRTypes = DDRType.getAllDDRTypes();
+            for (DDRType ddrType : allDDRTypes) {
+                result.addAll(addDDRTypeIfNameMatches(name, ddrType));
+            }
+        }
+        return result;
+    }
+    
+    @Override
+    public Object getDDRType(@Name("id") String id) throws Exception {
+
+        return DDRType.getDDRType(id);
     }
     
     /**
@@ -268,6 +295,7 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * @param units 
      * @param unitType 
      */
+    @Override
     public Object getDDRPrices( @Name( "ddrTypeId" ) @Optional String ddrTypeId,
         @Name( "adapterType" ) @Optional String adapterTypeString, @Name( "adapterId" ) @Optional String adapterId,
         @Name( "unitType" ) @Optional String unitTypeString, @Name( "keyword" ) @Optional String keyword )
@@ -351,6 +379,17 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
     }
     
     /**
+     * Get details about subscription tasks running
+     * @return 
+     * @return
+     */
+    public ScheduledTask getSubsriptionCostScedulerDetails(@Name("ddrPriceId") String ddrPriceId) {
+
+        String id = getState().get(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPriceId, String.class);
+        return getScheduledTaskDetails(id);
+    }
+    
+    /**
      * returns the scheduler id initiated for this ddrPrice
      * 
      * @param ddrPrice
@@ -364,25 +403,22 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
                 ObjectNode params = JOM.createObjectNode();
                 params.put("adapterId", ddrPrice.getAdapterId());
                 JSONRequest req = new JSONRequest("applySubscriptionChargesForAdapters", params);
-                Integer interval = null;
+                ScheduleFrequency frequency = null;
                 switch (ddrPrice.getUnitType()) {
-                    case SECOND:
-                        interval = 1000;
-                        break;
                     case MINUTE:
-                        interval = 60 * 1000;
+                        frequency = ScheduleFrequency.MINUTELY;
                         break;
                     case HOUR:
-                        interval = 60 * 60 * 1000;
+                        frequency = ScheduleFrequency.HOURLY;
                         break;
                     case DAY:
-                        interval = 24 * 60 * 60 * 1000;
+                        frequency = ScheduleFrequency.DAILY;
                         break;
                     case MONTH:
-                        interval = 30 * 24 * 60 * 60 * 1000;
+                        frequency = ScheduleFrequency.MONTHLY;
                         break;
                     case YEAR:
-                        interval = 12 * 30 * 24 * 60 * 60 * 1000;
+                        frequency = ScheduleFrequency.YEARLY;
                         break;
                     default:
                         throw new Exception("DDR cannot be created for Subsciption for UnitType: " +
@@ -390,7 +426,7 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
                 }
                 log.info(String.format("-------Starting scheduler for processing adapter subscriptions. DDRPrice: %s -------",
                                        ddrPrice.getId()));
-                id = schedule(req, interval, true);
+                id = schedule(req, TimeUtils.getServerCurrentTimeInMillis(), frequency);
                 getState().put(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId(), id);
             }
             catch (Exception e) {
@@ -403,4 +439,30 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         }
         return id;
     }
+    
+    /**
+     * Adds a ddrType if the name is contained in the {@link DDRType#getName()}.
+     * If name is null, it just returns the given ddrTYpe
+     * 
+     * @param name
+     * @param result
+     * @param ddrType
+     * @return
+     */
+    private ArrayList<DDRType> addDDRTypeIfNameMatches(String name, DDRType ddrType) {
+
+        ArrayList<DDRType> result = new ArrayList<DDRType>();
+        if (ddrType != null) {
+            if (name != null && !name.isEmpty()) {
+                if (ddrType.getName().contains(name)) {
+                    result.add(ddrType);
+                }
+            }
+            else {
+                result.add(ddrType);
+            }
+        }
+        return result;
+    }
+
 }

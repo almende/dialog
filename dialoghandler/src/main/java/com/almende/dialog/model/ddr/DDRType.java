@@ -1,7 +1,6 @@
 package com.almende.dialog.model.ddr;
 
 import java.util.List;
-import java.util.logging.Logger;
 import org.bson.types.ObjectId;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.twigmongo.FilterOperator;
@@ -17,8 +16,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
  */
 public class DDRType
 {
-    private static final Logger log = Logger.getLogger( DDRType.class.getSimpleName() );
-    
     /**
      * category of this type
      */
@@ -58,9 +55,14 @@ public class DDRType
         OTHER;
 
         @JsonCreator
-        public static DDRTypeCategory fromJson( String name )
-        {
-            return valueOf( name.toUpperCase() );
+        public static DDRTypeCategory fromJson(String name) {
+
+            for (DDRTypeCategory type : values()) {
+                if (type.toString().equalsIgnoreCase(name)) {
+                    return type;
+                }
+            }
+            return null;
         }
     }
     

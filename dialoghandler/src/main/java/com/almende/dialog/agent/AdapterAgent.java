@@ -32,12 +32,14 @@ import com.almende.util.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.uuid.UUID;
 import com.askfast.commons.Status;
+import com.askfast.commons.agent.ScheduleAgent;
 import com.askfast.commons.agent.intf.AdapterAgentInterface;
 import com.askfast.commons.agent.intf.DialogAgentInterface;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.ScheduledTask;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 @Access(AccessType.PUBLIC)
@@ -103,6 +105,17 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
     }
     
     /**
+     * Get details about emails check task
+     * @return 
+     * @return
+     */
+    public ScheduledTask getEmailInboundScedulerDetails() {
+
+        String emailScedulerTaskId = getState().get("emailScedulerTaskId", String.class);
+        return getScheduledTaskDetails(emailScedulerTaskId);
+    }
+    
+    /**
      * stops the scheduler which checks for inbound emails
      * @return scheduler id
      */
@@ -153,6 +166,17 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         getState().remove( "twitterScedulerTaskId" );
         return schedulerId;
     }
+    
+    /**
+    * Get details about twitter check task
+     * @return 
+    * @return
+    */
+   public ScheduledTask getTwitterInboundScedulerDetails() {
+
+       String twitterScedulerTaskId = getState().get("twitterScedulerTaskId", String.class);
+       return getScheduledTaskDetails(twitterScedulerTaskId);
+   }
 
     /**
      * check inbound email
@@ -646,8 +670,8 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
                 config.setAccountType(adapter.getAccountType());
             }
             //allow keywords to be changed only for sms adapters
-            if (adapter.getAdapterType() != null) {
-                AdapterType adapterType = AdapterType.fromJson(adapter.getAdapterType());
+            if (config.getAdapterType() != null) {
+                AdapterType adapterType = AdapterType.fromJson(config.getAdapterType());
                 switch (adapterType) {
                     case EMAIL:
                     case PUSH:
@@ -659,6 +683,11 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
                     case SMS:
                         if (adapter.getKeyword() != null) {
                             config.setKeyword(adapter.getKeyword());
+                        }
+                        //set the adapter myAddress if the accountId given is the owner
+                        //This should be allowed only for an SMS adapter
+                        if (adapter.getMyAddress() != null && accountId.equalsIgnoreCase(config.getOwner())) {
+                            config.setMyAddress(adapter.getMyAddress());
                         }
                         break;
                     default:
@@ -847,6 +876,26 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
             }
         }
         return warnings;
+    }
+    
+    /**
+     * Updates the dialog linked to this adapter
+     * 
+     * @return
+     * @throws Exception
+     */
+    public AdapterConfig setDialogToAdapter(@Name("accountId") String accountId, @Name("adapterId") String adapterId,
+        @Name("dialogId") String dialogId) throws Exception {
+
+        AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
+        if (config != null && accountId.equals(config.getOwner())) {
+            Dialog dialog = Dialog.getDialog(dialogId, accountId);
+            if (dialog != null) {
+                config.setDialogId(dialogId);
+                config.update();
+            }
+        }
+        return config;
     }
     
     /**

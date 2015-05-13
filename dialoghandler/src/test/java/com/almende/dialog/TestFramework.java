@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.logging.Logger;
+
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.InternetHeaders;
@@ -15,6 +16,7 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.custommonkey.xmlunit.XMLTestCase;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.eclipse.jetty.server.Server;
@@ -23,6 +25,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.experimental.categories.Category;
 import org.w3c.dom.Document;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DDRRecordAgent;
@@ -58,12 +61,13 @@ public class TestFramework
     protected static final String TEST_PRIVATE_KEY 		= "test_private_key";
     private Server server = null;
     public static final int jettyPort = 8078;
+    public static final String host = "http://localhost:"+jettyPort+"/dialoghandler";
     private static final Logger log = Logger.getLogger(TestFramework.class.toString());
     
     @Before
     public void setup() throws Exception {
 
-        TestServlet.TEST_SERVLET_PATH = "http://localhost:" + TestFramework.jettyPort + "/unitTestServlet";
+        TestServlet.TEST_SERVLET_PATH = TestFramework.host + "/unitTestServlet";
         new ParallelInit(true);
         ParallelInit.getDatastore();
         if (ParallelInit.datastore != null) {
@@ -316,7 +320,7 @@ public class TestFramework
         if (server == null || server.isRunning()) {
             server = new Server(jettyPort);
             server.setStopAtShutdown(true);
-            WebAppContext webAppContext = new WebAppContext("src/test/webapp/WEB-INF/web.xml", "/");
+            WebAppContext webAppContext = new WebAppContext("src/test/webapp/WEB-INF/web.xml", "/dialoghandler");
             webAppContext.setResourceBase("src/test/webapp");
             webAppContext.setClassLoader(getClass().getClassLoader());
             server.setHandler(webAppContext);

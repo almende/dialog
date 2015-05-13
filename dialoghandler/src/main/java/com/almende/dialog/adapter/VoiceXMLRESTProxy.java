@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -34,6 +35,7 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -41,6 +43,7 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
+
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -810,6 +813,9 @@ public class VoiceXMLRESTProxy {
             HashMap<String, Object> timeMap = new HashMap<String, Object>();
             timeMap.put("referredCalledId", referredCalledId);
             timeMap.put("sessionKey", sessionKey);
+            if (session.getParentSessionKey() != null) {
+                timeMap.put(Session.PARENT_SESSION_KEY, session.getParentSessionKey());
+            }
             timeMap.put("requester", session.getLocalAddress());
             QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "answered",
                                                                               "Answered", responder, timeMap,
@@ -1159,7 +1165,7 @@ public class VoiceXMLRESTProxy {
         String reply = "<vxml><exit/></vxml>";
         Session session = Session.getSession(sessionKey);
         if (session != null) {
-            String answer_input = storeAudioFile(req, session.getAccountId(), session.getDdrRecordId());
+            String answer_input = storeAudioFile(req, session.getAccountId(), session.getDdrRecordId(), session.getAdapterID());
             Question question = session.getQuestion();
             if (question != null) {
                 String responder = session.getRemoteAddress();
@@ -1174,8 +1180,14 @@ public class VoiceXMLRESTProxy {
                                                 session.getRemoteAddress(),
                                                 question.getQuestion_expandedtext(session.getKey())), session);
                 }
+                
                 String answerForQuestion = question.getQuestion_expandedtext(session.getKey());
-                question = question.answer(responder, session.getAdapterConfig().getConfigId(), null, answer_input, sessionKey);
+                // If the recording is empty end the call.
+                if(answer_input!=null) {
+                    question = question.answer(responder, session.getAdapterConfig().getConfigId(), null, answer_input, sessionKey);
+                } else {
+                    question = null;
+                }
                 //reload the session
                 session = Session.getSession(sessionKey);
                 if(session!=null) {
@@ -1923,7 +1935,7 @@ public class VoiceXMLRESTProxy {
      * @param accountId
      * @return downloadUrl
      */
-    private String storeAudioFile(HttpServletRequest request, String accountId, String ddrId) {
+    private String storeAudioFile(HttpServletRequest request, String accountId, String adapterId, String ddrId) {
         
         String uuid = UUID.randomUUID().toString();
         List<FileItem> multipartfiledata = new ArrayList<FileItem>();
@@ -1945,7 +1957,7 @@ public class VoiceXMLRESTProxy {
         Recording recording = null;
         try{
             FileItem fileData = multipartfiledata.get( 0 );
-            recording = Recording.createRecording( new Recording(uuid, accountId, fileData.getContentType(), ddrId) );
+            recording = Recording.createRecording( new Recording(uuid, accountId, fileData.getContentType(), ddrId, adapterId) );
 
             //upload to S3
             AWSClient client = ParallelInit.getAWSClient();

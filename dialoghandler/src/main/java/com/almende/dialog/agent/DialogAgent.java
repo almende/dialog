@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -624,8 +625,10 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         return Recording.getRecording( id, accountId );
     }
     
-    public ArrayNode getRecordings(@Name("accountId") String accountId) {
-        Set<Recording> recordings = Recording.getRecordings( accountId );
+    public ArrayNode getRecordings(@Name("accountId") String accountId,
+                                   @Name("ddrId") @Optional String ddrId,
+                                   @Name("adapterId") @Optional String adapterId) {
+        Set<Recording> recordings = Recording.getRecordings( accountId, ddrId, adapterId );
         return JOM.getInstance().convertValue(recordings, ArrayNode.class);
     }
 	
@@ -634,7 +637,8 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         try {
             rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory
                                                                          : new ConnectionFactory();
-            rabbitMQConnectionFactory.setHost("localhost");
+            String url = (System.getenv( "AMQP_URL" ) != null ? System.getenv( "AMQP_URL" ) : "amqp://localhost");
+            rabbitMQConnectionFactory.setUri( url );
             Connection connection = rabbitMQConnectionFactory.newConnection();
             Channel channel = connection.createChannel();
             //create a message

@@ -6,7 +6,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
 import org.joda.time.DateTime;
+
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Session;
@@ -425,7 +427,8 @@ public class DDRUtils
                 log.info( String.format( "Publishing costs: %s for account: %s", totalCost , accountId ) );
                 rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory
                                                                              : new ConnectionFactory();
-                rabbitMQConnectionFactory.setHost( "localhost" );
+                String url = (System.getenv( "AMQP_URL" ) != null ? System.getenv( "AMQP_URL" ) : "amqp://localhost");
+                rabbitMQConnectionFactory.setUri( url );
                 Connection connection = rabbitMQConnectionFactory.newConnection();
                 Channel channel = connection.createChannel();
                 //create a message

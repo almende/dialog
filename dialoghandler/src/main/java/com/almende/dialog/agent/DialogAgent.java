@@ -637,7 +637,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         try {
             rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory
                                                                          : new ConnectionFactory();
-            String url = (System.getenv( "AMQP_URL" ) != null ? System.getenv( "AMQP_URL" ) : "amqp://localhost");
+            String url = (System.getProperty( "AMQP_URL" ) != null ? System.getProperty( "AMQP_URL" ) : "amqp://localhost");
             rabbitMQConnectionFactory.setUri( url );
             Connection connection = rabbitMQConnectionFactory.newConnection();
             Channel channel = connection.createChannel();

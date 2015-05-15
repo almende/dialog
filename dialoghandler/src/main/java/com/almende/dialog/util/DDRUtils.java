@@ -395,6 +395,15 @@ public class DDRUtils
                         units = units != null ? units : 1;
                         ddrRecord = new DDRRecord(ttsDDRType.getTypeId(), session.getAdapterConfig(),
                                                   session.getAccountId(), units.intValue());
+                        //set the from and to address
+                        if("inbound".equalsIgnoreCase(session.getDirection())) {
+                            ddrRecord.setFromAddress(session.getRemoteAddress());
+                            ddrRecord.addToAddress(session.getLocalAddress());
+                        }
+                        else {
+                            ddrRecord.setFromAddress(session.getLocalAddress());
+                            ddrRecord.addToAddress(session.getRemoteAddress());
+                        }
                         ddrRecord.addSessionKey(session.getKey());
                         if (ttsProvider != null) {
                             ddrRecord.addAdditionalInfo("TTSProvider", ttsProvider);
@@ -445,6 +454,15 @@ public class DDRUtils
 
                         ddrRecord = new DDRRecord(ttsDDRType.getTypeId(), session.getAdapterConfig(),
                                                   session.getAccountId(), 1);
+                        //set the from and to address
+                        if("inbound".equalsIgnoreCase(session.getDirection())) {
+                            ddrRecord.setFromAddress(session.getRemoteAddress());
+                            ddrRecord.addToAddress(session.getLocalAddress());
+                        }
+                        else {
+                            ddrRecord.setFromAddress(session.getLocalAddress());
+                            ddrRecord.addToAddress(session.getRemoteAddress());
+                        }
                         ddrRecord.addSessionKey(session.getKey());
                         if (ttsProvider != null) {
                             ddrRecord.addAdditionalInfo("TTSProvider", ttsProvider);
@@ -581,16 +599,20 @@ public class DDRUtils
                         }
                     }
                     case SUBSCRIPTION_COST:
-                    case OTHER: {
-                        List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType, adapterId,
-                                                                         null, null);
-                        return !ddrPrices.isEmpty() ? ddrPrices.iterator().next().getPrice() : 0.0;
+                    case OTHER:
+                    default: {
+                        List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType,
+                                                                         ddrRecord.getAdapterId(), null, null);
+                        if (ddrPrices != null && !ddrPrices.isEmpty()) {
+                            return ddrPrices.iterator().next().getPrice();
+                        }
+                        else {
+                            String errorMessage = String.format("No DDRTypes found for this DDRRecord id: %s and ddrTypeId: %s",
+                                                                ddrRecord.getId(), ddrRecord.getDdrTypeId());
+                            log.severe(errorMessage);
+                            throw new Exception(errorMessage);
+                        }
                     }
-                    default:
-                        String errorMessage = String.format("No DDRTypes found for this DDRRecord id: %s and ddrTypeId: %s",
-                                                            ddrRecord.getId(), ddrRecord.getDdrTypeId());
-                        log.severe(errorMessage);
-                        throw new Exception(errorMessage);
                 }
             }
             else {

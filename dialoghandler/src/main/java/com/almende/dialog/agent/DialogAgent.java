@@ -45,6 +45,7 @@ import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DialogRequestDetails;
 import com.askfast.commons.entity.TTSInfo;
+import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -548,9 +549,9 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name( "dialog" ) Object dialog ) throws Exception
     {
         Dialog oldDialog = Dialog.getDialog( id, accountId );
-        if ( oldDialog == null )
+        if ( oldDialog == null ) {
             throw new Exception( "Dialog not found" );
-
+        }
         String dialogString = JOM.getInstance().writeValueAsString( dialog );
         JOM.getInstance().readerForUpdating( oldDialog ).readValue( dialogString );
         oldDialog.storeOrUpdate();
@@ -888,13 +889,14 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     
     @Override
     public Object setTTSCredentials(@Name("dialogId") String dialogId, @Name("accountId") String accountId,
-        @Name("ttsAccountId") String ttsAccountId) {
+        @Name("ttsProvider") TTSProvider ttsProvider, @Name("ttsAccountId") String ttsAccountId) {
 
         Dialog dialog = Dialog.getDialog(dialogId, accountId);
         if (dialog != null) {
             TTSInfo ttsInfo = dialog.getTtsInfo();
             ttsInfo = ttsInfo != null ? ttsInfo : new TTSInfo();
             ttsInfo.setTtsAccountId(ttsAccountId);
+            ttsInfo.setProvider(ttsProvider);
             dialog.setTtsInfo(ttsInfo);
             dialog.storeOrUpdate();
         }

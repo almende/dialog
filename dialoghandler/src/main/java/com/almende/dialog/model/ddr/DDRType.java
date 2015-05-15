@@ -50,6 +50,11 @@ public class DDRType
          */
         TTS_COST,
         /**
+         * cost applied for every time a TTS account of customer is used for tts
+         * processing
+         */
+        TTS_SERVICE_COST,
+        /**
          * any other subsription cost
          */
         OTHER;

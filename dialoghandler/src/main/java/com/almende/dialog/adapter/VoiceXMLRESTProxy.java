@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -35,7 +34,6 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -43,7 +41,6 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -391,7 +388,7 @@ public class VoiceXMLRESTProxy {
                 String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
                 //create a ddr record for tts
                 DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
-                String ttsurl = ServerUtils.getTTSURL(ttsInfo, insufficientCreditMessage);
+                String ttsurl = ServerUtils.getTTSURL(ttsInfo, insufficientCreditMessage, session.getAccountId());
                 return Response.ok(renderExitQuestion(Arrays.asList(ttsurl), session.getKey())).build();
             }
             session.setStartUrl(url);
@@ -1126,7 +1123,7 @@ public class VoiceXMLRESTProxy {
         ttsInfo.setFormat(format);
         ttsInfo.setLanguage(Language.getByValue(language));
         ttsInfo.setSpeed(speed);
-        String ttsURL = ServerUtils.getTTSURL(ttsInfo, textForSpeech);
+        String ttsURL = ServerUtils.getTTSURL(ttsInfo, textForSpeech, null);
         return Response.seeOther(new URI(ttsURL)).build();
     }
 
@@ -1801,7 +1798,7 @@ public class VoiceXMLRESTProxy {
                         //create a ddr record for tts
                         DDRUtils.createDDRForTTS(session != null ? session.getRemoteAddress() : null, session, ttsInfo,
                                                  prompt);
-                        promptsCopy.add(ServerUtils.getTTSURL(ttsInfo, prompt));
+                        promptsCopy.add(ServerUtils.getTTSURL(ttsInfo, prompt, session.getAccountId()));
                     }
                     else {
                         promptsCopy.add(prompt);
@@ -1840,7 +1837,7 @@ public class VoiceXMLRESTProxy {
             String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
             //create a ddr record for tts
             DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
-            String ttsurl = ServerUtils.getTTSURL(ttsInfo, insufficientCreditMessage);
+            String ttsurl = ServerUtils.getTTSURL(ttsInfo, insufficientCreditMessage, session.getAccountId());
             return renderExitQuestion(Arrays.asList(ttsurl), session.getKey());
         }
         if (redirectedId != null) {

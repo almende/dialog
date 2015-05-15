@@ -306,7 +306,7 @@ public class ServerUtils
      * @param contentType
      * @return
      */
-    public static String getTTSURL(TTSInfo ttsInfo, String textForSpeech) {
+    public static String getTTSURL(TTSInfo ttsInfo, String textForSpeech, String accountId) {
 
         String language = Language.getByValue(null).getCode();
         String speed = "0";
@@ -314,6 +314,7 @@ public class ServerUtils
         String format = "8khz_8bit_mono";
         String voice = null;
         String serviceProvider = null;
+        String ttsAccountId = null;
 
         if (ttsInfo != null) {
             language = ttsInfo.getLanguage().getCode();
@@ -323,11 +324,12 @@ public class ServerUtils
             voice = ttsInfo.getVoiceUsed();
             serviceProvider = ttsInfo.getProvider() != null ? ttsInfo.getProvider().name() : null;
             format = ttsInfo.getFormat();
+            ttsAccountId = ttsInfo.getTtsAccountId();
         }
         
         textForSpeech = textForSpeech.replace("text://", "");
-        
-        String url = "http://tts.ask-fast.com/api/parse";
+
+        String url = "http://shravan-tts.ngrok.com/api/parse";
         try {
             url = ServerUtils.getURLWithQueryParams(url, "text", textForSpeech);
             url = ServerUtils.getURLWithQueryParams(url, "lang", language);
@@ -336,6 +338,8 @@ public class ServerUtils
             url = ServerUtils.getURLWithQueryParams(url, "format", format);
             url = ServerUtils.getURLWithQueryParams(url, "voice", voice);
             url = ServerUtils.getURLWithQueryParams(url, "service", serviceProvider);
+            url = ServerUtils.getURLWithQueryParams(url, "id", ttsAccountId);
+            url = ServerUtils.getURLWithQueryParams(url, "askFastAccountId", accountId);
             url += "&type=.wav";
         }
         catch (Exception ex) {

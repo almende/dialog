@@ -12,7 +12,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -45,6 +44,7 @@ import com.askfast.commons.agent.intf.DialogAgentInterface;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DialogRequestDetails;
+import com.askfast.commons.entity.TTSInfo;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -886,7 +886,25 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         return getGlobalProviderCredentials();
     }
     
-    /** Get the provider attached to this adapter by checking the adapterProperties and adapterType
+    @Override
+    public Object setTTSCredentials(@Name("dialogId") String dialogId, @Name("accountId") String accountId,
+        @Name("ttsAccountId") String ttsAccountId) {
+
+        Dialog dialog = Dialog.getDialog(dialogId, accountId);
+        if (dialog != null) {
+            TTSInfo ttsInfo = dialog.getTtsInfo();
+            ttsInfo = ttsInfo != null ? ttsInfo : new TTSInfo();
+            ttsInfo.setTtsAccountId(ttsAccountId);
+            dialog.setTtsInfo(ttsInfo);
+            dialog.storeOrUpdate();
+        }
+        return dialog;
+    }
+
+    /**
+     * Get the provider attached to this adapter by checking the
+     * adapterProperties and adapterType
+     * 
      * @param adapterType
      * @param config
      * @return

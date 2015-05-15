@@ -1,10 +1,18 @@
 DialogHandler
 https://github.com/almende/dialog/
 
-21-4-2014 version 1.8.1
+15-5-2015, version 1.9.1
+- feature: load urls from jvm environment variables
+
+13-5-2015 version 1.9.0
+- feature: updated ddr fetch. improved answered notifications.
+- feature: recordings include adapterId
+- fix: don't store empty recordings from broadsoft 
+
+21-4-2015 version 1.8.1
 - hotfix: fix referral without preconnect for twilio adapter
 
-16-4-2014 version 1.8.1
+16-4-2015 version 1.8.1
 - hotfix: broadsoft preconnect connect 2-legs correctly
 - hotfix: Fix typo in twilio recording url
 - hotfix: don't send the hangup twice when preconnect ends

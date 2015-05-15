@@ -29,9 +29,9 @@ public class DatastoreThread extends Thread implements java.lang.Runnable {
     @Override
     public void run()
     {
-        String url = System.getenv( "DIALOG_HANDLER_MONGO_URL" );
+        String url = System.getProperty( "DIALOG_HANDLER_MONGO_URL" );
         if(url==null) {
-            url = System.getenv( "MONGO_URL" );
+            url = System.getProperty( "MONGO_URL" );
         }
         String host = "localhost:27017";
         String db = (isTest ? TEST_DB_NAME : DB_NAME);

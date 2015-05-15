@@ -10,9 +10,9 @@ public class MongoThread extends Thread {
 
     @Override
     public void run() {
-        String url = System.getenv( "DIALOG_HANDLER_MONGO_URL" );
+        String url = System.getProperty( "DIALOG_HANDLER_MONGO_URL" );
         if(url==null) {
-            url = System.getenv( "MONGO_URL" );
+            url = System.getProperty( "MONGO_URL" );
         }
         ParallelInit.mm = MongoManager.getInstance();
         if(url!=null) {

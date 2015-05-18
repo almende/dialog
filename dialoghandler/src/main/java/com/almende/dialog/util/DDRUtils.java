@@ -6,9 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import org.joda.time.DateTime;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Session;
@@ -356,8 +354,7 @@ public class DDRUtils
 
         if (session != null) {
             try {
-                return createDDRForTTS(session.getAdapterConfig(), message, session.getAccountId(), true,
-                                       session.getKey(), ttsInfo.getProvider());
+                return createDDRForTTS(message, session, true, ttsInfo.getProvider());
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -370,22 +367,23 @@ public class DDRUtils
     }
     
     /**
-     * create a ddr for a TTS being processed being created and charge a monthly
-     * fee for example
-     * 
-     * @param adapterConfig
+     * create a ddr for a TTS being processed being created
      * @return
      * @throws Exception
      */
-    public static DDRRecord createDDRForTTS(AdapterConfig adapterConfig, String message, String accountId,
-                                            boolean publishCharges, String sessionKey, TTSProvider ttsProvider) throws Exception {
+    public static DDRRecord createDDRForTTS(String message, Session session, boolean publishCharges,
+        TTSProvider ttsProvider) throws Exception {
 
         DDRType ttsDDRType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
         DDRRecord ddrRecord = null;
-        if (ttsDDRType != null) {
+        if (ttsDDRType != null && session != null) {
+            String adapterType = session.getType();
+            if ((adapterType == null || adapterType.isEmpty()) && session.getAdapterConfig() != null) {
+                adapterType = session.getAdapterConfig().getAdapterType();
+            }
             List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ttsDDRType.getTypeId(),
-                                                             AdapterType.getByValue(adapterConfig.getAdapterType()),
-                                                             adapterConfig.getConfigId(), null, null);
+                                                             AdapterType.getByValue(adapterType),
+                                                             session.getAdapterID(), null, null);
             if (ddrPrices != null) {
                 for (DDRPrice ddrPrice : ddrPrices) {
                     //pick the ddr price which matches the tts provider. 
@@ -395,12 +393,84 @@ public class DDRUtils
                         message = message.replaceFirst("text://", "");
                         Double units = Math.ceil(message.length() / ddrPrice.getUnits());
                         units = units != null ? units : 1;
-                        ddrRecord = new DDRRecord(ttsDDRType.getTypeId(), adapterConfig, accountId, units.intValue());
-                        ddrRecord.addSessionKey(sessionKey);
+                        ddrRecord = new DDRRecord(ttsDDRType.getTypeId(), session.getAdapterConfig(),
+                                                  session.getAccountId(), units.intValue());
+                        //set the from and to address
+                        if("inbound".equalsIgnoreCase(session.getDirection())) {
+                            ddrRecord.setFromAddress(session.getRemoteAddress());
+                            ddrRecord.addToAddress(session.getLocalAddress());
+                        }
+                        else {
+                            ddrRecord.setFromAddress(session.getLocalAddress());
+                            ddrRecord.addToAddress(session.getRemoteAddress());
+                        }
+                        ddrRecord.addSessionKey(session.getKey());
                         if (ttsProvider != null) {
                             ddrRecord.addAdditionalInfo("TTSProvider", ttsProvider);
                         }
                         ddrRecord.addAdditionalInfo("message", message);
+                        ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
+                        ddrRecord.createOrUpdate();
+                        break;
+                    }
+                }
+            }
+            if (publishCharges && ddrRecord != null) {
+                Double ddrCost = calculateDDRCost(ddrRecord, false);
+                publishDDREntryToQueue(ddrRecord.getAccountId(), ddrCost);
+            }
+            return ddrRecord;
+        }
+        else {
+            throw new Exception("No DDRType found for type TTS_COST");
+        }
+    }
+    
+    /**
+     * create a ddr service cost for a TTS being processed
+     * 
+     * @param adapterConfig
+     * @return
+     * @throws Exception
+     */
+    public static DDRRecord createDDRForTTSService(TTSProvider ttsProvider, String ttsAccountId, Session session,
+        boolean publishCharges) throws Exception {
+
+        DDRType ttsDDRType = DDRType.getDDRType(DDRTypeCategory.TTS_SERVICE_COST);
+        DDRRecord ddrRecord = null;
+        if (ttsDDRType != null && session != null) {
+            String adapterType = session.getType();
+            if ((adapterType == null || adapterType.isEmpty()) && session.getAdapterConfig() != null) {
+                adapterType = session.getAdapterConfig().getAdapterType();
+            }
+            List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ttsDDRType.getTypeId(),
+                                                             AdapterType.getByValue(adapterType),
+                                                             session.getAdapterID(), UnitType.PART, null);
+            if (ddrPrices != null) {
+                for (DDRPrice ddrPrice : ddrPrices) {
+                    //pick the ddr price which matches the tts provider. 
+                    if (ddrPrice.getKeyword() == null ||
+                        (ttsProvider != null && ddrPrice.getKeyword().equalsIgnoreCase(ttsProvider.toString()))) {
+
+                        ddrRecord = new DDRRecord(ttsDDRType.getTypeId(), session.getAdapterConfig(),
+                                                  session.getAccountId(), 1);
+                        //set the from and to address
+                        if("inbound".equalsIgnoreCase(session.getDirection())) {
+                            ddrRecord.setFromAddress(session.getRemoteAddress());
+                            ddrRecord.addToAddress(session.getLocalAddress());
+                        }
+                        else {
+                            ddrRecord.setFromAddress(session.getLocalAddress());
+                            ddrRecord.addToAddress(session.getRemoteAddress());
+                        }
+                        ddrRecord.addSessionKey(session.getKey());
+                        if (ttsProvider != null) {
+                            ddrRecord.addAdditionalInfo("TTSProvider", ttsProvider);
+                        }
+                        if (ttsAccountId != null) {
+                            ddrRecord.addAdditionalInfo("ttsAccountId", ttsAccountId);
+                        }
+                        ddrRecord.addAdditionalInfo("message", "Service costs");
                         ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
                         ddrRecord.createOrUpdate();
                         break;
@@ -529,16 +599,20 @@ public class DDRUtils
                         }
                     }
                     case SUBSCRIPTION_COST:
-                    case OTHER: {
-                        List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType, adapterId,
-                                                                         null, null);
-                        return !ddrPrices.isEmpty() ? ddrPrices.iterator().next().getPrice() : 0.0;
+                    case OTHER:
+                    default: {
+                        List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), adapterType,
+                                                                         ddrRecord.getAdapterId(), null, null);
+                        if (ddrPrices != null && !ddrPrices.isEmpty()) {
+                            return ddrPrices.iterator().next().getPrice();
+                        }
+                        else {
+                            String errorMessage = String.format("No DDRTypes found for this DDRRecord id: %s and ddrTypeId: %s",
+                                                                ddrRecord.getId(), ddrRecord.getDdrTypeId());
+                            log.severe(errorMessage);
+                            throw new Exception(errorMessage);
+                        }
                     }
-                    default:
-                        String errorMessage = String.format("No DDRTypes found for this DDRRecord id: %s and ddrTypeId: %s",
-                                                            ddrRecord.getId(), ddrRecord.getDdrTypeId());
-                        log.severe(errorMessage);
-                        throw new Exception(errorMessage);
                 }
             }
             else {
@@ -793,6 +867,12 @@ public class DDRUtils
                 if (sessionKeyMap != null) {
                     ddrRecord.addAdditionalInfo(Session.SESSION_KEY, sessionKeyMap);
                     ddrRecord.setSessionKeys(sessionKeyMap.values());
+                    for (String sessionKey : sessionKeyMap.keySet()) {
+                        Session session = Session.getSession(sessionKey);
+                        if (session != null && session.getExternalSession() != null) {
+                            ddrRecord.addAdditionalInfo("externalSessionKey", session.getExternalSession());
+                        }
+                    }
                 }
                 //set the ddrRecord time with server current time creationTime.
                 ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());

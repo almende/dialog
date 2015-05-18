@@ -26,6 +26,7 @@ import com.askfast.commons.Status;
 import com.askfast.commons.entity.Account;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
+import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -306,7 +307,7 @@ public class ServerUtils
      * @param contentType
      * @return
      */
-    public static String getTTSURL(TTSInfo ttsInfo, String textForSpeech) {
+    public static String getTTSURL(TTSInfo ttsInfo, String textForSpeech, Session session) {
 
         String language = Language.getByValue(null).getCode();
         String speed = "0";
@@ -314,7 +315,9 @@ public class ServerUtils
         String format = "8khz_8bit_mono";
         String voice = null;
         String serviceProvider = null;
-
+        String ttsAccountId = null;
+        String accountId = null;
+        
         if (ttsInfo != null) {
             language = ttsInfo.getLanguage().getCode();
             speed = ttsInfo.getSpeed();
@@ -323,10 +326,24 @@ public class ServerUtils
             voice = ttsInfo.getVoiceUsed();
             serviceProvider = ttsInfo.getProvider() != null ? ttsInfo.getProvider().name() : null;
             format = ttsInfo.getFormat();
+            ttsAccountId = ttsInfo.getTtsAccountId();
+            
+            if (ttsAccountId != null && !TTSProvider.VOICE_RSS.equals(ttsInfo.getProvider())) {
+
+                if (session != null) {
+                    accountId = session.getAccountId();
+                    try {
+                        DDRUtils.createDDRForTTSService(ttsInfo.getProvider(), ttsAccountId, session, true);
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                        log.severe("Applying service charge for TTS processing failed.");
+                    }
+                }
+            }
         }
-        
         textForSpeech = textForSpeech.replace("text://", "");
-        
+
         String url = "http://tts.ask-fast.com/api/parse";
         try {
             url = ServerUtils.getURLWithQueryParams(url, "text", textForSpeech);
@@ -336,6 +353,8 @@ public class ServerUtils
             url = ServerUtils.getURLWithQueryParams(url, "format", format);
             url = ServerUtils.getURLWithQueryParams(url, "voice", voice);
             url = ServerUtils.getURLWithQueryParams(url, "service", serviceProvider);
+            url = ServerUtils.getURLWithQueryParams(url, "id", ttsAccountId);
+            url = ServerUtils.getURLWithQueryParams(url, "askFastAccountId", accountId);
             url += "&type=.wav";
         }
         catch (Exception ex) {

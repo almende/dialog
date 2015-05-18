@@ -409,6 +409,12 @@ public class DDRRecord
     {
         this.toAddress = toAddress;
     }
+    @JsonIgnore
+    public void addToAddress( String toAddress )
+    {
+        this.toAddress = this.toAddress != null ? this.toAddress : new HashMap<String, String>();
+        this.toAddress.put(toAddress, "");
+    }
     public String getDdrTypeId()
     {
         return ddrTypeId;

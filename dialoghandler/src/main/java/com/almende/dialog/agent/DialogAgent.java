@@ -902,6 +902,25 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         }
         return dialog;
     }
+    
+    @Override
+    public Object setDefaultTTSCredentialsToAllDialogs(@Name("accountId") String accountId,
+        @Name("ttsAccountId") String ttsAccountId) throws Exception {
+
+        List<Dialog> dialogs = Dialog.getDialogs(accountId);
+        if (dialogs != null) {
+            for (Dialog dialog : dialogs) {
+                if (dialog.getTtsInfo() == null ||
+                    (dialog.getTtsInfo() != null && dialog.getTtsInfo().getTtsAccountId() == null)) {
+                    TTSInfo ttsInfo = dialog.getTtsInfo() != null ? dialog.getTtsInfo() : new TTSInfo();
+                    ttsInfo.setTtsAccountId(ttsAccountId);
+                    dialog.setTtsInfo(ttsInfo);
+                    dialog.storeOrUpdate();
+                }
+            }
+        }
+        return dialogs;
+    }
 
     /**
      * Get the provider attached to this adapter by checking the

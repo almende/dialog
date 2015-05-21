@@ -66,6 +66,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     public static final String ADAPTER_PROVIDER_CREDENTIALS_KEY = "ADAPTER_PROVIDER_CREDENTIALS";
     public static final String ADAPTER_CREDENTIALS_GLOBAL_KEY = "GLOBAL";
     public static final String BEARER_TOKEN_KEY = "BEARER_TOKEN";
+    private static final String DEFAULT_TTS_ACCOUNT_ID_KEY = "DEFAULT_TTS_ACCOUNTID";
     
     /**
      * Used by the Tests to store any default communication providers. Usually 
@@ -901,6 +902,35 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             dialog.storeOrUpdate();
         }
         return dialog;
+    }
+    
+    @Override
+    public String setDefaultTTSAccountId(@Name("accountId") String accountId, @Name("ttsAccountId") String ttsAccountId)
+            throws Exception {
+
+        Map<String, String> defaultTTSAccountIds = getAllDefaultTTSAccountIds();
+        defaultTTSAccountIds.put(accountId, ttsAccountId);
+        getState().put(DEFAULT_TTS_ACCOUNT_ID_KEY, defaultTTSAccountIds);
+        return getDefaultTTSAccountId(accountId);
+    }
+
+    @Override
+    public String getDefaultTTSAccountId(@Name("accountId") String accountId) {
+
+        return getAllDefaultTTSAccountIds().get(accountId);
+    }
+    
+    /**
+     * Fetches all the default ttsAccountIds mapped for a askFastAccountId
+     * @return
+     */
+    public Map<String, String> getAllDefaultTTSAccountIds() {
+
+        Map<String, String> defaultTTSAccountIds = getState().get(DEFAULT_TTS_ACCOUNT_ID_KEY,
+                                                                  new TypeUtil<Map<String, String>>() {
+                                                                  });
+        defaultTTSAccountIds = defaultTTSAccountIds != null ? defaultTTSAccountIds : new HashMap<String, String>();
+        return defaultTTSAccountIds;
     }
 
     /**

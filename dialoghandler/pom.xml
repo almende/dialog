@@ -152,6 +152,12 @@
 			<groupId>com.askfast</groupId>
 			<artifactId>askfast-commons</artifactId>
 			<version>${askfast.version}</version>
+			<exclusions>
+				<exclusion>
+					<artifactId>mongo-java-driver</artifactId>
+					<groupId>org.mongodb</groupId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>com.rabbitmq</groupId>

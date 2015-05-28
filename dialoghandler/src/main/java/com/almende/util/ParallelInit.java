@@ -1,5 +1,6 @@
 package com.almende.util;
 
+import com.almende.dialog.agent.LoggerProxyAgent;
 import com.almende.dialog.aws.AWSClient;
 import com.almende.dialog.db.MongoManager;
 import com.almende.dialog.util.AFHttpClient;
@@ -31,6 +32,10 @@ public class ParallelInit {
 	public static AWSClient awsClient = null;
         public static boolean awsClientActive = false;
         public static Thread awsThread = new AWSThread();
+        
+        public static LoggerProxyAgent loggerAgent = null;
+        public static boolean loggerAgentActive = false;
+        public static Thread loggerAgentThread = new LoggerAgentThread();
 	
 	public static ObjectMapper om = new ObjectMapper();
 	
@@ -40,30 +45,41 @@ public class ParallelInit {
 	    datastoreThread = new DatastoreThread( isTest );
         }
 	
-	public static boolean startThreads(){
-		synchronized(conThread){
-			if (!clientActive && !conThread.isAlive()) conThread.start();
-		}
-		synchronized(afconThread){
-                    if (!afclientActive && !afconThread.isAlive()) afconThread.start();
-                }
-		synchronized(datastoreThread){
-			if (!datastoreActive && !datastoreThread.isAlive()) datastoreThread.start();
-		}
-		synchronized(mongoThread){
-                    if (!mongoActive && !mongoThread.isAlive()) mongoThread.start();
-                }
-		synchronized(awsThread) {
-		    if (!awsClientActive && !awsThread.isAlive()) awsThread.start();
-		}
-		synchronized(loadingRequest){
-			if (loadingRequest) {
-				loadingRequest=false;
-				return true;
-			}
-		}
-		return false;
-	}
+    public static boolean startThreads() {
+
+        synchronized (conThread) {
+            if (!clientActive && !conThread.isAlive())
+                conThread.start();
+        }
+        synchronized (afconThread) {
+            if (!afclientActive && !afconThread.isAlive())
+                afconThread.start();
+        }
+        synchronized (datastoreThread) {
+            if (!datastoreActive && !datastoreThread.isAlive())
+                datastoreThread.start();
+        }
+        synchronized (mongoThread) {
+            if (!mongoActive && !mongoThread.isAlive())
+                mongoThread.start();
+        }
+        synchronized (awsThread) {
+            if (!awsClientActive && !awsThread.isAlive())
+                awsThread.start();
+        }
+        synchronized (loggerAgentThread) {
+            if (!loggerAgentActive && !loggerAgentThread.isAlive()) {
+                loggerAgentThread.start();
+            }
+        }
+        synchronized (loadingRequest) {
+            if (loadingRequest) {
+                loadingRequest = false;
+                return true;
+            }
+        }
+        return false;
+    }
 	
 	public static Client getClient(){
 		startThreads();
@@ -126,6 +142,20 @@ public class ParallelInit {
 		om.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
 		return om;
 	}
+	
+    public static LoggerProxyAgent getLoggerAgent() {
+
+        startThreads();
+        while (!loggerAgentActive) {
+            try {
+                Thread.sleep(100);
+            }
+            catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        return loggerAgent;
+    }
 }
 
 

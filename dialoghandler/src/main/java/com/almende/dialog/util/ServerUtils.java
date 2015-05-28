@@ -185,6 +185,40 @@ public class ServerUtils
     }
     
     /**
+     * Appends all the query params in the given askFastQueryParams to the url
+     * @param url
+     * @param askFastQueryParams
+     * @return
+     * @throws UnsupportedEncodingException
+     */
+    public static String getURLWithQueryParams(String url, Map<String, String> askFastQueryParams)
+        throws UnsupportedEncodingException {
+
+        if (askFastQueryParams != null) {
+            for (String queryKey : askFastQueryParams.keySet()) {
+                url = ServerUtils.getURLWithQueryParams(url, queryKey, askFastQueryParams.get(queryKey));
+            }
+        }
+        return url;
+    }
+    
+    /**
+     * Returns all the query parameters in the url given.
+     * @return
+     * @throws Exception
+     */
+    public static HashMap<String, String> getAllQuerParameters(String url) throws Exception {
+
+        url = url.replace(" ", URLEncoder.encode(" ", "UTF-8"));
+        URIBuilder uriBuilder = new URIBuilder(new URI(url));
+        HashMap<String, String> result = new HashMap<String, String>();
+        for (NameValuePair nameValue : uriBuilder.getQueryParams()) {
+            result.put(nameValue.getName(), nameValue.getValue());
+        }
+        return result;
+    }
+    
+    /**
      * associates the same value corresponding to keys listed in keyCollection
      */
     public static <T> Map<T, T> putCollectionAsKey( Collection<T> keyCollection, T value )

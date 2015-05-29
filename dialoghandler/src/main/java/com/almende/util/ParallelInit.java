@@ -1,5 +1,6 @@
 package com.almende.util;
 
+import javax.servlet.ServletContext;
 import com.almende.dialog.agent.LoggerProxyAgent;
 import com.almende.dialog.aws.AWSClient;
 import com.almende.dialog.db.MongoManager;
@@ -35,7 +36,7 @@ public class ParallelInit {
         
         public static LoggerProxyAgent loggerAgent = null;
         public static boolean loggerAgentActive = false;
-        public static Thread loggerAgentThread = new LoggerAgentThread();
+        public static Thread loggerAgentThread = null;
 	
 	public static ObjectMapper om = new ObjectMapper();
 	
@@ -44,6 +45,11 @@ public class ParallelInit {
 	    ParallelInit.isTest = isTest;
 	    datastoreThread = new DatastoreThread( isTest );
         }
+	
+    public ParallelInit(final ServletContext servletContext) {
+
+        loggerAgentThread = new LoggerAgentThread(servletContext);
+    }
 	
     public static boolean startThreads() {
 
@@ -67,9 +73,11 @@ public class ParallelInit {
             if (!awsClientActive && !awsThread.isAlive())
                 awsThread.start();
         }
-        synchronized (loggerAgentThread) {
-            if (!loggerAgentActive && !loggerAgentThread.isAlive()) {
-                loggerAgentThread.start();
+        if (loggerAgentThread != null) {
+            synchronized (loggerAgentThread) {
+                if (!loggerAgentActive && !loggerAgentThread.isAlive()) {
+                    loggerAgentThread.start();
+                }
             }
         }
         synchronized (loadingRequest) {

@@ -2,6 +2,7 @@ package com.almende.dialog.agent;
 
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.protocol.jsonrpc.annotation.Access;
 import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
@@ -32,9 +33,10 @@ public class LoggerProxyAgent extends Agent {
     }
 
     public ArrayList<HttpLog> getLogs(@Name("id") @Optional String logId, @Name("accountId") String accountId,
-        @Name("sessionKey") @Optional String sessionKey, @Name("ddrRecordId") @Optional String ddrRecordId) {
+            @Name("sessionKeys") @Optional Collection<String> sessionKeys,
+            @Name("ddrRecordId") @Optional String ddrRecordId) throws Exception {
 
-        return getLoggerAgentInterface().getLogs(logId, accountId, sessionKey, ddrRecordId);
+        return getLoggerAgentInterface().getLogs(logId, accountId, sessionKeys, ddrRecordId);
     }
 
     public void deleteLogs(@Name("id") String logId, @Name("accountId") String accountId) {

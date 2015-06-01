@@ -1261,6 +1261,9 @@ public class TwilioAdapter {
             session.setRemoteAddress(remoteID);
             session.storeSession();
 
+            //convert all text prompts to speech 
+            convertTextsToTTSURLS(question, res, session);
+            
             if (question.getType().equalsIgnoreCase("closed")) {
                 result = renderClosedQuestion(question, res.prompts, sessionKey);
             }
@@ -1461,5 +1464,39 @@ public class TwilioAdapter {
                                      localID, accountSid, callSid));
         }
         return null;
+    }
+    
+    /**
+     * Converts all prompts which do not have prefix dtmfKey://. If the prompt
+     * ends with a .wav suffix it if added directly. If not it is converted to a
+     * TTS url
+     * 
+     * @param question
+     * @param res
+     */
+    private void convertTextsToTTSURLS(Question question, Return res, Session session) {
+
+        if (res.prompts != null) {
+            String ttsSpeedProperty = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TSS_SPEED);
+            ttsSpeedProperty = ttsSpeedProperty != null ? ttsSpeedProperty : "0";
+            ArrayList<String> promptsCopy = new ArrayList<String>();
+
+            //fetch the ttsInfo from session
+            TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
+            for (String prompt : res.prompts) {
+                if (!prompt.startsWith("dtmfKey://")) {
+                    if (!prompt.endsWith(".wav")) {
+                        //create a ddr record for tts
+                        DDRUtils.createDDRForTTS(session != null ? session.getRemoteAddress() : null, session, ttsInfo,
+                                                 prompt);
+                        promptsCopy.add(ServerUtils.getTTSURL(ttsInfo, prompt, session));
+                    }
+                    else {
+                        promptsCopy.add(prompt);
+                    }
+                }
+            }
+            res.prompts = promptsCopy;
+        }
     }
 }

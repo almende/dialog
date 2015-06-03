@@ -522,8 +522,8 @@ public class VoiceXMLRESTProxy {
 
                             session.addExtras("requester", session.getLocalAddress());
                             Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected",
-                                                                                    session.getPublicExtras(), responder,
-                                                                                    session.getKey());
+                                                                                    session.getPublicExtras(),
+                                                                                    responder, session);
                             return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), responder, sessionKey);
                         }
                     }
@@ -533,7 +533,7 @@ public class VoiceXMLRESTProxy {
                         session.addExtras("requester", session.getLocalAddress());
                         Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected",
                                                                                 session.getPublicExtras(), responder,
-                                                                                session.getKey());
+                                                                                session);
                         return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), responder, sessionKey);
                     }
                 }
@@ -556,7 +556,7 @@ public class VoiceXMLRESTProxy {
                     isExit = true;
                 }
                 question = question.answer(responder, session.getAdapterConfig().getConfigId(), answer_id,
-                                           answer_input, sessionKey);
+                                           answer_input, session);
                 //reload the session
                 session = Session.getSession(sessionKey);
                 session.setQuestion(question);
@@ -622,7 +622,7 @@ public class VoiceXMLRESTProxy {
                 HashMap<String, String> extras = new HashMap<String, String>();
                 extras.put("sessionKey", session.getKey());
                 extras.put("requester", session.getLocalAddress());
-                question = question.event("preconnect", "preconnect event", extras, responder, session.getKey());
+                question = question.event("preconnect", "preconnect event", extras, responder, session);
                 // If there is no preconnect the isCallPickedUp is never set
                 if (question == null) {
                     session.setCallPickedUpStatus(true);
@@ -684,7 +684,7 @@ public class VoiceXMLRESTProxy {
             HashMap<String, Object> extras = new HashMap<String, Object>();
             extras.put("sessionKey", sessionKey);
             extras.put("requester", session.getLocalAddress());
-            question = question.event("timeout", "No answer received", extras, responder, session.getKey());
+            question = question.event("timeout", "No answer received", extras, responder, session);
             session.setQuestion(question);
             if (question != null) {
                 String retryLimit = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT);
@@ -734,7 +734,7 @@ public class VoiceXMLRESTProxy {
             HashMap<String, String> extras = new HashMap<String, String>();
             extras.put("sessionKey", sessionKey);
             extras.put("requester", session.getLocalAddress());
-            question = question.event("exception", "Wrong answer received", extras, responder, session.getKey());
+            question = question.event("exception", "Wrong answer received", extras, responder, session);
             //reload the session
             session = Session.getSession(sessionKey);
             session.setQuestion(question);
@@ -778,7 +778,7 @@ public class VoiceXMLRESTProxy {
                 Response hangupResponse = handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(),
                                                          session.getKey());
                 timeMap.put("requester", session.getLocalAddress());
-                session.getQuestion().event("hangup", "Hangup", timeMap, session.getRemoteAddress(), session.getKey());
+                session.getQuestion().event("hangup", "Hangup", timeMap, session.getRemoteAddress(), session);
                 dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
                               String.format("Call hungup from: %s", session.getRemoteAddress()), session);
                 return hangupResponse;
@@ -815,8 +815,7 @@ public class VoiceXMLRESTProxy {
             }
             timeMap.put("requester", session.getLocalAddress());
             QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "answered",
-                                                                              "Answered", responder, timeMap,
-                                                                              session.getKey());
+                                                                              "Answered", responder, timeMap, session);
             Thread questionEventRunnerThread = new Thread(questionEventRunner);
             questionEventRunnerThread.start();
             dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
@@ -1181,7 +1180,8 @@ public class VoiceXMLRESTProxy {
                 String answerForQuestion = question.getQuestion_expandedtext(session.getKey());
                 // If the recording is empty end the call.
                 if(answer_input!=null) {
-                    question = question.answer(responder, session.getAdapterConfig().getConfigId(), null, answer_input, sessionKey);
+                    question = question.answer(responder, session.getAdapterConfig().getConfigId(), null, answer_input,
+                                               session);
                 } else {
                     question = null;
                 }

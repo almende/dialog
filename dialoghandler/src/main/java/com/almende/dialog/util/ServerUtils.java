@@ -187,16 +187,16 @@ public class ServerUtils
     /**
      * Appends all the query params in the given askFastQueryParams to the url
      * @param url
-     * @param askFastQueryParams
+     * @param queryParams
      * @return
      * @throws UnsupportedEncodingException
      */
-    public static String getURLWithQueryParams(String url, Map<String, String> askFastQueryParams)
+    public static String getURLWithQueryParams(String url, Map<String, String> queryParams)
         throws UnsupportedEncodingException {
 
-        if (askFastQueryParams != null) {
-            for (String queryKey : askFastQueryParams.keySet()) {
-                url = ServerUtils.getURLWithQueryParams(url, queryKey, askFastQueryParams.get(queryKey));
+        if (queryParams != null) {
+            for (String queryKey : queryParams.keySet()) {
+                url = ServerUtils.getURLWithQueryParams(url, queryKey, queryParams.get(queryKey));
             }
         }
         return url;

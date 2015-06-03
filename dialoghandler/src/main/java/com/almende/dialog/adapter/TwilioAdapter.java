@@ -415,7 +415,7 @@ public class TwilioAdapter {
                     session.addExtras("requester", session.getLocalAddress());
                     Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected",
                                                                             session.getPublicExtras(), remoteID,
-                                                                            session.getKey());
+                                                                            session);
                     return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session.getKey(),
                                           session.getPublicExtras());
                 }
@@ -440,7 +440,7 @@ public class TwilioAdapter {
                 String answerForQuestion = question.getQuestion_expandedtext(session.getKey());
                 
                 question = question.answer(responder, session.getAdapterConfig().getConfigId(), answer_id,
-                                           answer_input, session.getKey());
+                                           answer_input, session);
                 
                 log.info(String.format("Question after answer is: %s", ServerUtils.serializeWithoutException(question)));
                 //reload the session
@@ -513,7 +513,7 @@ public class TwilioAdapter {
             HashMap<String, Object> extras = new HashMap<String, Object>();
             extras.put("sessionKey", session.getKey());
             extras.put("requester", session.getLocalAddress());
-            question = question.event("timeout", "No answer received", extras, responder, session.getKey());
+            question = question.event("timeout", "No answer received", extras, responder, session);
             session.setQuestion(question);
             if (question != null) {
                 String retryLimit = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT);
@@ -574,7 +574,7 @@ public class TwilioAdapter {
                 HashMap<String, String> extras = new HashMap<String, String>();
                 extras.put("sessionKey", session.getKey());
                 extras.put("requester", session.getLocalAddress());
-                question = question.event("preconnect", "preconnect event", extras, responder, session.getKey());
+                question = question.event("preconnect", "preconnect event", extras, responder, session);
                 // If there is no preconnect the isCallPickedUp is never set
                 if (question == null) {
                     session.setCallPickedUpStatus(true);
@@ -652,8 +652,7 @@ public class TwilioAdapter {
             }
             timeMap.put("requester", session.getLocalAddress());
             QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "answered",
-                                                                              "Answered", responder, timeMap,
-                                                                              session.getKey());
+                                                                              "Answered", responder, timeMap, session);
             Thread questionEventRunnerThread = new Thread(questionEventRunner);
             questionEventRunnerThread.start();
             dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
@@ -775,7 +774,7 @@ public class TwilioAdapter {
                 timeMap.put("requester", session.getLocalAddress());
                 QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "hangup",
                                                                                   "Hangup", session.getRemoteAddress(),
-                                                                                  timeMap, session.getKey());
+                                                                                  timeMap, session);
                 Thread questionEventRunnerThread = new Thread(questionEventRunner);
                 questionEventRunnerThread.start();
                 dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),

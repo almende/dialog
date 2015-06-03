@@ -1,7 +1,6 @@
 package com.almende.dialog.util;
 
 import java.io.IOException;
-import java.util.Map;
 import com.almende.dialog.util.http.UserAgentInterceptor;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.RequestLog;
@@ -27,7 +26,7 @@ public class AFHttpClient {
 
     public String get(String url) throws IOException {
 
-        return get(url, null, false, null, null, null);
+        return get(url, false, null, null, null);
     }
 
     /**
@@ -39,17 +38,26 @@ public class AFHttpClient {
      * @return
      * @throws IOException
      */
-    public String get(String url, Map<String, String> askFastQueryParams, boolean createLog, String sessionKey,
-        String accountId, String ddrRecordId) throws IOException {
+    public String get(String url, boolean createLog, String sessionKey, String accountId, String ddrRecordId)
+        throws IOException {
 
         long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
-        url = ServerUtils.getURLWithQueryParams(url, askFastQueryParams);
         Request request = getBuilderWIthBasicAuthHeader(url).build();
-        Response response = client.newCall(request).execute();
+        Response response = null;
+        ResponseLog responseLog = null;
+        try {
+            response = client.newCall(request).execute();
+            responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
+        }
+        catch (Exception ex) {
+            responseLog = new ResponseLog();
+            Long responseTimestamp = TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp;
+            responseLog.setHttpResponseTime(responseTimestamp.intValue());
+            responseLog.setResponseBody(ex.toString());
+            responseLog.setHttpCode(-1);
+        }
         if (createLog && sessionKey != null) {
-            ResponseLog responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() -
-                startTimeStamp);
-            RequestLog requestLog = new RequestLog(request, askFastQueryParams);
+            RequestLog requestLog = new RequestLog(request);
             ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
                                                     response.isSuccessful());
             //the response connection might be closed. So response.body.string() isnt accessible 
@@ -65,7 +73,7 @@ public class AFHttpClient {
 
     public String post(String json, String url, String type) throws IOException {
 
-        return post(json, url, type, null, false, null, null, null);
+        return post(json, url, type, false, null, null, null);
     }
 
     /**
@@ -75,7 +83,6 @@ public class AFHttpClient {
      * @param json
      * @param url
      * @param type
-     * @param askFastQueryParams
      * @param createLog
      * @param sessionKey
      * @param accountId
@@ -83,22 +90,31 @@ public class AFHttpClient {
      * @return
      * @throws IOException
      */
-    public String post(String json, String url, String type, Map<String, String> askFastQueryParams, boolean createLog,
-        String sessionKey, String accountId, String ddrRecordId) throws IOException {
+    public String post(String json, String url, String type, boolean createLog, String sessionKey, String accountId,
+        String ddrRecordId) throws IOException {
 
         if (type == null) {
             type = "application/json";
         }
         MediaType mediaType = MediaType.parse(type);
         RequestBody body = RequestBody.create(mediaType, json);
-        url = ServerUtils.getURLWithQueryParams(url, askFastQueryParams);
         long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
         Request request = getBuilderWIthBasicAuthHeader(url).post(body).build();
-        Response response = client.newCall(request).execute();
+        Response response = null;
+        ResponseLog responseLog = null;
+        try {
+            response = client.newCall(request).execute();
+            responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
+        }
+        catch (Exception ex) {
+            responseLog = new ResponseLog();
+            Long responseTimestamp = TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp;
+            responseLog.setHttpResponseTime(responseTimestamp.intValue());
+            responseLog.setResponseBody(ex.toString());
+            responseLog.setHttpCode(-1);
+        }
         if (createLog && sessionKey != null) {
-            ResponseLog responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() -
-                startTimeStamp);
-            RequestLog requestLog = new RequestLog(request, askFastQueryParams);
+            RequestLog requestLog = new RequestLog(request);
             ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
                                                     response.isSuccessful());
             //the response connection might be closed. So response.body.string() isnt accessible 
@@ -114,7 +130,6 @@ public class AFHttpClient {
      * @param json
      * @param url
      * @param type
-     * @param askFastQueryParams
      * @param createLog
      * @param sessionKey
      * @param accountId
@@ -122,22 +137,31 @@ public class AFHttpClient {
      * @return
      * @throws IOException
      */
-    public String put(String json, String url, String type, Map<String, String> askFastQueryParams, boolean createLog,
-        String sessionKey, String accountId, String ddrRecordId) throws IOException {
+    public String put(String json, String url, String type, boolean createLog, String sessionKey, String accountId,
+        String ddrRecordId) throws IOException {
 
         if (type == null) {
             type = "application/json";
         }
         MediaType mediaType = MediaType.parse(type);
         RequestBody body = RequestBody.create(mediaType, json);
-        url = ServerUtils.getURLWithQueryParams(url, askFastQueryParams);
         long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
         Request request = getBuilderWIthBasicAuthHeader(url).put(body).build();
-        Response response = client.newCall(request).execute();
+        Response response = null;
+        ResponseLog responseLog = null;
+        try {
+            response = client.newCall(request).execute();
+            responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
+        }
+        catch (Exception ex) {
+            responseLog = new ResponseLog();
+            Long responseTimestamp = TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp;
+            responseLog.setHttpResponseTime(responseTimestamp.intValue());
+            responseLog.setResponseBody(ex.toString());
+            responseLog.setHttpCode(-1);
+        }
         if (createLog && sessionKey != null) {
-            ResponseLog responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() -
-                startTimeStamp);
-            RequestLog requestLog = new RequestLog(request, askFastQueryParams);
+            RequestLog requestLog = new RequestLog(request);
             ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
                                                     response.isSuccessful());
             //the response connection might be closed. So response.body.string() isnt accessible 
@@ -148,7 +172,7 @@ public class AFHttpClient {
 
     public String put(String json, String url, String type) throws IOException {
 
-        return put(json, url, type, null, false, null, null, null);
+        return put(json, url, type, false, null, null, null);
     }
 
     /**

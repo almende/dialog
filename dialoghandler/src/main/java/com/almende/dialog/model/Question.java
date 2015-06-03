@@ -97,12 +97,13 @@ public class Question implements QuestionIntf {
                 for (String key : extraParams.keySet()) {
                     url = ServerUtils.getURLWithQueryParams(url, key, extraParams.get(key));
                 }
+                url = ServerUtils.getURLWithQueryParams(url, askFastRequestQueryParams);
                 String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
                 if (credentialsFromSession != null) {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
-                json = client.get(url.replace(" ", URLEncoder.encode(" ", "UTF-8")), askFastRequestQueryParams, true,
-                                  sessionKey, accountId, ddrRecordId);
+                json = client.get(url.replace(" ", URLEncoder.encode(" ", "UTF-8")), true, sessionKey, accountId,
+                                  ddrRecordId);
             }
             catch (Exception e) {
                 log.severe(e.toString());
@@ -112,7 +113,7 @@ public class Question implements QuestionIntf {
                 while (questionReloadCounter.get(url) != null &&
                     questionReloadCounter.get(url) < DEFAULT_MAX_QUESTION_LOAD) {
                     try {
-                        json = client.get(url, askFastRequestQueryParams, true, sessionKey, accountId, ddrRecordId);
+                        json = client.get(url, true, sessionKey, accountId, ddrRecordId);
                         break;
                     }
                     catch (Exception ex) {
@@ -200,10 +201,11 @@ public class Question implements QuestionIntf {
         }
     }
 
-    public Question answer(String responder, String adapterID, String answer_id, String answer_input, String sessionKey) {
+    public Question answer(String responder, String adapterID, String answer_id, String answer_input, Session session) {
 
         log.info("answerTest: " + answer_input);
         boolean answered = false;
+        String sessionKey = session != null ? session.getKey() : null;
         Answer answer = null;
         if (this.getType().equals("open")) {
             // updated as part of bug#16 at
@@ -257,7 +259,7 @@ public class Question implements QuestionIntf {
                 for (Answer ans : answers) {
                     if (ans.getAnswer_expandedtext(this.preferred_language,
                                                    Dialog.getCredentialsFromSession(sessionKey))
-                                                    .equalsIgnoreCase(answer_input)) {
+                           .equalsIgnoreCase(answer_input)) {
                         answer = ans;
                         break;
                     }
@@ -308,7 +310,7 @@ public class Question implements QuestionIntf {
                         extras.put("requester", localAddress);
                     }
                 }
-                newQ = this.event("exception", "Wrong answer received", extras, responder, sessionKey);
+                newQ = this.event("exception", "Wrong answer received", extras, responder, session);
             }
             if (newQ != null) {
                 return newQ;
@@ -334,7 +336,6 @@ public class Question implements QuestionIntf {
         String url = answer.getCallback();
         // Check if answer.callback gives new question for this dialog
         if (url != null) {
-            Session session = Session.getSession(sessionKey);
             String parentSessionKey = null;
             String accountId = null;
             String ddrRecordId = null;
@@ -347,8 +348,8 @@ public class Question implements QuestionIntf {
                                                                                              sessionKey,
                                                                                              parentSessionKey);
             try {
+                url = ServerUtils.getURLWithQueryParams(url, askFastRequestQueryParams);
                 log.info(String.format("answerText: %s and answer: %s", answer_input, om.writeValueAsString(answer)));
-
                 String post = om.writeValueAsString(ans);
                 log.info("Going to send: " + post);
                 String newQuestionJSON = null;
@@ -357,8 +358,8 @@ public class Question implements QuestionIntf {
                 if (credentialsFromSession != null) {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
-                newQuestionJSON = client.post(post, url.replace(" ", URLEncoder.encode(" ", "UTF-8")), null,
-                                              askFastRequestQueryParams, true, sessionKey, accountId, ddrRecordId);
+                newQuestionJSON = client.post(post, url.replace(" ", URLEncoder.encode(" ", "UTF-8")), null, true,
+                                              sessionKey, accountId, ddrRecordId);
 
                 log.info("Received new question (answer): " + newQuestionJSON);
 
@@ -372,20 +373,21 @@ public class Question implements QuestionIntf {
             catch (ClientHandlerException ioe) {
                 log.severe(ioe.toString());
                 ioe.printStackTrace();
-                newQ = this.event("exception", "Unable to load question", null, responder, sessionKey);
+                newQ = this.event("exception", "Unable to load question", null, responder, session);
             }
             catch (Exception e) {
                 log.severe(e.toString());
-                newQ = this.event("exception", "Unable to parse question json", null, responder, sessionKey);
+                newQ = this.event("exception", "Unable to parse question json", null, responder, session);
             }
         }
         return newQ;
     }
 
-    public Question event(String eventType, String message, Object extras, String responder, String sessionKey) {
+    public Question event(String eventType, String message, Object extras, String responder, Session session) {
 
         log.info(String.format("Received: %s Message: %s Responder: %s Extras: %s", eventType, message, responder,
                                ServerUtils.serializeWithoutException(extras)));
+        String sessionKey = session != null ? session.getKey() : null;
         ArrayList<EventCallback> events = this.getEvent_callbacks();
         EventCallback eventCallback = null;
         if (events != null) {
@@ -415,7 +417,6 @@ public class Question implements QuestionIntf {
         if (url != null) {
             EventPost event = new EventPost(responder, this.getQuestion_id(), eventType, message, extras);
             AFHttpClient client = ParallelInit.getAFHttpClient();
-            Session session = Session.getSession(sessionKey);
             String parentSessionKey = null;
             String accountId = null;
             String ddrRecordId = null;
@@ -430,15 +431,14 @@ public class Question implements QuestionIntf {
                                                                                              sessionKey,
                                                                                              parentSessionKey);
             try {
-                url = ServerUtils.getURLWithQueryParams(url, "responder", responder);
-                url = appendParentSessionKeyToURL(sessionKey, url);
+                url = ServerUtils.getURLWithQueryParams(url, askFastRequestQueryParams);
                 String post = om.writeValueAsString(event);
                 String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
                 if (credentialsFromSession != null) {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
-                String eventResponse = client.post(post, url.replace(" ", URLEncoder.encode(" ", "UTF-8")), null,
-                                       askFastRequestQueryParams, true, sessionKey, accountId, ddrRecordId);
+                String eventResponse = client.post(post, url.replace(" ", URLEncoder.encode(" ", "UTF-8")), null, true,
+                                                   sessionKey, accountId, ddrRecordId);
                 log.info("Received new question (event: "+eventType+"): " + eventResponse);
 
                 if (eventResponse != null && !eventResponse.equals("")) {

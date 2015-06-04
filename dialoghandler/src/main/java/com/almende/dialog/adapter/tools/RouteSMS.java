@@ -11,8 +11,8 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.util.jackson.JOM;
 import com.almende.util.ParallelInit;
+import com.almende.util.jackson.JOM;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
@@ -105,7 +105,7 @@ public class RouteSMS {
         boolean validSenderId = isValidSenderId(fromName);
         String result = !validSenderId ? "1707" : null; //by default assign a result
         if (!ServerUtils.isInUnitTestingEnvironment()) {
-            result = afHttpClient.get(uriBuilder.build().toString());
+            result = afHttpClient.get(uriBuilder.build().toString()).getResponseBody();
         }
         else {
             result = result != null ? result : "";

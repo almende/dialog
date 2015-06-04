@@ -66,7 +66,7 @@ public class A_fields implements AnswerIntf {
         }
         String text = "";
         try {
-            text = client.get(url);
+            text = client.get(url).getResponseBody();
         }
         catch (Exception e) {
             log.severe(e.toString());

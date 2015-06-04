@@ -103,7 +103,7 @@ public class Question implements QuestionIntf {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
                 json = client.get(url.replace(" ", URLEncoder.encode(" ", "UTF-8")), true, sessionKey, accountId,
-                                  ddrRecordId);
+                                  ddrRecordId).getResponseBody();
             }
             catch (Exception e) {
                 log.severe(e.toString());
@@ -113,7 +113,7 @@ public class Question implements QuestionIntf {
                 while (questionReloadCounter.get(url) != null &&
                     questionReloadCounter.get(url) < DEFAULT_MAX_QUESTION_LOAD) {
                     try {
-                        json = client.get(url, true, sessionKey, accountId, ddrRecordId);
+                        json = client.get(url, true, sessionKey, accountId, ddrRecordId).getResponseBody();
                         break;
                     }
                     catch (Exception ex) {
@@ -359,7 +359,7 @@ public class Question implements QuestionIntf {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
                 newQuestionJSON = client.post(post, url.replace(" ", URLEncoder.encode(" ", "UTF-8")), null, true,
-                                              sessionKey, accountId, ddrRecordId);
+                                              sessionKey, accountId, ddrRecordId).getResponseBody();
 
                 log.info("Received new question (answer): " + newQuestionJSON);
 
@@ -438,7 +438,7 @@ public class Question implements QuestionIntf {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
                 String eventResponse = client.post(post, url.replace(" ", URLEncoder.encode(" ", "UTF-8")), null, true,
-                                                   sessionKey, accountId, ddrRecordId);
+                                                   sessionKey, accountId, ddrRecordId).getResponseBody();
                 log.info("Received new question (event: "+eventType+"): " + eventResponse);
 
                 if (eventResponse != null && !eventResponse.equals("")) {

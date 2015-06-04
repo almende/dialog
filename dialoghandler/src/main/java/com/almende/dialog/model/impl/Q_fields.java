@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Logger;
-
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
@@ -73,7 +72,7 @@ public class Q_fields implements QuestionIntf {
                     if (credentialsFromSession != null) {
                         client.addBasicAuthorizationHeader(credentialsFromSession);
                     }
-                    text = client.get(url);
+                    text = client.get(url).getResponseBody();
                 }
                 catch (Exception e) {
                     log.severe(e.toString());
@@ -162,7 +161,7 @@ public class Q_fields implements QuestionIntf {
             if (credentialsFromSession != null) {
                 client.addBasicAuthorizationHeader(credentialsFromSession);
             }
-            text = client.get(url);
+            text = client.get(url).getResponseBody();
         }
         catch (Exception e) {
             log.severe(e.toString());

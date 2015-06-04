@@ -278,7 +278,7 @@ public class Dialog implements DialogInterface {
      * @throws URISyntaxException 
      */
     @JsonIgnore
-    public String getQuestionFromDialog(Map<String, String> queryParams) throws IOException, URISyntaxException {
+    public String getQuestionFromDialog(Map<String, String> queryParams) throws Exception {
 
         AFHttpClient client = ParallelInit.getAFHttpClient();
         if (Boolean.TRUE.equals(useBasicAuth)) {
@@ -290,7 +290,7 @@ public class Dialog implements DialogInterface {
                 uriBuilder.addParameter(query, queryParams.get(query));
             }
         }
-        return client.get(uriBuilder.build().toString());
+        return client.get(uriBuilder.build().toString()).getResponseBody();
     }
 
     @JsonIgnore

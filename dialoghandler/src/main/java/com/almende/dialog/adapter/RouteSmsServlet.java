@@ -326,9 +326,9 @@ public class RouteSmsServlet extends TextServlet {
             AFHttpClient client = ParallelInit.getAFHttpClient();
             switch (method) {
                 case GET:
-                    return client.get(host);
+                    return client.get(host).getResponseBody();
                 case POST:
-                    return client.post(payload, host);
+                    return client.post(payload, host).getResponseBody();
                 default:
                     throw new NotFoundException(String.format("METHOD %s not implemented", method));
             }

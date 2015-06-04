@@ -24,7 +24,7 @@ public class AFHttpClient {
         client.networkInterceptors().add(new UserAgentInterceptor("ASK-Fast/1.0"));
     }
 
-    public String get(String url) throws IOException {
+    public ResponseLog get(String url) throws Exception {
 
         return get(url, false, null, null, null);
     }
@@ -38,8 +38,8 @@ public class AFHttpClient {
      * @return
      * @throws IOException
      */
-    public String get(String url, boolean createLog, String sessionKey, String accountId, String ddrRecordId)
-        throws IOException {
+    public ResponseLog get(String url, boolean createLog, String sessionKey, String accountId, String ddrRecordId)
+        throws Exception {
 
         long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
         Request request = getBuilderWIthBasicAuthHeader(url).build();
@@ -53,25 +53,25 @@ public class AFHttpClient {
             responseLog = new ResponseLog();
             Long responseTimestamp = TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp;
             responseLog.setHttpResponseTime(responseTimestamp.intValue());
-            responseLog.setResponseBody(ex.toString());
+            responseLog.setResponseBody(ex.getLocalizedMessage());
             responseLog.setHttpCode(-1);
         }
         if (createLog && sessionKey != null) {
             RequestLog requestLog = new RequestLog(request);
-            ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
-                                                    response.isSuccessful());
-            //the response connection might be closed. So response.body.string() isnt accessible 
-            return responseLog.getResponseBody();
+            if (!ServerUtils.isInUnitTestingEnvironment()) {
+                ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
+                                                        response.isSuccessful());
+            }
         }
-        return response.body().string();
+        return responseLog;
     }
 
-    public String post(String json, String url) throws IOException {
+    public ResponseLog post(String json, String url) throws Exception {
 
         return post(json, url, null);
     }
 
-    public String post(String json, String url, String type) throws IOException {
+    public ResponseLog post(String json, String url, String type) throws Exception {
 
         return post(json, url, type, false, null, null, null);
     }
@@ -90,8 +90,8 @@ public class AFHttpClient {
      * @return
      * @throws IOException
      */
-    public String post(String json, String url, String type, boolean createLog, String sessionKey, String accountId,
-        String ddrRecordId) throws IOException {
+    public ResponseLog post(String json, String url, String type, boolean createLog, String sessionKey, String accountId,
+        String ddrRecordId) throws Exception {
 
         if (type == null) {
             type = "application/json";
@@ -117,10 +117,8 @@ public class AFHttpClient {
             RequestLog requestLog = new RequestLog(request);
             ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
                                                     response.isSuccessful());
-            //the response connection might be closed. So response.body.string() isnt accessible 
-            return responseLog.getResponseBody();
         }
-        return response.body().string();
+        return responseLog;
     }
 
     /**
@@ -137,8 +135,8 @@ public class AFHttpClient {
      * @return
      * @throws IOException
      */
-    public String put(String json, String url, String type, boolean createLog, String sessionKey, String accountId,
-        String ddrRecordId) throws IOException {
+    public ResponseLog put(String json, String url, String type, boolean createLog, String sessionKey, String accountId,
+        String ddrRecordId) throws Exception {
 
         if (type == null) {
             type = "application/json";
@@ -164,13 +162,11 @@ public class AFHttpClient {
             RequestLog requestLog = new RequestLog(request);
             ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
                                                     response.isSuccessful());
-            //the response connection might be closed. So response.body.string() isnt accessible 
-            return responseLog.getResponseBody();
         }
-        return response.body().string();
+        return responseLog;
     }
 
-    public String put(String json, String url, String type) throws IOException {
+    public ResponseLog put(String json, String url, String type) throws Exception {
 
         return put(json, url, type, false, null, null, null);
     }

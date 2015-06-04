@@ -45,8 +45,10 @@ public class AFHttpClient {
         Request request = getBuilderWIthBasicAuthHeader(url).build();
         Response response = null;
         ResponseLog responseLog = null;
+        boolean isSuccess = false;
         try {
             response = client.newCall(request).execute();
+            isSuccess = response != null ? response.isSuccessful() : false;
             responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
         }
         catch (Exception ex) {
@@ -60,7 +62,7 @@ public class AFHttpClient {
             RequestLog requestLog = new RequestLog(request);
             if (!ServerUtils.isInUnitTestingEnvironment()) {
                 ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
-                                                        response.isSuccessful());
+                                                        isSuccess);
             }
         }
         return responseLog;
@@ -102,8 +104,10 @@ public class AFHttpClient {
         Request request = getBuilderWIthBasicAuthHeader(url).post(body).build();
         Response response = null;
         ResponseLog responseLog = null;
+        boolean isSuccess = false;
         try {
             response = client.newCall(request).execute();
+            isSuccess = response != null ? response.isSuccessful() : false;
             responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
         }
         catch (Exception ex) {
@@ -116,7 +120,7 @@ public class AFHttpClient {
         if (createLog && sessionKey != null) {
             RequestLog requestLog = new RequestLog(request);
             ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
-                                                    response.isSuccessful());
+                                                    isSuccess);
         }
         return responseLog;
     }
@@ -147,8 +151,10 @@ public class AFHttpClient {
         Request request = getBuilderWIthBasicAuthHeader(url).put(body).build();
         Response response = null;
         ResponseLog responseLog = null;
+        boolean isSuccess = false;
         try {
             response = client.newCall(request).execute();
+            isSuccess = response != null ? response.isSuccessful() : false;
             responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
         }
         catch (Exception ex) {
@@ -161,7 +167,7 @@ public class AFHttpClient {
         if (createLog && sessionKey != null) {
             RequestLog requestLog = new RequestLog(request);
             ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
-                                                    response.isSuccessful());
+                                                    isSuccess);
         }
         return responseLog;
     }

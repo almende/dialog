@@ -106,6 +106,7 @@ public class Question implements QuestionIntf {
                                   ddrRecordId).getResponseBody();
             }
             catch (Exception e) {
+                e.printStackTrace();
                 log.severe(e.toString());
                 if (questionReloadCounter.get(url) == null) {
                     questionReloadCounter.put(url, 0);

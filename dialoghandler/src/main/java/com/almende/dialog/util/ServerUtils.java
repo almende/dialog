@@ -361,11 +361,13 @@ public class ServerUtils
             serviceProvider = ttsInfo.getProvider() != null ? ttsInfo.getProvider().name() : null;
             format = ttsInfo.getFormat();
             ttsAccountId = ttsInfo.getTtsAccountId();
-            
-            if (ttsAccountId != null && !TTSProvider.VOICE_RSS.equals(ttsInfo.getProvider())) {
 
-                if (session != null) {
-                    accountId = session.getAccountId();
+            textForSpeech = textForSpeech.replace("text://", "");
+            
+            //VOice rss is a free service. No charges are applied.
+            if (!TTSProvider.VOICE_RSS.equals(ttsInfo.getProvider())) {
+                //apply a tts processing service change if the ttsAccountId is given
+                if (ttsAccountId != null) {
                     try {
                         DDRUtils.createDDRForTTSService(ttsInfo.getProvider(), ttsAccountId, session, true);
                     }
@@ -374,10 +376,14 @@ public class ServerUtils
                         log.severe("Applying service charge for TTS processing failed.");
                     }
                 }
+                //create a tts cost, as it is using ASK-Fast account tts processing
+                else {
+                    //create a ddr record for tts
+                    DDRUtils.createDDRForTTS(session != null ? session.getRemoteAddress() : null, session, ttsInfo,
+                                             textForSpeech);
+                }
             }
         }
-        textForSpeech = textForSpeech.replace("text://", "");
-
         String url = "http://tts.ask-fast.com/api/parse";
         try {
             url = ServerUtils.getURLWithQueryParams(url, "text", textForSpeech);

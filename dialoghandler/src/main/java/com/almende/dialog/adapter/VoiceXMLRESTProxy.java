@@ -65,6 +65,7 @@ import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
+import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
@@ -385,9 +386,8 @@ public class VoiceXMLRESTProxy {
             }
             if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
                 TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
+                ttsInfo.setProvider(TTSProvider.VOICE_RSS);
                 String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
-                //create a ddr record for tts
-                DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
                 String ttsurl = ServerUtils.getTTSURL(ttsInfo, insufficientCreditMessage, session);
                 return Response.ok(renderExitQuestion(Arrays.asList(ttsurl), session.getKey())).build();
             }
@@ -1795,9 +1795,6 @@ public class VoiceXMLRESTProxy {
             for (String prompt : res.prompts) {
                 if (!prompt.startsWith("dtmfKey://")) {
                     if (!prompt.endsWith(".wav")) {
-                        //create a ddr record for tts
-                        DDRUtils.createDDRForTTS(session != null ? session.getRemoteAddress() : null, session, ttsInfo,
-                                                 prompt);
                         promptsCopy.add(ServerUtils.getTTSURL(ttsInfo, prompt, session));
                     }
                     else {
@@ -1834,9 +1831,8 @@ public class VoiceXMLRESTProxy {
 
         if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
             TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
+            ttsInfo.setProvider(TTSProvider.VOICE_RSS);
             String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
-            //create a ddr record for tts
-            DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
             String ttsurl = ServerUtils.getTTSURL(ttsInfo, insufficientCreditMessage, session);
             return renderExitQuestion(Arrays.asList(ttsurl), session.getKey());
         }

@@ -42,9 +42,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
-import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
-import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.twilio.sdk.TwilioRestClient;
@@ -290,10 +288,8 @@ public class TwilioAdapter {
             
             TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
             String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
-            //create a ddr record for tts
-            DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
             return Response.ok(renderExitQuestion(question, Arrays.asList(insufficientCreditMessage), session.getKey()))
-                                            .build();
+                           .build();
         }
         // Check if we were able to load a question
         if (question == null) {
@@ -1207,23 +1203,16 @@ public class TwilioAdapter {
                 Verb verbToAppend = null;
                 if (prompt.startsWith("http")) {
                     // Replace all the & with &amp; because of xml validity
-                    prompt = prompt.replace( "&", "&amp;" );
+                    prompt = prompt.replace("&", "&amp;");
                     verbToAppend = new Play(prompt);
                 }
                 else {
-                    if (ttsInfo != null && TTSProvider.ACAPELA.equals(ttsInfo.getProvider())) {
-                        DDRUtils.createDDRForTTS(session != null ? session.getRemoteAddress() : null, session, ttsInfo,
-                                                 prompt);
-                        String url = ServerUtils.getTTSURL(ttsInfo, prompt, session);
-                        url = url.replace( "&", "&amp;" );
-                        verbToAppend = new Play(url);
-                    } else {
-                        
+                    if (ttsInfo != null) {
+
                         Say say = new Say(prompt.replace("text://", ""));
-                        say.setLanguage(Language.DUTCH.getCode());
+                        say.setLanguage(ttsInfo.getLanguage().getCode());
                         verbToAppend = say;
-                        
-                        if(ttsInfo!=null) {
+                        if (ttsInfo != null) {
                             say.setLanguage(ttsInfo.getLanguage().getCode());
                         }
                     }
@@ -1302,8 +1291,6 @@ public class TwilioAdapter {
 
                                     TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
                                     String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
-                                    //create a ddr record for tts
-                                    DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
                                     return Response.ok(renderExitQuestion(null,
                                                                           Arrays.asList(insufficientCreditMessage),
                                                                           session.getKey())).build();
@@ -1485,9 +1472,6 @@ public class TwilioAdapter {
             for (String prompt : res.prompts) {
                 if (!prompt.startsWith("dtmfKey://")) {
                     if (!prompt.endsWith(".wav")) {
-                        //create a ddr record for tts
-                        DDRUtils.createDDRForTTS(session != null ? session.getRemoteAddress() : null, session, ttsInfo,
-                                                 prompt);
                         promptsCopy.add(ServerUtils.getTTSURL(ttsInfo, prompt, session));
                     }
                     else {

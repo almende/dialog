@@ -3,6 +3,7 @@ package com.almende.dialog.agent;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
+import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.protocol.jsonrpc.annotation.Access;
 import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
@@ -29,7 +30,11 @@ public class LoggerProxyAgent extends Agent {
         @Name("sessionKey") String sessionKey, @Name("accountId") String accountId,
         @Name("ddrRecordId") @Optional String ddrRecordId, @Name("isSuccessful") @Optional Boolean isSuccessful) {
 
-        return getLoggerAgentInterface().createLog(request, response, sessionKey, accountId, ddrRecordId, isSuccessful);
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            return getLoggerAgentInterface().createLog(request, response, sessionKey, accountId, ddrRecordId,
+                                                       isSuccessful);
+        }
+        return null;
     }
 
     public ArrayList<HttpLog> getLogs(@Name("id") @Optional String logId, @Name("accountId") String accountId,

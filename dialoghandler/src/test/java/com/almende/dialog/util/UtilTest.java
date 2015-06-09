@@ -1,7 +1,12 @@
 package com.almende.dialog.util;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
@@ -49,5 +54,18 @@ public class UtilTest extends TestFramework {
         Assert.assertThat(response.getHttpResponseTime(), Matchers.instanceOf(Integer.class));
         Assert.assertThat(response.getHttpResponseTime(), Matchers.notNullValue());
         Assert.assertThat(response.getHeaders().isEmpty(), Matchers.is(false));
+    }
+    
+    @Test
+    public void splitTest() {
+        List<String> keys = Arrays.asList("A", "B", "C");
+        String test = " [[A]] > 2 && ([[B]] + [[C]] > 2) ";
+        Pattern compile = Pattern.compile("\\[\\[(.+?)\\]\\]");
+        Matcher matcher = compile.matcher(test);
+        List<String> result = new ArrayList<String>();
+        while (matcher.find()) {
+            result.add(matcher.group().replace("[[", "").replace("]]", ""));
+        }
+        Assert.assertArrayEquals(result.toArray(), keys.toArray());
     }
 }

@@ -303,8 +303,6 @@ public class CMServletIT extends TestFramework {
         //check that there are logs formed with shared account
         ddrRecords = DDRRecord.getDDRRecords(null, TEST_PRIVATE_KEY, null, null, null, null, null, null, null, null);
         assertTrue(ddrRecords.size() > 0);
-        logs = Logger.find(TEST_PRIVATE_KEY, null, null, null, null, null, null, null);
-        assertTrue(logs.size() > 0);
     }
     
     /**

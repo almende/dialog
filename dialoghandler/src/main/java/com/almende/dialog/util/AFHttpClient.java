@@ -60,10 +60,8 @@ public class AFHttpClient {
         }
         if (createLog && sessionKey != null) {
             RequestLog requestLog = new RequestLog(request);
-            if (!ServerUtils.isInUnitTestingEnvironment()) {
-                ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
-                                                        isSuccess);
-            }
+            ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
+                                                    isSuccess);
         }
         return responseLog;
     }

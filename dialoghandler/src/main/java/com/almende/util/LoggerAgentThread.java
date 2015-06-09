@@ -46,7 +46,7 @@ public class LoggerAgentThread extends Thread {
         if (servletContext != null) {
             eveFileStream = servletContext.getResourceAsStream("/WEB-INF/" + HTTP_LOGGER_EVE_PATH);
         }
-        else {
+        if (eveFileStream == null) {
             String eveLoggerPath = System.getProperty("user.dir") + "/src/main/webapp/WEB-INF/" + HTTP_LOGGER_EVE_PATH;
             log.info("eve logger path: " + eveLoggerPath);
             eveFileStream = new FileInputStream(new File(eveLoggerPath));

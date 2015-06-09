@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.logging.Logger;
-
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.InternetHeaders;
@@ -16,7 +15,6 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.custommonkey.xmlunit.XMLTestCase;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.eclipse.jetty.server.Server;
@@ -25,7 +23,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.experimental.categories.Category;
 import org.w3c.dom.Document;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DDRRecordAgent;
@@ -68,15 +65,11 @@ public class TestFramework
     public void setup() throws Exception {
 
         TestServlet.TEST_SERVLET_PATH = TestFramework.host + "/unitTestServlet";
-        new ParallelInit(true);
+        ParallelInit.isTest = true;
         ParallelInit.getDatastore();
         if (ParallelInit.datastore != null) {
             ParallelInit.datastore.dropDatabase();
         }
-        DialogAgent dialogAgent = new DialogAgent();
-        dialogAgent.setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.CM);
-        dialogAgent.setDefaultProviderSettings(AdapterType.CALL, AdapterProviders.BROADSOFT);
-        
         //check if server has to be started
         Category integrationTestAnnotation = getClass().getAnnotation(Category.class);
         if (integrationTestAnnotation != null &&
@@ -84,6 +77,9 @@ public class TestFramework
 
             startJettyServer();
         }
+        DialogAgent dialogAgent = new DialogAgent();
+        dialogAgent.setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.CM);
+        dialogAgent.setDefaultProviderSettings(AdapterType.CALL, AdapterProviders.BROADSOFT);
     }
     
     @After

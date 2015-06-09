@@ -14,7 +14,6 @@ import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
-import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -277,9 +276,6 @@ public class ServerUtils
             else if(config != null && Status.ACTIVE.equals(config.getStatus())) {
                 return true;
             }
-            dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
-                          String.format("Not enough credits to start communication from: %s to: %s",
-                                        session.getLocalAddress(), session.getRemoteAddress()), session);
             session.drop();
             return false;
         }
@@ -378,7 +374,6 @@ public class ServerUtils
                 }
                 //create a tts cost, as it is using ASK-Fast account tts processing
                 else {
-                    //create a ddr record for tts
                     DDRUtils.createDDRForTTS(session != null ? session.getRemoteAddress() : null, session, ttsInfo,
                                              textForSpeech);
                 }

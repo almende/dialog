@@ -34,6 +34,7 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
+import com.almende.util.DatastoreThread;
 import com.almende.util.ParallelInit;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.Status;
@@ -66,8 +67,8 @@ public class TestFramework
 
         TestServlet.TEST_SERVLET_PATH = TestFramework.host + "/unitTestServlet";
         ParallelInit.isTest = true;
-        ParallelInit.getDatastore();
-        if (ParallelInit.datastore != null) {
+        ParallelInit.datastoreThread = new DatastoreThread(true);
+        if (ParallelInit.getDatastore() != null) {
             ParallelInit.datastore.dropDatabase();
         }
         //check if server has to be started

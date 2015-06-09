@@ -13,6 +13,7 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
+import com.askfast.commons.intf.LoggerAgentInterface;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -57,36 +58,84 @@ public class Logger {
         this.log(LogLevel.WARNING, adapter, message, session);
     }
 
+    /**
+     * @deprecated As the new {@link LoggerAgentInterface} microservice agent is used to log HTTP requests.
+     * @param adapterID
+     * @param message
+     * @param ddrRecordId
+     * @param sessionKey
+     */
     public void info(String adapterID, String message, String ddrRecordId, String sessionKey) {
 
         info(adapterID, null, message, ddrRecordId, sessionKey);
     }
 
+    /**
+     * @deprecated As the new {@link LoggerAgentInterface} microservice agent is used to log HTTP requests.
+     * @param adapterID
+     * @param adapterType
+     * @param message
+     * @param ddrRecordId
+     * @param sessionKey
+     */
     public void info(String adapterID, String adapterType, String message, String ddrRecordId, String sessionKey) {
 
         this.log(LogLevel.INFO, adapterID, adapterType, message, ddrRecordId, sessionKey);
     }
 
+    /**
+     * @deprecated As the new {@link LoggerAgentInterface} microservice agent is used to log HTTP requests.
+     * @param adapter
+     * @param message
+     * @param session
+     */
     public void info(AdapterConfig adapter, String message, Session session) {
 
         this.log(LogLevel.INFO, adapter, message, session);
     }
     
+    /**
+     * @deprecated As the new {@link LoggerAgentInterface} microservice agent is used to log HTTP requests.
+     * @param adapter
+     * @param ddrRecord
+     * @param session
+     */
     public void ddr(AdapterConfig adapter, DDRRecord ddrRecord, Session session) {
 
         this.log(LogLevel.DDR, adapter, ServerUtils.serializeWithoutException(ddrRecord), session);
     }
 
+    /**
+     * @deprecated As the new {@link LoggerAgentInterface} microservice agent is used to log HTTP requests.
+     * @param adapterID
+     * @param message
+     * @param ddrRecordId
+     * @param sessionKey
+     */
     public void debug(String adapterID, String message, String ddrRecordId, String sessionKey) {
 
         debug(adapterID, null, message, ddrRecordId, sessionKey);
     }
 
+    /**
+     * @deprecated As the new {@link LoggerAgentInterface} microservice agent is used to log HTTP requests.
+     * @param adapterID
+     * @param adapterType
+     * @param message
+     * @param ddrRecordId
+     * @param sessionKey
+     */
     public void debug(String adapterID, String adapterType, String message, String ddrRecordId, String sessionKey) {
 
         this.log(LogLevel.DEBUG, adapterID, adapterType, message, ddrRecordId, sessionKey);
     }
 
+    /**
+     * @deprecated As the new {@link LoggerAgentInterface} microservice agent is used to log HTTP requests.
+     * @param adapter
+     * @param message
+     * @param session
+     */
     public void debug(AdapterConfig adapter, String message, Session session) {
 
         this.log(LogLevel.DEBUG, adapter, message, session);
@@ -95,7 +144,7 @@ public class Logger {
     /**
      * Logs something only if a session and a trackingToken is found
      * corresponding to the sessionKey
-     * 
+     * @deprecated As the new {@link LoggerAgentInterface} microservice agent is used to log HTTP requests.
      * @param level
      * @param adapterId
      * @param adapterType
@@ -106,7 +155,8 @@ public class Logger {
     public void log(LogLevel level, String adapterId, String adapterType, String message, String ddrRecordId,
         String sessionKey) {
 
-        if (sessionKey != null) {
+        if (sessionKey != null && (LogLevel.SEVERE.equals(level) || LogLevel.WARNING.equals(level))) {
+            
             Log devLog = new Log(level, adapterId, adapterType, message, ddrRecordId, sessionKey);
             if (devLog.getSessionKey() != null) {
                 MongoCollection collection = getCollection();
@@ -116,7 +166,9 @@ public class Logger {
     }
 
     /**
-     * Logs something only if a session and a trackingToken is found in the session
+     * @deprecated As the new {@link LoggerAgentInterface} microservice agent is
+     *             used to log HTTP requests. Logs something only if a session
+     *             and a trackingToken is found in the session
      * @param level
      * @param adapter
      * @param message
@@ -124,7 +176,9 @@ public class Logger {
      */
     public void log(LogLevel level, AdapterConfig adapter, String message, Session session) {
 
-        if (session != null && session.getTrackingToken() != null) {
+        if (session != null && session.getTrackingToken() != null &&
+            (LogLevel.SEVERE.equals(level) || LogLevel.WARNING.equals(level))) {
+            
             MongoCollection collection = getCollection();
             Log devLog = new Log(level, adapter, message, session);
             collection.insert(devLog);

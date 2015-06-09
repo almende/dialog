@@ -38,7 +38,6 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.sim.TwilioSimulator;
-import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
@@ -287,6 +286,8 @@ public class TwilioAdapterIT extends TestFramework {
 
         TTSInfo ttsInfo = new TTSInfo();
         ttsInfo.setProvider(TTSProvider.ACAPELA);
+        String ttsAccountId = UUID.randomUUID().toString();
+        ttsInfo.setTtsAccountId(ttsAccountId);
         ttsInfo.setVoiceUsed("testtest");
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
@@ -332,6 +333,10 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
                 continue;
             }
+            else if (queryParams.getName().equals("id")) {
+                assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
@@ -351,6 +356,8 @@ public class TwilioAdapterIT extends TestFramework {
         TTSInfo ttsInfo = new TTSInfo();
         ttsInfo.setProvider(TTSProvider.ACAPELA);
         ttsInfo.setVoiceUsed("testtest");
+        String ttsAccountId = UUID.randomUUID().toString();
+        ttsInfo.setTtsAccountId(ttsAccountId);
         ttsInfo.setSpeed("0");
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
@@ -396,8 +403,111 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
                 continue;
             }
+            else if (queryParams.getName().equals("id")) {
+                assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
+    }
+    
+    @Test
+    public void inboundPhoneCall_ForTTSServiceCostProcessingTest() throws Exception {
+        phoneCall_ForTTSServiceCostProcessingTest("inbound");
+    }
+    
+    @Test
+    public void outboundPhoneCall_ForTTSServiceCostProcessingTest() throws Exception {
+        phoneCall_ForTTSServiceCostProcessingTest("outbound");
+    }
+    
+    /**
+     * This test is to check if tts service charges are attached to the inbound
+     * functionality when the ttsAccountId is found. No tts costs must be seen
+     * 
+     * @throws Exception
+     */
+    public void phoneCall_ForTTSServiceCostProcessingTest(String direction) throws Exception {
+
+        DDRRecordAgent ddrRecordAgent = new DDRRecordAgent();
+        ddrRecordAgent.createDDRPriceWithNewDDRType("TTS service costs", DDRTypeCategory.TTS_SERVICE_COST.name(), null,
+                                                    null, 0.01, null, null, null, null, null, null, null);
+        ddrRecordAgent.createDDRPriceWithNewDDRType("TTS service costs", DDRTypeCategory.TTS_COST.name(), null, null,
+                                                    0.01, null, null, null, null, null, null, null);
+        
+        String ttsAccountId = UUID.randomUUID().toString();
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setProvider(TTSProvider.ACAPELA);
+        ttsInfo.setVoiceUsed("testtest");
+        ttsInfo.setTtsAccountId(ttsAccountId);
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        String message = "How are you doing? today";
+        url = ServerUtils.getURLWithQueryParams(url, "question", message);
+        Response securedDialogResponse = performSecuredInboundCall(direction, "testuserName", "testpassword", ttsInfo,
+                                                                   url);
+        assertTrue(securedDialogResponse != null);
+        //check if ddr is created for ttsprocessing
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        int ttsServiceChargesAttached = 0;
+        for (DDRRecord ddrRecord : ddrRecords) {
+            Assert.assertFalse(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_COST));
+            if (ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_SERVICE_COST)) {
+                ttsServiceChargesAttached++;
+            }
+        }
+        assertEquals(1, ttsServiceChargesAttached);
+    }
+    
+    @Test
+    public void inboundPhoneCall_ForTTSCostProcessingTest() throws Exception {
+        phoneCall_ForTTSCostProcessingTest("inbound");
+    }
+    
+    @Test
+    public void outboundPhoneCall_ForTTSCostProcessingTest() throws Exception {
+        phoneCall_ForTTSCostProcessingTest("outbound");
+    }
+    
+    /**
+     * This test is to check if tts charges are attached to the inbound
+     * functionality when the ttsAccountId is not found. No tts service costs
+     * must be seen
+     * 
+     * @throws Exception
+     */
+    public void phoneCall_ForTTSCostProcessingTest(String direction) throws Exception {
+
+        DDRRecordAgent ddrRecordAgent = new DDRRecordAgent();
+        ddrRecordAgent.createDDRPriceWithNewDDRType("TTS service costs", DDRTypeCategory.TTS_SERVICE_COST.name(), null,
+                                                    null, 0.01, null, null, null, null, null, null, null);
+        ddrRecordAgent.createDDRPriceWithNewDDRType("TTS service costs", DDRTypeCategory.TTS_COST.name(), null, null,
+                                                    0.01, null, null, null, null, null, null, null);
+
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setProvider(TTSProvider.ACAPELA);
+        ttsInfo.setVoiceUsed("testtest");
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        String message = "How are you doing? today";
+        url = ServerUtils.getURLWithQueryParams(url, "question", message);
+        Response securedDialogResponse = performSecuredInboundCall("inbound", "testuserName", "testpassword", ttsInfo,
+                                                                   url);
+        assertTrue(securedDialogResponse != null);
+        //check if ddr is created for ttsprocessing
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        int ttsChargesAttached = 0;
+        for (DDRRecord ddrRecord : ddrRecords) {
+            Assert.assertFalse(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_SERVICE_COST));
+            if (ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_COST)) {
+                ttsChargesAttached++;
+            }
+        }
+        assertEquals(1, ttsChargesAttached);
     }
 
     /**
@@ -416,6 +526,8 @@ public class TwilioAdapterIT extends TestFramework {
         ttsInfo.setProvider(TTSProvider.ACAPELA);
         ttsInfo.setVoiceUsed("testtest");
         ttsInfo.setSpeed("0");
+        String ttsAccountId = UUID.randomUUID().toString();
+        ttsInfo.setTtsAccountId(ttsAccountId);
         ttsInfo.setLanguage(Language.ENGLISH_UNITEDSTATES);
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
@@ -461,6 +573,10 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
                 continue;
             }
+            else if (queryParams.getName().equals("id")) {
+                assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
@@ -481,6 +597,8 @@ public class TwilioAdapterIT extends TestFramework {
         ttsInfo.setProvider(TTSProvider.ACAPELA);
         ttsInfo.setVoiceUsed("testtest");
         ttsInfo.setSpeed("0");
+        String ttsAccountId = UUID.randomUUID().toString();
+        ttsInfo.setTtsAccountId(ttsAccountId);
         ttsInfo.setLanguage(Language.DUTCH);
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
@@ -527,6 +645,10 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
                 continue;
             }
+            else if (queryParams.getName().equals("id")) {
+                assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
@@ -542,15 +664,16 @@ public class TwilioAdapterIT extends TestFramework {
 
         //create a ddrPrice
         createTestDDRPrice(DDRTypeCategory.TTS_COST, 0.1, "ddr price for tts", UnitType.PART, null, null);
+        createTestDDRPrice(DDRTypeCategory.TTS_SERVICE_COST, 0.01, "ddr price for tts service", UnitType.PART, null,
+                           null);
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
-        DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
+        DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_SERVICE_COST);
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, ddrType.getTypeId(), null,
                                                              null, null, null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         ddrRecord.setShouldGenerateCosts(true);
-        assertThat(ddrRecord.getTotalCost(),
-                   Matchers.is(DDRUtils.getCeilingAtPrecision(0.1 * TEST_MESSAGE.length(), 3)));
+        assertThat(ddrRecord.getTotalCost(), Matchers.is(0.01));
     }
 
     /**

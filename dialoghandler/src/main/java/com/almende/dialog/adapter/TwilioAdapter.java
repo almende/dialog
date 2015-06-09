@@ -43,6 +43,7 @@ import com.almende.dialog.util.TimeUtils;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.TTSInfo;
+import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.twilio.sdk.TwilioRestClient;
@@ -1471,7 +1472,10 @@ public class TwilioAdapter {
             TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
             for (String prompt : res.prompts) {
                 if (!prompt.startsWith("dtmfKey://")) {
-                    if (!prompt.endsWith(".wav")) {
+                    //do not format the url to tts if voicerss is given
+                    if (!prompt.endsWith(".wav") && ttsInfo.getProvider() != null &&
+                        !TTSProvider.VOICE_RSS.equals(ttsInfo.getProvider())) {
+
                         promptsCopy.add(ServerUtils.getTTSURL(ttsInfo, prompt, session));
                     }
                     else {

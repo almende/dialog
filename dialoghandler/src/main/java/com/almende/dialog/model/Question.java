@@ -227,7 +227,7 @@ public class Question implements QuestionIntf {
             }
         }
         //just get the next question if its a comment, referral or an exit question
-        else if (Arrays.asList("comment", "referral").contains(getType())) {
+        else if (Arrays.asList("comment", "referral", "conference").contains(getType())) {
             if (this.getAnswers() == null || this.getAnswers().size() == 0) {
                 return null;
             }

@@ -337,6 +337,22 @@ public class ServerUtils
      * @param contentType
      * @return
      */
+    public static String getTTSURL(String textForSpeech, Question question, Session session) {
+
+        TTSInfo ttsInfoFromSession = getTTSInfoFromSession(question, session);
+        return getTTSURL(ttsInfoFromSession, textForSpeech, session);
+    }
+    
+    /**
+     * returns the TTS URL from tts.ask-fast
+     * 
+     * @param ttsInfo
+     * 
+     * @param textForSpeech
+     * @param language
+     * @param contentType
+     * @return
+     */
     public static String getTTSURL(TTSInfo ttsInfo, String textForSpeech, Session session) {
 
         String language = Language.getByValue(null).getCode();
@@ -379,7 +395,7 @@ public class ServerUtils
                 }
             }
         }
-        String url = "http://tts.ask-fast.com/api/parse";
+        String url = Settings.TTS_ENDPOINT;
         try {
             url = ServerUtils.getURLWithQueryParams(url, "text", textForSpeech);
             url = ServerUtils.getURLWithQueryParams(url, "lang", language);

@@ -141,13 +141,13 @@ public class TwilioAdapterIT extends TestFramework {
 
         //answer the preconnect with the ignore reply
         Response answer = twilioAdapter.answer(null, "2", adapterConfig.getMyAddress(), remoteAddressVoice,
-                                               "outbound-dial", null, null, null, testCallId1);
+                                               "outbound-dial", null, null, null, testCallId1, null);
         assertEquals("<Response><Say language=\"nl-nl\">You chose 2</Say><Hangup></Hangup></Response>".toLowerCase(),
                      answer.getEntity().toString().toLowerCase());
 
         //mock new redirect call to the second number
         answer = twilioAdapter.answer(null, null, adapterConfig.getMyAddress(), inboundAddress, "inbound", null, null,
-                                      null, testCallId);
+                                      null, testCallId, null);
 
         //a new referral session must have been created from testCallId as the parent external sessionId
         Session sessionFromParentExternalId = Session.getSessionFromParentExternalId(testCallId2,
@@ -173,7 +173,7 @@ public class TwilioAdapterIT extends TestFramework {
                                           preconnect.getEntity().toString());
 
         answer = twilioAdapter.answer(null, "1", adapterConfig.getMyAddress(), inboundAddress, "inbound", null, null,
-                                      null, testCallId2);
+                                      null, testCallId2, null);
         assertXMLGeneratedByTwilioLibrary("<Response><Say language=\"nl-nl\">You chose 1</Say></Response>",
                                           answer.getEntity().toString());
     }

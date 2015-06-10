@@ -33,6 +33,7 @@ public class Session{
     public static final String PARENT_SESSION_KEY = "parentSessionKey";
     public static final String CHILD_SESSION_KEY = "childSessionKey";
     public static final String TRACKING_TOKEN_KEY = "trackingToken";
+    public static final String EXTERNAL_CONFERENCE_KEY = "conferenceKey";
     /**
      * Tag used by calling adapters to mark it in the session if a call is
      * picked up or not. If there is a preconnect on the callee's end, then its
@@ -403,6 +404,7 @@ public class Session{
         extrasCopy.remove(AdapterConfig.XSI_USER_KEY);
         extrasCopy.remove(AdapterConfig.XSI_PASSWORD_KEY);
         extrasCopy.remove(DialogAgent.BEARER_TOKEN_KEY);
+        extrasCopy.remove(Session.EXTERNAL_CONFERENCE_KEY);
         return extrasCopy;
     }
     
@@ -846,6 +848,17 @@ public class Session{
     public String getParentSessionKey() {
 
         return getAllExtras().get(PARENT_SESSION_KEY);
+    }
+    
+    /**
+     * Gets the conference key if found in the session
+     * 
+     * @return
+     */
+    @JsonIgnore
+    public String getConferenceKey() {
+
+        return getAllExtras().get(EXTERNAL_CONFERENCE_KEY);
     }
     
     /**

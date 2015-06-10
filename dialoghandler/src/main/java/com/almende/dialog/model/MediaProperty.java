@@ -56,7 +56,29 @@ public class MediaProperty
         /**
          * Pre-connect message. Gives opertunity to play a message before connecting the redirected call
          */
-        USE_PRECONNECT;
+        USE_PRECONNECT,
+        /**
+         * The conference room name that has to be used to add a call to.
+         */
+        CONFERENCE_ROOM_NAME,
+        /**
+         * The conference starts when this flag is set to true. If not found,
+         * the conference starts as soon as there are two people in the
+         * conference
+         */
+        CONFERENCE_START_ON_CONNECT,
+        /**
+         * The conference ends when this flag is set to true. If not found, the
+         * conference ends as soon as all participants leave the conference
+         */
+        CONFERENCE_END_ON_DISCONNECT,
+        /**
+         * A valid url must be set against this key. This audio is played when
+         * participant is waiting in a conference room to be connected to other
+         * participants
+         */
+        CONFERENCE_WAIT_URL;
+        
         
         @JsonCreator
         public static MediaPropertyKey fromJson(String name) {

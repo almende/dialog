@@ -1219,32 +1219,32 @@ public class TwilioAdapter {
                 String conferenceWaitURL = question.getMediaPropertyValue(MediumType.BROADSOFT,
                                                                           MediaPropertyKey.CONFERENCE_WAIT_URL);
                 Session session = Session.getSession(sessionKey);
-                Conference conference = new Conference(conferenceName);
-                if (conferenceStart != null) {
-                    conference.setStartConferenceOnEnter(Boolean.parseBoolean(conferenceStart));
-                }
-                if (conferenceEnd != null) {
-                    conference.setEndConferenceOnExit(Boolean.parseBoolean(conferenceEnd));
-                }
-                if (conferenceWaitURL != null) {
-
-                    if (conferenceWaitURL.startsWith("http")) {
-                        conference.setWaitUrl(formatPrompt(conferenceWaitURL));
-                    }
-                    else {
-                        String ttsWaitUrl = ServerUtils.getTTSURL(conferenceWaitURL, question, session);
-                        conference.setWaitUrl(formatPrompt(ttsWaitUrl));
-                    }
-                }
                 if (session != null) {
+                    Conference conference = new Conference(conferenceName + "_" + session.getAccountId());
+                    if (conferenceStart != null) {
+                        conference.setStartConferenceOnEnter(Boolean.parseBoolean(conferenceStart));
+                    }
+                    if (conferenceEnd != null) {
+                        conference.setEndConferenceOnExit(Boolean.parseBoolean(conferenceEnd));
+                    }
+                    if (conferenceWaitURL != null) {
+
+                        if (conferenceWaitURL.startsWith("http")) {
+                            conference.setWaitUrl(formatPrompt(conferenceWaitURL));
+                        }
+                        else {
+                            String ttsWaitUrl = ServerUtils.getTTSURL(conferenceWaitURL, question, session);
+                            conference.setWaitUrl(formatPrompt(ttsWaitUrl));
+                        }
+                    }
                     session.addExtras(MediaPropertyKey.CONFERENCE_START_ON_CONNECT.toString(),
                                       String.valueOf(Boolean.parseBoolean(conferenceStart)));
                     session.addExtras(MediaPropertyKey.CONFERENCE_END_ON_DISCONNECT.toString(),
                                       String.valueOf(Boolean.parseBoolean(conferenceEnd)));
                     session.storeSession();
+                    dial.append(conference);
+                    twiml.append(dial);
                 }
-                dial.append(conference);
-                twiml.append(dial);
             }
         }
         catch (TwiMLException e) {

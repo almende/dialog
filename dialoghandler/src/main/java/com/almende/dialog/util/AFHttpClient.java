@@ -1,6 +1,8 @@
 package com.almende.dialog.util;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+import com.almende.dialog.Settings;
 import com.almende.dialog.util.http.UserAgentInterceptor;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.RequestLog;
@@ -21,6 +23,7 @@ public class AFHttpClient {
     public AFHttpClient() {
 
         client = new OkHttpClient();
+        client.setConnectTimeout(15, TimeUnit.SECONDS);
         client.networkInterceptors().add(new UserAgentInterceptor("ASK-Fast/1.0"));
     }
 
@@ -60,8 +63,10 @@ public class AFHttpClient {
         }
         if (createLog && sessionKey != null) {
             RequestLog requestLog = new RequestLog(request);
-            ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
-                                                    isSuccess);
+            if (Settings.ENABLE_LOGGER) {
+                ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
+                                                        isSuccess);
+            }
         }
         return responseLog;
     }
@@ -117,8 +122,10 @@ public class AFHttpClient {
         }
         if (createLog && sessionKey != null) {
             RequestLog requestLog = new RequestLog(request);
-            ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
-                                                    isSuccess);
+            if (Settings.ENABLE_LOGGER) {
+                ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
+                                                        isSuccess);
+            }
         }
         return responseLog;
     }
@@ -164,8 +171,10 @@ public class AFHttpClient {
         }
         if (createLog && sessionKey != null) {
             RequestLog requestLog = new RequestLog(request);
-            ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
-                                                    isSuccess);
+            if (Settings.ENABLE_LOGGER) {
+                ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
+                                                        isSuccess);
+            }
         }
         return responseLog;
     }

@@ -63,6 +63,9 @@ public class DDRUtils
                     config.getOwner(), 1 );
                 ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );
                 ddrRecord.setAccountType(config.getAccountType());
+                ddrRecord.addAdditionalInfo("message",
+                                            String.format("Type: %s Address: %s", config.getAdapterType(),
+                                                          config.getMyAddress()));
                 ddrRecord.createOrUpdate();
                 //publish charges
                 if (publishCharges) {

@@ -241,8 +241,8 @@ public class CMServletIT extends TestFramework {
 
         createTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 1.0, "Adapter purchage", UnitType.PART, null, null);
         //create an SMS adapter
-        String adapterConfigID = new AdapterAgent().createMBAdapter(remoteAddressVoice, null, "1111|blabla",
-                                                                        "test", null, TEST_PUBLIC_KEY, null);
+        String adapterConfigID = new AdapterAgent().createMBAdapter(remoteAddressVoice, null, "1111|blabla", "test",
+                                                                    null, TEST_PUBLIC_KEY, null, null);
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterConfigID);
         assertEquals(TEST_PUBLIC_KEY, adapterConfig.getOwner());
         //collect all ddrRecord ids and log ids

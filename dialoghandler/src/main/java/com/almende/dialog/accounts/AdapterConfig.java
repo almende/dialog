@@ -33,6 +33,7 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.almende.util.uuid.UUID;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.entity.Adapter;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -945,5 +946,32 @@ public class AdapterConfig {
     public void addMediaProperties(String key, Object value) {
         properties = properties != null ? properties : new HashMap<String, Object>();
         properties.put(key, value);
+    }
+    
+    /**
+     * Simple lookup into the adapter properties
+     * {@link AdapterConfig#getProperties()} if a key {@link Adapter#IS_PRIVATE}
+     * is set to true
+     * 
+     * @return
+     */
+    @JsonIgnore
+    public boolean isPrivate() {
+
+        Object isPrivate = getProperties().get(Adapter.IS_PRIVATE);
+        return isPrivate != null ? Boolean.parseBoolean(isPrivate.toString()) : false;
+    }
+    
+    /**
+     * Simple addtion of a flag in the adapter properties
+     * {@link AdapterConfig#getProperties()}. A key {@link Adapter#IS_PRIVATE}
+     * is set to true. Does not save the entity
+     * 
+     * @return
+     */
+    @JsonIgnore
+    public void markAsPrivate() {
+
+        getProperties().put(Adapter.IS_PRIVATE, true);
     }
 }

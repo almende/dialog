@@ -173,13 +173,15 @@ public class TestFramework
         return ServerUtils.deserialize(adapterConfigString, AdapterConfig.class);
     }
     
-    public static AdapterConfig createEmailAdapter( String emailAddress, String password, String name,
+    public static AdapterConfig createEmailAdapter(String emailAddress, String password, String name,
         String preferredLanguage, String sendingPort, String sendingHost, String protocol, String receivingHost,
-        String receivingProtocol, String accountId, String initialAgentURL ) throws Exception
-    {
-        String emailAdapterId = new AdapterAgent().createEmailAdapter( emailAddress, password, name, preferredLanguage,
-            sendingPort, sendingHost, protocol, receivingProtocol, receivingHost, accountId, initialAgentURL, null );
-        return AdapterConfig.getAdapterConfig( emailAdapterId );
+        String receivingProtocol, String accountId, String initialAgentURL, Boolean isPrivate) throws Exception {
+
+        String emailAdapterId = new AdapterAgent().createEmailAdapter(emailAddress, password, name, preferredLanguage,
+                                                                      sendingPort, sendingHost, protocol,
+                                                                      receivingProtocol, receivingHost, accountId,
+                                                                      initialAgentURL, null, isPrivate);
+        return AdapterConfig.getAdapterConfig(emailAdapterId);
     }
     
     public static Method fetchMethodByReflection( String methodName, Class<?> class1, Class<?> parameterType )

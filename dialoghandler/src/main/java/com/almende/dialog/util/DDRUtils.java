@@ -579,6 +579,7 @@ public class DDRUtils
             if (ddrType != null) {
                 AdapterType adapterType = adapter != null ? AdapterType.getByValue(adapter.getAdapterType()) : null;
                 String adapterId = adapter != null ? adapter.getConfigId() : null;
+                ddrRecord.addAdditionalInfo(DDRType.DDR_CATEGORY_KEY, ddrType.getCategory());
                 switch (ddrType.getCategory()) {
                     case ADAPTER_PURCHASE:
                     case SERVICE_COST: {

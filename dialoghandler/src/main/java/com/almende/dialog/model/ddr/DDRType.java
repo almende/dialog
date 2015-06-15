@@ -16,6 +16,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
  */
 public class DDRType
 {
+    public static final String DDR_CATEGORY_KEY = "DDR_TYPE_CATEGORY_KEY";
+    
     /**
      * category of this type
      */

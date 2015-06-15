@@ -1218,6 +1218,8 @@ public class TwilioAdapter {
                                                                       MediaPropertyKey.CONFERENCE_END_ON_DISCONNECT);
                 String conferenceWaitURL = question.getMediaPropertyValue(MediumType.BROADSOFT,
                                                                           MediaPropertyKey.CONFERENCE_WAIT_URL);
+                String terminateOnStar = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                          MediaPropertyKey.DTMF_TERMINATE);
                 Session session = Session.getSession(sessionKey);
                 if (session != null) {
                     Conference conference = new Conference(conferenceName + "_" + session.getAccountId());
@@ -1236,6 +1238,9 @@ public class TwilioAdapter {
                             String ttsWaitUrl = ServerUtils.getTTSURL(conferenceWaitURL, question, session);
                             conference.setWaitUrl(formatPrompt(ttsWaitUrl));
                         }
+                    }
+                    if(terminateOnStar != null) {
+                        dial.setHangupOnStar(Boolean.parseBoolean(terminateOnStar));
                     }
                     session.addExtras(MediaPropertyKey.CONFERENCE_START_ON_CONNECT.toString(),
                                       String.valueOf(Boolean.parseBoolean(conferenceStart)));

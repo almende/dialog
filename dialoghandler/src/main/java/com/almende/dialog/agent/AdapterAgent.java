@@ -7,7 +7,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import javax.ws.rs.core.Response;
 import org.jivesoftware.smack.XMPPException;
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.MailServlet;
@@ -31,6 +33,7 @@ import com.almende.eve.protocol.jsonrpc.formats.JSONRequest;
 import com.almende.util.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.uuid.UUID;
+import com.askfast.commons.RestResponse;
 import com.askfast.commons.Status;
 import com.askfast.commons.agent.ScheduleAgent;
 import com.askfast.commons.agent.intf.AdapterAgentInterface;
@@ -242,7 +245,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
      * @return AdapterId
      * @throws Exception
      */
-    public String createBroadSoftAdapter(@Name("address") String address, @Name("username") @Optional String username,
+    public RestResponse createBroadSoftAdapter(@Name("address") String address, @Name("username") @Optional String username,
         @Name("password") @Optional String password, @Name("preferredLanguage") @Optional String preferredLanguage,
         @Name("accountId") @Optional String accountId, @Name("anonymous") boolean anonymous,
         @Name("accountType") @Optional String accountType, @Name("isPrivate") @Optional Boolean isPrivate)
@@ -268,8 +271,17 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         config.setAnonymous(anonymous);
         config.setAccountType(AccountType.fromJson(accountType));
         config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT);
-        AdapterConfig newConfig = createAdapter(config, isPrivate);
-        return newConfig.getConfigId();
+        //check if adapter credentials are true
+        Broadsoft broadsoft = new Broadsoft(config);
+        ArrayList<String> activeCalls = broadsoft.getActiveCalls();
+        if (activeCalls != null && activeCalls.isEmpty()) {
+            AdapterConfig newConfig = createAdapter(config, isPrivate);
+            return new RestResponse(getVersion(), newConfig.getConfigId(), Response.Status.OK.getStatusCode(), "OK");
+        }
+        else {
+            return new RestResponse(getVersion(), null, Response.Status.FORBIDDEN.getStatusCode(),
+                                    "Unauthorized credentials. Please try again.");
+        }
     }
     
     public Map<String, String> createMultipleTwilioAdapters(@Name("accountSid") String accountSid,
@@ -1031,5 +1043,9 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
     private String getApplicationId() {
         DialogAgentInterface dialogAgent = getDialogAgent( "dialog" );
         return dialogAgent.getApplicationId();
+    }
+    
+    public String getVersion() {
+        return Settings.DIALOG_HANDLER_VERSION;
     }
 }

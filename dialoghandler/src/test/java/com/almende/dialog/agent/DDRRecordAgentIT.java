@@ -34,6 +34,7 @@ import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
+import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
@@ -658,8 +659,9 @@ public class DDRRecordAgentIT extends TestFramework {
                                               adapterConfig, adapterConfig.getOwner());
                 break;
             case CALL:
-                adapterId = adapterAgent.createBroadSoftAdapter(localAddressBroadsoft, null, "askask", null,
+                RestResponse createBroadSoftAdapter = adapterAgent.createBroadSoftAdapter(localAddressBroadsoft, null, "askask", null,
                                                                 TEST_ACCOUNTID, false, null, null);
+                adapterId = createBroadSoftAdapter.getResult().toString();
                 adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
                 adapterConfig.setAccountType(type);
                 adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);

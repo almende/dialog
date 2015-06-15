@@ -41,8 +41,8 @@ public class MailServletIT extends TestFramework
     {
         String testMessage = "testMessage";
         //create mail adapter
-        AdapterConfig adapterConfig = createEmailAdapter( "askfasttest@gmail.com", "askask2times", null, null, null,
-            null, null, null, null, new UUID().toString(), null );
+        AdapterConfig adapterConfig = createEmailAdapter("askfasttest@gmail.com", "askask2times", null, null, null,
+                                                         null, null, null, null, new UUID().toString(), null, null);
         //create session
         Session.createSession( adapterConfig, remoteAddressEmail );
         

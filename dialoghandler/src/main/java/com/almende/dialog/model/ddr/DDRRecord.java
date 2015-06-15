@@ -544,13 +544,21 @@ public class DDRRecord
         this.shouldIncludeServiceCosts = shouldIncludeServiceCosts;
     }
     
+    /**
+     * Generally only called by the serializer method to lazy load all the
+     * charges involved. This method will generate costs if it is a
+     * {@link AccountType#POST_PAID} account
+     * 
+     * @return
+     * @throws Exception
+     */
     public Double getTotalCost() throws Exception {
 
-        //generate the costs at runtime, only when requested and when the accountTYpe is not prepaid. Prepaid accounts
+        //generate the costs at runtime, only when requested and when the accountTYpe is not prepaid or trial. These accounts
         //have fixed costs
         if (Boolean.TRUE.equals(shouldGenerateCosts) &&
-            (accountType == null || !accountType.equals(AccountType.PRE_PAID))) {
-            
+            (accountType == null || accountType.equals(AccountType.POST_PAID))) {
+
             DDRType ddrType = getDdrType();
             switch (ddrType.getCategory()) {
                 case INCOMING_COMMUNICATION_COST:

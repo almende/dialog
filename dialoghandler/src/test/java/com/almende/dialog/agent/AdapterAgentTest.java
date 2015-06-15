@@ -26,7 +26,8 @@ public class AdapterAgentTest extends TestFramework
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", testMessage);
-        createEmailAdapter("askfasttest@gmail.com", "", null, null, null, null, null, null, null, TEST_PRIVATE_KEY, url);
+        createEmailAdapter("askfasttest@gmail.com", "", null, null, null, null, null, null, null, TEST_PRIVATE_KEY,
+                           url, null);
         //fetch the adapter again
         ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(TEST_PRIVATE_KEY);
         assertThat(adapterConfigs.size(), Matchers.is(1));
@@ -57,8 +58,8 @@ public class AdapterAgentTest extends TestFramework
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        TestServlet.QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams( url, "question", testMessage );
-        createEmailAdapter( "askfasttest@gmail.com", "", null, null, null, null, null, null, null,
-            TEST_PRIVATE_KEY, url );
+        createEmailAdapter("askfasttest@gmail.com", "", null, null, null, null, null, null, null, TEST_PRIVATE_KEY,
+                           url, null);
         //fetch the adapter again
         ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(TEST_PRIVATE_KEY);
         assertThat(adapterConfigs.size(), Matchers.is(1));

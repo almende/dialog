@@ -743,8 +743,8 @@ abstract public class TextServlet extends HttpServlet {
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateDDRCost(ddrRecord, true);
         DDRUtils.publishDDREntryToQueue(accountId, totalCost);
-        //attach cost to ddr is prepaid type
-        if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+        //attach cost to ddr is prepaid type or trial account
+        if (ddrRecord != null && !AccountType.POST_PAID.equals(ddrRecord.getAccountType())) {
             ddrRecord.setTotalCost(totalCost);
             ddrRecord.createOrUpdate();
         }
@@ -801,8 +801,8 @@ abstract public class TextServlet extends HttpServlet {
             //push the cost to hte queue
             Double totalCost = DDRUtils.calculateDDRCost(ddrRecord, true);
             DDRUtils.publishDDREntryToQueue(session.getAccountId(), totalCost);
-            //attach cost to ddr is prepaid type
-            if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+            //attach cost to ddr is prepaid type or trial account
+            if (ddrRecord != null && !AccountType.POST_PAID.equals(ddrRecord.getAccountType())) {
                 ddrRecord.setTotalCost(totalCost);
                 ddrRecord.createOrUpdate();
             }

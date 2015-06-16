@@ -66,6 +66,7 @@ public class TestServlet extends HttpServlet
     public enum QuestionInRequest {
         SECURED,
         APPOINTMENT,
+        TWELVE_INPUT,
         SIMPLE_COMMENT,
         OPEN_QUESTION,
         OPEN_QUESION_WITHOUT_ANSWERS,
@@ -138,7 +139,12 @@ public class TestServlet extends HttpServlet
         if (questionType != null) {
             switch (QuestionInRequest.valueOf(questionType)) {
                 case APPOINTMENT:
-                    result = getAppointmentQuestion(req.getParameter("question"));
+                    result = getAppointmentQuestion(req.getParameter("question"),
+                                                    Boolean.parseBoolean(req.getParameter("byDtmf")),
+                                                    req.getParameter("yesDtmf"), req.getParameter("noDtmf"));
+                    break;
+                case TWELVE_INPUT:
+                    result = getTwelveAnswerQuestion(req.getParameter("question"));
                     break;
                 case SIMPLE_COMMENT:
                     result = getJsonSimpleCommentQuestion(req.getParameter("question"), req.getParameter("lang"));
@@ -195,7 +201,8 @@ public class TestServlet extends HttpServlet
             throw new ServletException(e1);
         }
         if (appointmentTag != null) {
-            result = getAppointmentQuestion(appointmentTag);
+            result = getAppointmentQuestion(appointmentTag, Boolean.parseBoolean(req.getParameter("byDtmf")),
+                                            req.getParameter("yesDtmf"), req.getParameter("noDtmf"));
             //store all the questions loaded in the TestFramework
             try {
                 storeResponseQuestionInThread(getResponseQuestionWithOptionsInString(result));
@@ -316,15 +323,28 @@ public class TestServlet extends HttpServlet
         }
     }
     
-    public static String getJsonAppointmentQuestion()
+    public static String getJsonAppointmentQuestion(boolean byDtmf, String yesDTMf, String noDtmf)
     {
         Question question = new Question();
         question.setQuestion_id( "1" );
         question.setType( "closed" );
         question.setQuestion_text( "text://" + APPOINTMENT_MAIN_QUESTION );
         question.addEventCallback( null, "delivered", TEST_SERVLET_PATH );
-        Answer yesAnswer = new Answer( "text://" + APPOINTMENT_YES_ANSWER, TEST_SERVLET_PATH + "?appointment=" + APPOINTMENT_YES_ANSWER );
-        Answer noAnswer = new Answer( "text://" + APPOINTMENT_NO_ANSWER, TEST_SERVLET_PATH + "?appointment=" + APPOINTMENT_NO_ANSWER );
+        Answer yesAnswer = null;
+        Answer noAnswer = null; 
+
+        if (!byDtmf) {
+            yesAnswer = new Answer("text://" + APPOINTMENT_YES_ANSWER, TEST_SERVLET_PATH + "?appointment=" +
+                APPOINTMENT_YES_ANSWER);
+            noAnswer = new Answer("text://" + APPOINTMENT_NO_ANSWER, TEST_SERVLET_PATH + "?appointment=" +
+                APPOINTMENT_NO_ANSWER);
+        }
+        else {
+            yesDTMf = yesDTMf != null ? yesDTMf : "1";
+            noDtmf = noDtmf != null ? noDtmf : "2";
+            yesAnswer = new Answer("dtmfKey://" + yesDTMf, TEST_SERVLET_PATH + "?appointment=" + APPOINTMENT_YES_ANSWER);
+            noAnswer = new Answer("dtmfKey://" + noDtmf, TEST_SERVLET_PATH + "?appointment=" + APPOINTMENT_NO_ANSWER);
+        }
         
         //set the answers in the question
         question.setAnswers( new ArrayList<Answer>( Arrays.asList( yesAnswer, noAnswer ) ));
@@ -454,28 +474,64 @@ public class TestServlet extends HttpServlet
      * @param appointmentTag
      * @return
      */
-    private String getAppointmentQuestion( String appointmentTag )
-    {
+    private String getAppointmentQuestion(String appointmentTag, boolean byDtmf, String yesDtmf, String noDtmf) {
+
         String result;
-        if ( appointmentTag.equals( "start" ) )
-        {
-            result = getJsonAppointmentQuestion();
+        if (appointmentTag.equals("start")) {
+            result = getJsonAppointmentQuestion(byDtmf, yesDtmf, noDtmf);
         }
-        else if ( appointmentTag.equals( APPOINTMENT_YES_ANSWER ) )
-        {
+        else if (appointmentTag.equals(APPOINTMENT_YES_ANSWER)) {
             result = getJsonAppointmentYesQuestion();
         }
-        else if ( appointmentTag.equals( APPOINTMENT_NO_ANSWER ) )
-        {
+        else if (appointmentTag.equals(APPOINTMENT_NO_ANSWER)) {
             result = getJsonAppointmentNoQuestion();
         }
-        else if ( appointmentTag.equals( APPOINTMENT_FREE_ANSWER ) )
-        {
+        else if (appointmentTag.equals(APPOINTMENT_FREE_ANSWER)) {
             result = getJsonAppointmentFreeQuestion();
         }
-        else
-        {
-            result = getJsonAppointmentQuestion();
+        else {
+            result = getJsonAppointmentQuestion(byDtmf, yesDtmf, noDtmf);
+        }
+        return result;
+    }
+    
+    /**
+     * @param key
+     * @return
+     * @throws UnsupportedEncodingException 
+     */
+    private String getTwelveAnswerQuestion(String key) throws UnsupportedEncodingException {
+
+        String result;
+        switch (key) {
+            case "start":
+                Question question = new Question();
+                question.setQuestion_id("1");
+                question.setType("closed");
+                question.setQuestion_text("text://" + APPOINTMENT_MAIN_QUESTION);
+                question.addEventCallback(null, "delivered", TEST_SERVLET_PATH);
+                ArrayList<Answer> answers = new ArrayList<Answer>();
+                for (int answerCount = 1; answerCount < 13; answerCount++) {
+                    String dtmfKey = String.valueOf(answerCount);
+                    if (answerCount == 10) {
+                        dtmfKey = "*";
+                    }
+                    else if (answerCount == 11) {
+                        dtmfKey = "0";
+                    }
+                    else if (answerCount == 12) {
+                        dtmfKey = "#";
+                    }
+                    answers.add(new Answer("dtmfKey://" + dtmfKey, TEST_SERVLET_PATH + "?questionType=" +
+                        QuestionInRequest.TWELVE_INPUT + "&question=" + URLEncoder.encode(dtmfKey, "UTF-8")));
+                }
+                question.setAnswers(answers);
+                question.generateIds();
+                result = question.toJSON();
+                break;
+            default:
+                result = getJsonSimpleCommentQuestion("You pressed: " + key, null);
+                break;
         }
         return result;
     }

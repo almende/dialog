@@ -720,7 +720,7 @@ public class DDRRecordAgentIT extends TestFramework {
 
         if (isPrivate != null && isPrivate) {
             adapter.markAsPrivate();
+            adapter.update();
         }
-        adapter.update();
     }
 }

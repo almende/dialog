@@ -245,15 +245,19 @@ public class Question implements QuestionIntf {
         }
         else if (answer_input != null) {
             answered = true;
+            boolean isPrefixedWithDtmfKey = false;
             // check all answers of question to see if they match, possibly
             // retrieving the answer_text for each
             answer_input = answer_input.trim();
             ArrayList<Answer> answers = question.getAnswers();
             for (Answer ans : answers) {
-                if (ans.getAnswer_text() != null &&
-                    ans.getAnswer_text().replace("dtmfKey://", "").equalsIgnoreCase(answer_input)) {
-                    answer = ans;
-                    break;
+                //if any answer has a dtmfKey prefix, then do not pick the answer based on the index
+                if (ans.getAnswer_text() != null && ans.getAnswer_text().startsWith("dtmfKey://")) {
+                    isPrefixedWithDtmfKey = true;
+                    if (ans.getAnswer_text().replace("dtmfKey://", "").equalsIgnoreCase(answer_input)) {
+                        answer = ans;
+                        break;
+                    }
                 }
             }
             if (answer == null) {
@@ -269,17 +273,18 @@ public class Question implements QuestionIntf {
             if (answer == null) {
                 try {
                     int answer_nr = Integer.parseInt(answer_input);
-                    if (answer_nr <= answers.size()) {
+                    //if any answer has a dtmfKey prefix, then do not pick the answer based on the index
+                    if (!isPrefixedWithDtmfKey && answer_nr <= answers.size()) {
                         answer = answers.get(answer_nr - 1);
                     }
                 }
                 catch (NumberFormatException ex) {
                     log.severe(ex.getLocalizedMessage());
                     if (answer_input.equals("#") && answers.size() > 11) {
-
+                        answer = answers.get(11);
                     }
                     else if (answer_input.equals("*") && answers.size() > 10) {
-
+                        answer = answers.get(10);
                     }
                     else {
                         for (Answer ans : answers) {
@@ -366,9 +371,9 @@ public class Question implements QuestionIntf {
 
                 newQ = om.readValue(newQuestionJSON, Question.class);
                 newQ.setPreferred_language(preferred_language);
-                
-                if(newQ.getType() == null) {
-                    newQ.setType( "comment" );
+
+                if (newQ.getType() == null) {
+                    newQ.setType("comment");
                 }
             }
             catch (ClientHandlerException ioe) {
@@ -383,7 +388,7 @@ public class Question implements QuestionIntf {
         }
         return newQ;
     }
-
+    
     public Question event(String eventType, String message, Object extras, String responder, Session session) {
 
         log.info(String.format("Received: %s Message: %s Responder: %s Extras: %s", eventType, message, responder,

@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -741,7 +742,135 @@ public class VoiceXMLServletIT extends TestFramework {
         String sessionKey = performSecuredOutBoundCall(dialog);
         assertThat(sessionKey, Matchers.notNullValue());
     }
+    
+    /**
+     * test if a wrong dtmf entry repeats a question when the dtmf in the
+     * answers are of wrong order. Answeres with dtmfKey://3 and 4 must not take
+     * 1 as an answer and must repeat the question
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void inboundCallWithWrongOrderDtmfTest() throws Exception {
 
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.APPOINTMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+        url = ServerUtils.getURLWithQueryParams(url, "byDtmf", "true");
+        url = ServerUtils.getURLWithQueryParams(url, "yesDtmf", "3");
+        url = ServerUtils.getURLWithQueryParams(url, "noDtmf", "4");
+        Dialog dialog = Dialog.createDialog("Test dialog", url, TEST_PUBLIC_KEY);
+
+        //create mail adapter
+        AdapterConfig adapterConfig = createBroadsoftAdapter();
+        adapterConfig.setDialogId(dialog.getId());
+        adapterConfig.update();
+
+        //mock the Context
+        UriInfo uriInfo = Mockito.mock(UriInfo.class);
+        Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
+        VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
+        voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
+                                       uriInfo);
+
+        //fetch current sesison
+        Session session = Session.getSessionByInternalKey(adapterConfig.getAdapterType(), adapterConfig.getMyAddress(),
+                                                          PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        assertNotNull(session);
+        //trigger answer 
+        Response answer = voiceXMLRESTProxy.answer("1", null, "1", session.getKey(), null, uriInfo);
+        assertTrue(String.format("%s doesnt contain %s", answer.getEntity().toString(),
+                                 TestServlet.APPOINTMENT_MAIN_QUESTION),
+                   answer.getEntity().toString()
+                         .contains(URLEncoder.encode(TestServlet.APPOINTMENT_MAIN_QUESTION, "UTF-8")));
+    }
+    
+    /**
+     * test if a wrong dtmf entry repeats a question when the dtmf is a digit
+     * @throws Exception
+     */
+    @Test
+    public void inboundCallWith12AnswersPressed1DtmfTest() throws Exception {
+
+        inboundCallWithDTMFAsAnswerTest("1");
+    }
+    
+    /**
+     * test if a wrong dtmf entry repeats a question when the dtmf is a digit
+     * @throws Exception
+     */
+    @Test
+    public void inboundCallWith12AnswersPressed9DtmfTest() throws Exception {
+
+        inboundCallWithDTMFAsAnswerTest("9");
+    }
+    
+    /**
+     * test if a wrong dtmf entry repeats a question when the dtmf is a digit
+     * @throws Exception
+     */
+    @Test
+    public void inboundCallWith12AnswersPressed0DtmfTest() throws Exception {
+
+        inboundCallWithDTMFAsAnswerTest("0");
+    }
+    
+    /**
+     * test if a wrong dtmf entry repeats a question when the dtmf is a digit
+     * @throws Exception
+     */
+    @Test
+    public void inboundCallWith12AnswersPressedSharpDtmfTest() throws Exception {
+
+        inboundCallWithDTMFAsAnswerTest("#");
+    }
+    
+    /**
+     * test if a wrong dtmf entry repeats a question when the dtmf is a digit
+     * @throws Exception
+     */
+    @Test
+    public void inboundCallWith12AnswersPressedStarDtmfTest() throws Exception {
+
+        inboundCallWithDTMFAsAnswerTest("*");
+    }
+    
+    /**
+     * test if a wrong dtmf entry repeats a question when the dtmf in the
+     * answers are of wrong order. Answeres with dtmfKey://3 and 4 must not take
+     * 1 as an answer and must repeat the question
+     * 
+     * @throws Exception
+     */
+    private void inboundCallWithDTMFAsAnswerTest(String answerDtmf) throws Exception {
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.TWELVE_INPUT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+        Dialog dialog = Dialog.createDialog("Test dialog", url, TEST_PUBLIC_KEY);
+
+        //create mail adapter
+        AdapterConfig adapterConfig = createBroadsoftAdapter();
+        adapterConfig.setDialogId(dialog.getId());
+        adapterConfig.update();
+
+        //mock the Context
+        UriInfo uriInfo = Mockito.mock(UriInfo.class);
+        Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
+        VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
+        voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
+                                       uriInfo);
+
+        //fetch current sesison
+        Session session = Session.getSessionByInternalKey(adapterConfig.getAdapterType(), adapterConfig.getMyAddress(),
+                                                          PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        assertNotNull(session);
+        //trigger answer 
+        Response answer = voiceXMLRESTProxy.answer(answerDtmf, null, answerDtmf, session.getKey(), null, uriInfo);
+        assertTrue(String.format("%s doesnt contain %s", answer.getEntity().toString(), "You pressed: " + answerDtmf),
+                   answer.getEntity().toString().contains(URLEncoder.encode("You pressed: " + answerDtmf, "UTF-8")));
+    }
+    
     /**
      * @throws UnsupportedEncodingException
      * @throws Exception

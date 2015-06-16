@@ -141,8 +141,9 @@ public class CMServletIT extends TestFramework {
         TextMessage textMessage = smsAppointmentInteraction( "hi" );
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( textMessage.getAddress(), textMessage.getRecipientName() );
-        String expectedQuestion = TestServlet.getResponseQuestionWithOptionsInString( TestServlet
-            .getJsonAppointmentQuestion() );
+        String expectedQuestion = TestServlet.getResponseQuestionWithOptionsInString(TestServlet.getJsonAppointmentQuestion(false,
+                                                                                                                            null,
+                                                                                                                            null));
         assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, expectedQuestion,
             textMessage.getLocalAddress() );
     }

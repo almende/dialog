@@ -18,6 +18,7 @@ import com.almende.dialog.adapter.TwitterServlet.TwitterEndpoint;
 import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.adapter.tools.Twilio;
+import com.almende.dialog.broadsoft.UserProfile;
 import com.almende.dialog.exception.ConflictException;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
@@ -245,7 +246,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
      * @return AdapterId
      * @throws Exception
      */
-    public RestResponse createBroadSoftAdapter(@Name("address") String address, @Name("username") @Optional String username,
+    public RestResponse createBroadSoftAdapter(@Name("username") @Optional String username,
         @Name("password") @Optional String password, @Name("preferredLanguage") @Optional String preferredLanguage,
         @Name("accountId") @Optional String accountId, @Name("anonymous") boolean anonymous,
         @Name("accountType") @Optional String accountType, @Name("isPrivate") @Optional Boolean isPrivate)
@@ -253,15 +254,8 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
 
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
 
-        String normAddress = address.replaceFirst("^0", "").replace("+31", "").replace("@ask.ask.voipit.nl", "");
-        String externalAddress = "+31" + normAddress;
-        String myAddress = "0" +
-            (normAddress.contains("@ask.ask.voipit.nl") ? normAddress : (normAddress + "@ask.ask.voipit.nl"));
-        username = username != null ? username : myAddress;
         AdapterConfig config = new AdapterConfig();
         config.setAdapterType(AdapterType.CALL.toString());
-        config.setMyAddress(myAddress);
-        config.setAddress(externalAddress);
         config.setPreferred_language(preferredLanguage);
         config.setPublicKey(accountId);
         config.setXsiUser(username);
@@ -272,16 +266,21 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         config.setAccountType(AccountType.fromJson(accountType));
         config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT);
         
-        ArrayList<String> activeCalls = null;
+        boolean isValidCredentials = false;
         if (!ServerUtils.isInUnitTestingEnvironment()) {
             //check if adapter credentials are true
             Broadsoft broadsoft = new Broadsoft(config);
-            activeCalls = broadsoft.getActiveCalls();
+            UserProfile userProfile = broadsoft.getUserProfile();
+            if(userProfile != null) {
+                config.setMyAddress(userProfile.getUserId());
+                config.setAddress(userProfile.getNumber());
+                isValidCredentials = true;
+            }
         }
         else {
-            activeCalls = new ArrayList<String>();
+            isValidCredentials = true;
         }
-        if (activeCalls != null && activeCalls.isEmpty()) {
+        if (isValidCredentials) {
             AdapterConfig newConfig = createAdapter(config, isPrivate);
             return new RestResponse(getVersion(), newConfig.getConfigId(), Response.Status.OK.getStatusCode(), "OK");
         }

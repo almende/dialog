@@ -659,8 +659,9 @@ public class DDRRecordAgentIT extends TestFramework {
                                               adapterConfig, adapterConfig.getOwner());
                 break;
             case CALL:
-                RestResponse createBroadSoftAdapter = adapterAgent.createBroadSoftAdapter(localAddressBroadsoft, null, "askask", null,
-                                                                TEST_ACCOUNTID, false, null, null);
+                RestResponse createBroadSoftAdapter = adapterAgent.createBroadSoftAdapter(null, "askask", null,
+                                                                                          TEST_ACCOUNTID, false, null,
+                                                                                          null);
                 adapterId = createBroadSoftAdapter.getResult().toString();
                 adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
                 adapterConfig.setAccountType(type);

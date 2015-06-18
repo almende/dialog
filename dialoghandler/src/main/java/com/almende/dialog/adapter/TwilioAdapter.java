@@ -971,10 +971,34 @@ public class TwilioAdapter {
             List<String> urls = question.getUrl();           
             for(String url : urls) {
 
-                com.twilio.sdk.verbs.Number number = new com.twilio.sdk.verbs.Number(url.replace("tel:", "").trim());
-                number.setMethod( "GET" );
-                number.setUrl( getPreconnectUrl() );
-                dial.append( number );
+                try {
+                    url = URLDecoder.decode(url, "UTF-8");
+                }
+                catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+                url = url.replace("tel:", "").trim();
+                if (PhoneNumberUtils.isValidPhoneNumber(url)) {
+                    com.twilio.sdk.verbs.Number number = new com.twilio.sdk.verbs.Number(PhoneNumberUtils.formatNumber(url, null));
+                    number.setMethod("GET");
+                    number.setUrl(getPreconnectUrl());
+                    dial.append(number);
+                }
+                else {
+                    Session session = Session.getSession(sessionKey);
+                    if(session != null && session.getDdrRecordId() != null) {
+                        try {
+                            DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getAccountId(), session.getDdrRecordId());
+                            if(ddrRecord != null) {
+                                ddrRecord.addAdditionalInfo(url, "Invalid address");
+                                ddrRecord.createOrUpdate();
+                            }
+                        }
+                        catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
             }
             
             dial.setCallerId( remoteID );

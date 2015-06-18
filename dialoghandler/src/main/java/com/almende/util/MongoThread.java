@@ -1,6 +1,7 @@
 package com.almende.util;
 
-import com.almende.dialog.db.MongoManager;
+import com.askfast.commons.db.MongoManager;
+
 
 public class MongoThread extends Thread {
     

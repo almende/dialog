@@ -2,8 +2,8 @@ package com.almende.util;
 
 import com.almende.dialog.agent.LoggerProxyAgent;
 import com.almende.dialog.aws.AWSClient;
-import com.almende.dialog.db.MongoManager;
 import com.almende.dialog.util.AFHttpClient;
+import com.askfast.commons.db.MongoManager;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.DB;

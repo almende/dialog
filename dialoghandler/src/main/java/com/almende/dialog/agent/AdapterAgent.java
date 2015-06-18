@@ -43,6 +43,7 @@ import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.ScheduledTask;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
@@ -252,8 +253,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         @Name("accountType") @Optional String accountType, @Name("isPrivate") @Optional Boolean isPrivate)
         throws Exception {
 
-        preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
-
+        preferredLanguage = Language.getByValue(preferredLanguage).getCode();
         AdapterConfig config = new AdapterConfig();
         config.setAdapterType(AdapterType.CALL.toString());
         config.setPreferred_language(preferredLanguage);

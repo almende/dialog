@@ -7,11 +7,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.ws.rs.core.Response;
-
 import org.jivesoftware.smack.XMPPException;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -275,8 +272,9 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
             //check if adapter credentials are true
             Broadsoft broadsoft = new Broadsoft(config);
             UserProfile userProfile = broadsoft.getUserProfile();
-            if(userProfile != null) {
-                config.setMyAddress(userProfile.getUserId());
+            Registration registration = broadsoft.getUserProfileRegistration();
+            if(userProfile != null && registration != null) {
+                config.setMyAddress(registration.getLinePort());
                 config.setAddress(userProfile.getNumber());
                 isValidCredentials = true;
             }

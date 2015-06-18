@@ -7,13 +7,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.broadsoft.Registration;
 import com.almende.dialog.broadsoft.UserProfile;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
@@ -35,6 +39,7 @@ public class Broadsoft {
 	public static final String XSI_START_CALL="/calls/new";
 	public static final String XSI_CALLS="/calls";
 	public static final String XSI_PROFILE="/profile";
+	public static final String XSI_REGISTRATIONS = "/Registrations";
 	public static final String XSI_HIDE_CALLER_ID="/services/CallingLineIDDeliveryBlocking";
 	
 	private String user = null;
@@ -239,6 +244,20 @@ public class Broadsoft {
             
             return null;
 	}
+        
+        public Registration getUserProfileRegistration() {
+            WebResource webResource = client.resource(XSI_URL+XSI_ACTIONS+user+XSI_PROFILE+XSI_REGISTRATIONS);
+            webResource.addFilter(this.auth);
+            try {
+                    String result = webResource.type("text/plain").get(String.class);
+                    log.info( "Result: " + result );
+                    return new Registration( result );
+            } catch (Exception e) {
+                    log.severe("Problems getting profile:"+e.getMessage());
+            }
+            
+            return null;
+        }
 	
 	public ArrayList<String> getActiveCalls() {
 		WebResource webResource = client.resource(XSI_URL+XSI_ACTIONS+user+XSI_CALLS);

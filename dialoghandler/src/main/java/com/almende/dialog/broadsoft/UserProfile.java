@@ -40,24 +40,26 @@ public class UserProfile{
 
                     //Identifying the child tag of details encountered. 
                     if ( node instanceof Element ) {
-                        String content = node.getLastChild().getTextContent()
-                            .trim();
-                        switch ( node.getNodeName() ) {
-                            case "userId":
-                                this.userId = content;
-                                break;
-                            case "groupId":
-                                this.groupId = content;
-                                break;
-                            case "serviceProvider":
-                                this.serviceProvider = content;
-                                break;
-                            case "number":
-                                this.number = content;
-                                break;
-                            case "extension":
-                                this.extension = content;
-                                break;
+                        String content = node.getTextContent();
+                        if(content!=null) {
+                            content = content.trim();
+                            switch ( node.getNodeName() ) {
+                                case "userId":
+                                    this.userId = content;
+                                    break;
+                                case "groupId":
+                                    this.groupId = content;
+                                    break;
+                                case "serviceProvider":
+                                    this.serviceProvider = content;
+                                    break;
+                                case "number":
+                                    this.number = content;
+                                    break;
+                                case "extension":
+                                    this.extension = content;
+                                    break;
+                            }
                         }
                     }
                 }

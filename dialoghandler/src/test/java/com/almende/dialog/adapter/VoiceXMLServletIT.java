@@ -8,6 +8,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.List;
@@ -680,6 +681,41 @@ public class VoiceXMLServletIT extends TestFramework {
             }
         }
         assertEquals(1, ttsServiceChargesAttached);
+    }
+    
+    @Test
+    public void outboundPhoneCall_InvalidReferralTest() throws Exception {
+
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        String invalidNumber = "%2b3161234567";
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.REFERRAL.name());
+        url = ServerUtils.getURLWithQueryParams(url, "address", invalidNumber); //invalid address
+        url = ServerUtils.getURLWithQueryParams(url, "question", "Hello...");
+
+        //create a dialog
+        Dialog dialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+
+        performSecuredOutBoundCall(dialog);
+        //mock the Context
+        UriInfo uriInfo = Mockito.mock(UriInfo.class);
+        Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
+        VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
+        Response newDialog = voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
+                                       uriInfo);
+        assertThat(newDialog.getEntity().toString(), Matchers.not(Matchers.containsString(invalidNumber)));
+        List<Session> allSessions = Session.getAllSessions();
+        assertThat(allSessions.size(), Matchers.is(1));
+        DDRRecord ddrRecord = allSessions.iterator().next().getDDRRecord();
+        assertThat(ddrRecord, Matchers.notNullValue());
+        int ddrInfoCount = 0;
+        for (String infoKey : ddrRecord.getAdditionalInfo().keySet()) {
+            if (URLDecoder.decode(invalidNumber, "UTF-8").equals(infoKey)) {
+                assertThat(ddrRecord.getAdditionalInfo().get(infoKey).toString(), Matchers.is("Invalid address"));
+                ddrInfoCount++;
+            }
+        }
+        assertThat(ddrInfoCount, Matchers.is(1));
     }
     
     /**

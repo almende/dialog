@@ -54,6 +54,7 @@ import com.twilio.sdk.verbs.Conference;
 import com.twilio.sdk.verbs.Dial;
 import com.twilio.sdk.verbs.Gather;
 import com.twilio.sdk.verbs.Hangup;
+import com.twilio.sdk.verbs.Number;
 import com.twilio.sdk.verbs.Play;
 import com.twilio.sdk.verbs.Record;
 import com.twilio.sdk.verbs.Redirect;
@@ -971,33 +972,13 @@ public class TwilioAdapter {
             List<String> urls = question.getUrl();           
             for(String url : urls) {
 
-                try {
-                    url = URLDecoder.decode(url, "UTF-8");
-                }
-                catch (UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                }
-                url = url.replace("tel:", "").trim();
-                if (PhoneNumberUtils.isValidPhoneNumber(url)) {
-                    com.twilio.sdk.verbs.Number number = new com.twilio.sdk.verbs.Number(PhoneNumberUtils.formatNumber(url, null));
+                if (DDRUtils.validateAddressAndUpdateDDRIfInvalid(url, sessionKey)) {
+
+                    url = url.replace("tel:", "").trim();
+                    Number number = new Number( PhoneNumberUtils.formatNumber(url, null));
                     number.setMethod("GET");
                     number.setUrl(getPreconnectUrl());
                     dial.append(number);
-                }
-                else {
-                    Session session = Session.getSession(sessionKey);
-                    if(session != null && session.getDdrRecordId() != null) {
-                        try {
-                            DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getAccountId(), session.getDdrRecordId());
-                            if(ddrRecord != null) {
-                                ddrRecord.addAdditionalInfo(url, "Invalid address");
-                                ddrRecord.createOrUpdate();
-                            }
-                        }
-                        catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
                 }
             }
             
@@ -1014,7 +995,7 @@ public class TwilioAdapter {
         }
         return twiml.toXML();
     }
-	
+
     protected String renderClosedQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
 
         try {
@@ -1386,21 +1367,25 @@ public class TwilioAdapter {
 
                             log.info(String.format("current session key before referral is: %s and remoteId %s",
                                                    sessionKey, remoteID));
-                            String redirectedId = PhoneNumberUtils.formatNumber(url.replace("tel:", ""), null);
-                            if (redirectedId != null) {
+                            if (DDRUtils.validateAddressAndUpdateDDRIfInvalid(url, sessionKey)) {
 
-                                //check credits
-                                if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
+                                String redirectedId = PhoneNumberUtils.formatNumber(url.replace("tel:", "").trim(),
+                                                                                    null);
+                                if (redirectedId != null) {
 
-                                    TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
-                                    String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
-                                    return Response.ok(renderExitQuestion(null,
-                                                                          Arrays.asList(insufficientCreditMessage),
-                                                                          session.getKey())).build();
+                                    //check credits
+                                    if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
+
+                                        TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
+                                        String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
+                                        return Response.ok(renderExitQuestion(null,
+                                                                              Arrays.asList(insufficientCreditMessage),
+                                                                              session.getKey())).build();
+                                    }
+                                    question.getUrl().set(i, "tel:" + redirectedId);
+                                    updateSessionOnRedirect(question, adapterConfig, remoteID, session, newRemoteID,
+                                                            redirectedId);
                                 }
-                                question.getUrl().set(i, "tel:" + redirectedId);
-                                updateSessionOnRedirect(question, adapterConfig, remoteID, session, newRemoteID,
-                                                        redirectedId);
                             }
                             else {
                                 log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ",

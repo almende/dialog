@@ -13,6 +13,7 @@ import com.almende.dialog.adapter.TextServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
+import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.jackson.JOM;
@@ -80,6 +81,8 @@ public class Session{
     
     @JsonIgnore
     AdapterConfig adapterConfig = null;
+    @JsonIgnore
+    DDRRecord ddrRecord = null;
 	
     @JsonIgnore
     public void kill() {
@@ -379,6 +382,21 @@ public class Session{
             adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
         }
         return adapterConfig;
+    }
+    
+    @JsonIgnore
+    public DDRRecord getDDRRecord() {
+
+        if (ddrRecord == null && ddrRecordId != null) {
+            try {
+                ddrRecord = DDRRecord.getDDRRecord(ddrRecordId, accountId);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(e.toString());
+            }
+        }
+        return ddrRecord;
     }
 	
     @JsonProperty("extras")

@@ -211,6 +211,47 @@ public class TwilioAdapterIT extends TestFramework {
 
         assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
     }
+    
+    @Test
+    public void inboundPhoneCall_InvalidReferralTest() throws Exception {
+
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        String invalidNumber = "%2b3161234567";
+        String accountSid = UUID.randomUUID().toString();
+        String callSid = UUID.randomUUID().toString();
+        TwilioSimulator simulator = new TwilioSimulator(TestFramework.host, accountSid);
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.REFERRAL.name());
+        url = ServerUtils.getURLWithQueryParams(url, "address", invalidNumber); //invalid address
+        url = ServerUtils.getURLWithQueryParams(url, "question", "Hello...");
+
+        //create a dialog
+        Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+        adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
+        adapterConfig.setDialogId(createDialog.getId());
+        adapterConfig.update();
+
+        String initiateInboundCall = simulator.initiateInboundCall(callSid, remoteAddressVoice, localAddressBroadsoft);
+        assertThat(initiateInboundCall,
+                   Matchers.not(Matchers.containsString(URLDecoder.decode(invalidNumber, "UTF-8"))));
+        List<Session> allSessions = Session.getAllSessions();
+        assertThat(allSessions.size(), Matchers.is(1));
+        DDRRecord ddrRecord = allSessions.iterator().next().getDDRRecord();
+        assertThat(ddrRecord, Matchers.notNullValue());
+        int ddrInfoCount = 0;
+        for (String infoKey : ddrRecord.getAdditionalInfo().keySet()) {
+            if (URLDecoder.decode(invalidNumber, "UTF-8").equals(infoKey)) {
+                assertThat(ddrRecord.getAdditionalInfo().get(infoKey).toString(), Matchers.is("Invalid address"));
+                ddrInfoCount++;
+            }
+        }
+        assertThat(ddrInfoCount, Matchers.is(1));
+    }
 
     @Test
     public void inboundPhoneCall_ClosedTest() throws Exception {

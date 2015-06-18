@@ -423,7 +423,7 @@ public class VoiceXMLRESTProxy {
             DDRRecord ddrRecord = null;
             try {
                 if (direction.equalsIgnoreCase("outbound")) {
-                    ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+                    ddrRecord = session.getDDRRecord();
                     if (ddrRecord == null) {
                         ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, session.getAccountId(),
                                                                                     formattedRemoteId, 1, url,
@@ -562,9 +562,9 @@ public class VoiceXMLRESTProxy {
                 session.setQuestion(question);
                 session.storeSession();
                 //check if ddr is in session. save the answer in the ddr
-                if (session.getDdrRecordId() != null) {
+                if (session.getDDRRecord() != null) {
                     try {
-                        DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+                        DDRRecord ddrRecord = session.getDDRRecord();
                         if (ddrRecord != null) {
                             ddrRecord.addAdditionalInfo(DDRRecord.ANSWER_INPUT_KEY + ":" + answerForQuestion,
                                                         answer_input);
@@ -917,7 +917,7 @@ public class VoiceXMLRESTProxy {
                         if (type.equals("Network") || type.equals("Group") || type.equals("Unknown")) {
 
                             address = address.replace("tel:", "").replace("sip:", "");
-
+                            address = URLDecoder.decode(address, "UTF-8");
                             log.info("Going to format phone number: " + address);
                             String[] addressArray = address.split("@");
                             address = PhoneNumberUtils.formatNumber(addressArray[0], null);
@@ -1308,40 +1308,45 @@ public class VoiceXMLRESTProxy {
             outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
             outputter.startTag("form");
             if (question != null && question.getType().equalsIgnoreCase("referral")) {
-                outputter.startTag("transfer");
-                outputter.attribute("name", "thisCall");
-                outputter.attribute("dest", question.getUrl().get(0));
-                if (redirectType.equals("bridge")) {
-                    outputter.attribute("bridge", "true");
+
+                String address = question.getUrl().get(0);
+                if (DDRUtils.validateAddressAndUpdateDDRIfInvalid(address, sessionKey)) {
+                    
+                    outputter.startTag("transfer");
+                    outputter.attribute("name", "thisCall");
+                    outputter.attribute("dest", question.getUrl().get(0));
+                    if (redirectType.equals("bridge")) {
+                        outputter.attribute("bridge", "true");
+                    }
+                    else {
+                        outputter.attribute("bridge", "false");
+                    }
+                    outputter.attribute("connecttimeout", redirectTimeout);
+                    for (String prompt : prompts) {
+                        outputter.startTag("prompt");
+                        outputter.startTag("audio");
+                        outputter.attribute("src", prompt);
+                        outputter.endTag(); // prompt
+                        outputter.endTag(); // audio
+                    }
+                    outputter.startTag("filled");
+                    outputter.startTag("if");
+                    outputter.attribute("cond", "thisCall=='unknown'");
+                    outputter.startTag("goto");
+                    outputter.attribute("next", getAnswerUrl() + "?questionId=" + question.getQuestion_id() +
+                        "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8") + "&callStatus=completed");
+                    outputter.endTag(); // goto
+
+                    outputter.startTag("else");
+                    outputter.endTag(); // else 
+                    outputter.startTag("goto");
+                    outputter.attribute("expr", "'" + getAnswerUrl() + "?questionId=" + question.getQuestion_id() +
+                        "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8") + "&callStatus=' + thisCall");
+                    outputter.endTag(); // goto
+                    outputter.endTag(); // if
+                    outputter.endTag(); // filled
+                    outputter.endTag(); // transfer
                 }
-                else {
-                    outputter.attribute("bridge", "false");
-                }
-                outputter.attribute("connecttimeout", redirectTimeout);
-                for (String prompt : prompts) {
-                    outputter.startTag("prompt");
-                    outputter.startTag("audio");
-                    outputter.attribute("src", prompt);
-                    outputter.endTag(); // prompt
-                    outputter.endTag(); // audio
-                }
-                outputter.startTag("filled");
-                outputter.startTag("if");
-                outputter.attribute("cond", "thisCall=='unknown'");
-                outputter.startTag("goto");
-                outputter.attribute("next", getAnswerUrl() + "?questionId=" + question.getQuestion_id() + "&sessionKey=" +
-                                            URLEncoder.encode(sessionKey, "UTF-8") + "&callStatus=completed");
-                outputter.endTag(); // goto
-                
-                outputter.startTag("else");
-                outputter.endTag(); // else 
-                outputter.startTag("goto");
-                outputter.attribute("expr", "'" + getAnswerUrl() + "?questionId=" + question.getQuestion_id() +
-                                            "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8") + "&callStatus=' + thisCall" );
-                outputter.endTag(); // goto
-                outputter.endTag(); // if
-                outputter.endTag(); // filled
-                outputter.endTag(); // transfer
             }
             else {
                 outputter.startTag("block");
@@ -1367,6 +1372,7 @@ public class VoiceXMLRESTProxy {
         }
         catch (Exception e) {
             log.severe("Exception in creating question XML: " + e.toString());
+            e.printStackTrace();
         }
         return sw.toString();
     }
@@ -1826,17 +1832,17 @@ public class VoiceXMLRESTProxy {
                                session != null ? session.getKey() : null, remoteID));
         
         String url = question.getUrl().get(0);
-
-        String redirectedId = PhoneNumberUtils.formatNumber(url.replace("tel:", ""), null);
-
         if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
+            
             TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
             ttsInfo.setProvider(TTSProvider.VOICE_RSS);
             String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
             String ttsurl = ServerUtils.getTTSURL(ttsInfo, insufficientCreditMessage, session);
             return renderExitQuestion(Arrays.asList(ttsurl), session.getKey());
         }
-        if (redirectedId != null) {
+        if (DDRUtils.validateAddressAndUpdateDDRIfInvalid(url, session)) {
+            
+            String redirectedId = PhoneNumberUtils.formatNumber(url.replace("tel:", ""), null);
             //update url with formatted redirecteId. RFC3966 returns format tel:<blabla> as expected
             question.setUrl(PhoneNumberUtils.formatNumber(redirectedId, PhoneNumberFormat.RFC3966));
             //store the remoteId as its lost while trying to trigger the answered event

@@ -7,14 +7,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.broadsoft.UserProfile;
@@ -147,25 +144,25 @@ public class Broadsoft {
         }
         HashMap<String, String> queryKeyValue = new HashMap<String, String>();
 
-        while ( retryCounter.get( webResource.toString() ) != null &&
-                retryCounter.get( webResource.toString() ) < MAX_RETRY_COUNT ) {
+        
+        while (!ServerUtils.isInUnitTestingEnvironment() && retryCounter.get(webResource.toString()) != null &&
+            retryCounter.get(webResource.toString()) < MAX_RETRY_COUNT) {
             try {
-                String result = sendRequestWithRetry( webResource, queryKeyValue, 
-                                                      HTTPMethod.POST, xml );
-                log.info( "Subscription result from BroadSoft: " + result );
+                String result = sendRequestWithRetry(webResource, queryKeyValue, HTTPMethod.POST, xml);
+                log.info("Subscription result from BroadSoft: " + result);
                 //flush retryCount
-                retryCounter.remove( webResource.toString() );
-                String subId = getSubscriptionId( result );
-                if ( subId != null ) {
-                    if ( AdapterConfig.updateSubscription( config.getConfigId(), subId ) )
+                retryCounter.remove(webResource.toString());
+                String subId = getSubscriptionId(result);
+                if (subId != null) {
+                    if (AdapterConfig.updateSubscription(config.getConfigId(), subId))
                         return subId;
                 }
                 break;
             }
-            catch ( Exception ex ) {
-                log.severe( "Problems dialing out:" + ex.getMessage() );
-                Integer retry = retryCounter.get( webResource.toString() );
-                retryCounter.put( webResource.toString(), ++retry );
+            catch (Exception ex) {
+                log.severe("Problems dialing out:" + ex.getMessage());
+                Integer retry = retryCounter.get(webResource.toString());
+                retryCounter.put(webResource.toString(), ++retry);
             }
         }
         return null;

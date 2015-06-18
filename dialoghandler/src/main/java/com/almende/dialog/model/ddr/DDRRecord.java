@@ -767,6 +767,17 @@ public class DDRRecord
     }
     
     /**
+     * Reloads the instance from the db
+     * @return
+     * @throws Exception 
+     */
+    @JsonIgnore
+    public DDRRecord reload() throws Exception {
+
+        return getDDRRecord(getId(), accountId);
+    }
+    
+    /**
      * Ideally should be called by the GETTER methods of fields whose dot (.) values are to be
      * replaced by {@link DDRRecord#DOT_REPLACER_KEY}
      * @param data

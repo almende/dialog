@@ -271,9 +271,16 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         config.setAnonymous(anonymous);
         config.setAccountType(AccountType.fromJson(accountType));
         config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT);
-        //check if adapter credentials are true
-        Broadsoft broadsoft = new Broadsoft(config);
-        ArrayList<String> activeCalls = broadsoft.getActiveCalls();
+        
+        ArrayList<String> activeCalls = null;
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            //check if adapter credentials are true
+            Broadsoft broadsoft = new Broadsoft(config);
+            activeCalls = broadsoft.getActiveCalls();
+        }
+        else {
+            activeCalls = new ArrayList<String>();
+        }
         if (activeCalls != null && activeCalls.isEmpty()) {
             AdapterConfig newConfig = createAdapter(config, isPrivate);
             return new RestResponse(getVersion(), newConfig.getConfigId(), Response.Status.OK.getStatusCode(), "OK");

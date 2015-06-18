@@ -1,5 +1,7 @@
 package com.almende.dialog.util;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
@@ -574,6 +576,7 @@ public class DDRUtils
     public static Double calculateDDRCost(DDRRecord ddrRecord, Boolean includeServiceCharges) throws Exception {
 
         if (ddrRecord != null) {
+            
             DDRType ddrType = ddrRecord.getDdrType();
             AdapterConfig adapter = ddrRecord.getAdapter();
             if (ddrType != null) {
@@ -1062,5 +1065,55 @@ public class DDRUtils
             result = applyServiceCharges(ddrRecord, includeServiceCosts, result, config);
         }
         return getCeilingAtPrecision(result, 3);
+    }
+    
+    /**
+     * Returns true if the address given is valid phonenumber. If it is not a
+     * valid number, it also tries to fetch the linked ddrRecord from the
+     * session and adds an addtional info that it is an invalid number.
+     * 
+     * @param address
+     * @param sessionKey
+     * @return
+     */
+    public static boolean validateAddressAndUpdateDDRIfInvalid(String address, String sessionKey) {
+
+        return validateAddressAndUpdateDDRIfInvalid(address, Session.getSession(sessionKey));
+    }
+    
+    /**
+     * Returns true if the address given is valid phonenumber. If it is not a
+     * valid number, it also tries to fetch the linked ddrRecord from the
+     * session and adds an addtional info that it is an invalid number.
+     * 
+     * @param address
+     * @param session
+     * @return 
+     */
+    public static boolean validateAddressAndUpdateDDRIfInvalid(String address, Session session) {
+
+        try {
+            address = address != null ? URLDecoder.decode(address.replaceFirst("tel:", "").trim(), "UTF-8") : null;
+        }
+        catch (UnsupportedEncodingException e) {
+            log.severe(e.toString());
+            e.printStackTrace();
+        }
+        if (!PhoneNumberUtils.isValidPhoneNumber(address)) {
+            if (session != null && session.getDDRRecord() != null) {
+                try {
+                    DDRRecord ddrRecord = session.getDDRRecord();
+                    if (ddrRecord != null) {
+                        ddrRecord.addAdditionalInfo(address, "Invalid address");
+                        ddrRecord.createOrUpdate();
+                    }
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            return false;
+        }
+        return true;
     }
 }

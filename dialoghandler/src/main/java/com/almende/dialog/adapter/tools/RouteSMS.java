@@ -187,8 +187,8 @@ public class RouteSMS {
                 session.addExtras(SMS_STATUS_KEY, returnResult);
                 session.storeSession();
                 //if ddr record ID is found. update it
-                if (session.getDdrRecordId() != null) {
-                    DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+                if (session.getDDRRecord() != null) {
+                    DDRRecord ddrRecord = session.getDDRRecord();
                     if (ddrRecord != null) {
                         ddrRecord.addStatusForAddress(address, status);
                         ddrRecord.addAdditionalInfo(address + "_" + SMS_STATUS_KEY, returnResult);
@@ -228,8 +228,8 @@ public class RouteSMS {
                                                   session.getAllExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY),
                                                   session.getKey());
             //if ddr record ID is found. update it
-            if (session.getDdrRecordId() != null) {
-                DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+            if (session.getDDRRecord() != null) {
+                DDRRecord ddrRecord = session.getDDRRecord();
                 if (ddrRecord != null) {
                     ddrRecord.addStatusForAddress(remoteAddress, status);
                     ddrRecord.createOrUpdate();

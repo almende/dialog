@@ -740,6 +740,8 @@ abstract public class TextServlet extends HttpServlet {
         }
         //broadcast the message if its not a test environment
         Integer count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId);
+        //reload the ddrRecord
+        ddrRecord = ddrRecord != null ? ddrRecord.reload() : null;
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateDDRCost(ddrRecord, true);
         DDRUtils.publishDDREntryToQueue(accountId, totalCost);
@@ -797,7 +799,8 @@ abstract public class TextServlet extends HttpServlet {
                     session.storeSession();
                 }
             }
-
+            //reload the ddrRecord
+            ddrRecord = ddrRecord != null ? ddrRecord.reload() : null;
             //push the cost to hte queue
             Double totalCost = DDRUtils.calculateDDRCost(ddrRecord, true);
             DDRUtils.publishDDREntryToQueue(session.getAccountId(), totalCost);

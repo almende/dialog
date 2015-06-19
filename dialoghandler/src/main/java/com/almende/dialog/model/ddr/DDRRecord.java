@@ -778,6 +778,27 @@ public class DDRRecord
     }
     
     /**
+     * Adds the given sessionKeys to additionalInfo, and to collection of
+     * sessionKeys. If the session is found. adds the external caller id too
+     * 
+     * @param sessionKeyMap
+     */
+    @JsonIgnore
+    public void setSessionKeys(Map<String, String> sessionKeyMap) {
+
+        if (sessionKeyMap != null) {
+            addAdditionalInfo(Session.SESSION_KEY, sessionKeyMap);
+            setSessionKeys(sessionKeyMap.values());
+            for (String sessionKey : sessionKeyMap.keySet()) {
+                Session session = Session.getSession(sessionKey);
+                if (session != null && session.getExternalSession() != null) {
+                    addAdditionalInfo("externalSessionKey", session.getExternalSession());
+                }
+            }
+        }
+    }
+    
+    /**
      * Ideally should be called by the GETTER methods of fields whose dot (.) values are to be
      * replaced by {@link DDRRecord#DOT_REPLACER_KEY}
      * @param data

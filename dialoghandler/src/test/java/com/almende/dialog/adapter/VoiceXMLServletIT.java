@@ -757,6 +757,19 @@ public class VoiceXMLServletIT extends TestFramework {
         assertEquals(1, ttsChargesAttached);
     }
     
+    @Test
+    public void ttsUrlTest() throws Exception {
+
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setProvider(TTSProvider.ACAPELA);
+        ttsInfo.setVoiceUsed("testtest");
+
+        AdapterConfig adapterConfig = createBroadsoftAdapter();
+        Session session = Session.createSession(adapterConfig, remoteAddressVoice);
+        String ttsurl = ServerUtils.getTTSURL(ttsInfo, "simple test", session);
+        assertThat(ttsurl, Matchers.not(Matchers.containsString("&amp")));
+    }
+    
     /**
      * This test is to check if the outbound functionality works for a dialog
      * with the right credentials for the secured url access

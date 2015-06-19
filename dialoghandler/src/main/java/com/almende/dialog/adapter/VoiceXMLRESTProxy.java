@@ -174,8 +174,8 @@ public class VoiceXMLRESTProxy {
         session.storeSession();
         
         //create a ddr record
-        DDRRecord ddrRecord = DDRUtils.createDDRRecordOnCommunication("outbound", config.getMyAddress(), config,
-                                                                      firstRemoteAddress, session, url);
+        DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, firstRemoteAddress, 1,
+                                                                              url, session.getKey());
         
         //fetch the question
         Question question = Question.fromURL(url, config.getConfigId(), loadAddress,
@@ -253,6 +253,10 @@ public class VoiceXMLRESTProxy {
             dialogLog.log(LogLevel.SEVERE, session.getAdapterConfig(),
                           String.format("Question not fetched from: %s. Request for outbound call rejected ",
                                         dialogIdOrUrl), session);
+        }
+        if(ddrRecord != null) {
+            ddrRecord.setSessionKeys(resultSessionMap);
+            ddrRecord.createOrUpdate();
         }
         return resultSessionMap;
     }
@@ -338,8 +342,9 @@ public class VoiceXMLRESTProxy {
         //get or create a session based on the remoteId that is always populated.  
         String internalSessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + formattedRemoteId;
         Session session = Session.getSessionByInternalKey(internalSessionKey);
-
         String url = "";
+        DDRRecord ddrRecord = null;
+        
         if (session != null && direction.equalsIgnoreCase("outbound")) {
             try {
                 url = Dialog.getDialogURL(session.getStartUrl(), session.getAccountId(), session);
@@ -349,9 +354,7 @@ public class VoiceXMLRESTProxy {
                 dialogLog.log(LogLevel.WARNING, config,
                               String.format("Dialog url encoding failed. Error: %s ", e.toString()), session);
             }
-            dialogLog.log(LogLevel.INFO, config, String
-                                            .format("Trying to fetch dialog for %s, due to outgoing Call from: %s ",
-                                                    formattedRemoteId, config.getMyAddress()), session);
+            ddrRecord = session.getDDRRecord();
         }
         else if (direction.equals("inbound")) {
             //create a session for incoming only. Flush any existing one
@@ -371,6 +374,14 @@ public class VoiceXMLRESTProxy {
             session.setRemoteAddress(externalRemoteID);
             session.storeSession();
             url = config.getURLForInboundScenario(session);
+            try {
+                ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, config.getOwner(),
+                                                                            config.getMyAddress(), url,
+                                                                            session.getKey());
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
             Broadsoft bs = new Broadsoft(config);
             bs.startSubscription();
         }
@@ -385,10 +396,6 @@ public class VoiceXMLRESTProxy {
             session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
             session.setAdapterID(config.getConfigId());
             session.storeSession();
-            //create ddr Record
-            DDRRecord ddrRecord = DDRUtils.createDDRRecordOnCommunication(direction, localID, config,
-                                                                          formattedRemoteId, session, url);
-            session = session.reload();
             session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
             session.storeSession();
             

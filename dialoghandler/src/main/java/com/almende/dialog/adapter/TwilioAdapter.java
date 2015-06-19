@@ -133,8 +133,8 @@ public class TwilioAdapter {
         session.storeSession();
         
         //create a ddr record
-        DDRRecord ddrRecord = DDRUtils.createDDRRecordOnCommunication("outbound", config.getMyAddress(), config,
-                                                                      firstRemoteAddress, session, url);
+        DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, firstRemoteAddress, 1,
+                                                                              url, session.getKey());
         session = session.reload();
         //fetch the question
         Question question = Question.fromURL(url, loadAddress, config.getMyAddress(),
@@ -204,6 +204,10 @@ public class TwilioAdapter {
                           String.format("Question not fetched from: %s. Request for outbound call rejected ",
                                         dialogIdOrUrl), session);
         }
+        if(ddrRecord != null) {
+            ddrRecord.setSessionKeys(resultSessionMap);
+            ddrRecord.createOrUpdate();
+        }
         return resultSessionMap;
     }
 
@@ -236,6 +240,8 @@ public class TwilioAdapter {
         AdapterConfig config = null;
         String formattedRemoteId = null;
         //swap the remote and the local numbers if its inbound
+        DDRRecord ddrRecord = null;
+        
         if (direction.equals("inbound")) {
             String tmpLocalId = new String(localID);
             localID = new String(remoteID);
@@ -251,6 +257,14 @@ public class TwilioAdapter {
             session.setExternalSession(CallSid);
             session.storeSession();
             url = config.getURLForInboundScenario(session);
+            try {
+                ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, config.getOwner(),
+                                                                            config.getMyAddress(), url,
+                                                                            session.getKey());
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         else {
             direction = "outbound";
@@ -258,6 +272,7 @@ public class TwilioAdapter {
             try {
                 if (session != null) {
                     url = Dialog.getDialogURL(session.getStartUrl(), session.getAccountId(), session);
+                    ddrRecord = session.getDDRRecord();
                 }
             }
             catch (UnsupportedEncodingException e) {
@@ -274,8 +289,6 @@ public class TwilioAdapter {
             session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
             session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO.toString());
             session.setAdapterID(config.getConfigId());
-            DDRRecord ddrRecord = DDRUtils.createDDRRecordOnCommunication(direction, localID, config,
-                                                                          formattedRemoteId, session, url);
             session = session.reload();
             //fetch the question
             Question question = session.getQuestion();

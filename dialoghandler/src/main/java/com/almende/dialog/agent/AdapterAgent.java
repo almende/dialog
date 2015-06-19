@@ -281,6 +281,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         }
         else {
             isValidCredentials = true;
+            config.setMyAddress(username);
         }
         if (isValidCredentials) {
             AdapterConfig newConfig = createAdapter(config, isPrivate);
@@ -644,22 +645,29 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
 		config.update();
 	}
 	
-    public Object getAdapter(@Name("accoutId") String accountId, @Name("adapterId") String adapterId) throws Exception {
+    public RestResponse getAdapter(@Name("accoutId") String accountId, @Name("adapterId") String adapterId) {
 
         AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
-        if (config == null)
-            throw new Exception("No adapter linked to this account or with this id");
+        if (config == null) {
+            return RestResponse.ok(Settings.DIALOG_HANDLER_VERSION, null,
+                                   "No adapter linked to this account or with this id");
+        }
 
         if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, false) == null) {
-            throw new Exception("No adapter linked to this account or with this id");
+            return RestResponse.forbidden(Settings.DIALOG_HANDLER_VERSION,
+                                          "No adapter linked to this account or with this id");
         }
-        return config;
+        return RestResponse.ok(Settings.DIALOG_HANDLER_VERSION, config);
     }
 	
     public Object updateAdapter(@Name("accoutId") String accountId, @Name("adapterId") String adapterId,
                                 @Name("adapter") Adapter adapter) throws Exception {
 
-        AdapterConfig config = (AdapterConfig) getAdapter(accountId, adapterId);
+        RestResponse adapterResponse = getAdapter(accountId, adapterId);
+        AdapterConfig config = null;
+        if(adapterResponse.getCode() == javax.ws.rs.core.Response.Status.OK.getStatusCode()) {
+            config = adapterResponse.getResult(AdapterConfig.class);
+        }
         if (config != null) {
             if (adapter.getInitialAgentURL() != null) {
                 config.setInitialAgentURL(adapter.getInitialAgentURL());

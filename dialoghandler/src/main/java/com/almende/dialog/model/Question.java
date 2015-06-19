@@ -57,16 +57,8 @@ public class Question implements QuestionIntf {
         return fromURL(url, adapterID, remoteID, ddrRecordId, sessionKey, null);
     }
     
-    public static Question fromURL(String url, String adapterID, String remoteID, String ddrRecordId,
-        String sessionKey, Map<String, String> extraParams) {
-
-        AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterID);
-        String fromID = adapterConfig != null ? adapterConfig.getMyAddress() : null;
-        return fromURL(url, adapterID, remoteID, fromID, ddrRecordId, sessionKey, extraParams);
-    }
-
-    public static Question fromURL(String url, String adapterID, String remoteID, String fromID, String ddrRecordId,
-        String sessionKey, Map<String, String> extraParams) {
+    public static Question fromURL(String url, String remoteID, String fromID, String ddrRecordId, String sessionKey,
+        Map<String, String> extraParams) {
 
         log.info(String.format("Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID,
                                fromID));
@@ -124,14 +116,14 @@ public class Question implements QuestionIntf {
                 }
             }
             questionReloadCounter.remove(url);
-            return fromJSON(json, adapterID, ddrRecordId, sessionKey);
+            return fromJSON(json);
         }
         else {
             return null;
         }
     }
     
-    public static Question fromJSON(String json, String adapterID, String ddrRecordId, String sessionKey) {
+    public static Question fromJSON(String json) {
 
         Question question = null;
         if (json != null && !json.isEmpty()) {

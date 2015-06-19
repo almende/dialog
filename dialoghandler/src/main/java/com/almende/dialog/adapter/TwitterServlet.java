@@ -253,7 +253,7 @@ public class TwitterServlet extends TextServlet implements Runnable {
 	
     @Override
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config, String accountId) {
+        Map<String, Object> extras, AdapterConfig config, String accountId, DDRRecord ddrRecord) {
 
         OAuthService service = new ServiceBuilder().provider(TwitterApi.class).apiKey(Twitter.OAUTH_KEY)
                                         .apiSecret(Twitter.OAUTH_SECRET).build();
@@ -306,7 +306,8 @@ public class TwitterServlet extends TextServlet implements Runnable {
                             message += "\nSent at: " +
                                        TimeUtils.getStringFormatFromDateTime(TimeUtils.getServerCurrentTimeInMillis(),
                                                                              "dd-MM-yyyy HH:mm:ss Z");
-                            return sendMessage(message, subject, from, fromName, to, toName, extras, config, accountId);
+                            return sendMessage(message, subject, from, fromName, to, toName, extras, config, accountId,
+                                               ddrRecord);
                         }
                     }
                 }
@@ -315,6 +316,10 @@ public class TwitterServlet extends TextServlet implements Runnable {
             }
             catch (Exception ex) {
                 log.warning("Failed to send message. Error: " + ex.getLocalizedMessage());
+                if(ddrRecord != null) {
+                    ddrRecord.addAdditionalInfo(to, "Failed to send message. Error: " + ex.getLocalizedMessage());
+                    ddrRecord.createOrUpdate();
+                }
             }
         }
         retryCount = 0;
@@ -323,14 +328,14 @@ public class TwitterServlet extends TextServlet implements Runnable {
 	
     @Override
     protected int broadcastMessage(String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
-        throws Exception {
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId,
+        DDRRecord ddrRecord) throws Exception {
 
         int count = 0;
         for (String toAddress : addressNameMap.keySet()) {
             String toName = addressNameMap.get(toAddress);
             count = count +
-                    sendMessage(message, subject, from, senderName, toAddress, toName, extras, config, accountId);
+                sendMessage(message, subject, from, senderName, toAddress, toName, extras, config, accountId, ddrRecord);
         }
         return count;
     }

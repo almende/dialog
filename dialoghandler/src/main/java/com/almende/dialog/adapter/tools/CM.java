@@ -4,9 +4,7 @@ import java.io.StringWriter;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import org.znerd.xmlenc.XMLOutputter;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.example.agent.TestServlet;
@@ -51,12 +49,13 @@ public class CM {
 	}
 	
     public int broadcastMessage(String message, String subject, String from, String fromName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
-        throws Exception {
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId,
+        DDRRecord ddrRecord) throws Exception {
 
         String dcs = getMessageType(message);
         //create an CM XML request based on the parameters
-        StringWriter sw = createXMLRequest(message, from, fromName, addressNameMap, dcs, config, accountId, extras);
+        StringWriter sw = createXMLRequest(message, from, fromName, addressNameMap, dcs, config, accountId, extras,
+                                           ddrRecord);
 
         //add an interceptor so that send Messages is not enabled for unit tests
         if (!ServerUtils.isInUnitTestingEnvironment() && sw != null) {
@@ -79,7 +78,7 @@ public class CM {
      */
     private StringWriter createXMLRequest(String message, String from, String fromName,
         Map<String, String> addressNameMap, String dcs, AdapterConfig config, String accountId,
-        Map<String, Object> extras) {
+        Map<String, Object> extras, DDRRecord ddrRecord) {
 
         String type = "TEXT";
         // TODO: Check message for special chars, if so change dcs.             
@@ -115,6 +114,7 @@ public class CM {
                                                                    });
                 }
                 Session session = sessionKeyMap != null ? Session.getSession(sessionKeyMap.get(to)) : null;
+                String ddrRecordId = ddrRecord != null ? ddrRecord.getId() : null;
                 //check if its a mobile number, if no ignore, log, drop session and continue
                 PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(to);
                 if (!PhoneNumberType.MOBILE.equals(numberType)) {
@@ -122,25 +122,21 @@ public class CM {
                                                         to, config.getMyAddress());
                     logger.warning(config, errorMessage, session);
                     //update ddr if found
-                    String ddrRecordId = session != null ? session.getDdrRecordId() : null;
-                    DDRRecord ddrRecord = DDRRecord.getDDRRecord(ddrRecordId, accountId);
                     if (ddrRecord != null) {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
                         ddrRecord.addAdditionalInfo(to, errorMessage);
                         ddrRecord.createOrUpdate();
                     }
-                    
                     if (session != null) {
                         session.drop();
                     }
                     continue;
                 }
-                
                 if (storeSMSRelatedData != null) {
                     reference = UUID.randomUUID().toString() + ":" + Settings.HOST;
                     SMSDeliveryStatus linkedSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to, 
                                                                        config, accountId, session.getQuestion(), 
-                                                                       null, "SENT", session.getDdrRecordId(),
+                                                                       null, "SENT", ddrRecordId,
                                                                        AdapterProviders.CM.getName(),
                                                                        session.getKey());
                     storeSMSRelatedData.addExtraInfo(linkedSMSRelatedData.getRemoteAddress(),
@@ -150,7 +146,7 @@ public class CM {
                 else {
                     storeSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to, config, accountId,
                                                                                 session.getQuestion(), null, "SENT",
-                                                                                session.getDdrRecordId(),
+                                                                                ddrRecordId,
                                                                                 AdapterProviders.CM.getName(),
                                                                                 session.getKey());
                 }

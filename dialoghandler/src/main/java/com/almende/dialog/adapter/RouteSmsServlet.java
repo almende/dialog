@@ -42,20 +42,21 @@ public class RouteSmsServlet extends TextServlet {
 
     @Override
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
+        Map<String, Object> extras, AdapterConfig config, String accountId, DDRRecord ddrRecord) throws Exception {
 
         HashMap<String, String> addressNameMap = new HashMap<String, String>(1);
         addressNameMap.put(to, toName);
-        return broadcastMessage(message, subject, from, fromName, addressNameMap, extras, config, accountId); 
+        return broadcastMessage(message, subject, from, fromName, addressNameMap, extras, config, accountId, ddrRecord);
     }
 
     @Override
     protected int broadcastMessage(String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
-        throws Exception {
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId,
+        DDRRecord ddrRecord) throws Exception {
 
         RouteSMS routeSMS = new RouteSMS(config.getAccessToken(), config.getAccessTokenSecret(), null, null);
-        return routeSMS.broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId);
+        return routeSMS.broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId,
+                                         ddrRecord);
     }
 
     @Override

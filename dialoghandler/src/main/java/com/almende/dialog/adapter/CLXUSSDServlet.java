@@ -30,7 +30,7 @@ public class CLXUSSDServlet extends TextServlet {
 	
     @Override
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
+        Map<String, Object> extras, AdapterConfig config, String accountId, DDRRecord ddrRecord) throws Exception {
 
         //CLXUSSD clxussd = new CLXUSSD(config.getAccessToken(),
         //	config.getAccessTokenSecret(), config);
@@ -60,18 +60,17 @@ public class CLXUSSDServlet extends TextServlet {
 
     @Override
     protected int broadcastMessage(String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId,
+        DDRRecord ddrRecord)
         throws Exception {
 
         int count = 0;
         for (String address : addressNameMap.keySet()) {
             count += sendMessage(message, subject, from, senderName, address, addressNameMap.get(address), extras,
-                                 config, accountId);
+                                 config, accountId, ddrRecord);
         }
         return count;
     }
-	
-
 	
 	@Override
 	protected TextMessage receiveMessage(HttpServletRequest req,

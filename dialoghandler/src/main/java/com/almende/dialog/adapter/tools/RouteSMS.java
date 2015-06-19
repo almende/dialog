@@ -43,8 +43,8 @@ public class RouteSMS {
     }
 
     public int broadcastMessage(String message, String subject, String from, String fromName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
-        throws Exception {
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId,
+        DDRRecord ddrRecord) throws Exception {
 
         String dcs;
         if (!CM.isGSMSeven(message)) {
@@ -80,8 +80,6 @@ public class RouteSMS {
                                                     address, config.getMyAddress());
                 logger.warning(config, errorMessage, session);
                 //update ddr if found
-                String ddrRecordId = session != null ? session.getDdrRecordId() : null;
-                DDRRecord ddrRecord = DDRRecord.getDDRRecord(ddrRecordId, accountId);
                 if (ddrRecord != null) {
                     ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                     ddrRecord.addAdditionalInfo(address, errorMessage);

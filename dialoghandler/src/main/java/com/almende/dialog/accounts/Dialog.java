@@ -345,7 +345,7 @@ public class Dialog implements DialogInterface {
         else {
             Dialog dialog = Dialog.getDialog(dialogIdOrUrl, accountId);
             if (dialog != null) {
-                addDialogCredentialsToSession(dialog, session);
+                session = addDialogCredentialsToSession(dialog, session);
                 return dialog.getUrl();
             }
             String errorText = Question.getError(session != null ? session.getLanguage() : null).getQuestion_text()
@@ -359,7 +359,7 @@ public class Dialog implements DialogInterface {
      * @param dialog
      * @param session
      */
-    public static void addDialogCredentialsToSession(Dialog dialog, Session session) {
+    public static Session addDialogCredentialsToSession(Dialog dialog, Session session) {
 
         if (dialog != null && session != null) {
             if (dialog.getUseBasicAuth()) {
@@ -369,6 +369,7 @@ public class Dialog implements DialogInterface {
             session.addExtras(DIALOG_ID_KEY, dialog.getId());
             session.storeSession();
         }
+        return session;
     }
     
     /**

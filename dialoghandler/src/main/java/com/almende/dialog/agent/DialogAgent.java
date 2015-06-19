@@ -376,7 +376,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                             // fetch the first address in the map
                             if (!addressMap.keySet().isEmpty() && getApplicationId() != null) {
                                 resultSessionMap = TwilioAdapter.dial(addressMap, dialogIdOrUrl, config, accountId,
-                                                                      getApplicationId());
+                                                                      getApplicationId(), bearerToken);
                             }
                             else {
                                 throw new Exception("Address should not be empty to setup a call");

@@ -908,4 +908,10 @@ public class Session{
         }
         return null;
     }
+
+    @JsonIgnore
+    public Session reload() {
+
+        return getSession(key);
+    }
 }

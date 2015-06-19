@@ -210,32 +210,31 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
      * @Deprecated use broadcastMessage instead
      */
     @Override
-    protected int sendMessage( String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config, String accountId ) throws Exception
-    {
-        HashMap<String, String> addressNameMap = new HashMap<>( 1 );
-        addressNameMap.put( to, toName );
-        return broadcastMessage(message, subject, from, fromName, addressNameMap, extras, config, accountId);
+    protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
+        Map<String, Object> extras, AdapterConfig config, String accountId, DDRRecord ddrRecord) throws Exception {
+
+        HashMap<String, String> addressNameMap = new HashMap<>(1);
+        addressNameMap.put(to, toName);
+        return broadcastMessage(message, subject, from, fromName, addressNameMap, extras, config, accountId, ddrRecord);
     }
-	
+
     @Override
     protected int broadcastMessage(String message, String subject, String from, String senderName,
-                         Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId,
+        DDRRecord ddrRecord) throws Exception {
 
-        final String sendingHost = config.getProperties().get(SENDING_HOST_KEY) != null ? config.getProperties()
-                                        .get(SENDING_HOST_KEY).toString() : GMAIL_SENDING_HOST;
-        final String sendingPort = config.getProperties().get(SENDING_PORT_KEY) != null ? config.getProperties()
-                                        .get(SENDING_PORT_KEY).toString() : GMAIL_SENDING_PORT;
-        final String sendingProtocol = config.getProperties().get(SENDING_PROTOCOL_KEY) != null ? config
-                                        .getProperties().get(SENDING_PROTOCOL_KEY).toString() : GMAIL_SENDING_PROTOCOL;
+        final String sendingHost = config.getProperties().get(SENDING_HOST_KEY) != null 
+                                        ? config.getProperties().get(SENDING_HOST_KEY).toString() : GMAIL_SENDING_HOST;
+        final String sendingPort = config.getProperties().get(SENDING_PORT_KEY) != null
+                                        ? config.getProperties().get(SENDING_PORT_KEY).toString() : GMAIL_SENDING_PORT;
+        final String sendingProtocol = config.getProperties().get(SENDING_PROTOCOL_KEY) != null 
+                                        ? config.getProperties().get(SENDING_PROTOCOL_KEY).toString() : GMAIL_SENDING_PROTOCOL;
 
         //set username and password if its found and if its not an appengine mail proxy, else use the default one
         final String username = config.getXsiUser() != null && !config.getXsiUser().isEmpty() &&
-                                !config.getXsiUser().contains("appspotmail.com") ? config.getXsiUser()
-                                                                                : DEFAULT_SENDER_EMAIL;
+            !config.getXsiUser().contains("appspotmail.com") ? config.getXsiUser() : DEFAULT_SENDER_EMAIL;
         final String password = config.getXsiPasswd() != null && !config.getXsiPasswd().isEmpty() &&
-                                !config.getXsiUser().contains("appspotmail.com") ? config.getXsiPasswd()
-                                                                                : DEFAULT_SENDER_EMAIL_PASSWORD;
+            !config.getXsiUser().contains("appspotmail.com") ? config.getXsiPasswd() : DEFAULT_SENDER_EMAIL_PASSWORD;
         Properties props = new Properties();
         props.put("mail.smtp.host", sendingHost);
         props.put("mail.smtp.port", sendingPort);
@@ -270,13 +269,12 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                     simpleMessage.addRecipient(Message.RecipientType.TO, internetAddress);
                 }
                 catch (Exception e) {
+                    e.printStackTrace();
                     String errorMessage = String.format("Error in adding TO: receipient: %s (%s). Ignored. Message: %s",
                                                         address, toName, e.toString());
-                    log.severe(errorMessage);
-                    Session askfastSession = Session.getSessionByInternalKey(config.getAdapterType(),
-                                                                             config.getMyAddress(), address);
-                    logger.severe(config, errorMessage.replace("javax.mail.internet.AddressException: ", ""),
-                                  askfastSession);
+                    if (ddrRecord != null) {
+                        ddrRecord.addAdditionalInfo(address, errorMessage);
+                    }
                 }
             }
             if (extras != null) {
@@ -288,7 +286,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                         HashMap<String, String> ccAddressNameMap = injector.inject(extras.get(CC_ADDRESS_LIST_KEY));
                         for (String address : ccAddressNameMap.keySet()) {
                             String toName = ccAddressNameMap.get(address) != null ? ccAddressNameMap.get(address)
-                                                                                 : address;
+                                : address;
                             try {
                                 InternetAddress ccInternetAddress = new InternetAddress(address, toName);
                                 ccInternetAddress.validate();
@@ -297,10 +295,10 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                             catch (Exception e) {
                                 String errorMessage = String.format("Error in adding CC: receipient: %s (%s). Ignored. Message: %s",
                                                                     address, toName, e.toString());
-                                log.severe(errorMessage);
-                                Session askfastSession = Session.getSession(Session.getInternalSessionKey(config, address));
-                                logger.severe(config, errorMessage.replace("javax.mail.internet.AddressException: ", ""),
-                                              askfastSession);
+                                e.printStackTrace();
+                                if (ddrRecord != null) {
+                                    ddrRecord.addAdditionalInfo(address, errorMessage);
+                                }
                             }
                         }
                     }
@@ -316,7 +314,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                         Map<String, String> bccAddressNameMap = (Map<String, String>) extras.get(BCC_ADDRESS_LIST_KEY);
                         for (String address : bccAddressNameMap.keySet()) {
                             String toName = bccAddressNameMap.get(address) != null ? bccAddressNameMap.get(address)
-                                                                                  : address;
+                                : address;
                             try {
                                 InternetAddress bccInternetAddress = new InternetAddress(address, toName);
                                 bccInternetAddress.validate();
@@ -325,18 +323,21 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                             catch (Exception e) {
                                 String errorMessage = String.format("Error in adding BCC: receipient: %s (%s). Ignored. Message: %s",
                                                                     address, toName, e.toString());
-                                log.severe(errorMessage);
-                                Session askfastSession = Session.getSession(Session.getInternalSessionKey(config, address));
-                                logger.severe(config, errorMessage.replace("javax.mail.internet.AddressException: ", ""),
-                                              askfastSession);
+                                e.printStackTrace();
+                                if (ddrRecord != null) {
+                                    ddrRecord.addAdditionalInfo(address, errorMessage);
+                                }
                             }
                         }
                     }
                     else {
-                        log.severe(String.format("BCC list seen but not of Map type: %s", ServerUtils
-                                                        .serializeWithoutException(extras.get(BCC_ADDRESS_LIST_KEY))));
+                        log.severe(String.format("BCC list seen but not of Map type: %s",
+                                                 ServerUtils.serializeWithoutException(extras.get(BCC_ADDRESS_LIST_KEY))));
                     }
                 }
+            }
+            if (ddrRecord != null) {
+                ddrRecord.createOrUpdate();
             }
             simpleMessage.setSubject(subject);
             simpleMessage.setContent(message, "text/html; charset=utf-8");

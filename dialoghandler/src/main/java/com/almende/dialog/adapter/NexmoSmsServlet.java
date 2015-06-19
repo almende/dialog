@@ -27,21 +27,22 @@ public class NexmoSmsServlet extends TextServlet {
 	
     @Override
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
+        Map<String, Object> extras, AdapterConfig config, String accountId, DDRRecord ddrRecord) throws Exception {
 
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(to, toName);
-        return broadcastMessage(message, subject, from, fromName, addressNameMap, extras, config, accountId);
+        return broadcastMessage(message, subject, from, fromName, addressNameMap, extras, config, accountId, ddrRecord);
     }
 
     @Override
     protected int broadcastMessage(String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
-        throws Exception {
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId,
+        DDRRecord ddrRecord) throws Exception {
 
         String[] tokens = config.getAccessToken().split("\\|");
         CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
-        return cm.broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId);
+        return cm.broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId,
+                                   ddrRecord);
     }
 
     @Override

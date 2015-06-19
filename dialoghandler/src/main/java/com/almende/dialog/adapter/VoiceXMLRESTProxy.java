@@ -156,15 +156,33 @@ public class VoiceXMLRESTProxy {
         firstRemoteAddress = PhoneNumberUtils.formatNumber(firstRemoteAddress, null);
         session = Session.getOrCreateSession(config, firstRemoteAddress);
         session.setAccountId(accountId);
+        session.killed = false;
+        session.setDirection("outbound");
+        session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
+        session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
+        session.setAdapterID(config.getConfigId());
+        session.setAccountId(accountId);
+        session.addExtras(DialogAgent.BEARER_TOKEN_KEY, bearerToken);
         session.storeSession();
+
+        //fetch the url
         String url = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
 
+        session = session.reload();
+        session.setStartUrl(url);
+        session.setRemoteAddress(firstRemoteAddress);
+        session.storeSession();
+        
+        //create a ddr record
+        DDRRecord ddrRecord = DDRUtils.createDDRRecordOnCommunication("outbound", config.getMyAddress(), config,
+                                                                      firstRemoteAddress, session, url);
+        
         //fetch the question
-        Question question = Question.fromURL(url, config.getConfigId(), loadAddress, null,
+        Question question = Question.fromURL(url, config.getConfigId(), loadAddress,
+                                             ddrRecord != null ? ddrRecord.getId() : null,
                                              session != null ? session.getKey() : null);
         if (question != null) {
 
-            session.setStartUrl(url);
             for (String address : addressNameMap.keySet()) {
 
                 String formattedAddress = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
@@ -202,10 +220,9 @@ public class VoiceXMLRESTProxy {
                     session.setQuestion(question);
                     session.setAccountId(accountId);
                     session.addExtras(DialogAgent.BEARER_TOKEN_KEY, bearerToken);
+                    session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId(): null);
                     session.storeSession();
-                    dialogLog.log(LogLevel.INFO, session.getAdapterConfig(), String
-                                                    .format("Outgoing call requested from: %s to: %s",
-                                                            session.getLocalAddress(), formattedAddress), session);
+                    
                     String extSession = "";
                     Broadsoft bs = new Broadsoft(config);
                     String subscriptiion = bs.startSubscription();
@@ -219,20 +236,6 @@ public class VoiceXMLRESTProxy {
                         session.drop();
                         resultSessionMap.put(address, errorMessage);
                         continue;
-                    }
-                    //create a ddrRecord
-                    try {
-                        DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId,
-                                                                                              formattedAddress, 1, url,
-                                                                                              session.getKey());
-                        if (ddrRecord != null) {
-                            session.setDdrRecordId(ddrRecord.getId());
-                        }
-                    }
-                    catch (Exception e) {
-                        e.printStackTrace();
-                        log.severe(String.format("DDR creation failed for session: %s. Reason: %s", session.getKey(),
-                                                 e.getMessage()));
                     }
                     session.setExternalSession(extSession);
                     session.storeSession();
@@ -370,19 +373,29 @@ public class VoiceXMLRESTProxy {
             url = config.getURLForInboundScenario(session);
             Broadsoft bs = new Broadsoft(config);
             bs.startSubscription();
-            dialogLog.log(LogLevel.INFO, config, 
-                          String.format("Incoming Call received from: %s at: %s", formattedRemoteId,
-                                        config.getMyAddress()), session);
         }
         
         Question question = null;
-        
         if (session != null) {
+        
+            session.setStartUrl(url);
+            session.setDirection(direction);
+            session.setRemoteAddress(externalRemoteID);
+            session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
+            session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
+            session.setAdapterID(config.getConfigId());
+            session.storeSession();
+            //create ddr Record
+            DDRRecord ddrRecord = DDRUtils.createDDRRecordOnCommunication(direction, localID, config,
+                                                                          formattedRemoteId, session, url);
+            session = session.reload();
+            session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
+            session.storeSession();
             
             question = session.getQuestion();
             if (question == null) {
-                question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), externalRemoteID, localID,
-                                            session.getDdrRecordId(), session.getKey(), extraParams);
+                question = Question.fromURL(url, externalRemoteID, config.getMyAddress(), session.getDdrRecordId(),
+                                            session.getKey(), extraParams);
             }
             if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
                 TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
@@ -391,13 +404,6 @@ public class VoiceXMLRESTProxy {
                 String ttsurl = ServerUtils.getTTSURL(ttsInfo, insufficientCreditMessage, session);
                 return Response.ok(renderExitQuestion(Arrays.asList(ttsurl), session.getKey())).build();
             }
-            session.setStartUrl(url);
-            session.setDirection(direction);
-            session.setRemoteAddress(externalRemoteID);
-            session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
-            session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
-            session.setAdapterID(config.getConfigId());
-            session.storeSession();
         }
         else {
             log.severe(String.format("Session not found for internalKey: %s", internalSessionKey));
@@ -411,67 +417,12 @@ public class VoiceXMLRESTProxy {
         }
         session.setQuestion(question);
         session.storeSession();
-
         log.info("Current session info: " + ServerUtils.serializeWithoutException(session));
 
         if (session.getQuestion() != null) {
             //play trial account audio if the account is trial
             if (config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)) {
                 session.addExtras(PLAY_TRIAL_AUDIO_KEY, "true");
-            }
-            //create ddr record
-            DDRRecord ddrRecord = null;
-            try {
-                if (direction.equalsIgnoreCase("outbound")) {
-                    ddrRecord = session.getDDRRecord();
-                    if (ddrRecord == null) {
-                        ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, session.getAccountId(),
-                                                                                    formattedRemoteId, 1, url,
-                                                                                    session.getKey());
-                    }
-                }
-                else {
-                    ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, session.getAccountId(),
-                                                                                formattedRemoteId, 1, url,
-                                                                                session.getKey());
-                }
-                session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
-                if (ddrRecord != null) {
-                    log.info(String.format("For session: %s, a new DDRRecord is created: %s",
-                                           session != null ? session.getKey() : null,
-                                           ServerUtils.serializeWithoutException(ddrRecord)));
-                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
-                }
-            }
-            catch (Exception e) {
-                String errorMessage = String.format("Creating DDR records failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
-                                                    direction, config.getConfigId(), config.getMyAddress(),
-                                                    formattedRemoteId, localID);
-                log.severe(errorMessage);
-                dialogLog.severe(config.getConfigId(), errorMessage, ddrRecord != null ? ddrRecord.getId() : null,
-                                 session != null ? session.getKey() : null);
-            }
-            finally {
-                if (ddrRecord != null) {
-                    ddrRecord.createOrUpdate();
-                }
-                else {
-                    log.severe("DDRRecord not found. Not expected to be null here!!");
-                }
-                if (session != null) {
-                    session.storeSession();
-                    if (session.getDdrRecordId() != null) {
-                        log.info(String.format("Session: %s updated with ddrRecord: %s for direction: %s",
-                                               session.getKey(), session.getDdrRecordId(), direction));
-                    }
-                    else {
-                        log.severe(String.format("Session: %s updated with no ddrRecord for direction: %s",
-                                                 session.getKey(), direction));
-                    }
-                }
-                else {
-                    log.severe("Session not found. Not expected to be null here!!");
-                }
             }
             return handleQuestion(question, config, externalRemoteID, session != null ? session.getKey() : null);
         }
@@ -483,10 +434,9 @@ public class VoiceXMLRESTProxy {
     @Path("answer")
     @GET
     @Produces("application/voicexml+xml")
-    public Response
-        answer(@QueryParam("questionId") String question_id, @QueryParam("answerId") String answer_id,
-            @QueryParam("answerInput") String answer_input, @QueryParam("sessionKey") String sessionKey,
-            @QueryParam("callStatus") String callStatus, @Context UriInfo ui) {
+    public Response answer(@QueryParam("questionId") String question_id, @QueryParam("answerId") String answer_id,
+        @QueryParam("answerInput") String answer_input, @QueryParam("sessionKey") String sessionKey,
+        @QueryParam("callStatus") String callStatus, @Context UriInfo ui) {
 
         try {
             answer_input = answer_input != null ? URLDecoder.decode(answer_input, "UTF-8") : answer_input;
@@ -542,13 +492,6 @@ public class VoiceXMLRESTProxy {
                 if (session.killed) {
                     log.warning("session is killed");
                     return Response.status(Response.Status.BAD_REQUEST).build();
-                }
-                if (question.getType() != null && !question.getType().equalsIgnoreCase("comment")) {
-                    dialogLog.log(LogLevel.INFO,
-                                  session.getAdapterConfig(),
-                                  String.format("Answer input: %s from: %s to question: %s", answer_input,
-                                                session.getRemoteAddress(),
-                                                question.getQuestion_expandedtext(session.getKey())), session);
                 }
                 String answerForQuestion = question.getQuestion_expandedtext(session.getKey());
                 boolean isExit = false;
@@ -760,10 +703,9 @@ public class VoiceXMLRESTProxy {
             log.info("call hangup with:" + session.getDirection() + ":" + session.getRemoteAddress() + ":" +
                      session.getLocalAddress());
             if (session.getQuestion() == null) {
-                Question question = Question.fromURL(session.getStartUrl(), session.getAdapterConfig().getConfigId(),
-                                                     session.getRemoteAddress(), session.getLocalAddress(),
-                                                     session.getDdrRecordId(), session.getKey(),
-                                                     new HashMap<String, String>());
+                Question question = Question.fromURL(session.getStartUrl(), session.getRemoteAddress(),
+                                                     session.getLocalAddress(), session.getDdrRecordId(),
+                                                     session.getKey(), new HashMap<String, String>());
                 session.setQuestion(question);
             }
             if (session.getQuestion() != null && !isEventTriggered("hangup", session, false)) {
@@ -779,8 +721,6 @@ public class VoiceXMLRESTProxy {
                                                          session.getKey());
                 timeMap.put("requester", session.getLocalAddress());
                 session.getQuestion().event("hangup", "Hangup", timeMap, session.getRemoteAddress(), session);
-                dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
-                              String.format("Call hungup from: %s", session.getRemoteAddress()), session);
                 return hangupResponse;
             }
             else {

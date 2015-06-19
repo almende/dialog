@@ -89,7 +89,7 @@ public class PrivateFacebookServlet extends TextServlet {
 
     @Override
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config, String accountId) {
+        Map<String, Object> extras, AdapterConfig config, String accountId, DDRRecord ddrRecord) {
 
         Facebook fb = new Facebook(new Token(config.getAccessToken(), config.getAccessTokenSecret()));
         fb.sendMessage(message, to, toName);
@@ -98,8 +98,8 @@ public class PrivateFacebookServlet extends TextServlet {
 
     @Override
     protected int broadcastMessage(String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
-        throws Exception {
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId,
+        DDRRecord ddrRecord) throws Exception {
 
         return 1;
     }

@@ -545,6 +545,77 @@ public class DDRUtils
     }
     
     /**
+     * Creates a ddrRecord based on the given parameters. Updates the session
+     * with the created ddrRecord. So reload the session instance
+     * 
+     * @param direction
+     * @param localID
+     * @param config
+     * @param formattedRemoteId
+     * @param session
+     * @param url
+     */
+    public static DDRRecord createDDRRecordOnCommunication(String direction, String localID, AdapterConfig config,
+        String formattedRemoteId, Session session, String url) {
+
+        //create ddr record
+        DDRRecord ddrRecord = null;
+        try {
+            if (direction.equalsIgnoreCase("outbound")) {
+                ddrRecord = session.getDDRRecord();
+                if (ddrRecord == null) {
+                    ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, session.getAccountId(),
+                                                                                formattedRemoteId, 1, url,
+                                                                                session.getKey());
+                }
+            }
+            else {
+                ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, session.getAccountId(),
+                                                                            formattedRemoteId, 1, url, session.getKey());
+            }
+            session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
+            if (ddrRecord != null) {
+                log.info(String.format("For session: %s, a new DDRRecord is created: %s",
+                                       session != null ? session.getKey() : null,
+                                       ServerUtils.serializeWithoutException(ddrRecord)));
+                ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+            }
+        }
+        catch (Exception e) {
+            String errorMessage = String.format("Creating DDR records failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
+                                                direction, config.getConfigId(), config.getMyAddress(),
+                                                formattedRemoteId, localID);
+            log.severe(errorMessage);
+            dialogLog.severe(config.getConfigId(), errorMessage, ddrRecord != null ? ddrRecord.getId() : null,
+                             session != null ? session.getKey() : null);
+        }
+        finally {
+            if (ddrRecord != null) {
+                ddrRecord.createOrUpdate();
+            }
+            else {
+                log.severe("!!! DDRRecord not found. Not expected to be null here!!");
+                new Throwable().printStackTrace();
+            }
+            if (session != null) {
+                session.storeSession();
+                if (session.getDdrRecordId() != null) {
+                    log.info(String.format("Session: %s updated with ddrRecord: %s for direction: %s",
+                                           session.getKey(), session.getDdrRecordId(), direction));
+                }
+                else {
+                    log.severe(String.format("Session: %s updated with no ddrRecord for direction: %s",
+                                             session.getKey(), direction));
+                }
+            }
+            else {
+                log.severe("Session not found. Not expected to be null here!!");
+            }
+        }
+        return ddrRecord;
+    }
+    
+    /**
      * calculates the cost associated with this DDRRecord bsaed on the linked
      * DDRPrice. This does not add the servicecosts. Use the
      * {@link DDRUtils#calculateCommunicationDDRCost(DDRRecord, Boolean)} for
@@ -868,6 +939,9 @@ public class DDRUtils
                 ddrRecord.setQuantity(quantity);
                 //add individual statuses
                 for (String address : addresses.keySet()) {
+                    if (config.isCallAdapter() || config.isSMSAdapter()) {
+                        address = PhoneNumberUtils.formatNumber(address, null);
+                    }
                     ddrRecord.addStatusForAddress(address, status);
                 }
                 ddrRecord.setAccountType(config.getAccountType());
@@ -882,6 +956,7 @@ public class DDRUtils
                         }
                     }
                 }
+                ddrRecord.addAdditionalInfo(DDRType.DDR_CATEGORY_KEY, category);
                 //set the ddrRecord time with server current time creationTime.
                 ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
                 if(config.isPrivate()) {

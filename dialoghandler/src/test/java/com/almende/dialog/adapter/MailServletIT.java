@@ -54,7 +54,7 @@ public class MailServletIT extends TestFramework
         
         MailServlet mailServlet = new MailServlet();
         mailServlet.broadcastMessage(testMessage, "Test", adapterConfig.getXsiUser(), "Test message", addressNameMap,
-                                     null, adapterConfig, adapterConfig.getOwner());
+                                     null, adapterConfig, adapterConfig.getOwner(), null);
         Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, testMessage, "sendDummyMessageTest" );
         assertOutgoingTextMessage( message );
     }

@@ -56,7 +56,7 @@ public class CLXUSSDServletIT extends TestFramework{
                                                           "31624107792", "");
         CLXUSSDServlet servlet = new CLXUSSDServlet();
         servlet.sendMessage("hallo", "hey", "me", "vincent", "31624107792", "vincent", map, adapterConfig,
-                            adapterConfig.getOwner());
+                            adapterConfig.getOwner(), null);
     }
 	
 

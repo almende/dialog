@@ -875,7 +875,7 @@ public class DDRUtils
                 }
                 ddrRecord.setAccountType(config.getAccountType());
                 ddrRecord.addAdditionalInfo("message", message);
-                ddrRecord.setSessionKeys(sessionKeyMap);
+                ddrRecord.setSessionKeysFromMap(sessionKeyMap);
                 ddrRecord.addAdditionalInfo(DDRType.DDR_CATEGORY_KEY, category);
                 //set the ddrRecord time with server current time creationTime.
                 ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());

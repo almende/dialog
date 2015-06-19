@@ -784,7 +784,7 @@ public class DDRRecord
      * @param sessionKeyMap
      */
     @JsonIgnore
-    public void setSessionKeys(Map<String, String> sessionKeyMap) {
+    public void setSessionKeysFromMap(Map<String, String> sessionKeyMap) {
 
         if (sessionKeyMap != null) {
             addAdditionalInfo(Session.SESSION_KEY, sessionKeyMap);

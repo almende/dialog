@@ -255,7 +255,7 @@ public class VoiceXMLRESTProxy {
                                         dialogIdOrUrl), session);
         }
         if(ddrRecord != null) {
-            ddrRecord.setSessionKeys(resultSessionMap);
+            ddrRecord.setSessionKeysFromMap(resultSessionMap);
             ddrRecord.createOrUpdate();
         }
         return resultSessionMap;

@@ -9,6 +9,7 @@ import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.Question;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.annotations.Id;
@@ -90,7 +91,7 @@ public class SMSDeliveryStatus implements Serializable {
      */
     public static SMSDeliveryStatus storeSMSRelatedData(String referenceKey, String remoteAddress,
         AdapterConfig config, String accountId, Question question, String code, String description, String ddrRecordId,
-        String provider, String sessionKey) throws Exception {
+        String provider, Session session) throws Exception {
 
         if (referenceKey != null && config.isSMSAdapter()) {
             SMSDeliveryStatus smsStatus = new SMSDeliveryStatus();
@@ -99,7 +100,7 @@ public class SMSDeliveryStatus implements Serializable {
             smsStatus.setRemoteAddress(remoteAddress);
             smsStatus.setReference(referenceKey);
             smsStatus.setAccountId(accountId);
-            String smsText = question != null ? question.getTextWithAnswerTexts(sessionKey) : null;
+            String smsText = question != null ? question.getTextWithAnswerTexts(session) : null;
             smsStatus.setSms(smsText);
             smsStatus.setHost(Settings.HOST);
             smsStatus.setProvider(provider);
@@ -110,7 +111,7 @@ public class SMSDeliveryStatus implements Serializable {
                 smsStatus.setCallback(deliveryEventCallback.getCallback());
             }
             smsStatus.setDdrRecordId(ddrRecordId);
-            smsStatus.setSessionKey(sessionKey);
+            smsStatus.setSessionKey(session.getKey());
             smsStatus.store();
             return smsStatus;
         }

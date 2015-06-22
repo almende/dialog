@@ -158,17 +158,6 @@ public class DDRRecord
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
      */
     @JsonIgnore
-    public void createOrUpdateWithLog(String sessionKey) {
-
-        //fetch the Session
-        Session session = Session.getSession(sessionKey);
-        createOrUpdateWithLog(session);
-    }
-
-    /**
-     * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
-     */
-    @JsonIgnore
     public void createOrUpdateWithLog(Session session) {
 
         createOrUpdate();
@@ -180,10 +169,10 @@ public class DDRRecord
     /**
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
      */
-    public void createOrUpdateWithLog(Map<String, String> sessionKeyMap) {
+    public void createOrUpdateWithLog(Map<String, Session> sessionKeyMap) {
 
-        for (String sessionKey : sessionKeyMap.values()) {
-            createOrUpdateWithLog(sessionKey);
+        for (Session session : sessionKeyMap.values()) {
+            createOrUpdateWithLog(session);
         }
     }
     
@@ -784,15 +773,17 @@ public class DDRRecord
      * @param sessionKeyMap
      */
     @JsonIgnore
-    public void setSessionKeysFromMap(Map<String, String> sessionKeyMap) {
+    public void setSessionKeysFromMap(Map<String, Session> sessionKeyMap) {
 
         if (sessionKeyMap != null) {
             addAdditionalInfo(Session.SESSION_KEY, sessionKeyMap);
-            setSessionKeys(sessionKeyMap.values());
-            for (String sessionKey : sessionKeyMap.keySet()) {
-                Session session = Session.getSession(sessionKey);
-                if (session != null && session.getExternalSession() != null) {
-                    addAdditionalInfo("externalSessionKey", session.getExternalSession());
+            setSessionKeys(new HashSet<String>());
+            for (Session session : sessionKeyMap.values()) {
+                if (session != null) {
+                    sessionKeys.add(session.getKey());
+                    if (session.getExternalSession() != null) {
+                        addAdditionalInfo("externalSessionKey", session.getExternalSession());
+                    }
                 }
             }
         }

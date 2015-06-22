@@ -407,15 +407,14 @@ public class TwitterServlet extends TextServlet implements Runnable {
 	
     @Override
     protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
-        String message, String sessionKey) throws Exception {
+        String message, Session session) throws Exception {
 
-        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message,
-                                                               sessionKey);
+        return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message, session);
     }
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, Session> sessionKeyMap) throws Exception {
 
         int totalCount = 0;
         //calculate the total tweets been done!

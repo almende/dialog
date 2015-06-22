@@ -47,17 +47,17 @@ public class Question implements QuestionIntf {
     }
 
     // Factory functions:
-    public static Question fromURL(String url, String adapterID, String ddrRecordId, String sessionKey) {
+    public static Question fromURL(String url, String adapterID, String ddrRecordId, Session session) {
 
-        return fromURL(url, adapterID, "", ddrRecordId, sessionKey);
+        return fromURL(url, adapterID, "", ddrRecordId, session);
     }
 
-    public static Question fromURL(String url, String adapterID, String remoteID, String ddrRecordId, String sessionKey) {
+    public static Question fromURL(String url, String adapterID, String remoteID, String ddrRecordId, Session session) {
 
-        return fromURL(url, adapterID, remoteID, ddrRecordId, sessionKey, null);
+        return fromURL(url, adapterID, remoteID, ddrRecordId, session, null);
     }
     
-    public static Question fromURL(String url, String remoteID, String fromID, String ddrRecordId, String sessionKey,
+    public static Question fromURL(String url, String remoteID, String fromID, String ddrRecordId, Session session,
         Map<String, String> extraParams) {
 
         log.info(String.format("Trying to parse Question from URL: %s with remoteId: %s and fromId: %s", url, remoteID,
@@ -75,12 +75,13 @@ public class Question implements QuestionIntf {
         if (url != null && !url.trim().isEmpty()) {
 
             AFHttpClient client = ParallelInit.getAFHttpClient();
-            Session session = Session.getSession(sessionKey);
             String parentSessionKey = null;
             String accountId = null;
+            String sessionKey = null;
             if (session != null) {
                 parentSessionKey = session.getParentSessionKey();
                 accountId = session.getAccountId();
+                sessionKey = session.getKey();
             }
             HashMap<String, String> askFastRequestQueryParams = getAskFastRequestQueryParams(fromID, remoteID,
                                                                                              sessionKey,
@@ -90,7 +91,7 @@ public class Question implements QuestionIntf {
                     url = ServerUtils.getURLWithQueryParams(url, key, extraParams.get(key));
                 }
                 url = ServerUtils.getURLWithQueryParams(url, askFastRequestQueryParams);
-                String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
+                String credentialsFromSession = Dialog.getCredentialsFromSession(session);
                 if (credentialsFromSession != null) {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
@@ -197,8 +198,8 @@ public class Question implements QuestionIntf {
     public Question answer(String responder, String adapterID, String answer_id, String answer_input, Session session) {
 
         log.info("answerTest: " + answer_input);
-        boolean answered = false;
         String sessionKey = session != null ? session.getKey() : null;
+        boolean answered = false;
         Answer answer = null;
         if (this.getType().equals("open")) {
             // updated as part of bug#16 at
@@ -254,8 +255,7 @@ public class Question implements QuestionIntf {
             }
             if (answer == null) {
                 for (Answer ans : answers) {
-                    if (ans.getAnswer_expandedtext(this.preferred_language,
-                                                   Dialog.getCredentialsFromSession(sessionKey))
+                    if (ans.getAnswer_expandedtext(this.preferred_language, Dialog.getCredentialsFromSession(session))
                            .equalsIgnoreCase(answer_input)) {
                         answer = ans;
                         break;
@@ -352,7 +352,7 @@ public class Question implements QuestionIntf {
                 log.info("Going to send: " + post);
                 String newQuestionJSON = null;
                 AFHttpClient client = ParallelInit.getAFHttpClient();
-                String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
+                String credentialsFromSession = Dialog.getCredentialsFromSession(session);
                 if (credentialsFromSession != null) {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
@@ -431,7 +431,7 @@ public class Question implements QuestionIntf {
             try {
                 url = ServerUtils.getURLWithQueryParams(url, askFastRequestQueryParams);
                 String post = om.writeValueAsString(event);
-                String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
+                String credentialsFromSession = Dialog.getCredentialsFromSession(session);
                 if (credentialsFromSession != null) {
                     client.addBasicAuthorizationHeader(credentialsFromSession);
                 }
@@ -484,17 +484,17 @@ public class Question implements QuestionIntf {
 
     @Override
     @JsonIgnore
-    public HashMap<String, String> getExpandedRequester(String sessionKey) {
+    public HashMap<String, String> getExpandedRequester(Session session) {
 
-        return question.getExpandedRequester(this.preferred_language, sessionKey);
+        return question.getExpandedRequester(this.preferred_language, session);
     }
 
     @Override
     @JsonIgnore
-    public HashMap<String, String> getExpandedRequester(String language, String sessionKey) {
+    public HashMap<String, String> getExpandedRequester(String language, Session session) {
 
         this.preferred_language = language;
-        return question.getExpandedRequester(language, sessionKey);
+        return question.getExpandedRequester(language, session);
     }
 
     @Override
@@ -511,17 +511,17 @@ public class Question implements QuestionIntf {
 
     @Override
     @JsonIgnore
-    public String getQuestion_expandedtext(String sessionKey) {
+    public String getQuestion_expandedtext(Session session) {
 
-        return question.getQuestion_expandedtext(this.preferred_language, sessionKey);
+        return question.getQuestion_expandedtext(this.preferred_language, session);
     }
 
     @Override
     @JsonIgnore
-    public String getQuestion_expandedtext(String language, String sessionKey) {
+    public String getQuestion_expandedtext(String language, Session session) {
 
         this.preferred_language = language;
-        return question.getQuestion_expandedtext(language, sessionKey);
+        return question.getQuestion_expandedtext(language, session);
     }
 
     @Override
@@ -758,15 +758,15 @@ public class Question implements QuestionIntf {
      * @return
      */
     @JsonIgnore
-    public String getTextWithAnswerTexts(String sessionKey) {
+    public String getTextWithAnswerTexts(Session session) {
 
-        String reply = getQuestion_expandedtext(sessionKey);
+        String reply = getQuestion_expandedtext(session);
         if (question.getAnswers() != null) {
             reply += "\n[";
             for (Answer ans : question.getAnswers()) {
                 reply += " " +
-                         ans.getAnswer_expandedtext(getPreferred_language(),
-                                                    Dialog.getCredentialsFromSession(sessionKey)) + " |";
+                    ans.getAnswer_expandedtext(getPreferred_language(), Dialog.getCredentialsFromSession(session)) +
+                    " |";
             }
             reply = reply.substring(0, reply.length() - 1) + "]";
         }

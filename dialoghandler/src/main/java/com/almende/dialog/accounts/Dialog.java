@@ -379,29 +379,10 @@ public class Dialog implements DialogInterface {
      * @param sessionKey
      * @return
      */
-    public static String getCredentialsFromSession(String sessionKey) {
+    public static String getCredentialsFromSession(Session session) {
 
-        if (sessionKey != null) {
-            Session session = Session.getSession(sessionKey);
-            if (session != null) {
-                return session.getAllExtras().get(DIALOG_BASIC_AUTH_HEADER_KEY);
-            }
-        }
-        return null;
-    }
-    
-    /**
-     * Returns the TTSInfo in the session corresponding to
-     * {@link Dialog#DIALOG_ID_KEY}
-     * 
-     * @param sessionKey
-     * @return
-     */
-    public static TTSInfo getTTSInfoFromSession(String sessionKey) {
-
-        if (sessionKey != null) {
-            Session session = Session.getSession(sessionKey);
-            return getTTSInfoFromSession(session);
+        if (session != null) {
+            return session.getAllExtras().get(DIALOG_BASIC_AUTH_HEADER_KEY);
         }
         return null;
     }

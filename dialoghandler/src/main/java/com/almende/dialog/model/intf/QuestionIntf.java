@@ -4,9 +4,9 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
+import com.almende.dialog.model.Session;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public interface QuestionIntf extends Serializable {
@@ -20,17 +20,17 @@ public interface QuestionIntf extends Serializable {
 	public String getTrackingToken();
 	
 	@JsonIgnore
-	public HashMap<String,String> getExpandedRequester(String sessionKey);
+	public HashMap<String,String> getExpandedRequester(Session session);
 	@JsonIgnore
-	public HashMap<String,String> getExpandedRequester(String language, String sessionKey);
+	public HashMap<String,String> getExpandedRequester(String language, Session session);
 	
 	public ArrayList<Answer> getAnswers();
 	public ArrayList<EventCallback> getEvent_callbacks();
 	
 	@JsonIgnore
-	public String getQuestion_expandedtext(String sessionKey);
+	public String getQuestion_expandedtext(Session session);
 	@JsonIgnore
-	public String getQuestion_expandedtext(String language, String sessionKey);
+	public String getQuestion_expandedtext(String language, Session session);
 	
 	public void setQuestion_id(String question_id);
 	public void setQuestion_text(String question_text);

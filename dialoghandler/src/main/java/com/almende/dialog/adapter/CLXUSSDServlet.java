@@ -17,6 +17,7 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CLXUSSD;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
@@ -215,7 +216,7 @@ public class CLXUSSDServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
-        String message, String sessionKey) throws Exception {
+        String message, Session session) throws Exception {
 
         throw new NotImplementedException("Incoming cost processing is not implemented for " +
                                           this.getClass().getSimpleName());
@@ -223,7 +224,7 @@ public class CLXUSSDServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, Session> sessionKeyMap) throws Exception {
 
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, null, toAddress, 1, message,
                                                                sessionKeyMap);

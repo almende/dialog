@@ -224,7 +224,7 @@ public class RouteSMS {
                                                   session.getAccountId(), session.getQuestion(), smsCode, returnResult,
                                                   session.getDdrRecordId(),
                                                   session.getAllExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY),
-                                                  session.getKey());
+                                                  session);
             //if ddr record ID is found. update it
             if (session.getDDRRecord() != null) {
                 DDRRecord ddrRecord = session.getDDRRecord();

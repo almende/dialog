@@ -195,7 +195,6 @@ public class Session{
         }
         session = createSession(config, remoteAddress);
         session.existingSession = false;
-        session.existingSession = true;
         return session;
     }
     

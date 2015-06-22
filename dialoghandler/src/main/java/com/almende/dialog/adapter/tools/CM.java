@@ -137,8 +137,7 @@ public class CM {
                     SMSDeliveryStatus linkedSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to, 
                                                                        config, accountId, session.getQuestion(), 
                                                                        null, "SENT", ddrRecordId,
-                                                                       AdapterProviders.CM.getName(),
-                                                                       session.getKey());
+                                                                       AdapterProviders.CM.getName(), session);
                     storeSMSRelatedData.addExtraInfo(linkedSMSRelatedData.getRemoteAddress(),
                                                      linkedSMSRelatedData.getReference());
                     storeSMSRelatedData.store();
@@ -147,8 +146,7 @@ public class CM {
                     storeSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to, config, accountId,
                                                                                 session.getQuestion(), null, "SENT",
                                                                                 ddrRecordId,
-                                                                                AdapterProviders.CM.getName(),
-                                                                                session.getKey());
+                                                                                AdapterProviders.CM.getName(), session);
                 }
                 outputter.startTag("MSG");
                 outputter.startTag("CONCATENATIONTYPE");

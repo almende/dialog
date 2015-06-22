@@ -170,7 +170,7 @@ public class RouteSmsServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
-        String message, String sessionKey) throws Exception {
+        String message, Session session) throws Exception {
 
         // Needs implementation, but service not available at CM
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
@@ -178,7 +178,7 @@ public class RouteSmsServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, Session> sessionKeyMap) throws Exception {
 
         //add costs with no.of messages * recipients
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, senderName, toAddress,

@@ -114,7 +114,7 @@ public class MailServletIT extends TestFramework
         //update the question text in the textMessage
         Question question = Question.fromURL(initialAgentURL, adapterConfig.getConfigId(), null, null);
         if(question != null) {
-            textMessage.setBody(question.getTextWithAnswerTexts(session.getKey()));
+            textMessage.setBody(question.getTextWithAnswerTexts(session));
         }
         assertOutgoingTextMessage(textMessage);
     }

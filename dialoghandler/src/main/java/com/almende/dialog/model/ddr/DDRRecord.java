@@ -16,6 +16,7 @@ import org.mongojack.JacksonDBCollection;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
@@ -104,7 +105,7 @@ public class DDRRecord
     AccountType accountType;
     
     /**
-     * total cost is not sent for any ddr generally
+     * total cost is not sent for any ddr if its a post paid account
      */
     Double totalCost = 0.0;
     /**
@@ -787,6 +788,13 @@ public class DDRRecord
                 }
             }
         }
+    }
+    
+    @JsonIgnore
+    public DDRTypeCategory getTypeCategory() {
+
+        DDRType ddrType = DDRType.getDDRType(ddrTypeId);
+        return ddrType != null ? ddrType.getCategory() : null;
     }
     
     /**

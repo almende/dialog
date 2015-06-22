@@ -278,7 +278,6 @@ abstract public class TextServlet extends HttpServlet {
         session.storeSession();
         
         dialogIdOrUrl = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
-        session = session.reload();
         session.setStartUrl(dialogIdOrUrl);
         session.setRemoteAddress(firstRemoteAddress);
         session.storeSession();
@@ -319,7 +318,8 @@ abstract public class TextServlet extends HttpServlet {
             Map<String, String> formattedAddressNameToMap = new HashMap<String, String>();
             // Form the question without the responders address, because we don't know which one.
             question.setPreferred_language(session.getLanguage());
-            res = formQuestion(question, config.getConfigId(), null, null, null);
+            res = formQuestion(question, config.getConfigId(), loadAddress, ddrRecord != null ? ddrRecord.getId()
+                : null, session);
 
             for (String address : fullAddressMap.keySet()) {
                 String formattedAddress = address; //initialize formatted address to be the original one
@@ -349,22 +349,21 @@ abstract public class TextServlet extends HttpServlet {
                         dialogIdOrUrl = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
                         session.setStartUrl(dialogIdOrUrl);
                         session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, getProviderType());
-                        session.setAccountId(accountId);
-                        session.setDirection("outbound");
                         session.setType(config.getAdapterType());
                         session.setAdapterID(config.getConfigId());
-                        session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
                         if (provider != null) {
                             session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, provider.toString());
                         }
-                        //save this session
-                        session.storeSession();
                     }
+                    session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
+                    //save this session
+                    session.storeSession();
                     //put the formatted address to that a text can be broadcasted to it
                     formattedAddressNameToMap.put(formattedAddress, fullAddressMap.get(address));
                     // Add key to the map (for the return)
                     sessionKeyMap.put(formattedAddress, session);
                     result.put(formattedAddress, session.getKey());
+                    
                 }
                 else {
                     result.put(address, "Invalid address");

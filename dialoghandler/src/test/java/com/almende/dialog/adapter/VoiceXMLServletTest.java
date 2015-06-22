@@ -56,14 +56,13 @@ public class VoiceXMLServletTest extends TestFramework {
         assertEquals(COMMENT_QUESTION_AUDIO, prompt.getFirstChild()
                 .getAttributes().getNamedItem("src").getNodeValue());
 
-        assertEquals("answer?questionId=" + COMMENT_QUESTION_ID + "&sessionKey=" + sessionKey,
+        assertEquals("answer?questionId=" + COMMENT_QUESTION_ID + "&sessionKey=" + session.getKey(),
                      java.net.URLDecoder.decode(_goto.getAttributes().getNamedItem("next").getNodeValue(), "UTF-8"));
         assertXMLGeneratedByTwilioLibrary(String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" "
-                                                                                        + "xmlns=\"http://www.w3.org/2001/vxml\"><form><block><prompt><audio src=\"%1$s\"/>"
-                                                                                        + "</prompt><goto next=\"answer?questionId=1&amp;sessionKey=%2$s\"/>"
-                                                                                        + "</block></form></vxml>",
-                                                        COMMENT_QUESTION_AUDIO, URLEncoder.encode(sessionKey, "UTF-8")),
-                                          result);
+                                                            + "xmlns=\"http://www.w3.org/2001/vxml\"><form><block><prompt><audio src=\"%1$s\"/>"
+                                                            + "</prompt><goto next=\"answer?questionId=1&amp;sessionKey=%2$s\"/>"
+                                                            + "</block></form></vxml>", COMMENT_QUESTION_AUDIO,
+                                                        URLEncoder.encode(session.getKey(), "UTF-8")), result);
     }
 
     @Test
@@ -137,13 +136,13 @@ public class VoiceXMLServletTest extends TestFramework {
         String result = renderQuestion(question, adapter, remoteAddressVoice, session);
         TestServlet.logForTest(AdapterType.CALL.toString(), COMMENT_QUESTION_AUDIO);
         String expected = String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\">"
-                                                                        + "<form id=\"ComposeMessage\"><record name=\"file\" beep=\"true\" maxtime=\"15s\" dtmfterm=\"true\"><prompt timeout=\"5s\">"
-                                                                        + "<audio src=\"%1$s\"/></prompt><noinput><prompt><audio src=\"%1$s\"/></prompt></noinput>"
-                                                                        + "<catch event=\"connection.disconnect.hangup\"><submit next=\"upload?questionId=1&"
-                                                                        + "amp;sessionKey=%2$s\" namelist=\"file\" method=\"post\" enctype=\"multipart/form-data\"/>"
-                                                                        + "</catch><filled><submit next=\"upload?questionId=1&amp;sessionKey=%2$s\" namelist=\"file\" "
-                                                                        + "method=\"post\" enctype=\"multipart/form-data\"/></filled></record></form></vxml>",
-                                        COMMENT_QUESTION_AUDIO, URLEncoder.encode(sessionKey, "UTF-8"));
+                                            + "<form id=\"ComposeMessage\"><record name=\"file\" beep=\"true\" maxtime=\"15s\" dtmfterm=\"true\"><prompt timeout=\"5s\">"
+                                            + "<audio src=\"%1$s\"/></prompt><noinput><prompt><audio src=\"%1$s\"/></prompt></noinput>"
+                                            + "<catch event=\"connection.disconnect.hangup\"><submit next=\"upload?questionId=1&"
+                                            + "amp;sessionKey=%2$s\" namelist=\"file\" method=\"post\" enctype=\"multipart/form-data\"/>"
+                                            + "</catch><filled><submit next=\"upload?questionId=1&amp;sessionKey=%2$s\" namelist=\"file\" "
+                                            + "method=\"post\" enctype=\"multipart/form-data\"/></filled></record></form></vxml>",
+                                        COMMENT_QUESTION_AUDIO, URLEncoder.encode(session.getKey(), "UTF-8"));
         assertXMLGeneratedByTwilioLibrary(expected, result);
     }
     

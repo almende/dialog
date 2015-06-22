@@ -1,5 +1,6 @@
 package com.almende.dialog.adapter.tools;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -57,12 +58,13 @@ public class RouteSMS {
         //add an interceptor so that send Messages is not enabled for unit tests
 
         //fetch the sessions
-        Map<String, String> sessionKeyMap = null;
+        Map<String, Session> sessionMap = null;
         Object sessionsObject = extras != null ? extras.get(Session.SESSION_KEY) : null;
         if (sessionsObject != null) {
-            sessionKeyMap = JOM.getInstance().convertValue(sessionsObject, new TypeReference<Map<String, String>>() {
+            sessionMap = JOM.getInstance().convertValue(sessionsObject, new TypeReference<Map<String, Session>>() {
             });
         }
+        Map<String, String> sessionKeyMap = new HashMap<String, String>();
         AFHttpClient afHttpClient = ParallelInit.getAFHttpClient();
         URIBuilder uriBuilder = new URIBuilder(url);
         uriBuilder.addParameter("username", userName);
@@ -72,7 +74,10 @@ public class RouteSMS {
         String destination = "";
         for (String address : addressNameMap.keySet()) {
 
-            Session session = sessionKeyMap != null ? Session.getSession(sessionKeyMap.get(address)) : null;
+            Session session = sessionMap != null ? sessionMap.get(address) : null;
+            if(session != null) {
+                sessionKeyMap.put(address, session.getKey());
+            }
             //check if its a mobile number, if no ignore, log, drop session and continue
             PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(address);
             if (!PhoneNumberType.MOBILE.equals(numberType)) {
@@ -85,7 +90,6 @@ public class RouteSMS {
                     ddrRecord.addAdditionalInfo(address, errorMessage);
                     ddrRecord.createOrUpdate();
                 }
-
                 if (session != null) {
                     session.drop();
                 }
@@ -134,9 +138,6 @@ public class RouteSMS {
 
                         String remoteAddress = resultPerAddress[1].split(":")[0];
                         remoteAddress = PhoneNumberUtils.formatNumber(remoteAddress, null);
-                        //fetch the session corresponding to the address
-                        Session session = sessionKeyMap != null ? Session.getSession(sessionKeyMap.get(remoteAddress))
-                                                               : null;
                         String messageReference = null;
                         CommunicationStatus status = null;
                         if ("1701".equals(resultPerAddress[0])) {
@@ -148,7 +149,9 @@ public class RouteSMS {
                             sendStatus = getSendStatus(resultPerAddress[0]);
                         }
                         status = status != null ? status : CommunicationStatus.ERROR;
-                        createSMSSendData(config, sendStatus, resultPerAddress[0], remoteAddress, session,
+                        //fetch the session corresponding to the address
+                        String sessionKey = sessionKeyMap != null ? sessionKeyMap.get(remoteAddress) : null;
+                        createSMSSendData(config, sendStatus, resultPerAddress[0], remoteAddress, sessionKey,
                                           messageReference, status);
                     }
                     else {
@@ -194,7 +197,7 @@ public class RouteSMS {
                     }
                 }
                 //if error. delete the session
-                if(!"Successfully Sent".equalsIgnoreCase(getSendStatus(smsCode))) {
+                if (!"Successfully Sent".equalsIgnoreCase(getSendStatus(smsCode))) {
                     session.drop();
                 }
             }
@@ -213,8 +216,9 @@ public class RouteSMS {
      * @throws Exception
      */
     private void createSMSSendData(AdapterConfig config, String returnResult, String smsCode, String remoteAddress,
-        Session session, String messageReference, CommunicationStatus status) throws Exception {
+        String sessionKey, String messageReference, CommunicationStatus status) throws Exception {
 
+        Session session = Session.getSession(sessionKey);
         //save the sms status in the session
         if (session != null && returnResult != null) {
             session.addExtras(SMS_STATUS_KEY, returnResult);

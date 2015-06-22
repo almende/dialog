@@ -106,14 +106,14 @@ public class CM {
             for (String to : addressNameMap.keySet()) {
 
                 //fetch the sessions
-                Map<String, String> sessionKeyMap = null;
+                Map<String, Session> sessionKeyMap = null;
                 Object sessionsObject = extras != null ? extras.get(Session.SESSION_KEY) : null;
                 if (sessionsObject != null) {
                     sessionKeyMap = JOM.getInstance().convertValue(sessionsObject,
-                                                                   new TypeReference<Map<String, String>>() {
+                                                                   new TypeReference<Map<String, Session>>() {
                                                                    });
                 }
-                Session session = sessionKeyMap != null ? Session.getSession(sessionKeyMap.get(to)) : null;
+                Session session = sessionKeyMap != null ? sessionKeyMap.get(to) : null;
                 String ddrRecordId = ddrRecord != null ? ddrRecord.getId() : null;
                 //check if its a mobile number, if no ignore, log, drop session and continue
                 PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(to);

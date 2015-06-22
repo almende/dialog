@@ -260,7 +260,7 @@ public class TwilioAdapter {
             url = config.getURLForInboundScenario(session);
             try {
                 ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, config.getOwner(),
-                                                                            config.getMyAddress(), url, session);
+                                                                            formattedRemoteId, url, session);
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -282,14 +282,12 @@ public class TwilioAdapter {
             }
         }
         if (session != null) {
-            session = session.reload();
             session.setStartUrl(url);
             session.setDirection(direction);
             session.setRemoteAddress(formattedRemoteId);
             session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
             session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO.toString());
             session.setAdapterID(config.getConfigId());
-            session = session.reload();
             //fetch the question
             Question question = session.getQuestion();
             if (question == null) {

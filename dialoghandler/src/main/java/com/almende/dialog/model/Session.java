@@ -195,7 +195,6 @@ public class Session{
         }
         session = createSession(config, remoteAddress);
         session.existingSession = false;
-        session.existingSession = true;
         return session;
     }
     
@@ -907,5 +906,11 @@ public class Session{
             }
         }
         return null;
+    }
+
+    @JsonIgnore
+    public Session reload() {
+
+        return getSession(key);
     }
 }

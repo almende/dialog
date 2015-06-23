@@ -54,7 +54,7 @@ public class MailServletIT extends TestFramework
         
         MailServlet mailServlet = new MailServlet();
         mailServlet.broadcastMessage(testMessage, "Test", adapterConfig.getXsiUser(), "Test message", addressNameMap,
-                                     null, adapterConfig, adapterConfig.getOwner());
+                                     null, adapterConfig, adapterConfig.getOwner(), null);
         Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, testMessage, "sendDummyMessageTest" );
         assertOutgoingTextMessage( message );
     }
@@ -114,7 +114,7 @@ public class MailServletIT extends TestFramework
         //update the question text in the textMessage
         Question question = Question.fromURL(initialAgentURL, adapterConfig.getConfigId(), null, null);
         if(question != null) {
-            textMessage.setBody(question.getTextWithAnswerTexts(session.getKey()));
+            textMessage.setBody(question.getTextWithAnswerTexts(session));
         }
         assertOutgoingTextMessage(textMessage);
     }

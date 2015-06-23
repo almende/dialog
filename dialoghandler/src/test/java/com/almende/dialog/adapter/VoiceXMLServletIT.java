@@ -47,11 +47,13 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
+import com.almende.util.jackson.JOM;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 @Category(IntegrationTest.class)
 public class VoiceXMLServletIT extends TestFramework {
@@ -70,6 +72,8 @@ public class VoiceXMLServletIT extends TestFramework {
     @Test
     public void inboundPhoneCall_WithOpenQuestion_MissingAnswerTest() throws Exception {
 
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
@@ -119,6 +123,22 @@ public class VoiceXMLServletIT extends TestFramework {
         else {
             assertTrue(retryCount <= i);
             assertEquals(new Integer(Question.DEFAULT_MAX_QUESTION_LOAD), retryCount);
+        }
+        //check all the ddrs created
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertEquals(ddrRecords.size(), 1);
+        for (DDRRecord ddrRecord : ddrRecords) {
+            assertEquals("inbound", ddrRecord.getDirection());
+            assertEquals(adapterConfig.getMyAddress(), ddrRecord.getToAddress().keySet().iterator().next());
+            assertEquals(PhoneNumberUtils.formatNumber(remoteAddressVoice, null), ddrRecord.getFromAddress());
+            Object addressSessionKeyObject = ddrRecord.getAdditionalInfo().get(Session.SESSION_KEY);
+            Map<String, String> addressSessionKey = JOM.getInstance().convertValue(addressSessionKeyObject, new TypeReference<Map<String, String>>() {
+            });
+            assertEquals(PhoneNumberUtils.formatNumber(remoteAddressVoice, null), addressSessionKey.keySet().iterator()
+                                                                                                   .next());
+            assertEquals(ddrRecord.getSessionKeys().iterator().next(),
+                         addressSessionKey.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
         }
     }
     
@@ -755,6 +775,19 @@ public class VoiceXMLServletIT extends TestFramework {
             }
         }
         assertEquals(1, ttsChargesAttached);
+    }
+    
+    @Test
+    public void ttsUrlTest() throws Exception {
+
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setProvider(TTSProvider.ACAPELA);
+        ttsInfo.setVoiceUsed("testtest");
+
+        AdapterConfig adapterConfig = createBroadsoftAdapter();
+        Session session = Session.createSession(adapterConfig, remoteAddressVoice);
+        String ttsurl = ServerUtils.getTTSURL(ttsInfo, "simple test", session);
+        assertThat(ttsurl, Matchers.not(Matchers.containsString("&amp")));
     }
     
     /**

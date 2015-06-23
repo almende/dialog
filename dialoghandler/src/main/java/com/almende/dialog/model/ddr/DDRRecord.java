@@ -16,6 +16,7 @@ import org.mongojack.JacksonDBCollection;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
@@ -104,7 +105,7 @@ public class DDRRecord
     AccountType accountType;
     
     /**
-     * total cost is not sent for any ddr generally
+     * total cost is not sent for any ddr if its a post paid account
      */
     Double totalCost = 0.0;
     /**
@@ -158,17 +159,6 @@ public class DDRRecord
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
      */
     @JsonIgnore
-    public void createOrUpdateWithLog(String sessionKey) {
-
-        //fetch the Session
-        Session session = Session.getSession(sessionKey);
-        createOrUpdateWithLog(session);
-    }
-
-    /**
-     * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
-     */
-    @JsonIgnore
     public void createOrUpdateWithLog(Session session) {
 
         createOrUpdate();
@@ -180,10 +170,10 @@ public class DDRRecord
     /**
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
      */
-    public void createOrUpdateWithLog(Map<String, String> sessionKeyMap) {
+    public void createOrUpdateWithLog(Map<String, Session> sessionKeyMap) {
 
-        for (String sessionKey : sessionKeyMap.values()) {
-            createOrUpdateWithLog(sessionKey);
+        for (Session session : sessionKeyMap.values()) {
+            createOrUpdateWithLog(session);
         }
     }
     
@@ -775,6 +765,39 @@ public class DDRRecord
     public DDRRecord reload() throws Exception {
 
         return getDDRRecord(getId(), accountId);
+    }
+    
+    /**
+     * Adds the given sessionKeys to additionalInfo, and to collection of
+     * sessionKeys. If the session is found. adds the external caller id too
+     * 
+     * @param sessionMap
+     */
+    @JsonIgnore
+    public void setSessionKeysFromMap(Map<String, Session> sessionMap) {
+
+        if (sessionMap != null) {
+            HashMap<String, String> sessionKeyMap = new HashMap<String, String>();
+            setSessionKeys(new HashSet<String>());
+            for (String address : sessionMap.keySet()) {
+                Session session = sessionMap.get(address);
+                if (session != null) {
+                    sessionKeys.add(session.getKey());
+                    sessionKeyMap.put(address, session.getKey());
+                    if (session.getExternalSession() != null) {
+                        addAdditionalInfo("externalSessionKey", session.getExternalSession());
+                    }
+                }
+            }
+            addAdditionalInfo(Session.SESSION_KEY, sessionKeyMap);
+        }
+    }
+    
+    @JsonIgnore
+    public DDRTypeCategory getTypeCategory() {
+
+        DDRType ddrType = DDRType.getDDRType(ddrTypeId);
+        return ddrType != null ? ddrType.getCategory() : null;
     }
     
     /**

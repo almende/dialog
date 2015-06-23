@@ -20,7 +20,6 @@ import org.jivesoftware.smack.packet.Message.Body;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Presence.Mode;
 import org.jivesoftware.smack.packet.Presence.Type;
-import com.almende.dialog.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
@@ -40,11 +39,10 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
     public static final int DEFAULT_XMPP_PORT = 5222;
     private static ThreadLocal<XMPPConnection> xmppConnection = null;
     private static final String servletPath = "/xmpp";
-    private static final Logger dialogLog = new Logger();
 
     @Override
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config, String accountId) throws Exception {
+        Map<String, Object> extras, AdapterConfig config, String accountId, DDRRecord ddrRecord) throws Exception {
 
         XMPPConnection xmppConnection = null;
         try {
@@ -53,14 +51,12 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
             Roster.setDefaultSubscriptionMode(SubscriptionMode.accept_all);
             if (!xmppRooster.contains(to)) {
                 xmppRooster.createEntry(to, toName, null);
-                String sessionKey = extras.containsKey(Session.SESSION_KEY) ? extras.get(Session.SESSION_KEY)
-                                                .toString() : null;
-                String ddrRecordId = extras.containsKey(DDRRecord.DDR_RECORD_KEY) ? extras
-                                                .get(DDRRecord.DDR_RECORD_KEY).toString() : null;
-                dialogLog.warning(config.getConfigId(),
-                                  config.getAdapterType(),
-                                  String.format("Sending xmpp chat: %s to: %s might be incomplete. Contact just added in AddressBook",
-                                                message, to), ddrRecordId, sessionKey);
+                if (ddrRecord != null) {
+                    ddrRecord.addAdditionalInfo(to,
+                                                String.format("Sending xmpp chat: %s to: %s might be incomplete. Contact just added in AddressBook",
+                                                              message, to));
+                    ddrRecord.createOrUpdate();
+                }
             }
             if (fromName != null && !fromName.isEmpty()) {
                 Presence presence = new Presence(Type.available);
@@ -80,18 +76,22 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
                 xmppConnection.disconnect();
             }
             log.severe("XMPP send message failed. Error:" + ex.getLocalizedMessage());
+            if (ddrRecord != null) {
+                ddrRecord.addAdditionalInfo(to, "XMPP send message failed. Error:" + ex.getLocalizedMessage());
+                ddrRecord.createOrUpdate();
+            }
             throw ex;
         }
     }
 
     @Override
     protected int broadcastMessage(String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId, DDRRecord ddrRecord)
         throws Exception {
 
         for (String address : addressNameMap.keySet()) {
             sendMessage(message, subject, from, senderName, address, addressNameMap.get(address), extras, config,
-                        accountId);
+                        accountId, ddrRecord);
         }
         return addressNameMap.size();
     }
@@ -210,15 +210,15 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
     
     @Override
     protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
-        String message, String sessionKey) throws Exception {
+        String message, Session session) throws Exception {
 
         return DDRUtils.createDDRRecordOnIncomingCommunication(adapterConfig, accountId, fromAddress, message,
-                                                               sessionKey);
+                                                               session);
     }
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, Session> sessionKeyMap) throws Exception {
 
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, toAddress, message,
                                                                sessionKeyMap);

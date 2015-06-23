@@ -4,11 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 import java.util.Map;
-
 import org.junit.Test;
-
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
@@ -23,11 +20,11 @@ public class QuestionTest extends TestFramework {
         Question question;
         
         String json = "";
-        question = Question.fromJSON(json, null, null, null);
+        question = Question.fromJSON(json);
         assertNull(question);
         
         json = "{}";
-        question = Question.fromJSON(json, null, null, null);
+        question = Question.fromJSON(json);
         assertNotNull(question);
     }
     
@@ -45,7 +42,7 @@ public class QuestionTest extends TestFramework {
         
         //String json1 = "{\"question_id\":1,\"question_text\":\"http://ask70.ask-cs.nl/~ask/askfastdemo/audio/nl/inspreken.wav\",\"type\":\"referral\",\"url\":null,\"requester\":null}";
         
-        question = Question.fromJSON(json1.toString(), null, null, null);
+        question = Question.fromJSON(json1.toString());
         assertNotNull(question.getQuestion_text());
         assertEquals(question.getQuestion_text(),"http://ask70.ask-cs.nl/~ask/askfastdemo/audio/nl/inspreken.wav");
         assertNull(question.getAnswers());
@@ -65,7 +62,7 @@ public class QuestionTest extends TestFramework {
         
         //String json2 = "{\"question_id\":1,\"question_text\":\"http://ask70.ask-cs.nl/~ask/askfastdemo/audio/nl/inspreken.wav\",\"type\":\"open\",\"url\":null,\"requester\":null,\"answers\":[{\"answer_id\":1,\"answer_text\":null,\"callback\":\"http://ask70.ask-cs.nl/~ask/askfastdemo/audio_open_question.php?function=next\"}],\"event_callbacks\":[],\"media_properties\":[{\"medium\":\"BROADsofT\",\"properties\":{\"tYPe\":\"audio\"}}]}";
         
-        question = Question.fromJSON(json2.toString(), null, null, null);
+        question = Question.fromJSON(json2.toString());
         assertNotNull(question.getQuestion_text());
         assertEquals(question.getQuestion_text(), "http://ask70.ask-cs.nl/~ask/askfastdemo/audio/nl/inspreken.wav");
         assertNull(question.getAnswers());
@@ -81,7 +78,7 @@ public class QuestionTest extends TestFramework {
         json3.put( "url", url );
         json3.set( "requester", JOM.createNullNode() );
         
-        question = Question.fromJSON(json3.toString(), null, null, null);
+        question = Question.fromJSON(json3.toString());
         assertNotNull(question.getQuestion_text());
         assertEquals(question.getQuestion_text(), "http://ask70.ask-cs.nl/~ask/askfastdemo/audio/nl/inspreken.wav");
         assertNull(question.getAnswers());
@@ -101,7 +98,7 @@ public class QuestionTest extends TestFramework {
         
         String json1 = "{\"question_id\":1,\"question_text\":\"http://ask70.ask-cs.nl/~ask/askfastdemo/audio/nl/inspreken.wav\",\"type\":\"open\",\"url\":null,\"requester\":null}";
         
-        question = Question.fromJSON(json1, null, null, null);
+        question = Question.fromJSON(json1);
         assertNotNull(question.getQuestion_text());
         assertEquals(question.getQuestion_text(),"http://ask70.ask-cs.nl/~ask/askfastdemo/audio/nl/inspreken.wav");
         assertNull(question.getAnswers());
@@ -110,7 +107,7 @@ public class QuestionTest extends TestFramework {
         
         String json2 = "{\"question_id\":1,\"question_text\":\"http://ask70.ask-cs.nl/~ask/askfastdemo/audio/nl/inspreken.wav\",\"type\":\"open\",\"url\":null,\"requester\":null,\"answers\":[{\"answer_id\":1,\"answer_text\":null,\"callback\":\"http://ask70.ask-cs.nl/~ask/askfastdemo/audio_open_question.php?function=next\"}],\"event_callbacks\":[],\"media_properties\":[{\"medium\":\"BROADsofT\",\"properties\":{\"tYPe\":\"audio\"}}]}";
         
-        question = Question.fromJSON(json2, null, null, null);
+        question = Question.fromJSON(json2);
         assertNotNull(question.getQuestion_text());
         assertEquals(question.getQuestion_text(), "http://ask70.ask-cs.nl/~ask/askfastdemo/audio/nl/inspreken.wav");
         assertEquals(question.getAnswers().size(),1);
@@ -130,7 +127,7 @@ public class QuestionTest extends TestFramework {
             + "\"callback\":\"http://askfastmarket1.appspot.com/resource/question?url=comment\"}],\"event_callbacks\":[],"
             + "\"media_properties\":[{\"medium\":\"BROADSOFT\",\"properties\":{\"ANSWER_INPUT_MIN_LENGTH\":\"3\","
             + "\"ANSWER_INPUT_MAX_LENGTH\":\"3\"}}]}";
-        Question fromJSON = Question.fromJSON( questionText, null, null, null);
+        Question fromJSON = Question.fromJSON(questionText);
         assertEquals( "3",
             fromJSON.getMediaPropertyValue( MediumType.BROADSOFT, MediaPropertyKey.ANSWER_INPUT_MIN_LENGTH ) );
         assertEquals( "3",

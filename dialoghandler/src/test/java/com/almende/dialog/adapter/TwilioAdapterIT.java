@@ -114,6 +114,17 @@ public class TwilioAdapterIT extends TestFramework {
         for (Session session : allSessions) {
             DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), TEST_PUBLIC_KEY);
             Assert.assertThat(ddrRecord, Matchers.notNullValue());
+            if(DDRTypeCategory.INCOMING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
+
+                assertThat(ddrRecord.getToAddress().keySet().iterator().next(),
+                           Matchers.is(adapterConfig.getMyAddress()));
+                assertTrue(ddrRecord.getFromAddress().equals(PhoneNumberUtils.formatNumber(inboundAddress, null)));
+            }
+            else {
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getMyAddress()));
+                assertTrue(ddrRecord.getToAddress().keySet()
+                                    .contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+            }
         }
 
         //new inbound call should trigger a redirect with preconnect 
@@ -176,12 +187,31 @@ public class TwilioAdapterIT extends TestFramework {
                                       null, testCallId2, null);
         assertXMLGeneratedByTwilioLibrary("<Response><Say language=\"nl-nl\">You chose 1</Say></Response>",
                                           answer.getEntity().toString());
+        ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null);
+        Assert.assertThat(ddrRecords.size(), Matchers.is(3));
+        for (DDRRecord ddrRecord : ddrRecords) {
+
+            Assert.assertThat(ddrRecord, Matchers.notNullValue());
+            if(DDRTypeCategory.INCOMING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
+
+                assertThat(ddrRecord.getToAddress().keySet().iterator().next(),
+                           Matchers.is(adapterConfig.getMyAddress()));
+                assertTrue(ddrRecord.getFromAddress().equals(PhoneNumberUtils.formatNumber(inboundAddress, null)));
+            }
+            else if(DDRTypeCategory.OUTGOING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getMyAddress()));
+                assertTrue(ddrRecord.getToAddress().keySet()
+                                    .contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)) ||
+                    ddrRecord.getToAddress().keySet()
+                             .contains(PhoneNumberUtils.formatNumber(secondRemoteAddress, null)));
+            }
+        }
     }
 
     @Test
     public void inboundPhoneCall_CommentTest() throws Exception {
 
-        //new DDRRecordAgent().generateDefaultDDRTypes();
+        new DDRRecordAgent().generateDefaultDDRTypes();
 
         String accountSid = UUID.randomUUID().toString();
         String callSid = UUID.randomUUID().toString();
@@ -210,6 +240,15 @@ public class TwilioAdapterIT extends TestFramework {
         expected.append(say);
 
         assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+        //check all the ddrs created
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertEquals(ddrRecords.size(), 1);
+        for (DDRRecord ddrRecord : ddrRecords) {
+            assertEquals("inbound", ddrRecord.getDirection());
+            assertEquals(adapterConfig.getMyAddress(), ddrRecord.getToAddress().keySet().iterator().next());
+            assertEquals(PhoneNumberUtils.formatNumber(remoteAddressVoice, null), ddrRecord.getFromAddress());
+        }
     }
     
     @Test

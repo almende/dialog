@@ -30,6 +30,7 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.accounts.Recording;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
@@ -42,7 +43,6 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
-import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
@@ -51,9 +51,11 @@ import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.resource.factory.CallFactory;
 import com.twilio.sdk.resource.instance.Account;
 import com.twilio.sdk.resource.instance.Call;
+import com.twilio.sdk.verbs.Conference;
 import com.twilio.sdk.verbs.Dial;
 import com.twilio.sdk.verbs.Gather;
 import com.twilio.sdk.verbs.Hangup;
+import com.twilio.sdk.verbs.Number;
 import com.twilio.sdk.verbs.Play;
 import com.twilio.sdk.verbs.Record;
 import com.twilio.sdk.verbs.Redirect;
@@ -69,6 +71,7 @@ public class TwilioAdapter {
     protected static final com.almende.dialog.Logger dialogLog = new com.almende.dialog.Logger();
     private static final int LOOP_DETECTION = 10;
     protected String TIMEOUT_URL = "timeout";
+    protected static final String CONFERENCE_ROOM_NAME_KEY = "CONFERENCE_ROOM_NAME";
 	//protected String EXCEPTION_URL="exception";
 	
     /**
@@ -95,9 +98,10 @@ public class TwilioAdapter {
      * @throws Exception
      */
     public static HashMap<String, String> dial(Map<String, String> addressNameMap, String dialogIdOrUrl,
-        AdapterConfig config, String accountId, String applicationId) throws Exception {
+        AdapterConfig config, String accountId, String applicationId, String bearerToken) throws Exception {
 
-        HashMap<String, String> resultSessionMap = new HashMap<String, String>();
+        HashMap<String, Session> sessionMap = new HashMap<String, Session>();
+        HashMap<String, String> result = new HashMap<String, String>();
         // If it is a broadcast don't provide the remote address because it is deceiving.
         String loadAddress = "";
         if (addressNameMap == null || addressNameMap.isEmpty()) {
@@ -113,12 +117,29 @@ public class TwilioAdapter {
         firstRemoteAddress = PhoneNumberUtils.formatNumber(firstRemoteAddress, null);
         Session session = Session.getOrCreateSession(config, firstRemoteAddress);
         session.setAccountId(accountId);
+        session.killed = false;
+        session.setDirection("outbound");
+        session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
+        session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
+        session.setAdapterID(config.getConfigId());
+        session.setAccountId(accountId);
+        session.addExtras(DialogAgent.BEARER_TOKEN_KEY, bearerToken);
+        session.setRemoteAddress(firstRemoteAddress);
         session.storeSession();
+        
         String url = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
 
+        session = session.reload();
+        session.setStartUrl(url);
+        session.storeSession();
+        
+        //create a ddr record
+        DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, firstRemoteAddress, 1,
+                                                                              url, session);
+        session = session.reload();
         //fetch the question
-        Question question = Question.fromURL(url, config.getConfigId(), loadAddress, config.getMyAddress(),
-                                             session != null ? session.getKey() : null, null);
+        Question question = Question.fromURL(url, loadAddress, config.getMyAddress(),
+                                             ddrRecord != null ? ddrRecord.getId() : null, session, null);
         if (question != null) {
             for (String address : addressNameMap.keySet()) {
                 String formattedAddress = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
@@ -138,13 +159,12 @@ public class TwilioAdapter {
                     session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO.toString());
                     session.setAdapterID(config.getConfigId());
                     session.setQuestion(question);
+                    session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
                     //update session with account credentials
                     session.addExtras(AdapterConfig.ACCESS_TOKEN_KEY, config.getAccessToken());
                     session.addExtras(AdapterConfig.ACCESS_TOKEN_SECRET_KEY, config.getAccessTokenSecret());
                     session.storeSession();
-                    dialogLog.log(LogLevel.INFO, session.getAdapterConfig(), String
-                                                    .format("Outgoing call requested from: %s to: %s",
-                                                            session.getLocalAddress(), formattedAddress), session);
+                    
                     String extSession = "";
                     if (!ServerUtils.isInUnitTestingEnvironment()) {
                         
@@ -169,10 +189,11 @@ public class TwilioAdapter {
                         session.setExternalSession(extSession);
                         session.storeSession();
                     }
-                    resultSessionMap.put(formattedAddress, session.getKey());
+                    sessionMap.put(formattedAddress, session);
+                    result.put(formattedAddress, session.getKey());
                 }
                 else {
-                    resultSessionMap.put(address, "Invalid address");
+                    result.put(address, "Invalid address");
                     log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
                 }
             }
@@ -184,7 +205,11 @@ public class TwilioAdapter {
                           String.format("Question not fetched from: %s. Request for outbound call rejected ",
                                         dialogIdOrUrl), session);
         }
-        return resultSessionMap;
+        if(ddrRecord != null) {
+            ddrRecord.setSessionKeysFromMap(sessionMap);
+            ddrRecord.createOrUpdate();
+        }
+        return result;
     }
 
     @Path("new")
@@ -211,103 +236,92 @@ public class TwilioAdapter {
             extraParams.put("forwardedFrom", forwardedFrom);
         }
 
+        String url = "";
+        Session session = Session.getSessionByExternalKey(CallSid);
+        AdapterConfig config = null;
+        String formattedRemoteId = null;
         //swap the remote and the local numbers if its inbound
+        DDRRecord ddrRecord = null;
+        
         if (direction.equals("inbound")) {
             String tmpLocalId = new String(localID);
             localID = new String(remoteID);
             remoteID = tmpLocalId;
-        }
-        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
-        String formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
-        Session session = Session.getSessionByExternalKey(CallSid);
-
-        String url = "";
-        DDRRecord ddrRecord = null;
-        try {
-            if (session != null && direction.startsWith("outbound")) {
-                try {
-                    url = Dialog.getDialogURL(session.getStartUrl(), session.getAccountId(), session);
-                }
-                catch (UnsupportedEncodingException e) {
-                    e.printStackTrace();
-                    dialogLog.log(LogLevel.WARNING, config,
-                                  String.format("Dialog url encoding failed. Error: %s ", e.toString()), session);
-                }
-                ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, session.getAccountId(),
-                                                                            formattedRemoteId, 1, url, session.getKey());
-                direction = "outbound";
-                dialogLog.log(LogLevel.INFO, config,
-                              String.format("Trying to fetch dialog for %s, due to outgoing Call from: %s ",
-                                            formattedRemoteId, config.getMyAddress()), session);
+            config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
+            //create a session for incoming only. Flush any existing one
+            if (session != null) {
+                session.drop();
             }
-            else if (direction.equals("inbound")) {
-                //create a session for incoming only. Flush any existing one
+            formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
+            session = Session.createSession(config, formattedRemoteId);
+            session.setAccountId(config.getOwner());
+            session.setExternalSession(CallSid);
+            session.storeSession();
+            url = config.getURLForInboundScenario(session);
+            try {
+                ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, config.getOwner(),
+                                                                            formattedRemoteId, url, session);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            direction = "outbound";
+            config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
+            try {
                 if (session != null) {
-                    session.drop();
+                    url = Dialog.getDialogURL(session.getStartUrl(), session.getAccountId(), session);
+                    ddrRecord = session.getDDRRecord();
                 }
-                session = Session.createSession(config, formattedRemoteId);
-                session.setAccountId(config.getOwner());
-                session.setExternalSession(CallSid);
-                session.storeSession();
-                url = config.getURLForInboundScenario(session);
-                ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, session.getAccountId(),
-                                                                            formattedRemoteId, 1, url, session.getKey());
             }
-            session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
-            if(ddrRecord!=null) {
-                ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
+            catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+                dialogLog.log(LogLevel.WARNING, config,
+                              String.format("Dialog url encoding failed. Error: %s ", e.toString()), session);
             }
         }
-        catch (Exception e) {
-            e.printStackTrace();
-            String errorMessage = String.format("Creating DDR records failed. Direction: %s for adapterId: %s with address: %s remoteId: %s and localId: %s",
-                                                direction, config.getConfigId(), config.getMyAddress(),
-                                                formattedRemoteId, localID);
-            log.severe(errorMessage);
-            dialogLog.severe(config.getConfigId(), errorMessage, ddrRecord != null ? ddrRecord.getId() : null,
-                             session != null ? session.getKey() : null);
-        }
-        finally {
-            if (ddrRecord != null) {
-                ddrRecord.createOrUpdate();
-            }
+        if (session != null) {
             session.setStartUrl(url);
             session.setDirection(direction);
             session.setRemoteAddress(formattedRemoteId);
             session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
             session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO.toString());
             session.setAdapterID(config.getConfigId());
+            //fetch the question
+            Question question = session.getQuestion();
+            if (question == null) {
+                question = Question.fromURL(url, formattedRemoteId, localID, ddrRecord != null ? ddrRecord.getId()
+                    : null, session, extraParams);
+            }
+
+            if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
+
+                TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
+                String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
+                return Response.ok(renderExitQuestion(question, Arrays.asList(insufficientCreditMessage),
+                                                      session.getKey())).build();
+            }
+            // Check if we were able to load a question
+            if (question == null) {
+                //If not load a default error message
+                question = Question.getError(config.getPreferred_language());
+            }
+            session.setQuestion(question);
+            session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
             session.storeSession();
-        }
 
-        Question question = session.getQuestion();
-        if (question == null) {
-            question = Question.fromURL(url, session.getAdapterConfig().getConfigId(), formattedRemoteId, localID,
-                                        session.getDdrRecordId(), session.getKey(), extraParams);
-        }
-        
-        if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
-            
-            TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
-            String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
-            //create a ddr record for tts
-            DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
-            return Response.ok(renderExitQuestion(question, Arrays.asList(insufficientCreditMessage), session.getKey()))
-                                            .build();
-        }
-        // Check if we were able to load a question
-        if (question == null) {
-            //If not load a default error message
-            question = Question.getError(config.getPreferred_language());
-        }
-        session.setQuestion(question);
-        session.storeSession();
-
-        if (session.getQuestion() != null) {
-            return handleQuestion(question, config, formattedRemoteId, session.getKey(), extraParams);
+            if (session.getQuestion() != null) {
+                return handleQuestion(question, config, formattedRemoteId, session, extraParams);
+            }
+            else {
+                return Response.ok().build();
+            }
         }
         else {
-            return Response.ok().build();
+            log.severe(String.format("CallSid: %s From: %s to: %s direction: %s has no sessions", CallSid, localID,
+                                     remoteID, direction));
+            return Response.ok("No sessions found.").build();
         }
     }
 	
@@ -341,7 +355,7 @@ public class TwilioAdapter {
         @QueryParam("From") String localID, @QueryParam("To") String remoteID,
         @QueryParam("Direction") String direction, @QueryParam("RecordingUrl") String recordingUrl,
         @QueryParam("DialCallStatus") String dialCallStatus, @QueryParam("DialCallSid") String dialCallSid,
-        @QueryParam("CallSid") String callSid) {
+        @QueryParam("CallSid") String callSid, @QueryParam("ConferenceSid") String conferenceSid) {
 
         TwiMLResponse twiml = new TwiMLResponse();
         localID = checkAnonymousCallerId(localID);
@@ -371,6 +385,9 @@ public class TwilioAdapter {
 
             //add a tag in the session saying its picked up
             session.setCallPickedUpStatus(true);
+            if(conferenceSid != null) {
+                session.addExtras(Session.EXTERNAL_CONFERENCE_KEY, conferenceSid);
+            }
             session.storeSession();
             /*
              * Important note: Remove the referralSession. Twilio gives a
@@ -415,8 +432,8 @@ public class TwilioAdapter {
                     session.addExtras("requester", session.getLocalAddress());
                     Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected",
                                                                             session.getPublicExtras(), remoteID,
-                                                                            session.getKey());
-                    return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session.getKey(),
+                                                                            session);
+                    return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session,
                                           session.getPublicExtras());
                 }
             }
@@ -430,21 +447,12 @@ public class TwilioAdapter {
                     log.warning("session is killed");
                     return Response.status(Response.Status.BAD_REQUEST).build();
                 }
-                if (question.getType() != null && !question.getType().equalsIgnoreCase("comment")) {
-                    dialogLog.log(LogLevel.INFO,
-                                  session.getAdapterConfig(),
-                                  String.format("Answer input: %s from: %s to question: %s", answer_input,
-                                                session.getRemoteAddress(),
-                                                question.getQuestion_expandedtext(session.getKey())), session);
-                }
-                String answerForQuestion = question.getQuestion_expandedtext(session.getKey());
+                String answerForQuestion = question.getQuestion_expandedtext(session);
                 
                 question = question.answer(responder, session.getAdapterConfig().getConfigId(), answer_id,
-                                           answer_input, session.getKey());
+                                           answer_input, session);
                 
                 log.info(String.format("Question after answer is: %s", ServerUtils.serializeWithoutException(question)));
-                //reload the session
-                session = Session.getSession(session.getKey());
                 session.setQuestion(question);
                 session.storeSession();
                 //check if ddr is in session. save the answer in the ddr
@@ -471,7 +479,7 @@ public class TwilioAdapter {
                     session.setCallConnectedStatus(false);
                 }
                 session.storeSession();
-                return handleQuestion(question, session.getAdapterConfig(), responder, session.getKey(), null);
+                return handleQuestion(question, session.getAdapterConfig(), responder, session, null);
             }
             else {
                 log.warning("No question found in session!");
@@ -506,14 +514,10 @@ public class TwilioAdapter {
             if (session.killed) {
                 return Response.status(Response.Status.BAD_REQUEST).build();
             }
-            dialogLog.log(LogLevel.INFO,
-                          session.getAdapterConfig(),
-                          String.format("Timeout from: %s for question: %s", responder,
-                                        question.getQuestion_expandedtext(session.getKey())), session);
             HashMap<String, Object> extras = new HashMap<String, Object>();
             extras.put("sessionKey", session.getKey());
             extras.put("requester", session.getLocalAddress());
-            question = question.event("timeout", "No answer received", extras, responder, session.getKey());
+            question = question.event("timeout", "No answer received", extras, responder, session);
             session.setQuestion(question);
             if (question != null) {
                 String retryLimit = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT);
@@ -532,7 +536,7 @@ public class TwilioAdapter {
                 log.warning("No question found for this session :" + session.getKey());
             }
             session.storeSession();
-            return handleQuestion(question, session.getAdapterConfig(), responder, session.getKey(), null);
+            return handleQuestion(question, session.getAdapterConfig(), responder, session, null);
         }
         else {
             log.warning("Strange that no session is found for external call id: " + callSid);
@@ -566,15 +570,10 @@ public class TwilioAdapter {
                 if (session.killed) {
                     return Response.status(Response.Status.BAD_REQUEST).build();
                 }
-                dialogLog.log(LogLevel.INFO,
-                              session.getAdapterConfig(),
-                              String.format("Wrong answer received from: %s for question: %s", responder,
-                                            question.getQuestion_expandedtext(session.getKey())), session);
-
                 HashMap<String, String> extras = new HashMap<String, String>();
                 extras.put("sessionKey", session.getKey());
                 extras.put("requester", session.getLocalAddress());
-                question = question.event("preconnect", "preconnect event", extras, responder, session.getKey());
+                question = question.event("preconnect", "preconnect event", extras, responder, session);
                 // If there is no preconnect the isCallPickedUp is never set
                 if (question == null) {
                     session.setCallPickedUpStatus(true);
@@ -589,7 +588,7 @@ public class TwilioAdapter {
                 long afterPreconnectEvent = TimeUtils.getServerCurrentTimeInMillis();
                 log.info(String.format("It took %s for the preconnect event to finish",
                                        (afterPreconnectEvent - beforePreconnect) / 1000.0));
-                return handleQuestion(question, session.getAdapterConfig(), responder, session.getKey(), null);
+                return handleQuestion(question, session.getAdapterConfig(), responder, session, null);
             }
             else {
                 session.setCallPickedUpStatus(true);
@@ -652,12 +651,9 @@ public class TwilioAdapter {
             }
             timeMap.put("requester", session.getLocalAddress());
             QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "answered",
-                                                                              "Answered", responder, timeMap,
-                                                                              session.getKey());
+                                                                              "Answered", responder, timeMap, session);
             Thread questionEventRunnerThread = new Thread(questionEventRunner);
             questionEventRunnerThread.start();
-            dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
-                          String.format("Call from: %s answered by: %s", session.getLocalAddress(), responder), session);
         }
     }
 	
@@ -725,7 +721,7 @@ public class TwilioAdapter {
                 }
                 
                 //flush the keys if ddrProcessing was successful
-                if (DDRUtils.stopDDRCosts(session.getKey())) {
+                if (DDRUtils.stopDDRCosts(session)) {
                     session.drop();
                 }
                 hangup(session);
@@ -756,9 +752,9 @@ public class TwilioAdapter {
             log.info("call hangup with:" + session.getDirection() + ":" + session.getRemoteAddress() + ":" +
                      session.getLocalAddress());
             if (session.getQuestion() == null) {
-                Question question = Question.fromURL(session.getStartUrl(), session.getAdapterConfig().getConfigId(),
-                                                     session.getRemoteAddress(), session.getLocalAddress(),
-                                                     session.getDdrRecordId(), session.getKey(), new HashMap<String, String>());
+                Question question = Question.fromURL(session.getStartUrl(), session.getRemoteAddress(),
+                                                     session.getLocalAddress(), session.getDdrRecordId(), session,
+                                                     new HashMap<String, String>());
                 session.setQuestion(question);
             }
             if (session.getQuestion() != null && !isEventTriggered("hangup", session)) {
@@ -771,15 +767,13 @@ public class TwilioAdapter {
                     timeMap.putAll(session.getPublicExtras());
                 }
                 Response hangupResponse = handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(),
-                                                         session.getKey(), null);
+                                                         session, null);
                 timeMap.put("requester", session.getLocalAddress());
                 QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "hangup",
                                                                                   "Hangup", session.getRemoteAddress(),
-                                                                                  timeMap, session.getKey());
+                                                                                  timeMap, session);
                 Thread questionEventRunnerThread = new Thread(questionEventRunner);
                 questionEventRunnerThread.start();
-                dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
-                              String.format("Call hungup from: %s", session.getRemoteAddress()), session);
                 return hangupResponse;
             }
             else {
@@ -873,7 +867,7 @@ public class TwilioAdapter {
     }
 	
     public Return formQuestion(Question question, String adapterID, String address, String ddrRecordId,
-                               String sessionKey, Map<String, String> extraParams) {
+        Session session, Map<String, String> extraParams) {
 
         ArrayList<String> prompts = new ArrayList<String>();
         for (int count = 0; count <= LOOP_DETECTION; count++) {
@@ -908,7 +902,7 @@ public class TwilioAdapter {
             }
             else if (question.getType().equalsIgnoreCase("referral")) {
                 if (question.getUrl() != null && question.getUrl().size() == 1 && !question.getUrl().get(0).startsWith("tel:")) {
-                    question = Question.fromURL(question.getUrl().get(0), adapterID, address, ddrRecordId, sessionKey, extraParams);
+                    question = Question.fromURL(question.getUrl().get(0), adapterID, address, ddrRecordId, session, extraParams);
                     //question = question.answer(null, null, null);
                     //					break;
                 }
@@ -945,7 +939,7 @@ public class TwilioAdapter {
         TwiMLResponse twiml = new TwiMLResponse();
         try {
             
-            addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey );
+            addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey) );
             if (question != null && question.getAnswers() != null && !question.getAnswers().isEmpty()) {
                 Redirect redirect = new Redirect(getAnswerUrl());
                 redirect.setMethod("GET");
@@ -962,7 +956,7 @@ public class TwilioAdapter {
         TwiMLResponse twiml = new TwiMLResponse();
 
         try {
-            addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey);
+            addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey));
             String redirectTimeoutProperty = question
                 .getMediaPropertyValue( MediumType.BROADSOFT,
                                         MediaPropertyKey.TIMEOUT );
@@ -980,10 +974,14 @@ public class TwilioAdapter {
             List<String> urls = question.getUrl();           
             for(String url : urls) {
 
-                com.twilio.sdk.verbs.Number number = new com.twilio.sdk.verbs.Number(url.replace("tel:", "").trim());
-                number.setMethod( "GET" );
-                number.setUrl( getPreconnectUrl() );
-                dial.append( number );
+                if (DDRUtils.validateAddressAndUpdateDDRIfInvalid(url, sessionKey)) {
+
+                    url = url.replace("tel:", "").trim();
+                    Number number = new Number( PhoneNumberUtils.formatNumber(url, null));
+                    number.setMethod("GET");
+                    number.setUrl(getPreconnectUrl());
+                    dial.append(number);
+                }
             }
             
             dial.setCallerId( remoteID );
@@ -999,7 +997,7 @@ public class TwilioAdapter {
         }
         return twiml.toXML();
     }
-	
+
     protected String renderClosedQuestion(Question question, ArrayList<String> prompts, String sessionKey) {
 
         try {
@@ -1051,7 +1049,7 @@ public class TwilioAdapter {
         	gather.setFinishOnKey("");
         }
         try {
-            addPrompts(prompts, gather, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey);
+            addPrompts(prompts, gather, ServerUtils.getTTSInfoFromSession(question, sessionKey));
             twiml.append(gather);
             Redirect redirect = new Redirect(getTimeoutUrl());
             redirect.setMethod("GET");
@@ -1108,7 +1106,7 @@ public class TwilioAdapter {
             gather.setTimeout(timeout);
 
             try {
-                addPrompts(prompts, gather, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey);
+                addPrompts(prompts, gather, ServerUtils.getTTSInfoFromSession(question, sessionKey));
                 twiml.append(gather);
                 Redirect redirect = new Redirect(getTimeoutUrl());
                 redirect.setMethod("GET");
@@ -1136,7 +1134,7 @@ public class TwilioAdapter {
     protected void renderVoiceMailQuestion(Question question, ArrayList<String> prompts, String sessionKey,
         TwiMLResponse twiml) {
 
-        addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey);
+        addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey));
 
         Record record = new Record();
         record.setAction(getAnswerUrl());
@@ -1190,7 +1188,7 @@ public class TwilioAdapter {
     protected String renderExitQuestion(Question question, List<String> prompts, String sessionKey) {
 
         TwiMLResponse twiml = new TwiMLResponse();
-        addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey), sessionKey);
+        addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey));
         try {
             twiml.append(new Hangup());
         }
@@ -1200,31 +1198,90 @@ public class TwilioAdapter {
         return twiml.toXML();
     }
     
-    protected void addPrompts(List<String> prompts, Verb twiml, TTSInfo ttsInfo, Session session) {
+    /**
+     * Renders a conference question. Requests twilio to add the current call to
+     * the specified conference
+     * 
+     * @param question
+     * @param prompts
+     * @param sessionKey
+     * @return
+     */
+    protected String renderConferenceQuestion(Question question, List<String> prompts, String sessionKey) {
+
+        TwiMLResponse twiml = new TwiMLResponse();
+        addPrompts(prompts, twiml, ServerUtils.getTTSInfoFromSession(question, sessionKey));
+        try {
+            String conferenceName = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                   MediaPropertyKey.CONFERENCE_ROOM_NAME);
+            if (conferenceName != null) {
+                //create a dial verb
+                Dial dial = new Dial();
+                dial.setMethod("GET");
+                dial.setAction(getAnswerUrl());
+                String conferenceStart = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                        MediaPropertyKey.CONFERENCE_START_ON_CONNECT);
+                String conferenceEnd = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                      MediaPropertyKey.CONFERENCE_END_ON_DISCONNECT);
+                String conferenceWaitURL = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                          MediaPropertyKey.CONFERENCE_WAIT_URL);
+                String terminateOnStar = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                          MediaPropertyKey.DTMF_TERMINATE);
+                Session session = Session.getSession(sessionKey);
+                if (session != null) {
+                    Conference conference = new Conference(conferenceName + "_" + session.getAccountId());
+                    if (conferenceStart != null) {
+                        conference.setStartConferenceOnEnter(Boolean.parseBoolean(conferenceStart));
+                    }
+                    if (conferenceEnd != null) {
+                        conference.setEndConferenceOnExit(Boolean.parseBoolean(conferenceEnd));
+                    }
+                    if (conferenceWaitURL != null) {
+
+                        if (conferenceWaitURL.startsWith("http")) {
+                            conference.setWaitUrl(formatPrompt(conferenceWaitURL));
+                        }
+                        else {
+                            String ttsWaitUrl = ServerUtils.getTTSURL(conferenceWaitURL, question, session);
+                            conference.setWaitUrl(formatPrompt(ttsWaitUrl));
+                        }
+                    }
+                    if(terminateOnStar != null) {
+                        dial.setHangupOnStar(Boolean.parseBoolean(terminateOnStar));
+                    }
+                    session.addExtras(MediaPropertyKey.CONFERENCE_START_ON_CONNECT.toString(),
+                                      String.valueOf(Boolean.parseBoolean(conferenceStart)));
+                    session.addExtras(MediaPropertyKey.CONFERENCE_END_ON_DISCONNECT.toString(),
+                                      String.valueOf(Boolean.parseBoolean(conferenceEnd)));
+                    session.storeSession();
+                    dial.append(conference);
+                    twiml.append(dial);
+                }
+            }
+        }
+        catch (TwiMLException e) {
+            log.warning("Failed to append conference?");
+        }
+        return twiml.toXML();
+    }
+    
+    protected void addPrompts(List<String> prompts, Verb twiml, TTSInfo ttsInfo) {
 
         try {
             for (String prompt : prompts) {
-                
+
                 Verb verbToAppend = null;
                 if (prompt.startsWith("http")) {
                     // Replace all the & with &amp; because of xml validity
-                    prompt = prompt.replace( "&", "&amp;" );
-                    verbToAppend = new Play(prompt);
+                    verbToAppend = new Play(formatPrompt(prompt));
                 }
                 else {
-                    if (ttsInfo != null && TTSProvider.ACAPELA.equals(ttsInfo.getProvider())) {
-                        DDRUtils.createDDRForTTS(session != null ? session.getRemoteAddress() : null, session, ttsInfo,
-                                                 prompt);
-                        String url = ServerUtils.getTTSURL(ttsInfo, prompt);
-                        url = url.replace( "&", "&amp;" );
-                        verbToAppend = new Play(url);
-                    } else {
-                        
-                        Say say = new Say(prompt.replace("text://", ""));
-                        say.setLanguage(Language.DUTCH.getCode());
+                    if (ttsInfo != null) {
+
+                        Say say = new Say(formatPrompt(prompt));
+                        say.setLanguage(ttsInfo.getLanguage().getCode());
                         verbToAppend = say;
-                        
-                        if(ttsInfo!=null) {
+                        if (ttsInfo != null) {
                             say.setLanguage(ttsInfo.getLanguage().getCode());
                         }
                     }
@@ -1237,30 +1294,51 @@ public class TwilioAdapter {
         }
     }
     
-    protected void addPrompts(List<String> prompts, Verb twiml, TTSInfo ttsInfo, String sessionKey) {
+    /**
+     * Returns the formatted prompt as needed by Twilio
+     * @param prompt
+     * @return
+     */
+    private String formatPrompt(String prompt) {
 
-        Session session = Session.getSession(sessionKey);
-        addPrompts(prompts, twiml, ttsInfo, session);
+        if (prompt.startsWith("http")) {
+            // Replace all the & with &amp; because of xml validity
+            prompt = prompt.replace("&", "&amp;");
+        }
+        else {
+            try {
+                prompt = prompt.replace("text://", "");
+                prompt = URLDecoder.decode(prompt, "UTF-8");
+            }
+            catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+        }
+        return prompt;
     }
     
-    private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, String sessionKey,
+    private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, Session session,
         Map<String, String> extraParams) {
 
         String result = (new TwiMLResponse()).toXML();
-        Return res = formQuestion(question, adapterConfig.getConfigId(), remoteID, null, sessionKey, extraParams);
+        Return res = formQuestion(question, adapterConfig.getConfigId(), remoteID, null, session, extraParams);
         if (question != null && !question.getType().equalsIgnoreCase("comment"))
             question = res.question;
-        Session session = Session.getSession(sessionKey);
         // if the adapter is a trial adapter, add a introductory node
         log.info("question formed at handleQuestion is: " + ServerUtils.serializeWithoutException(question));
         log.info("prompts formed at handleQuestion is: " + res.prompts);
 
+        String sessionKey = session != null ? session.getKey() : null;
+        
         if (question != null) {
             question.generateIds();
             session.setQuestion(question);
             session.setRemoteAddress(remoteID);
             session.storeSession();
 
+            //convert all text prompts to speech 
+            convertTextsToTTSURLS(question, res, session);
+            
             if (question.getType().equalsIgnoreCase("closed")) {
                 result = renderClosedQuestion(question, res.prompts, sessionKey);
             }
@@ -1292,23 +1370,25 @@ public class TwilioAdapter {
 
                             log.info(String.format("current session key before referral is: %s and remoteId %s",
                                                    sessionKey, remoteID));
-                            String redirectedId = PhoneNumberUtils.formatNumber(url.replace("tel:", ""), null);
-                            if (redirectedId != null) {
+                            if (DDRUtils.validateAddressAndUpdateDDRIfInvalid(url, sessionKey)) {
 
-                                //check credits
-                                if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
+                                String redirectedId = PhoneNumberUtils.formatNumber(url.replace("tel:", "").trim(),
+                                                                                    null);
+                                if (redirectedId != null) {
 
-                                    TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
-                                    String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
-                                    //create a ddr record for tts
-                                    DDRUtils.createDDRForTTS(remoteID, session, ttsInfo, insufficientCreditMessage);
-                                    return Response.ok(renderExitQuestion(null,
-                                                                          Arrays.asList(insufficientCreditMessage),
-                                                                          session.getKey())).build();
+                                    //check credits
+                                    if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
+
+                                        TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
+                                        String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
+                                        return Response.ok(renderExitQuestion(null,
+                                                                              Arrays.asList(insufficientCreditMessage),
+                                                                              sessionKey)).build();
+                                    }
+                                    question.getUrl().set(i, "tel:" + redirectedId);
+                                    updateSessionOnRedirect(question, adapterConfig, remoteID, session, newRemoteID,
+                                                            redirectedId);
                                 }
-                                question.getUrl().set(i, "tel:" + redirectedId);
-                                updateSessionOnRedirect(question, adapterConfig, remoteID, session, newRemoteID,
-                                                        redirectedId);
                             }
                             else {
                                 log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ",
@@ -1321,6 +1401,9 @@ public class TwilioAdapter {
             }
             else if (question.getType().equalsIgnoreCase("exit")) {
                 result = renderExitQuestion(question, res.prompts, sessionKey);
+            }
+            else if (question.getType().equalsIgnoreCase("conference")) {
+                result = renderConferenceQuestion(question, res.prompts, sessionKey);
             }
             else if (res.prompts.size() > 0) {
                 result = renderComment(question, res.prompts, sessionKey);
@@ -1369,8 +1452,9 @@ public class TwilioAdapter {
             try {
                 ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig,
                                                                             referralSession.getAccountId(),
-                                                                            referralToId, question.getUrl().size(), urls,
-                                                                            referralSession.getKey());
+                                                                            referralToId, question.getUrl().size(),
+                                                                            urls, referralSession);
+                referralSession = referralSession.reload();
                 if (ddrRecord != null) {
                     ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, referralSession.getTrackingToken());
                     ddrRecord.createOrUpdate();
@@ -1461,5 +1545,39 @@ public class TwilioAdapter {
                                      localID, accountSid, callSid));
         }
         return null;
+    }
+    
+    /**
+     * Converts all prompts which do not have prefix dtmfKey://. If the prompt
+     * ends with a .wav suffix it if added directly. If not it is converted to a
+     * TTS url
+     * 
+     * @param question
+     * @param res
+     */
+    private void convertTextsToTTSURLS(Question question, Return res, Session session) {
+
+        if (res.prompts != null) {
+            String ttsSpeedProperty = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TSS_SPEED);
+            ttsSpeedProperty = ttsSpeedProperty != null ? ttsSpeedProperty : "0";
+            ArrayList<String> promptsCopy = new ArrayList<String>();
+
+            //fetch the ttsInfo from session
+            TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
+            for (String prompt : res.prompts) {
+                if (!prompt.startsWith("dtmfKey://")) {
+                    //do not format the url to tts if voicerss is given
+                    if (!prompt.endsWith(".wav") && ttsInfo.getProvider() != null &&
+                        !TTSProvider.VOICE_RSS.equals(ttsInfo.getProvider())) {
+
+                        promptsCopy.add(ServerUtils.getTTSURL(ttsInfo, prompt, session));
+                    }
+                    else {
+                        promptsCopy.add(prompt);
+                    }
+                }
+            }
+            res.prompts = promptsCopy;
+        }
     }
 }

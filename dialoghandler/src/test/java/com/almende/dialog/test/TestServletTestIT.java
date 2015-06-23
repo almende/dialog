@@ -21,7 +21,7 @@ public class TestServletTestIT extends TestFramework
             QuestionInRequest.APPOINTMENT.name() );
         url = ServerUtils.getURLWithQueryParams( url, "question", "start" );
         String response = fetchResponse( HttpMethod.GET, url, null );
-        Question questionFromJson = Question.fromJSON( response, null, null, null );
+        Question questionFromJson = Question.fromJSON(response);
         Assert.assertEquals( 2, questionFromJson.getAnswers().size() );
         Assert.assertEquals( "text://Are you available today?", questionFromJson.getQuestion_text() );
     }

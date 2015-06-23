@@ -13,6 +13,7 @@ import com.almende.dialog.adapter.TextServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
+import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.jackson.JOM;
@@ -33,6 +34,7 @@ public class Session{
     public static final String PARENT_SESSION_KEY = "parentSessionKey";
     public static final String CHILD_SESSION_KEY = "childSessionKey";
     public static final String TRACKING_TOKEN_KEY = "trackingToken";
+    public static final String EXTERNAL_CONFERENCE_KEY = "conferenceKey";
     /**
      * Tag used by calling adapters to mark it in the session if a call is
      * picked up or not. If there is a preconnect on the callee's end, then its
@@ -79,6 +81,8 @@ public class Session{
     
     @JsonIgnore
     AdapterConfig adapterConfig = null;
+    @JsonIgnore
+    DDRRecord ddrRecord = null;
 	
     @JsonIgnore
     public void kill() {
@@ -191,7 +195,6 @@ public class Session{
         }
         session = createSession(config, remoteAddress);
         session.existingSession = false;
-        session.existingSession = true;
         return session;
     }
     
@@ -379,6 +382,21 @@ public class Session{
         }
         return adapterConfig;
     }
+    
+    @JsonIgnore
+    public DDRRecord getDDRRecord() {
+
+        if (ddrRecord == null && ddrRecordId != null) {
+            try {
+                ddrRecord = DDRRecord.getDDRRecord(ddrRecordId, accountId);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(e.toString());
+            }
+        }
+        return ddrRecord;
+    }
 	
     @JsonProperty("extras")
     public Map<String, String> getAllExtras()
@@ -403,6 +421,7 @@ public class Session{
         extrasCopy.remove(AdapterConfig.XSI_USER_KEY);
         extrasCopy.remove(AdapterConfig.XSI_PASSWORD_KEY);
         extrasCopy.remove(DialogAgent.BEARER_TOKEN_KEY);
+        extrasCopy.remove(Session.EXTERNAL_CONFERENCE_KEY);
         return extrasCopy;
     }
     
@@ -849,6 +868,17 @@ public class Session{
     }
     
     /**
+     * Gets the conference key if found in the session
+     * 
+     * @return
+     */
+    @JsonIgnore
+    public String getConferenceKey() {
+
+        return getAllExtras().get(EXTERNAL_CONFERENCE_KEY);
+    }
+    
+    /**
      * Used to fetch the session created because of a referral communication.
      * The parentExternalKey is used to fetch the parent sesison and then the
      * child (linked/referred) session is fetched
@@ -876,5 +906,11 @@ public class Session{
             }
         }
         return null;
+    }
+
+    @JsonIgnore
+    public Session reload() {
+
+        return getSession(key);
     }
 }

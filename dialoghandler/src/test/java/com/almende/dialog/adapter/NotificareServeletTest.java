@@ -42,7 +42,7 @@ public class NotificareServeletTest extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", message);
 
         NotificareServlet not = new NotificareServlet();
-        not.sendMessage(message, "hallo", "me", "me", "me", "me", null, adapterConfig, adapterConfig.getOwner());
+        not.sendMessage(message, "hallo", "me", "me", "me", "me", null, adapterConfig, adapterConfig.getOwner(), null);
 
         //		outBoundPushTest( addressNameMap, adapterConfig, message, QuestionInRequest.SIMPLE_COMMENT,
         //		           senderName, "outBoundBroadcastCallSenderNameNotNullTest" );

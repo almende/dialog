@@ -7,7 +7,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import javax.ws.rs.core.Response;
 import org.jivesoftware.smack.XMPPException;
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.MailServlet;
@@ -16,6 +18,8 @@ import com.almende.dialog.adapter.TwitterServlet.TwitterEndpoint;
 import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.adapter.tools.Twilio;
+import com.almende.dialog.broadsoft.Registration;
+import com.almende.dialog.broadsoft.UserProfile;
 import com.almende.dialog.exception.ConflictException;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
@@ -31,6 +35,7 @@ import com.almende.eve.protocol.jsonrpc.formats.JSONRequest;
 import com.almende.util.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.uuid.UUID;
+import com.askfast.commons.RestResponse;
 import com.askfast.commons.Status;
 import com.askfast.commons.agent.ScheduleAgent;
 import com.askfast.commons.agent.intf.AdapterAgentInterface;
@@ -39,6 +44,7 @@ import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.ScheduledTask;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
@@ -242,23 +248,15 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
      * @return AdapterId
      * @throws Exception
      */
-    public String createBroadSoftAdapter(@Name("address") String address, @Name("username") @Optional String username,
+    public RestResponse createBroadSoftAdapter(@Name("username") @Optional String username,
         @Name("password") @Optional String password, @Name("preferredLanguage") @Optional String preferredLanguage,
         @Name("accountId") @Optional String accountId, @Name("anonymous") boolean anonymous,
-        @Name("accountType") @Optional String accountType) throws Exception {
+        @Name("accountType") @Optional String accountType, @Name("isPrivate") @Optional Boolean isPrivate)
+        throws Exception {
 
-        preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
-
-        String normAddress = address.replaceFirst("^0", "").replace("+31", "").replace("@ask.ask.voipit.nl", "");
-        String externalAddress = "+31" + normAddress;
-        String myAddress = "0" +
-                           (normAddress.contains("@ask.ask.voipit.nl") ? normAddress
-                                                                      : (normAddress + "@ask.ask.voipit.nl"));
-        username = username != null ? username : myAddress;
+        preferredLanguage = Language.getByValue(preferredLanguage).getCode();
         AdapterConfig config = new AdapterConfig();
         config.setAdapterType(AdapterType.CALL.toString());
-        config.setMyAddress(myAddress);
-        config.setAddress(externalAddress);
         config.setPreferred_language(preferredLanguage);
         config.setPublicKey(accountId);
         config.setXsiUser(username);
@@ -268,29 +266,61 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         config.setAnonymous(anonymous);
         config.setAccountType(AccountType.fromJson(accountType));
         config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT);
-        AdapterConfig newConfig = createAdapter(config);
-        return newConfig.getConfigId();
+        
+        boolean isValidCredentials = false;
+        if (!ServerUtils.isInUnitTestingEnvironment()) {
+            //check if adapter credentials are true
+            Broadsoft broadsoft = new Broadsoft(config);
+            UserProfile userProfile = broadsoft.getUserProfile();
+            Registration registration = broadsoft.getUserProfileRegistration();
+            if(userProfile != null && registration != null) {
+                config.setMyAddress(registration.getLinePort());
+                config.setAddress(userProfile.getNumber());
+                isValidCredentials = true;
+            }
+        }
+        else {
+            isValidCredentials = true;
+            config.setMyAddress(username);
+        }
+        try {
+
+            if (isValidCredentials) {
+                AdapterConfig newConfig = createAdapter(config, isPrivate);
+                return new RestResponse(getVersion(), newConfig.getConfigId(), Response.Status.OK.getStatusCode(), "OK");
+            }
+            else {
+                return new RestResponse(getVersion(), null, Response.Status.FORBIDDEN.getStatusCode(),
+                                        "Unauthorized credentials. Please try again.");
+            }
+        }
+        catch (Exception e) {
+            return new RestResponse(getVersion(), null, Response.Status.BAD_REQUEST.getStatusCode(),
+                                    e.getLocalizedMessage());
+        }
     }
     
-    public Map<String, String> createMultipleTwilioAdapters(@Name("accountSid") String accountSid, @Name("authToken") String authToken, 
-        @Name("count") Integer count, @Name("countryCode") String countryCode, 
+    public Map<String, String> createMultipleTwilioAdapters(@Name("accountSid") String accountSid,
+        @Name("authToken") String authToken, @Name("count") Integer count, @Name("countryCode") String countryCode,
         @Name("contains") @Optional String contains, @Name("preferredLanguage") @Optional String preferredLanguage,
-        @Name("accountId") @Optional String accountId, @Name("anonymous") @Optional Boolean anonymous) throws Exception {
-        
-        Map<String, String> boughtNumbers = new HashMap<String,String>();
+        @Name("accountId") @Optional String accountId, @Name("anonymous") @Optional Boolean anonymous,
+        @Name("isPrivate") @Optional Boolean isPrivate) throws Exception {
+
+        Map<String, String> boughtNumbers = new HashMap<String, String>();
         Twilio twilio = new Twilio(accountSid, authToken);
-        List<String> availableNumbers = twilio.getFreePhoneNumbers( countryCode, contains );
-        
-        if(availableNumbers.size()<count) {
-            throw new Exception("Can't buy more then: "+availableNumbers.size()+" numbers");
+        List<String> availableNumbers = twilio.getFreePhoneNumbers(countryCode, contains);
+
+        if (availableNumbers.size() < count) {
+            throw new Exception("Can't buy more then: " + availableNumbers.size() + " numbers");
         }
-        
-        for(int i=0; i<count; i++) {
+
+        for (int i = 0; i < count; i++) {
             String number = availableNumbers.get(i);
-            String id = createTwilioAdapter(number, accountSid, authToken, preferredLanguage, accountId, anonymous);
-            boughtNumbers.put( id, number );
+            String id = createTwilioAdapter(number, accountSid, authToken, preferredLanguage, accountId, anonymous,
+                                            isPrivate);
+            boughtNumbers.put(id, number);
         }
-        
+
         return boughtNumbers;
     }
     
@@ -308,18 +338,19 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
      */
     public String createTwilioAdapter(@Name("address") String address, @Name("accountSid") String accountSid,
         @Name("authToken") String authToken, @Name("preferredLanguage") @Optional String preferredLanguage,
-        @Name("accountId") @Optional String accountId, @Name("anonymous") @Optional Boolean anonymous) throws Exception {
+        @Name("accountId") @Optional String accountId, @Name("anonymous") @Optional Boolean anonymous,
+        @Name("isPrivate") @Optional Boolean isPrivate) throws Exception {
 
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
         anonymous = (anonymous == null ? false : anonymous);
 
         String normAddress = address.replaceFirst("^0", "").replace("+31", "");
         String externalAddress = "+31" + normAddress;
-        
+
         Twilio twilio = new Twilio(accountSid, authToken);
-        String id = twilio.buyPhoneNumber( address, getApplicationId() );
-        
-        if(id!=null) {
+        String id = twilio.buyPhoneNumber(address, getApplicationId());
+
+        if (id != null) {
 
             AdapterConfig config = new AdapterConfig();
             config.setAdapterType(AdapterType.CALL.toString());
@@ -333,20 +364,20 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
             config.addAccount(accountId);
             config.setAnonymous(anonymous);
             config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO);
-            AdapterConfig newConfig = createAdapter(config);
+            AdapterConfig newConfig = createAdapter(config, isPrivate);
             return newConfig.getConfigId();
         }
         return null;
     }
 	
-    public String createEmailAdapter( @Name( "emailAddress" ) String emailAddress, @Name( "password" ) String password,
-        @Name( "name" ) @Optional String name, @Name( "preferredLanguage" ) @Optional String preferredLanguage,
-        @Name( "sendingProtocol" ) @Optional String sendingProtocol,
-        @Name( "sendingHost" ) @Optional String sendingHost, @Name( "sendingPort" ) @Optional String sendingPort,
-        @Name( "receivingProtocol" ) @Optional String receivingProtocol,
-        @Name( "receivingHost" ) @Optional String receivingHost, @Name( "accountId" ) @Optional String accountId,
-        @Name( "initialAgentURL" ) @Optional String initialAgentURL, 
-        @Name( "accountType" ) @Optional String accountType) throws Exception {
+    public String createEmailAdapter(@Name("emailAddress") String emailAddress, @Name("password") String password,
+        @Name("name") @Optional String name, @Name("preferredLanguage") @Optional String preferredLanguage,
+        @Name("sendingProtocol") @Optional String sendingProtocol, @Name("sendingHost") @Optional String sendingHost,
+        @Name("sendingPort") @Optional String sendingPort,
+        @Name("receivingProtocol") @Optional String receivingProtocol,
+        @Name("receivingHost") @Optional String receivingHost, @Name("accountId") @Optional String accountId,
+        @Name("initialAgentURL") @Optional String initialAgentURL, @Name("accountType") @Optional String accountType,
+        @Name("isPrivate") @Optional Boolean isPrivate) throws Exception {
         
         preferredLanguage = ( preferredLanguage == null ? "nl" : preferredLanguage );
         AdapterConfig config = new AdapterConfig();
@@ -369,7 +400,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         config.setAnonymous( false );
         config.setAccountType(AccountType.fromJson(accountType));
         config.setInitialAgentURL(initialAgentURL );
-        AdapterConfig newConfig = createAdapter( config );
+        AdapterConfig newConfig = createAdapter(config, isPrivate);
         return newConfig.getConfigId();
     }
 	
@@ -380,10 +411,10 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
                                     @Name("service") @Optional String service,
                                     @Name("accountId") @Optional String accountId,
                                     @Name("initialAgentURL") @Optional String initialAgentURL,
-                                    @Name("accountType") @Optional String accountType) throws Exception {
+                                    @Name("accountType") @Optional String accountType, @Name("isPrivate") @Optional Boolean isPrivate) throws Exception {
 
         AdapterConfig newConfig = createSimpleXMPPAdapter(xmppAddress, password, name, preferredLanguage, host, port,
-                                                          service, accountId, initialAgentURL, accountType);
+                                                          service, accountId, initialAgentURL, accountType, isPrivate);
         //set for incoming requests
         XMPPServlet xmppServlet = new XMPPServlet();
         xmppServlet.listenForIncomingChats(newConfig);
@@ -391,10 +422,10 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
     }
     
     public String createUSSDAdapter(@Name("address") String address, @Name("keyword") @Optional String keyword,
-                                    @Name("username") String username, @Name("password") String password,
-                                    @Name("preferredLanguage") @Optional String preferredLanguage,
-                                    @Name("accountId") @Optional String accountId,
-                                    @Name("accountType") @Optional String accountType) throws Exception {
+        @Name("username") String username, @Name("password") String password,
+        @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
+        @Name("accountType") @Optional String accountType, @Name("isPrivate") @Optional Boolean isPrivate)
+        throws Exception {
 
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
 
@@ -411,14 +442,15 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         config.setAccessTokenSecret(password);
         config.setAccountType(AccountType.fromJson(accountType));
         config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.CLX);
-        AdapterConfig newConfig = createAdapter(config);
+        AdapterConfig newConfig = createAdapter(config, isPrivate);
         return newConfig.getConfigId();
     }
 	
     public String createPushAdapter(@Name("address") String address, @Name("keyword") @Optional String keyword,
         @Name("username") String username, @Name("password") String password,
         @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
-        @Name("accountType") @Optional String accountType) throws Exception {
+        @Name("accountType") @Optional String accountType, @Name("isPrivate") @Optional Boolean isPrivate)
+        throws Exception {
 
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
 
@@ -435,18 +467,15 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         config.setAccessTokenSecret(password);
         config.setAccountType(AccountType.fromJson(accountType));
         config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.NOTIFICARE);
-        AdapterConfig newConfig = createAdapter(config);
+        AdapterConfig newConfig = createAdapter(config, isPrivate);
         return newConfig.getConfigId();
     }
 
-
     public String registerASKFastXMPPAdapter(@Name("xmppAddress") String xmppAddress,
-                                             @Name("password") String password, @Name("name") @Optional String name,
-                                             @Name("email") @Optional String email,
-                                             @Name("preferredLanguage") @Optional String preferredLanguage,
-                                             @Name("accountId") @Optional String accountId,
-                                             @Name("initialAgentURL") @Optional String initialAgentURL,
-                                             @Name("accountType") @Optional String accountType) throws Exception {
+        @Name("password") String password, @Name("name") @Optional String name, @Name("email") @Optional String email,
+        @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
+        @Name("initialAgentURL") @Optional String initialAgentURL, @Name("accountType") @Optional String accountType,
+        @Name("isPrivate") @Optional Boolean isPrivate) throws Exception {
 
         xmppAddress = xmppAddress.endsWith("@xmpp.ask-fast.com") ? xmppAddress : (xmppAddress + "@xmpp.ask-fast.com");
         ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters(AdapterType.XMPP.toString(), xmppAddress, null);
@@ -456,7 +485,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
             newConfig = createSimpleXMPPAdapter(xmppAddress, password, name, preferredLanguage,
                                                 XMPPServlet.DEFAULT_XMPP_HOST,
                                                 String.valueOf(XMPPServlet.DEFAULT_XMPP_PORT), null, accountId,
-                                                initialAgentURL, accountType);
+                                                initialAgentURL, accountType, isPrivate);
         }
         else if (accountId != null && !accountId.isEmpty() && !accountId.equals(newConfig.getOwner())) //check if the accountId owns this adapter
         {
@@ -479,24 +508,19 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         return newConfig != null ? newConfig.getConfigId() : null;
     }
     
-    public String deregisterASKFastXMPPAdapter( @Name( "xmppAddress" ) @Optional String xmppAddress,
-        @Name( "accountId" ) String accountId, 
-        @Name( "adapterId" ) @Optional String adapterId)
-    throws Exception
-    {
-        xmppAddress = xmppAddress.endsWith( "@xmpp.ask-fast.com" ) ? xmppAddress
-                                                                  : ( xmppAddress + "@xmpp.ask-fast.com" );
-        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters( AdapterType.XMPP.toString(), xmppAddress, null );
+    public String deregisterASKFastXMPPAdapter(@Name("xmppAddress") @Optional String xmppAddress,
+        @Name("accountId") String accountId, @Name("adapterId") @Optional String adapterId) throws Exception {
+
+        xmppAddress = xmppAddress.endsWith("@xmpp.ask-fast.com") ? xmppAddress : (xmppAddress + "@xmpp.ask-fast.com");
+        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters(AdapterType.XMPP.toString(), xmppAddress, null);
         AdapterConfig adapterConfig = adapters != null && !adapters.isEmpty() ? adapters.iterator().next() : null;
         //check if adapter is owned by the accountId
-        if ( adapterConfig != null && accountId.equals( adapterConfig.getOwner() ))
-        {
-            XMPPServlet.deregisterASKFastXMPPAccount( adapterConfig );
+        if (adapterConfig != null && accountId.equals(adapterConfig.getOwner())) {
+            XMPPServlet.deregisterASKFastXMPPAccount(adapterConfig);
             adapterConfig.delete();
         }
-        else 
-        {
-            throw new Exception( String.format( "Adapter either doesnt exist or now owned by AccountId: %s", accountId ) );
+        else {
+            throw new Exception(String.format("Adapter either doesnt exist or now owned by AccountId: %s", accountId));
         }
         return adapterConfig != null ? adapterConfig.getConfigId() : null;
     }
@@ -504,10 +528,11 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
     public String createMBAdapter(@Name("address") String address, @Name("keyword") @Optional String keyword,
         @Name("username") String username, @Name("password") String password,
         @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
-        @Name("accountType") @Optional String accountType) throws Exception {
+        @Name("accountType") @Optional String accountType, @Name("isPrivate") @Optional Boolean isPrivate)
+        throws Exception {
 
         return createGenericSMSAdapter(address, AdapterProviders.MB, keyword, username, password, preferredLanguage,
-                                       accountId, accountType);
+                                       accountId, accountType, isPrivate);
     }
     
     /**
@@ -528,7 +553,8 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         @Name("provider") @Optional AdapterProviders provider, @Name("keyword") @Optional String keyword,
         @Name("username") String username, @Name("password") String password,
         @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
-        @Name("accountType") @Optional String accountType) throws Exception {
+        @Name("accountType") @Optional String accountType, @Name("isPrivate") @Optional Boolean isPrivate)
+        throws Exception {
 
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
 
@@ -547,17 +573,18 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         if (provider != null) {
             config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, provider);
         }
-        AdapterConfig newConfig = createAdapter(config);
+        AdapterConfig newConfig = createAdapter(config, isPrivate);
         return newConfig.getConfigId();
     }
 	
     public String createNexmoAdapter(@Name("address") String address, @Name("keyword") @Optional String keyword,
         @Name("username") String username, @Name("password") String password,
-        @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId)
+        @Name("preferredLanguage") @Optional String preferredLanguage, @Name("accountId") @Optional String accountId,
+        @Name("isPrivate") @Optional Boolean isPrivate)
         throws Exception {
 
         return createGenericSMSAdapter(address, AdapterProviders.NEXMO, keyword, username, password, preferredLanguage,
-                                       accountId, null);
+                                       accountId, null, isPrivate);
     }
 	
     public String attachTwitterAdapterToUser( @Name( "adapterID" ) @Optional String adapterID,
@@ -625,22 +652,29 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
 		config.update();
 	}
 	
-    public Object getAdapter(@Name("accoutId") String accountId, @Name("adapterId") String adapterId) throws Exception {
+    public RestResponse getAdapter(@Name("accoutId") String accountId, @Name("adapterId") String adapterId) {
 
         AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
-        if (config == null)
-            throw new Exception("No adapter linked to this account or with this id");
+        if (config == null) {
+            return RestResponse.ok(Settings.DIALOG_HANDLER_VERSION, null,
+                                   "No adapter linked to this account or with this id");
+        }
 
         if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, false) == null) {
-            throw new Exception("No adapter linked to this account or with this id");
+            return RestResponse.forbidden(Settings.DIALOG_HANDLER_VERSION,
+                                          "No adapter linked to this account or with this id");
         }
-        return config;
+        return RestResponse.ok(Settings.DIALOG_HANDLER_VERSION, config);
     }
 	
     public Object updateAdapter(@Name("accoutId") String accountId, @Name("adapterId") String adapterId,
                                 @Name("adapter") Adapter adapter) throws Exception {
 
-        AdapterConfig config = (AdapterConfig) getAdapter(accountId, adapterId);
+        RestResponse adapterResponse = getAdapter(accountId, adapterId);
+        AdapterConfig config = null;
+        if(adapterResponse.getCode() == javax.ws.rs.core.Response.Status.OK.getStatusCode()) {
+            config = adapterResponse.getResult(AdapterConfig.class);
+        }
         if (config != null) {
             if (adapter.getInitialAgentURL() != null) {
                 config.setInitialAgentURL(adapter.getInitialAgentURL());
@@ -668,6 +702,9 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
             }
             if (adapter.getAccountType() != null) {
                 config.setAccountType(adapter.getAccountType());
+            }
+            if(adapter.isPrivate()) {
+                config.markAsPrivate();
             }
             //allow keywords to be changed only for sms adapters
             if (config.getAdapterType() != null) {
@@ -714,9 +751,8 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
     /**
      * detach an adapter from this account. if adapter is: <br> 
      * 1. XMPP: then this also deregisters him (if its an ask-fast account) <br>
-     * 2. CALL: unlinks it from the account only. makes it free <br>
-     * 3. CALL: unlinks it from the account only. makes it free <br>
-     * 4. rest: deletes the adapter.  <br>
+     * 2. isPrivate: deletes the adpater from the datastore
+     * 3. rest: unlinks the adapter.  <br>
      * @param adapterId
      * @param accountId If this is same as the adapter owner, it frees the adapter. If it is 
      * same as the accoundId, it just unlinks the accountId from the adapter
@@ -731,7 +767,16 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         }
         else {
             AdapterType adapterType = AdapterType.fromJson(config.getAdapterType());
-            if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, false) != null) {
+            //if the accoutnId is the owner of the adapter requesting a remove operation
+            //if the adapter is a private adapter, just delete it from the system
+            if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, true) != null &&
+                config.isPrivate()) {
+
+                config.delete();
+            }
+            //if its a shared adapter provided by ASK-Fast.
+            else if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, false) != null) {
+                //if the accountId is the owner, mark adapter as inactive
                 config.removeAccount(accountId);
                 config.getProperties().remove(AdapterConfig.DIALOG_ID_KEY);
                 switch (adapterType) {
@@ -748,20 +793,19 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         }
     }
 	
-	public ArrayNode getAdapters(@Name("accoutId") String accountId,
-								@Name("adapterType") @Optional String adapterType,
-								@Name("address") @Optional String address) {
-		
-		List<AdapterConfig> adapters = AdapterConfig.findAdapterByAccount(accountId, adapterType, address);
-		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
-	}
-	
-	public ArrayNode findAdapters(@Name("adapterType") @Optional String type,
-									@Name("address") @Optional String address,
-									@Name("keyword") @Optional String keyword) {
-		ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters(type, address, keyword);
-		return JOM.getInstance().convertValue(adapters, ArrayNode.class);
-	}
+    public ArrayNode getAdapters(@Name("accoutId") String accountId, @Name("adapterType") @Optional String adapterType,
+        @Name("address") @Optional String address) {
+
+        List<AdapterConfig> adapters = AdapterConfig.findAdapterByAccount(accountId, adapterType, address);
+        return JOM.getInstance().convertValue(adapters, ArrayNode.class);
+    }
+
+    public ArrayNode findAdapters(@Name("adapterType") @Optional String type,
+        @Name("address") @Optional String address, @Name("keyword") @Optional String keyword) {
+
+        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters(type, address, keyword);
+        return JOM.getInstance().convertValue(adapters, ArrayNode.class);
+    }
 
     /**
      * Gets all the adapters owned by the given accountId
@@ -905,7 +949,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
      * @return
      * @throws Exception
      */
-    private AdapterConfig createAdapter(AdapterConfig config) throws Exception {
+    private AdapterConfig createAdapter(AdapterConfig config, Boolean isPrivate) throws Exception {
 
         if (AdapterConfig.adapterExists(config.getAdapterType(), config.getMyAddress(), config.getKeyword())) {
             throw new ConflictException("Adapter already exists");
@@ -919,7 +963,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         if (config.getMyAddress() != null &&
             (AdapterType.EMAIL.equals(AdapterType.getByValue(config.getAdapterType()))) ||
             AdapterType.XMPP.equals(AdapterType.getByValue(config.getAdapterType()))) {
-            
+
             config.setMyAddress(config.getMyAddress().toLowerCase());
         }
         //check if there is an initialAgent url given. Create a dialog if it is
@@ -931,6 +975,9 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
 
         config.setAdapterType(config.getAdapterType().toLowerCase());
         config.setStatus(Status.INACTIVE);
+        if (Boolean.TRUE.equals(isPrivate)) {
+            config.markAsPrivate();
+        }
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         datastore.store(config);
 
@@ -944,7 +991,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         Double totalCost = DDRUtils.calculateDDRCost(ddrRecord);
         DDRUtils.publishDDREntryToQueue(config.getOwner(), totalCost);
         //attach cost to ddr is prepaid type
-        if (ddrRecord != null && AccountType.PRE_PAID.equals(ddrRecord.getAccountType())) {
+        if (ddrRecord != null && !AccountType.POST_PAID.equals(ddrRecord.getAccountType())) {
             ddrRecord.setTotalCost(totalCost);
             ddrRecord.createOrUpdate();
         }
@@ -964,9 +1011,9 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
      * @return
      * @throws Exception
      */
-    private AdapterConfig createSimpleXMPPAdapter(String xmppAddress, String password, String name, String preferredLanguage,
-                                String host, String port, String service, String accountId, String initialAgentURL,
-                                String accountType) throws Exception {
+    private AdapterConfig createSimpleXMPPAdapter(String xmppAddress, String password, String name,
+        String preferredLanguage, String host, String port, String service, String accountId, String initialAgentURL,
+        String accountType, Boolean isPrivate) throws Exception {
 
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
         AdapterConfig config = new AdapterConfig();
@@ -988,7 +1035,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         config.setAnonymous(false);
         config.setInitialAgentURL(initialAgentURL);
         config.setAccountType(AccountType.fromJson(accountType));
-        AdapterConfig newConfig = createAdapter(config);
+        AdapterConfig newConfig = createAdapter(config, isPrivate);
         return newConfig;
     }
     
@@ -1019,5 +1066,9 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
     private String getApplicationId() {
         DialogAgentInterface dialogAgent = getDialogAgent( "dialog" );
         return dialogAgent.getApplicationId();
+    }
+    
+    public String getVersion() {
+        return Settings.DIALOG_HANDLER_VERSION;
     }
 }

@@ -4,20 +4,17 @@ package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.logging.Logger;
-
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
-
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.TwilioAdapter.Return;
@@ -49,8 +46,8 @@ public class TwilioAdapterTest extends TestFramework{
         Question question = getCommentQuestion( false );
         AdapterConfig adapter = createTwilioAdapter();
         String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-
-        String result = renderQuestion( question, adapter, sessionKey );
+        Session session = createSession(sessionKey);
+        String result = renderQuestion( question, adapter, session);
 
         Document doc = getXMLDocumentBuilder( result );
         Node response = doc.getFirstChild();
@@ -73,8 +70,8 @@ public class TwilioAdapterTest extends TestFramework{
         Question question = getCommentQuestion( true );
         AdapterConfig adapter = createBroadsoftAdapter();
         String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-
-        String result = renderQuestion( question, adapter, sessionKey );
+        Session session = createSession(sessionKey);
+        String result = renderQuestion(question, adapter, session);
 
         Document doc = getXMLDocumentBuilder( result );
         Node response = doc.getFirstChild();
@@ -99,8 +96,8 @@ public class TwilioAdapterTest extends TestFramework{
         Question question = getOpenQuestion( false, false );
         AdapterConfig adapter = createTwilioAdapter();
         String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-
-        String result = renderQuestion( question, adapter, sessionKey );
+        Session session = createSession(sessionKey);
+        String result = renderQuestion(question, adapter, session);
 
         log.info( "Result Open Question: " + result );
 
@@ -127,8 +124,8 @@ public class TwilioAdapterTest extends TestFramework{
         Question question = getOpenQuestion( false, true );
         AdapterConfig adapter = createTwilioAdapter();
         String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-
-        String result = renderQuestion( question, adapter, sessionKey );
+        Session session = createSession(sessionKey);
+        String result = renderQuestion( question, adapter, session);
 
         log.info( "Result Open Question: " + result );
 
@@ -161,8 +158,8 @@ public class TwilioAdapterTest extends TestFramework{
         Question question = getClosedQuestion( false );
         AdapterConfig adapter = createTwilioAdapter();
         String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-
-        String result = renderQuestion( question, adapter, sessionKey );
+        Session session = createSession(sessionKey);
+        String result = renderQuestion( question, adapter, session);
 
         Document doc = getXMLDocumentBuilder( result );
         Node response = doc.getFirstChild();
@@ -197,8 +194,8 @@ public class TwilioAdapterTest extends TestFramework{
         Question question = getReferralQuestion( false, false,false );
         AdapterConfig adapter = createTwilioAdapter();
         String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-
-        String result = renderQuestion( question, adapter, sessionKey );
+        Session session = createSession(sessionKey);
+        String result = renderQuestion( question, adapter, session);
 
         log.info( "Result Referral Question: " + result );
 
@@ -232,8 +229,8 @@ public class TwilioAdapterTest extends TestFramework{
         Question question = getReferralQuestion( true, false,false );
         AdapterConfig adapter = createTwilioAdapter();
         String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-
-        String result = renderQuestion( question, adapter, sessionKey );
+        Session session = createSession(sessionKey);
+        String result = renderQuestion( question, adapter, session);
 
         log.info( "Result Referral Question: " + result );
 
@@ -267,8 +264,8 @@ public class TwilioAdapterTest extends TestFramework{
         Question question = getReferralQuestion( true, true, false );
         AdapterConfig adapter = createTwilioAdapter();
         String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-
-        String result = renderQuestion( question, adapter, sessionKey );
+        Session session = createSession(sessionKey);
+        String result = renderQuestion( question, adapter, session );
 
         log.info( "Result Referral Question: " + result );
 
@@ -305,8 +302,8 @@ public class TwilioAdapterTest extends TestFramework{
         Question question = getReferralQuestion( false, false, true );
         AdapterConfig adapter = createTwilioAdapter();
         String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-
-        String result = renderQuestion( question, adapter, sessionKey );
+        Session session = createSession(sessionKey);
+        String result = renderQuestion( question, adapter, session);
 
         log.info( "Result Referral Question: " + result );
 
@@ -345,8 +342,8 @@ public class TwilioAdapterTest extends TestFramework{
         Question question = getReferralQuestion( true, true, true );
         AdapterConfig adapter = createTwilioAdapter();
         String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-
-        String result = renderQuestion( question, adapter, sessionKey );
+        Session session = createSession(sessionKey);
+        String result = renderQuestion( question, adapter, session);
 
         log.info( "Result Referral Question: " + result );
 
@@ -587,34 +584,35 @@ public class TwilioAdapterTest extends TestFramework{
         return question;
     }
 
-    private String renderQuestion( Question question, AdapterConfig adapter,String sessionKey ) throws Exception {
+    private String renderQuestion(Question question, AdapterConfig adapter, Session session) throws Exception {
 
         TwilioAdapter servlet = new TwilioAdapter();
-        Return res = servlet.formQuestion( question, adapter.getConfigId(), remoteAddressVoice, null, sessionKey, new HashMap<String, String>() );
+        Return res = servlet.formQuestion(question, adapter.getConfigId(), remoteAddressVoice, null, session,
+                                          new HashMap<String, String>());
+        String sessionKey = session != null ? session.getKey() : null;
         if (question != null && !question.getType().equalsIgnoreCase("comment"))
             question = res.question;
-        
-        if ( question.getType().equalsIgnoreCase( "comment" ) ) {
-            return servlet.renderComment( question, res.prompts, sessionKey );
+
+        if (question.getType().equalsIgnoreCase("comment")) {
+            return servlet.renderComment(question, res.prompts, sessionKey);
         }
-        else if ( question.getType().equalsIgnoreCase( "referral" ) ) {
-            
+        else if (question.getType().equalsIgnoreCase("referral")) {
+
             String remoteID = remoteAddressVoice;
-            String externalCallerId = question
-                .getMediaPropertyValue( MediumType.BROADSOFT,
-                                        MediaPropertyKey.USE_EXTERNAL_CALLERID );
+            String externalCallerId = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                     MediaPropertyKey.USE_EXTERNAL_CALLERID);
             Boolean callerId = false;
-            if ( externalCallerId != null ) {
-                callerId = Boolean.parseBoolean( externalCallerId );
+            if (externalCallerId != null) {
+                callerId = Boolean.parseBoolean(externalCallerId);
             }
-            if ( !callerId ) {
+            if (!callerId) {
                 remoteID = adapter.getMyAddress();
             }
 
-            for(int i=0; i<question.getUrl().size(); i++) {
+            for (int i = 0; i < question.getUrl().size(); i++) {
                 String url = question.getUrl().get(i);
-            //for(String url : question.getUrl()) {
-                if(url.startsWith("tel:")) {
+                //for(String url : question.getUrl()) {
+                if (url.startsWith("tel:")) {
                     // added for release0.4.2 to store the question in the
                     // session,
                     // for triggering an answered event
@@ -625,20 +623,21 @@ public class TwilioAdapterTest extends TestFramework{
                     String redirectedId = PhoneNumberUtils.formatNumber(url.replace("tel:", ""), null);
                     if (redirectedId != null) {
 
-                        question.getUrl().set( i, redirectedId );
+                        question.getUrl().set(i, redirectedId);
                     }
                     else {
-                        log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ", url.replace("tel:", "")));
+                        log.severe(String.format("Redirect address is invalid: %s. Ignoring.. ",
+                                                 url.replace("tel:", "")));
                     }
                 }
             }
-            return servlet.renderReferral( question, res.prompts, sessionKey, remoteID );
+            return servlet.renderReferral(question, res.prompts, sessionKey, remoteID);
         }
-        else if ( question.getType().equalsIgnoreCase( "open" ) ) {
-            return servlet.renderOpenQuestion( question, res.prompts, sessionKey );
+        else if (question.getType().equalsIgnoreCase("open")) {
+            return servlet.renderOpenQuestion(question, res.prompts, sessionKey);
         }
-        else if ( question.getType().equalsIgnoreCase( "closed" ) ) {
-            return servlet.renderClosedQuestion( question, res.prompts, sessionKey );
+        else if (question.getType().equalsIgnoreCase("closed")) {
+            return servlet.renderClosedQuestion(question, res.prompts, sessionKey);
         }
 
         return null;

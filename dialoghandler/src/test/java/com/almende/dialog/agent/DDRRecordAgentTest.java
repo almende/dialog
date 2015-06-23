@@ -66,8 +66,8 @@ public class DDRRecordAgentTest extends TestFramework
         DDRPrice ddrPrice = getTestDDRPrice( DDRTypeCategory.ADAPTER_PURCHASE, 10.0, "Test", UnitType.PART,
             AdapterType.EMAIL, null );
         assertThat( ddrPrice.getDdrTypeId(), Matchers.notNullValue() );
-        String createAdapter = adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null,
-            null, null, TEST_ACCOUNTID, null, null );
+        String createAdapter = adapterAgent.createEmailAdapter("test@test.com", "test", null, null, null, null, null,
+                                                               null, null, TEST_ACCOUNTID, null, null, null);
         //check if a ddr record is created
         Object ddrRecords = ddrRecordAgent.getDDRRecords(null, TEST_ACCOUNTID, null, null, null, null, null, null,
                                                          null, null, null, null);
@@ -94,7 +94,8 @@ public class DDRRecordAgentTest extends TestFramework
         DDRPrice ddrPrice = getTestDDRPrice( DDRTypeCategory.ADAPTER_PURCHASE, 10.0, "Test", UnitType.PART,
             AdapterType.EMAIL, null );
         assertThat( ddrPrice.getDdrTypeId(), Matchers.notNullValue() );
-        adapterAgent.createEmailAdapter( "test@test.com", "test", null, null, null, null, null, null, null, null, null, null );
+        adapterAgent.createEmailAdapter("test@test.com", "test", null, null, null, null, null, null, null, null, null,
+                                        null, null);
         //check if a ddr record is created
         Object ddrRecords = ddrRecordAgent.getDDRRecords(null, null, null, null, null, null, null, null, null, null,
                                                          null, null);
@@ -116,7 +117,7 @@ public class DDRRecordAgentTest extends TestFramework
         DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
         //create an adapter
         getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 0.5, "Test", UnitType.PART, null, null);
-        String adapterId = adapterAgent.createMBAdapter( "TEST", null, "", "", null, TEST_ACCOUNTID, null );
+        String adapterId = adapterAgent.createMBAdapter( "TEST", null, "", "", null, TEST_ACCOUNTID, null, null);
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
         //create a new price
         getTestDDRPrice(DDRTypeCategory.SUBSCRIPTION_COST, 0.5, "Test", UnitType.HOUR,
@@ -141,7 +142,7 @@ public class DDRRecordAgentTest extends TestFramework
         DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
         //create an adapter
         getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 0.5, "Test", UnitType.PART, null, null);
-        String adapterId = adapterAgent.createMBAdapter("TEST", null, "", "", null, TEST_ACCOUNTID, null);
+        String adapterId = adapterAgent.createMBAdapter("TEST", null, "", "", null, TEST_ACCOUNTID, null, null);
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
         //create a new price
         getTestDDRPrice(DDRTypeCategory.SUBSCRIPTION_COST, 0.5, "Test", UnitType.SECOND,

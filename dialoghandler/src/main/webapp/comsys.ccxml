@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ccxml version="1.0" xmlns="http://www.w3.org/2002/09/ccxml">
+  <var name="test" expr="''"/>
+  
+  <var name="remoteID" expr="''"/>
+  <var name="redirectID" expr="''"/>
+  <var name="externalRemoteID" expr="''"/>
+  <var name="localID" expr="''"/>
+  <var name="direction" expr="'inbound'"/>
+  <var name="timeout" expr="'60s'" />
+  <var name="ctdConn" expr="''" />
+  <var name="inConn" expr="''" />
+  <var name="outConn" expr="''" />
+  <var name="dialogID" expr="''"/>
+  <var name="holdDialogID" expr="''"/>
+  <var name="preconDialogID" expr="''"/>
+  <var name="connectedDialogID" expr="''"/>
+  <var name="dialURL" expr="''" />
+  <var name="results" expr="''" />
+  <var name="vxmlScript" expr="'rest/comsys/vxml/new'" />
+  <var name="holdVxmlScript" expr="'/dialoghandler/transfer.vxml'" />
+  <var name="preconVxmlScript" expr="'rest/comsys/vxml/preconnect'" />
+  <var name="connectedVxmlScript" expr="'rest/comsys/vxml/connected'" />
+  <var name="currentState" expr="'initial'" />
+  
+  <eventprocessor statevariable="currentState" >
+    <transition state="initial" event="connection.alerting">
+      <log expr="'*** Caller ID via SIP header = ' + event$.connection.protocol.sip.headers.From"/>
+      <log expr="'*** Callee ID via SIP header = ' + event$.connection.protocol.sip.headers.To"/>
+      <log expr="'*** The calledID is ' + event$.connection.local"/>
+      <log expr="'*** The calleeID is ' + event$.connection.remote"/>
+      <script>
+          var remote = event$.connection.remote;
+          var strings = remote.split('@');
+
+          var from = event$.info.sip.headers['from'];
+
+          localID = event$.connection.local;
+          remoteID = strings[0];
+          externalRemoteID = remoteID;
+          if(from.indexOf('Anonymous')!=-1) {
+            externalRemoteID = '';
+          }
+          
+          var domain   = strings[1];
+          if (domain.substring(0,8) == "outbound") {
+            direction = "outbound";
+            dialURL = "sip:"+remoteID+"@asb-02.voipit.nl";
+          }
+        </script>
+        <!-- When outbound ctd:ctdConn and requester is being called with: inConn -->
+        <if cond="direction == 'outbound'">
+            <assign name="ctdConn" expr="event$.connectionid"/>
+            <accept connectionid="ctdConn"/>
+            <createcall dest="dialURL" connectionid="inConn" timeout="timeout" />
+        <else />
+            <assign name="inConn" expr="event$.connectionid"/>
+            <accept connectionid="inConn"/>
+        </if>
+    </transition>
+
+    <transition state="initial" event="connection.connected">
+      <if cond="inConn == event$.connectionid">
+	    <dialogstart src="vxmlScript" connectionid="inConn" dialogid="dialogID" namelist="direction localID remoteID externalRemoteID"/>
+	    <if cond="ctdConn != ''">
+	        <disconnect connectionid="ctdConn"/>
+	    </if>
+	    <assign name="currentState" expr="'connestablished'" />
+      </if>
+    </transition>
+
+    <transition state="connestablished" event="dialog.transfer">
+      <if cond="event$.type == 'blind'">
+        <assign name="currentState" expr="'redirecting'" />
+        <redirect connectionid="inConn" dest="event$.URI" />
+      <else />
+        <script>
+          var remote = event$.URI;
+          dialURL = remote;
+          var strings = remote.split(':');
+          if(strings[0] == "tel") {
+            redirectID = strings[1];
+            dialURL = "sip:"+redirectID+"@asb-02.voipit.nl";
+          }
+        </script>
+        <assign name="currentState" expr="'originatingcall'" />
+        <unjoin id1="inConn" id2="dialogID" />
+        <dialogstart src="holdVxmlScript" connectionid="inConn" dialogid="holdDialogID"/>
+        <createcall dest="dialURL" connectionid="outConn" timeout="event$.connecttimeout"/>
+      </if>
+    </transition>
+
+    
+    <transition state="originatingcall" event="connection.failed">
+	    <assign name="currentState" expr="'connestablished'" />
+	    <assign name="results" expr="'event$.result'"/>
+	    <join id1="inConn" id2="dialogID" />
+      <send name="'dialog.transfer.complete'"
+	      target="dialogID"
+	      targettype="'dialog'"
+	      namelist="results" />
+	  </transition>
+	
+	  <transition state="originatingcall" event="connection.connected">
+	    <assign name="currentState" expr="'preconnecting'" />
+	    <dialogstart src="preconVxmlScript" connectionid="outConn" dialogid="preconDialogID" namelist="direction localID remoteID redirectID"/>
+	  </transition>
+	  
+	  <transition state="preconnecting" event="connection.disconnected">
+	    <if cond="event$.connectionid == outConn" >
+          <join id1="inConn" id2="dialogID" />
+          <assign name="currentState" expr="'connestablished'" />
+          <assign name="results" expr="'event$.result'" />
+          <send name="'dialog.transfer.complete'"
+                target="dialogID"
+                targettype="'dialog'"
+                namelist="results" />
+        <else />
+          <disconnect connectionid="outConn"/>
+          <exit/>
+        </if>
+	  </transition>
+	  
+	  <transition state="preconnecting" event="dialog.exit">
+	    <assign name="currentState" expr="'preconnected'" />
+	  	<dialogstart src="connectedVxmlScript" connectionid="outConn" dialogid="connectedDialogID" namelist="direction localID remoteID redirectID"/>
+	  	<!--<send event="'http.get'" target="connectedVxmlScript" namelist="direction localID remoteID redirectID" />-->
+	  </transition>
+	  
+	  <transition state="preconnected" event="dialog.exit">
+	    <if cond="event$.dialogid == connectedDialogID" >
+		    <assign name="currentState" expr="'conferenceestablished'" />
+		    <join id1="inConn" id2="outConn" duplex="'full'"/>
+		    <assign name="results" expr="'completed'" />
+		    <send name="'dialog.transfer.connected'"
+		            target="dialogID"
+		            targettype="'dialog'"
+		            namelist="results"/>
+	    </if>
+	  </transition>
+	  
+	  <transition state="preconnecting" event="dialog.disconnect"> 
+	     <if cond="event$.dialogid == preconDialogID" >
+	    	  <join id1="inConn" id2="dialogID" />
+	          <assign name="currentState" expr="'connestablished'" />
+	          <assign name="results" expr="'event$.result'" />
+	          <send name="'dialog.transfer.complete'"
+	                target="dialogID"
+	                targettype="'dialog'"
+	                namelist="results" />
+	    	  <disconnect connectionid="outConn"/>
+	    </if>
+	  </transition>
+	
+	  <transition state="conferenceestablished" event="connection.disconnected">
+	        <if cond="event$.connectionid == outConn" >
+	          <join id1="inConn" id2="dialogID" />
+	          <assign name="currentState" expr="'connestablished'" />
+	          <assign name="results" expr="'far_end_disconnect'" />
+	          <send name="'dialog.transfer.complete'"
+	                target="dialogID"
+	                targettype="'dialog'"
+	                namelist="results" />
+	        <else />
+	          <disconnect connectionid="outConn"/>
+	          <exit/>
+	        </if>
+	  </transition>
+      
+    <transition state="originatingcall" event="connection.disconnected">
+      <if cond="event$.connectionid == inConn" >
+        <disconnect connectionid="outConn"/>
+      </if>
+    </transition>
+   
+    <transition event="connection.disconnected">
+      <if cond="event$.connectionid == inConn" >
+        <exit/>
+      </if>
+    </transition>
+
+    <transition state="connestablished" event="dialog.exit">
+      <if cond="event$.dialogid == dialogID" >
+        <disconnect connectionid="inConn"/>
+        <exit/>
+      </if>
+    </transition>
+
+    <transition event="connection.failed">
+      <exit/>
+    </transition>
+
+  </eventprocessor>
+</ccxml>

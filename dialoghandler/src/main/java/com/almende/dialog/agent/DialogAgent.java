@@ -12,7 +12,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -45,6 +44,8 @@ import com.askfast.commons.agent.intf.DialogAgentInterface;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DialogRequestDetails;
+import com.askfast.commons.entity.TTSInfo;
+import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -65,6 +66,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     public static final String ADAPTER_PROVIDER_CREDENTIALS_KEY = "ADAPTER_PROVIDER_CREDENTIALS";
     public static final String ADAPTER_CREDENTIALS_GLOBAL_KEY = "GLOBAL";
     public static final String BEARER_TOKEN_KEY = "BEARER_TOKEN";
+    private static final String DEFAULT_TTS_ACCOUNT_ID_KEY = "DEFAULT_TTS_ACCOUNTID";
     
     /**
      * Used by the Tests to store any default communication providers. Usually 
@@ -374,7 +376,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                             // fetch the first address in the map
                             if (!addressMap.keySet().isEmpty() && getApplicationId() != null) {
                                 resultSessionMap = TwilioAdapter.dial(addressMap, dialogIdOrUrl, config, accountId,
-                                                                      getApplicationId());
+                                                                      getApplicationId(), bearerToken);
                             }
                             else {
                                 throw new Exception("Address should not be empty to setup a call");
@@ -548,9 +550,9 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name( "dialog" ) Object dialog ) throws Exception
     {
         Dialog oldDialog = Dialog.getDialog( id, accountId );
-        if ( oldDialog == null )
+        if ( oldDialog == null ) {
             throw new Exception( "Dialog not found" );
-
+        }
         String dialogString = JOM.getInstance().writeValueAsString( dialog );
         JOM.getInstance().readerForUpdating( oldDialog ).readValue( dialogString );
         oldDialog.storeOrUpdate();
@@ -886,7 +888,55 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         return getGlobalProviderCredentials();
     }
     
-    /** Get the provider attached to this adapter by checking the adapterProperties and adapterType
+    @Override
+    public Object setTTSCredentials(@Name("dialogId") String dialogId, @Name("accountId") String accountId,
+        @Name("ttsProvider") TTSProvider ttsProvider, @Name("ttsAccountId") String ttsAccountId) {
+
+        Dialog dialog = Dialog.getDialog(dialogId, accountId);
+        if (dialog != null) {
+            TTSInfo ttsInfo = dialog.getTtsInfo();
+            ttsInfo = ttsInfo != null ? ttsInfo : new TTSInfo();
+            ttsInfo.setTtsAccountId(ttsAccountId);
+            ttsInfo.setProvider(ttsProvider);
+            dialog.setTtsInfo(ttsInfo);
+            dialog.storeOrUpdate();
+        }
+        return dialog;
+    }
+    
+    @Override
+    public String setDefaultTTSAccountId(@Name("accountId") String accountId, @Name("ttsAccountId") String ttsAccountId)
+            throws Exception {
+
+        Map<String, String> defaultTTSAccountIds = getAllDefaultTTSAccountIds();
+        defaultTTSAccountIds.put(accountId, ttsAccountId);
+        getState().put(DEFAULT_TTS_ACCOUNT_ID_KEY, defaultTTSAccountIds);
+        return getDefaultTTSAccountId(accountId);
+    }
+
+    @Override
+    public String getDefaultTTSAccountId(@Name("accountId") String accountId) {
+
+        return getAllDefaultTTSAccountIds().get(accountId);
+    }
+    
+    /**
+     * Fetches all the default ttsAccountIds mapped for a askFastAccountId
+     * @return
+     */
+    public Map<String, String> getAllDefaultTTSAccountIds() {
+
+        Map<String, String> defaultTTSAccountIds = getState().get(DEFAULT_TTS_ACCOUNT_ID_KEY,
+                                                                  new TypeUtil<Map<String, String>>() {
+                                                                  });
+        defaultTTSAccountIds = defaultTTSAccountIds != null ? defaultTTSAccountIds : new HashMap<String, String>();
+        return defaultTTSAccountIds;
+    }
+
+    /**
+     * Get the provider attached to this adapter by checking the
+     * adapterProperties and adapterType
+     * 
      * @param adapterType
      * @param config
      * @return

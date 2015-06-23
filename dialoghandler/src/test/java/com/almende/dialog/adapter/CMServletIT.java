@@ -141,8 +141,9 @@ public class CMServletIT extends TestFramework {
         TextMessage textMessage = smsAppointmentInteraction( "hi" );
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( textMessage.getAddress(), textMessage.getRecipientName() );
-        String expectedQuestion = TestServlet.getResponseQuestionWithOptionsInString( TestServlet
-            .getJsonAppointmentQuestion() );
+        String expectedQuestion = TestServlet.getResponseQuestionWithOptionsInString(TestServlet.getJsonAppointmentQuestion(false,
+                                                                                                                            null,
+                                                                                                                            null));
         assertXMLGeneratedFromOutBoundCall( addressNameMap, adapterConfig, expectedQuestion,
             textMessage.getLocalAddress() );
     }
@@ -241,8 +242,8 @@ public class CMServletIT extends TestFramework {
 
         createTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 1.0, "Adapter purchage", UnitType.PART, null, null);
         //create an SMS adapter
-        String adapterConfigID = new AdapterAgent().createMBAdapter(remoteAddressVoice, null, "1111|blabla",
-                                                                        "test", null, TEST_PUBLIC_KEY, null);
+        String adapterConfigID = new AdapterAgent().createMBAdapter(remoteAddressVoice, null, "1111|blabla", "test",
+                                                                    null, TEST_PUBLIC_KEY, null, null);
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterConfigID);
         assertEquals(TEST_PUBLIC_KEY, adapterConfig.getOwner());
         //collect all ddrRecord ids and log ids
@@ -303,8 +304,6 @@ public class CMServletIT extends TestFramework {
         //check that there are logs formed with shared account
         ddrRecords = DDRRecord.getDDRRecords(null, TEST_PRIVATE_KEY, null, null, null, null, null, null, null, null);
         assertTrue(ddrRecords.size() > 0);
-        logs = Logger.find(TEST_PRIVATE_KEY, null, null, null, null, null, null, null);
-        assertTrue(logs.size() > 0);
     }
     
     /**

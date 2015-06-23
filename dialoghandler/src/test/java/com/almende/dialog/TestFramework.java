@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.logging.Logger;
-
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.InternetHeaders;
@@ -16,7 +15,6 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.custommonkey.xmlunit.XMLTestCase;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.eclipse.jetty.server.Server;
@@ -25,7 +23,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.experimental.categories.Category;
 import org.w3c.dom.Document;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DDRRecordAgent;
@@ -37,6 +34,7 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
+import com.almende.util.DatastoreThread;
 import com.almende.util.ParallelInit;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.Status;
@@ -68,15 +66,11 @@ public class TestFramework
     public void setup() throws Exception {
 
         TestServlet.TEST_SERVLET_PATH = TestFramework.host + "/unitTestServlet";
-        new ParallelInit(true);
-        ParallelInit.getDatastore();
-        if (ParallelInit.datastore != null) {
+        ParallelInit.isTest = true;
+        ParallelInit.datastoreThread = new DatastoreThread(true);
+        if (ParallelInit.getDatastore() != null) {
             ParallelInit.datastore.dropDatabase();
         }
-        DialogAgent dialogAgent = new DialogAgent();
-        dialogAgent.setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.CM);
-        dialogAgent.setDefaultProviderSettings(AdapterType.CALL, AdapterProviders.BROADSOFT);
-        
         //check if server has to be started
         Category integrationTestAnnotation = getClass().getAnnotation(Category.class);
         if (integrationTestAnnotation != null &&
@@ -84,6 +78,9 @@ public class TestFramework
 
             startJettyServer();
         }
+        DialogAgent dialogAgent = new DialogAgent();
+        dialogAgent.setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.CM);
+        dialogAgent.setDefaultProviderSettings(AdapterType.CALL, AdapterProviders.BROADSOFT);
     }
     
     @After
@@ -176,13 +173,15 @@ public class TestFramework
         return ServerUtils.deserialize(adapterConfigString, AdapterConfig.class);
     }
     
-    public static AdapterConfig createEmailAdapter( String emailAddress, String password, String name,
+    public static AdapterConfig createEmailAdapter(String emailAddress, String password, String name,
         String preferredLanguage, String sendingPort, String sendingHost, String protocol, String receivingHost,
-        String receivingProtocol, String accountId, String initialAgentURL ) throws Exception
-    {
-        String emailAdapterId = new AdapterAgent().createEmailAdapter( emailAddress, password, name, preferredLanguage,
-            sendingPort, sendingHost, protocol, receivingProtocol, receivingHost, accountId, initialAgentURL, null );
-        return AdapterConfig.getAdapterConfig( emailAdapterId );
+        String receivingProtocol, String accountId, String initialAgentURL, Boolean isPrivate) throws Exception {
+
+        String emailAdapterId = new AdapterAgent().createEmailAdapter(emailAddress, password, name, preferredLanguage,
+                                                                      sendingPort, sendingHost, protocol,
+                                                                      receivingProtocol, receivingHost, accountId,
+                                                                      initialAgentURL, null, isPrivate);
+        return AdapterConfig.getAdapterConfig(emailAdapterId);
     }
     
     public static Method fetchMethodByReflection( String methodName, Class<?> class1, Class<?> parameterType )

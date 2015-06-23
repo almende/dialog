@@ -278,7 +278,7 @@ public class Dialog implements DialogInterface {
      * @throws URISyntaxException 
      */
     @JsonIgnore
-    public String getQuestionFromDialog(Map<String, String> queryParams) throws IOException, URISyntaxException {
+    public String getQuestionFromDialog(Map<String, String> queryParams) throws Exception {
 
         AFHttpClient client = ParallelInit.getAFHttpClient();
         if (Boolean.TRUE.equals(useBasicAuth)) {
@@ -290,7 +290,7 @@ public class Dialog implements DialogInterface {
                 uriBuilder.addParameter(query, queryParams.get(query));
             }
         }
-        return client.get(uriBuilder.build().toString());
+        return client.get(uriBuilder.build().toString()).getResponseBody();
     }
 
     @JsonIgnore
@@ -345,7 +345,7 @@ public class Dialog implements DialogInterface {
         else {
             Dialog dialog = Dialog.getDialog(dialogIdOrUrl, accountId);
             if (dialog != null) {
-                addDialogCredentialsToSession(dialog, session);
+                session = addDialogCredentialsToSession(dialog, session);
                 return dialog.getUrl();
             }
             String errorText = Question.getError(session != null ? session.getLanguage() : null).getQuestion_text()
@@ -359,7 +359,7 @@ public class Dialog implements DialogInterface {
      * @param dialog
      * @param session
      */
-    public static void addDialogCredentialsToSession(Dialog dialog, Session session) {
+    public static Session addDialogCredentialsToSession(Dialog dialog, Session session) {
 
         if (dialog != null && session != null) {
             if (dialog.getUseBasicAuth()) {
@@ -369,6 +369,7 @@ public class Dialog implements DialogInterface {
             session.addExtras(DIALOG_ID_KEY, dialog.getId());
             session.storeSession();
         }
+        return session;
     }
     
     /**
@@ -378,29 +379,10 @@ public class Dialog implements DialogInterface {
      * @param sessionKey
      * @return
      */
-    public static String getCredentialsFromSession(String sessionKey) {
+    public static String getCredentialsFromSession(Session session) {
 
-        if (sessionKey != null) {
-            Session session = Session.getSession(sessionKey);
-            if (session != null) {
-                return session.getAllExtras().get(DIALOG_BASIC_AUTH_HEADER_KEY);
-            }
-        }
-        return null;
-    }
-    
-    /**
-     * Returns the TTSInfo in the session corresponding to
-     * {@link Dialog#DIALOG_ID_KEY}
-     * 
-     * @param sessionKey
-     * @return
-     */
-    public static TTSInfo getTTSInfoFromSession(String sessionKey) {
-
-        if (sessionKey != null) {
-            Session session = Session.getSession(sessionKey);
-            return getTTSInfoFromSession(session);
+        if (session != null) {
+            return session.getAllExtras().get(DIALOG_BASIC_AUTH_HEADER_KEY);
         }
         return null;
     }

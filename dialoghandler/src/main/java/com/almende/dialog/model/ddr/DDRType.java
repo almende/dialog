@@ -16,6 +16,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
  */
 public class DDRType
 {
+    public static final String DDR_CATEGORY_KEY = "DDR_TYPE_CATEGORY_KEY";
+    
     /**
      * category of this type
      */
@@ -49,6 +51,11 @@ public class DDRType
          * cost applied for every time a TTS is being processed
          */
         TTS_COST,
+        /**
+         * cost applied for every time a TTS account of customer is used for tts
+         * processing
+         */
+        TTS_SERVICE_COST,
         /**
          * any other subsription cost
          */

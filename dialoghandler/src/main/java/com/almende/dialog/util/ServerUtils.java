@@ -14,7 +14,6 @@ import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
-import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -26,6 +25,7 @@ import com.askfast.commons.Status;
 import com.askfast.commons.entity.Account;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
+import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -184,6 +184,40 @@ public class ServerUtils
     }
     
     /**
+     * Appends all the query params in the given askFastQueryParams to the url
+     * @param url
+     * @param queryParams
+     * @return
+     * @throws UnsupportedEncodingException
+     */
+    public static String getURLWithQueryParams(String url, Map<String, String> queryParams)
+        throws UnsupportedEncodingException {
+
+        if (queryParams != null) {
+            for (String queryKey : queryParams.keySet()) {
+                url = ServerUtils.getURLWithQueryParams(url, queryKey, queryParams.get(queryKey));
+            }
+        }
+        return url;
+    }
+    
+    /**
+     * Returns all the query parameters in the url given.
+     * @return
+     * @throws Exception
+     */
+    public static HashMap<String, String> getAllQuerParameters(String url) throws Exception {
+
+        url = url.replace(" ", URLEncoder.encode(" ", "UTF-8"));
+        URIBuilder uriBuilder = new URIBuilder(new URI(url));
+        HashMap<String, String> result = new HashMap<String, String>();
+        for (NameValuePair nameValue : uriBuilder.getQueryParams()) {
+            result.put(nameValue.getName(), nameValue.getValue());
+        }
+        return result;
+    }
+    
+    /**
      * associates the same value corresponding to keys listed in keyCollection
      */
     public static <T> Map<T, T> putCollectionAsKey( Collection<T> keyCollection, T value )
@@ -242,9 +276,6 @@ public class ServerUtils
             else if(config != null && Status.ACTIVE.equals(config.getStatus())) {
                 return true;
             }
-            dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
-                          String.format("Not enough credits to start communication from: %s to: %s",
-                                        session.getLocalAddress(), session.getRemoteAddress()), session);
             session.drop();
             return false;
         }
@@ -306,7 +337,23 @@ public class ServerUtils
      * @param contentType
      * @return
      */
-    public static String getTTSURL(TTSInfo ttsInfo, String textForSpeech) {
+    public static String getTTSURL(String textForSpeech, Question question, Session session) {
+
+        TTSInfo ttsInfoFromSession = getTTSInfoFromSession(question, session);
+        return getTTSURL(ttsInfoFromSession, textForSpeech, session);
+    }
+    
+    /**
+     * returns the TTS URL from tts.ask-fast
+     * 
+     * @param ttsInfo
+     * 
+     * @param textForSpeech
+     * @param language
+     * @param contentType
+     * @return
+     */
+    public static String getTTSURL(TTSInfo ttsInfo, String textForSpeech, Session session) {
 
         String language = Language.getByValue(null).getCode();
         String speed = "0";
@@ -314,7 +361,9 @@ public class ServerUtils
         String format = "8khz_8bit_mono";
         String voice = null;
         String serviceProvider = null;
-
+        String ttsAccountId = null;
+        String accountId = null;
+        
         if (ttsInfo != null) {
             language = ttsInfo.getLanguage().getCode();
             speed = ttsInfo.getSpeed();
@@ -323,11 +372,30 @@ public class ServerUtils
             voice = ttsInfo.getVoiceUsed();
             serviceProvider = ttsInfo.getProvider() != null ? ttsInfo.getProvider().name() : null;
             format = ttsInfo.getFormat();
+            ttsAccountId = ttsInfo.getTtsAccountId();
+
+            textForSpeech = textForSpeech.replace("text://", "");
+            
+            //VOice rss is a free service. No charges are applied.
+            if (!TTSProvider.VOICE_RSS.equals(ttsInfo.getProvider())) {
+                //apply a tts processing service change if the ttsAccountId is given
+                if (ttsAccountId != null) {
+                    try {
+                        DDRUtils.createDDRForTTSService(ttsInfo.getProvider(), ttsAccountId, session, true);
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                        log.severe("Applying service charge for TTS processing failed.");
+                    }
+                }
+                //create a tts cost, as it is using ASK-Fast account tts processing
+                else {
+                    DDRUtils.createDDRForTTS(session != null ? session.getRemoteAddress() : null, session, ttsInfo,
+                                             textForSpeech);
+                }
+            }
         }
-        
-        textForSpeech = textForSpeech.replace("text://", "");
-        
-        String url = "http://tts.ask-fast.com/api/parse";
+        String url = Settings.TTS_ENDPOINT;
         try {
             url = ServerUtils.getURLWithQueryParams(url, "text", textForSpeech);
             url = ServerUtils.getURLWithQueryParams(url, "lang", language);
@@ -336,6 +404,8 @@ public class ServerUtils
             url = ServerUtils.getURLWithQueryParams(url, "format", format);
             url = ServerUtils.getURLWithQueryParams(url, "voice", voice);
             url = ServerUtils.getURLWithQueryParams(url, "service", serviceProvider);
+            url = ServerUtils.getURLWithQueryParams(url, "id", ttsAccountId);
+            url = ServerUtils.getURLWithQueryParams(url, "askFastAccountId", accountId);
             url += "&type=.wav";
         }
         catch (Exception ex) {

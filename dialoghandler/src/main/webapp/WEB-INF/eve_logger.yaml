@@ -1,0 +1,16 @@
+templates:  
+   defaultAgent:
+      transport:
+         class: com.almende.eve.transport.http.HttpTransportBuilder
+         servletUrl: http://localhost:8082/dialoghandler/agents/
+         doAuthentication: false
+         
+agent:
+  id: loggerProxy
+  class: com.almende.dialog.agent.LoggerProxyAgent
+  extends: templates/defaultAgent
+  environment:
+    Development:
+      http_logger_agent_url: http://localhost:8088/logserver/agents/httplogger
+    Production:
+      http_logger_agent_url: http://sandbox.ask-fast.com/logserver/agents/httplogger

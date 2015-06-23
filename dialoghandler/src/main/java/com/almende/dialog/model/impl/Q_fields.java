@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Logger;
-
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.EventCallback;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.model.intf.QuestionIntf;
 import com.almende.dialog.util.AFHttpClient;
 import com.almende.util.ParallelInit;
@@ -55,7 +55,7 @@ public class Q_fields implements QuestionIntf {
 	}
     
         @Override
-        public HashMap<String, String> getExpandedRequester(String language, String sessionKey) {
+        public HashMap<String, String> getExpandedRequester(String language, Session session) {
     
             HashMap<String, String> result = new HashMap<String, String>(0);
             String url = this.getRequester();
@@ -69,11 +69,11 @@ public class Q_fields implements QuestionIntf {
                 AFHttpClient client = ParallelInit.getAFHttpClient();
                 String text = "";
                 try {
-                    String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
+                    String credentialsFromSession = Dialog.getCredentialsFromSession(session);
                     if (credentialsFromSession != null) {
                         client.addBasicAuthorizationHeader(credentialsFromSession);
                     }
-                    text = client.get(url);
+                    text = client.get(url).getResponseBody();
                 }
                 catch (Exception e) {
                     log.severe(e.toString());
@@ -89,9 +89,9 @@ public class Q_fields implements QuestionIntf {
         }
         
         @Override
-        public HashMap<String, String> getExpandedRequester(String sessionKey) {
+        public HashMap<String, String> getExpandedRequester(Session session) {
     
-            return getExpandedRequester(null, sessionKey);
+            return getExpandedRequester(null, session);
         }
 	@Override
 	public ArrayList<Answer> getAnswers() {
@@ -138,7 +138,7 @@ public class Q_fields implements QuestionIntf {
 	}
 
     @Override
-    public String getQuestion_expandedtext(String language, String sessionKey) {
+    public String getQuestion_expandedtext(String language, Session session) {
 
         String url = this.getQuestion_text();
         if (url == null || url.equals("")) {
@@ -158,11 +158,11 @@ public class Q_fields implements QuestionIntf {
         String text = "";
         AFHttpClient client = ParallelInit.getAFHttpClient();
         try {
-            String credentialsFromSession = Dialog.getCredentialsFromSession(sessionKey);
+            String credentialsFromSession = Dialog.getCredentialsFromSession(session);
             if (credentialsFromSession != null) {
                 client.addBasicAuthorizationHeader(credentialsFromSession);
             }
-            text = client.get(url);
+            text = client.get(url).getResponseBody();
         }
         catch (Exception e) {
             log.severe(e.toString());
@@ -171,9 +171,9 @@ public class Q_fields implements QuestionIntf {
     }
 	
     @Override
-    public String getQuestion_expandedtext(String sessionKey) {
+    public String getQuestion_expandedtext(Session session) {
 
-        return getQuestion_expandedtext(null, sessionKey);
+        return getQuestion_expandedtext(null, session);
     }
 
 	@Override

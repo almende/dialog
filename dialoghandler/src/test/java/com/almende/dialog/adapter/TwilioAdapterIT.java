@@ -38,7 +38,6 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.sim.TwilioSimulator;
-import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
@@ -115,6 +114,17 @@ public class TwilioAdapterIT extends TestFramework {
         for (Session session : allSessions) {
             DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), TEST_PUBLIC_KEY);
             Assert.assertThat(ddrRecord, Matchers.notNullValue());
+            if(DDRTypeCategory.INCOMING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
+
+                assertThat(ddrRecord.getToAddress().keySet().iterator().next(),
+                           Matchers.is(adapterConfig.getMyAddress()));
+                assertTrue(ddrRecord.getFromAddress().equals(PhoneNumberUtils.formatNumber(inboundAddress, null)));
+            }
+            else {
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getMyAddress()));
+                assertTrue(ddrRecord.getToAddress().keySet()
+                                    .contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+            }
         }
 
         //new inbound call should trigger a redirect with preconnect 
@@ -142,13 +152,13 @@ public class TwilioAdapterIT extends TestFramework {
 
         //answer the preconnect with the ignore reply
         Response answer = twilioAdapter.answer(null, "2", adapterConfig.getMyAddress(), remoteAddressVoice,
-                                               "outbound-dial", null, null, null, testCallId1);
+                                               "outbound-dial", null, null, null, testCallId1, null);
         assertEquals("<Response><Say language=\"nl-nl\">You chose 2</Say><Hangup></Hangup></Response>".toLowerCase(),
                      answer.getEntity().toString().toLowerCase());
 
         //mock new redirect call to the second number
         answer = twilioAdapter.answer(null, null, adapterConfig.getMyAddress(), inboundAddress, "inbound", null, null,
-                                      null, testCallId);
+                                      null, testCallId, null);
 
         //a new referral session must have been created from testCallId as the parent external sessionId
         Session sessionFromParentExternalId = Session.getSessionFromParentExternalId(testCallId2,
@@ -174,15 +184,34 @@ public class TwilioAdapterIT extends TestFramework {
                                           preconnect.getEntity().toString());
 
         answer = twilioAdapter.answer(null, "1", adapterConfig.getMyAddress(), inboundAddress, "inbound", null, null,
-                                      null, testCallId2);
+                                      null, testCallId2, null);
         assertXMLGeneratedByTwilioLibrary("<Response><Say language=\"nl-nl\">You chose 1</Say></Response>",
                                           answer.getEntity().toString());
+        ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null);
+        Assert.assertThat(ddrRecords.size(), Matchers.is(3));
+        for (DDRRecord ddrRecord : ddrRecords) {
+
+            Assert.assertThat(ddrRecord, Matchers.notNullValue());
+            if(DDRTypeCategory.INCOMING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
+
+                assertThat(ddrRecord.getToAddress().keySet().iterator().next(),
+                           Matchers.is(adapterConfig.getMyAddress()));
+                assertTrue(ddrRecord.getFromAddress().equals(PhoneNumberUtils.formatNumber(inboundAddress, null)));
+            }
+            else if(DDRTypeCategory.OUTGOING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getMyAddress()));
+                assertTrue(ddrRecord.getToAddress().keySet()
+                                    .contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)) ||
+                    ddrRecord.getToAddress().keySet()
+                             .contains(PhoneNumberUtils.formatNumber(secondRemoteAddress, null)));
+            }
+        }
     }
 
     @Test
     public void inboundPhoneCall_CommentTest() throws Exception {
 
-        //new DDRRecordAgent().generateDefaultDDRTypes();
+        new DDRRecordAgent().generateDefaultDDRTypes();
 
         String accountSid = UUID.randomUUID().toString();
         String callSid = UUID.randomUUID().toString();
@@ -211,6 +240,56 @@ public class TwilioAdapterIT extends TestFramework {
         expected.append(say);
 
         assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+        //check all the ddrs created
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertEquals(ddrRecords.size(), 1);
+        for (DDRRecord ddrRecord : ddrRecords) {
+            assertEquals("inbound", ddrRecord.getDirection());
+            assertEquals(adapterConfig.getMyAddress(), ddrRecord.getToAddress().keySet().iterator().next());
+            assertEquals(PhoneNumberUtils.formatNumber(remoteAddressVoice, null), ddrRecord.getFromAddress());
+        }
+    }
+    
+    @Test
+    public void inboundPhoneCall_InvalidReferralTest() throws Exception {
+
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        String invalidNumber = "%2b3161234567";
+        String accountSid = UUID.randomUUID().toString();
+        String callSid = UUID.randomUUID().toString();
+        TwilioSimulator simulator = new TwilioSimulator(TestFramework.host, accountSid);
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.REFERRAL.name());
+        url = ServerUtils.getURLWithQueryParams(url, "address", invalidNumber); //invalid address
+        url = ServerUtils.getURLWithQueryParams(url, "question", "Hello...");
+
+        //create a dialog
+        Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+        adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
+        adapterConfig.setDialogId(createDialog.getId());
+        adapterConfig.update();
+
+        String initiateInboundCall = simulator.initiateInboundCall(callSid, remoteAddressVoice, localAddressBroadsoft);
+        assertThat(initiateInboundCall,
+                   Matchers.not(Matchers.containsString(URLDecoder.decode(invalidNumber, "UTF-8"))));
+        List<Session> allSessions = Session.getAllSessions();
+        assertThat(allSessions.size(), Matchers.is(1));
+        DDRRecord ddrRecord = allSessions.iterator().next().getDDRRecord();
+        assertThat(ddrRecord, Matchers.notNullValue());
+        int ddrInfoCount = 0;
+        for (String infoKey : ddrRecord.getAdditionalInfo().keySet()) {
+            if (URLDecoder.decode(invalidNumber, "UTF-8").equals(infoKey)) {
+                assertThat(ddrRecord.getAdditionalInfo().get(infoKey).toString(), Matchers.is("Invalid address"));
+                ddrInfoCount++;
+            }
+        }
+        assertThat(ddrInfoCount, Matchers.is(1));
     }
 
     @Test
@@ -287,6 +366,8 @@ public class TwilioAdapterIT extends TestFramework {
 
         TTSInfo ttsInfo = new TTSInfo();
         ttsInfo.setProvider(TTSProvider.ACAPELA);
+        String ttsAccountId = UUID.randomUUID().toString();
+        ttsInfo.setTtsAccountId(ttsAccountId);
         ttsInfo.setVoiceUsed("testtest");
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
@@ -332,6 +413,10 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
                 continue;
             }
+            else if (queryParams.getName().equals("id")) {
+                assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
@@ -351,6 +436,8 @@ public class TwilioAdapterIT extends TestFramework {
         TTSInfo ttsInfo = new TTSInfo();
         ttsInfo.setProvider(TTSProvider.ACAPELA);
         ttsInfo.setVoiceUsed("testtest");
+        String ttsAccountId = UUID.randomUUID().toString();
+        ttsInfo.setTtsAccountId(ttsAccountId);
         ttsInfo.setSpeed("0");
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
@@ -396,8 +483,111 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
                 continue;
             }
+            else if (queryParams.getName().equals("id")) {
+                assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
+    }
+    
+    @Test
+    public void inboundPhoneCall_ForTTSServiceCostProcessingTest() throws Exception {
+        phoneCall_ForTTSServiceCostProcessingTest("inbound");
+    }
+    
+    @Test
+    public void outboundPhoneCall_ForTTSServiceCostProcessingTest() throws Exception {
+        phoneCall_ForTTSServiceCostProcessingTest("outbound");
+    }
+    
+    /**
+     * This test is to check if tts service charges are attached to the inbound
+     * functionality when the ttsAccountId is found. No tts costs must be seen
+     * 
+     * @throws Exception
+     */
+    public void phoneCall_ForTTSServiceCostProcessingTest(String direction) throws Exception {
+
+        DDRRecordAgent ddrRecordAgent = new DDRRecordAgent();
+        ddrRecordAgent.createDDRPriceWithNewDDRType("TTS service costs", DDRTypeCategory.TTS_SERVICE_COST.name(), null,
+                                                    null, 0.01, null, null, null, null, null, null, null);
+        ddrRecordAgent.createDDRPriceWithNewDDRType("TTS service costs", DDRTypeCategory.TTS_COST.name(), null, null,
+                                                    0.01, null, null, null, null, null, null, null);
+        
+        String ttsAccountId = UUID.randomUUID().toString();
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setProvider(TTSProvider.ACAPELA);
+        ttsInfo.setVoiceUsed("testtest");
+        ttsInfo.setTtsAccountId(ttsAccountId);
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        String message = "How are you doing? today";
+        url = ServerUtils.getURLWithQueryParams(url, "question", message);
+        Response securedDialogResponse = performSecuredInboundCall(direction, "testuserName", "testpassword", ttsInfo,
+                                                                   url);
+        assertTrue(securedDialogResponse != null);
+        //check if ddr is created for ttsprocessing
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        int ttsServiceChargesAttached = 0;
+        for (DDRRecord ddrRecord : ddrRecords) {
+            Assert.assertFalse(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_COST));
+            if (ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_SERVICE_COST)) {
+                ttsServiceChargesAttached++;
+            }
+        }
+        assertEquals(1, ttsServiceChargesAttached);
+    }
+    
+    @Test
+    public void inboundPhoneCall_ForTTSCostProcessingTest() throws Exception {
+        phoneCall_ForTTSCostProcessingTest("inbound");
+    }
+    
+    @Test
+    public void outboundPhoneCall_ForTTSCostProcessingTest() throws Exception {
+        phoneCall_ForTTSCostProcessingTest("outbound");
+    }
+    
+    /**
+     * This test is to check if tts charges are attached to the inbound
+     * functionality when the ttsAccountId is not found. No tts service costs
+     * must be seen
+     * 
+     * @throws Exception
+     */
+    public void phoneCall_ForTTSCostProcessingTest(String direction) throws Exception {
+
+        DDRRecordAgent ddrRecordAgent = new DDRRecordAgent();
+        ddrRecordAgent.createDDRPriceWithNewDDRType("TTS service costs", DDRTypeCategory.TTS_SERVICE_COST.name(), null,
+                                                    null, 0.01, null, null, null, null, null, null, null);
+        ddrRecordAgent.createDDRPriceWithNewDDRType("TTS service costs", DDRTypeCategory.TTS_COST.name(), null, null,
+                                                    0.01, null, null, null, null, null, null, null);
+
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setProvider(TTSProvider.ACAPELA);
+        ttsInfo.setVoiceUsed("testtest");
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        String message = "How are you doing? today";
+        url = ServerUtils.getURLWithQueryParams(url, "question", message);
+        Response securedDialogResponse = performSecuredInboundCall("inbound", "testuserName", "testpassword", ttsInfo,
+                                                                   url);
+        assertTrue(securedDialogResponse != null);
+        //check if ddr is created for ttsprocessing
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        int ttsChargesAttached = 0;
+        for (DDRRecord ddrRecord : ddrRecords) {
+            Assert.assertFalse(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_SERVICE_COST));
+            if (ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_COST)) {
+                ttsChargesAttached++;
+            }
+        }
+        assertEquals(1, ttsChargesAttached);
     }
 
     /**
@@ -416,6 +606,8 @@ public class TwilioAdapterIT extends TestFramework {
         ttsInfo.setProvider(TTSProvider.ACAPELA);
         ttsInfo.setVoiceUsed("testtest");
         ttsInfo.setSpeed("0");
+        String ttsAccountId = UUID.randomUUID().toString();
+        ttsInfo.setTtsAccountId(ttsAccountId);
         ttsInfo.setLanguage(Language.ENGLISH_UNITEDSTATES);
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
@@ -461,6 +653,10 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
                 continue;
             }
+            else if (queryParams.getName().equals("id")) {
+                assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
@@ -481,6 +677,8 @@ public class TwilioAdapterIT extends TestFramework {
         ttsInfo.setProvider(TTSProvider.ACAPELA);
         ttsInfo.setVoiceUsed("testtest");
         ttsInfo.setSpeed("0");
+        String ttsAccountId = UUID.randomUUID().toString();
+        ttsInfo.setTtsAccountId(ttsAccountId);
         ttsInfo.setLanguage(Language.DUTCH);
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
@@ -527,6 +725,10 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is("ACAPELA"));
                 continue;
             }
+            else if (queryParams.getName().equals("id")) {
+                assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
@@ -542,15 +744,16 @@ public class TwilioAdapterIT extends TestFramework {
 
         //create a ddrPrice
         createTestDDRPrice(DDRTypeCategory.TTS_COST, 0.1, "ddr price for tts", UnitType.PART, null, null);
+        createTestDDRPrice(DDRTypeCategory.TTS_SERVICE_COST, 0.01, "ddr price for tts service", UnitType.PART, null,
+                           null);
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
-        DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
+        DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_SERVICE_COST);
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, ddrType.getTypeId(), null,
                                                              null, null, null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         ddrRecord.setShouldGenerateCosts(true);
-        assertThat(ddrRecord.getTotalCost(),
-                   Matchers.is(DDRUtils.getCeilingAtPrecision(0.1 * TEST_MESSAGE.length(), 3)));
+        assertThat(ddrRecord.getTotalCost(), Matchers.is(0.01));
     }
 
     /**

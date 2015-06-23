@@ -15,6 +15,7 @@ import org.apache.commons.lang.NotImplementedException;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.sms.SmsMessage;
 import com.almende.util.ParallelInit;
@@ -37,7 +38,7 @@ public class AskSmsServlet extends TextServlet {
 	
     @Override
     protected int sendMessage(String message, String subject, String from, String fromName, String to, String toName,
-        Map<String, Object> extras, AdapterConfig config, String accountId) {
+        Map<String, Object> extras, AdapterConfig config, String accountId, DDRRecord ddrRecord) {
 
         try {
             to = URLDecoder.decode(to, "UTF-8");
@@ -56,8 +57,8 @@ public class AskSmsServlet extends TextServlet {
 	
     @Override
     protected int broadcastMessage(String message, String subject, String from, String senderName,
-        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId)
-        throws Exception {
+        Map<String, String> addressNameMap, Map<String, Object> extras, AdapterConfig config, String accountId,
+        DDRRecord ddrRecord) throws Exception {
 
         //            try
         //            {
@@ -192,14 +193,14 @@ public class AskSmsServlet extends TextServlet {
 
     @Override
     protected DDRRecord createDDRForIncoming(AdapterConfig adapterConfig, String accountId, String fromAddress,
-        String message, String sessionKey) throws Exception {
+        String message, Session session) throws Exception {
 
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
     }
 
     @Override
     protected DDRRecord createDDRForOutgoing(AdapterConfig adapterConfig, String accountId, String senderName,
-        Map<String, String> toAddress, String message, Map<String, String> sessionKeyMap) throws Exception {
+        Map<String, String> toAddress, String message, Map<String, Session> sessionKeyMap) throws Exception {
 
         throw new NotImplementedException("Attaching cost not implemented for this Adapter");
     }

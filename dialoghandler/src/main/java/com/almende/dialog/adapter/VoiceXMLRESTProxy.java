@@ -377,7 +377,7 @@ public class VoiceXMLRESTProxy {
             url = config.getURLForInboundScenario(session);
             try {
                 ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, config.getOwner(),
-                                                                            config.getMyAddress(), url, session);
+                                                                            formattedRemoteId, url, session);
             }
             catch (Exception e) {
                 e.printStackTrace();

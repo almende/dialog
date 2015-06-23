@@ -283,13 +283,20 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
             isValidCredentials = true;
             config.setMyAddress(username);
         }
-        if (isValidCredentials) {
-            AdapterConfig newConfig = createAdapter(config, isPrivate);
-            return new RestResponse(getVersion(), newConfig.getConfigId(), Response.Status.OK.getStatusCode(), "OK");
+        try {
+
+            if (isValidCredentials) {
+                AdapterConfig newConfig = createAdapter(config, isPrivate);
+                return new RestResponse(getVersion(), newConfig.getConfigId(), Response.Status.OK.getStatusCode(), "OK");
+            }
+            else {
+                return new RestResponse(getVersion(), null, Response.Status.FORBIDDEN.getStatusCode(),
+                                        "Unauthorized credentials. Please try again.");
+            }
         }
-        else {
-            return new RestResponse(getVersion(), null, Response.Status.FORBIDDEN.getStatusCode(),
-                                    "Unauthorized credentials. Please try again.");
+        catch (Exception e) {
+            return new RestResponse(getVersion(), null, Response.Status.BAD_REQUEST.getStatusCode(),
+                                    e.getLocalizedMessage());
         }
     }
     

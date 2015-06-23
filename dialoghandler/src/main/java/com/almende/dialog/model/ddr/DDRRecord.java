@@ -771,22 +771,25 @@ public class DDRRecord
      * Adds the given sessionKeys to additionalInfo, and to collection of
      * sessionKeys. If the session is found. adds the external caller id too
      * 
-     * @param sessionKeyMap
+     * @param sessionMap
      */
     @JsonIgnore
-    public void setSessionKeysFromMap(Map<String, Session> sessionKeyMap) {
+    public void setSessionKeysFromMap(Map<String, Session> sessionMap) {
 
-        if (sessionKeyMap != null) {
-            addAdditionalInfo(Session.SESSION_KEY, sessionKeyMap);
+        if (sessionMap != null) {
+            HashMap<String, String> sessionKeyMap = new HashMap<String, String>();
             setSessionKeys(new HashSet<String>());
-            for (Session session : sessionKeyMap.values()) {
+            for (String address : sessionMap.keySet()) {
+                Session session = sessionMap.get(address);
                 if (session != null) {
                     sessionKeys.add(session.getKey());
+                    sessionKeyMap.put(address, session.getKey());
                     if (session.getExternalSession() != null) {
                         addAdditionalInfo("externalSessionKey", session.getExternalSession());
                     }
                 }
             }
+            addAdditionalInfo(Session.SESSION_KEY, sessionKeyMap);
         }
     }
     

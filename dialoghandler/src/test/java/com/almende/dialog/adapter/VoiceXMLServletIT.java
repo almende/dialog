@@ -47,11 +47,13 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
+import com.almende.util.jackson.JOM;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 @Category(IntegrationTest.class)
 public class VoiceXMLServletIT extends TestFramework {
@@ -130,6 +132,13 @@ public class VoiceXMLServletIT extends TestFramework {
             assertEquals("inbound", ddrRecord.getDirection());
             assertEquals(adapterConfig.getMyAddress(), ddrRecord.getToAddress().keySet().iterator().next());
             assertEquals(PhoneNumberUtils.formatNumber(remoteAddressVoice, null), ddrRecord.getFromAddress());
+            Object addressSessionKeyObject = ddrRecord.getAdditionalInfo().get(Session.SESSION_KEY);
+            Map<String, String> addressSessionKey = JOM.getInstance().convertValue(addressSessionKeyObject, new TypeReference<Map<String, String>>() {
+            });
+            assertEquals(PhoneNumberUtils.formatNumber(remoteAddressVoice, null), addressSessionKey.keySet().iterator()
+                                                                                                   .next());
+            assertEquals(ddrRecord.getSessionKeys().iterator().next(),
+                         addressSessionKey.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
         }
     }
     

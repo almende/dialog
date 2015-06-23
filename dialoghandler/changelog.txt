@@ -1,6 +1,10 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+23-6-2015, version 1.10.0
+- feature: conference call capabilities
+- update: session instances are passed around.
+
 15-5-2015, version 1.9.1
 - feature: load urls from jvm environment variables
 

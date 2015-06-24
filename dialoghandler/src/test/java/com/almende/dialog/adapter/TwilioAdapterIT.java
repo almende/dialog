@@ -118,11 +118,11 @@ public class TwilioAdapterIT extends TestFramework {
             if(DDRTypeCategory.INCOMING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
 
                 assertThat(ddrRecord.getToAddress().keySet().iterator().next(),
-                           Matchers.is(adapterConfig.getMyAddress()));
+                           Matchers.is(adapterConfig.getFormattedMyAddress()));
                 assertTrue(ddrRecord.getFromAddress().equals(PhoneNumberUtils.formatNumber(inboundAddress, null)));
             }
             else {
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getMyAddress()));
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getFormattedMyAddress()));
                 assertTrue(ddrRecord.getToAddress().keySet()
                                     .contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
             }
@@ -200,7 +200,7 @@ public class TwilioAdapterIT extends TestFramework {
                 assertTrue(ddrRecord.getFromAddress().equals(PhoneNumberUtils.formatNumber(inboundAddress, null)));
             }
             else if(DDRTypeCategory.OUTGOING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getMyAddress()));
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getFormattedMyAddress()));
                 assertTrue(ddrRecord.getToAddress().keySet()
                                     .contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)) ||
                     ddrRecord.getToAddress().keySet()
@@ -248,7 +248,7 @@ public class TwilioAdapterIT extends TestFramework {
         assertEquals(ddrRecords.size(), 1);
         for (DDRRecord ddrRecord : ddrRecords) {
             assertEquals("inbound", ddrRecord.getDirection());
-            assertEquals(adapterConfig.getMyAddress(), ddrRecord.getToAddress().keySet().iterator().next());
+            assertEquals(adapterConfig.getFormattedMyAddress(), ddrRecord.getToAddress().keySet().iterator().next());
             assertEquals(PhoneNumberUtils.formatNumber(remoteAddressVoice, null), ddrRecord.getFromAddress());
         }
     }

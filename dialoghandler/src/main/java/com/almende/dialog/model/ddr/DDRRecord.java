@@ -736,8 +736,8 @@ public class DDRRecord
 
         //if the from address is not equal to the adapter address, its an incoming communication
         if (getToAddress() != null && getAdapter() != null) {
-            return getToAddress().containsKey(getAdapter().getMyAddress()) && getToAddress().size() == 1 ? "inbound"
-                                                                                                        : "outbound";
+            return getToAddress().containsKey(getAdapter().getFormattedMyAddress()) && getToAddress().size() == 1 ? "inbound"
+                : "outbound";
         }
         return null;
     }

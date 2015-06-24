@@ -345,7 +345,8 @@ public class DDRRecordAgentIT extends TestFramework {
             if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
                 assertThat(ddrCost, Matchers.is(0.0));
                 assertThat(ddrRecord.getQuantity(), Matchers.is(1));
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(localFullAddressBroadsoft));
+                assertThat(ddrRecord.getFromAddress(),
+                           Matchers.is(PhoneNumberUtils.formatNumber(localAddressBroadsoft, null)));
                 assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
                 assertThat(ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
                            Matchers.is(CommunicationStatus.SENT));
@@ -388,7 +389,8 @@ public class DDRRecordAgentIT extends TestFramework {
             if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
                 assertThat(ddrCost, Matchers.is(2.5));
                 assertThat(ddrRecord.getQuantity(), Matchers.is(1));
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(localFullAddressBroadsoft));
+                assertThat(ddrRecord.getFromAddress(),
+                           Matchers.is(PhoneNumberUtils.formatNumber(localAddressBroadsoft, null)));
                 assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
                 assertThat(ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
                            Matchers.is(CommunicationStatus.FINISHED));
@@ -513,7 +515,8 @@ public class DDRRecordAgentIT extends TestFramework {
             {
                 assertThat( ddrCost, Matchers.is( 0.0 ) );
                 assertThat( ddrRecord.getQuantity(), Matchers.is( 1 ) );
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(localFullAddressBroadsoft));
+                assertThat(ddrRecord.getFromAddress(),
+                           Matchers.is(PhoneNumberUtils.formatNumber(localAddressBroadsoft, null)));
                 assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
                 assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
             }

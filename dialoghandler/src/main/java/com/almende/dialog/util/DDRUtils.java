@@ -247,7 +247,7 @@ public class DDRUtils
                 ddrRecord.setStart(startTime); //if no answerTime i.e call not picked up, set to startTime
                 duration = 0L;
                 //mark as MISSED if its an outbound call
-                if (ddrRecord.getFromAddress().equalsIgnoreCase(adapterConfig.getMyAddress())) {
+                if (ddrRecord.getFromAddress().equalsIgnoreCase(adapterConfig.getFormattedMyAddress())) {
                     for (String toAddress : ddrRecord.getToAddress().keySet()) {
                         ddrRecord.addStatusForAddress(toAddress, CommunicationStatus.MISSED);
                     }

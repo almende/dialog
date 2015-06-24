@@ -332,8 +332,8 @@ public class DDRRecordAgentIT extends TestFramework {
         Mockito.when(uri.getBaseUri()).thenReturn(new URI("http://localhost:8082/dialoghandler/vxml/new"));
         //-----------------------------------------------------------------------
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft +
-            "@ask.ask.voipit.nl", uri);
+        voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice, localFullAddressBroadsoft,
+                                       uri);
         allDdrRecords = getDDRRecordsByAccountId(resultMap.get(ACCOUNT_ID_KEY));
         for (DDRRecord ddrRecord : allDdrRecords) {
             ddrRecord.setShouldGenerateCosts(true);
@@ -345,7 +345,8 @@ public class DDRRecordAgentIT extends TestFramework {
             if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
                 assertThat(ddrCost, Matchers.is(0.0));
                 assertThat(ddrRecord.getQuantity(), Matchers.is(1));
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(localAddressBroadsoft + "@ask.ask.voipit.nl"));
+                assertThat(ddrRecord.getFromAddress(),
+                           Matchers.is(PhoneNumberUtils.formatNumber(localAddressBroadsoft, null)));
                 assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
                 assertThat(ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
                            Matchers.is(CommunicationStatus.SENT));
@@ -363,8 +364,8 @@ public class DDRRecordAgentIT extends TestFramework {
         adapterConfig.update();
         String hangupXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
             "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" +
-            localAddressBroadsoft +
-            "@ask.ask.voipit.nl</subscriberId>" +
+            localFullAddressBroadsoft +
+            "</subscriberId>" +
             "<applicationId>cc</applicationId><subscriptionId>" +
             adapterConfig.getXsiSubscription() +
             "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
@@ -388,7 +389,8 @@ public class DDRRecordAgentIT extends TestFramework {
             if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
                 assertThat(ddrCost, Matchers.is(2.5));
                 assertThat(ddrRecord.getQuantity(), Matchers.is(1));
-                assertThat(ddrRecord.getFromAddress(), Matchers.is("0854881000@ask.ask.voipit.nl"));
+                assertThat(ddrRecord.getFromAddress(),
+                           Matchers.is(PhoneNumberUtils.formatNumber(localAddressBroadsoft, null)));
                 assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
                 assertThat(ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
                            Matchers.is(CommunicationStatus.FINISHED));
@@ -458,6 +460,9 @@ public class DDRRecordAgentIT extends TestFramework {
     @SuppressWarnings("deprecation")
     @Test
     public void outgoingCallPickupAndImmediateHangupTest() throws Exception{
+        
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        
         String formattedRemoteAddressVoice = PhoneNumberUtils.formatNumber( remoteAddressVoice, null );
         Map<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( formattedRemoteAddressVoice, "" );
@@ -498,7 +503,8 @@ public class DDRRecordAgentIT extends TestFramework {
         Mockito.when( uri.getBaseUri() ).thenReturn( new URI( "http://localhost:8082/dialoghandler/vxml/new" ) );
         //-----------------------------------------------------------------------
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        voiceXMLRESTProxy.getNewDialog( "outbound", formattedRemoteAddressVoice, formattedRemoteAddressVoice, localAddressBroadsoft + "@ask.ask.voipit.nl", uri );
+        voiceXMLRESTProxy.getNewDialog("outbound", formattedRemoteAddressVoice, formattedRemoteAddressVoice,
+                                       localFullAddressBroadsoft, uri);
         allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
         for ( DDRRecord ddrRecord : allDdrRecords )
         {
@@ -509,7 +515,8 @@ public class DDRRecordAgentIT extends TestFramework {
             {
                 assertThat( ddrCost, Matchers.is( 0.0 ) );
                 assertThat( ddrRecord.getQuantity(), Matchers.is( 1 ) );
-                assertThat( ddrRecord.getFromAddress(), Matchers.is( localAddressBroadsoft + "@ask.ask.voipit.nl" ) );
+                assertThat(ddrRecord.getFromAddress(),
+                           Matchers.is(PhoneNumberUtils.formatNumber(localAddressBroadsoft, null)));
                 assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
                 assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
             }
@@ -519,8 +526,7 @@ public class DDRRecordAgentIT extends TestFramework {
             }
         }
         //assert that a session exists
-        Session session = Session.getSessionByInternalKey(AdapterType.CALL.toString(), localAddressBroadsoft +
-                                                                                       "@ask.ask.voipit.nl",
+        Session session = Session.getSessionByInternalKey(AdapterType.CALL.toString(), localFullAddressBroadsoft,
                                                           formattedRemoteAddressVoice);
         assertThat(session, Matchers.notNullValue());
         assertThat(session.getStartTimestamp(), Matchers.notNullValue());
@@ -540,8 +546,7 @@ public class DDRRecordAgentIT extends TestFramework {
         String hangupXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
                            "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257" +
                            "</sequenceNumber><subscriberId>" +
-                           localAddressBroadsoft +
-                           "@ask.ask.voipit.nl</subscriberId>" +
+                           localFullAddressBroadsoft + "</subscriberId>" +
                            "<applicationId>cc</applicationId><subscriptionId>" +
                            adapterConfig.getXsiSubscription() +
                            "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=\"http://schema.broadsoft.com/xsi-events\">" +
@@ -554,34 +559,8 @@ public class DDRRecordAgentIT extends TestFramework {
 
         voiceXMLRESTProxy.receiveCCMessage(hangupXML);
         //assert that a session still exists
-        session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localAddressBroadsoft +
-                                                                                  "@ask.ask.voipit.nl",
+        session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localFullAddressBroadsoft,
                                                   formattedRemoteAddressVoice);
-//        assertThat(session, Matchers.notNullValue());
-//        assertThat(session.getStartTimestamp(), Matchers.notNullValue());
-//        assertThat(session.getAnswerTimestamp(), Matchers.nullValue());
-//        assertThat(session.getReleaseTimestamp(), Matchers.notNullValue());
-//        assertThat(session.getCreationTimestamp(), Matchers.notNullValue());
-
-//        //send answer ccxml
-//        String answerXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" xmlns:xsi1=" +
-//                           "\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>246</sequenceNumber><subscriberId>" +
-//                           localAddressBroadsoft +
-//                           "@ask.ask.voipit.nl</subscriberId><applicationId>cc</applicationId><subscriptionId>" +
-//                           adapterConfig.getXsiSubscription() +
-//                           "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=\"http://schema.broadsoft.com/xsi-events\">" +
-//                           "<eventName>CallSessionEvent</eventName><call><callId>callhalf-12914431715:1</callId><extTrackingId>10668830:1" +
-//                           "</extTrackingId><personality>Originator</personality><callState>Active</callState><remoteParty><address>tel:" +
-//                           remoteAddressVoice +
-//                           "</address><callType>Network</callType></remoteParty><addressOfRecord>0854881000@ask.ask.voipit.nl</addressOfRecord>" +
-//                           "<endPoint xsi1:type=\"xsi:AccessEndpoint\"><addressOfRecord>0854881000@ask.ask.voipit.nl</addressOfRecord></endPoint>" +
-//                           "<appearance>2</appearance><startTime>1401809063943</startTime><answerTime>1401809061002</answerTime></call></eventData>" +
-//                           "</Event>";
-//        voiceXMLRESTProxy.receiveCCMessage(answerXML);
-        
-        //force start the processing of Session
-//        sessionAgent.postProcessSessions(session.getKey());
-
         //assert that a session doesnt exist and is processed
         Collection<Session> sessions = Session.getAllSessions();
         assertThat(sessions, Matchers.emptyCollectionOf(Session.class));
@@ -659,8 +638,10 @@ public class DDRRecordAgentIT extends TestFramework {
                                               adapterConfig, adapterConfig.getOwner());
                 break;
             case CALL:
-                RestResponse createBroadSoftAdapter = adapterAgent.createBroadSoftAdapter(localAddressBroadsoft +
-                    "@ask.ask.voipit.nl", "askask", null, TEST_ACCOUNTID, false, null, null);
+                RestResponse createBroadSoftAdapter = adapterAgent.createBroadSoftAdapter(localFullAddressBroadsoft,
+                                                                                          "askask", null,
+                                                                                          TEST_ACCOUNTID, false, null,
+                                                                                          null);
                 adapterId = createBroadSoftAdapter.getResult().toString();
                 adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
                 adapterConfig.setAccountType(type);

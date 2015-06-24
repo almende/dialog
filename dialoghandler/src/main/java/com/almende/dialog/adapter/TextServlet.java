@@ -155,7 +155,7 @@ abstract public class TextServlet extends HttpServlet {
             else if (question.getType().equalsIgnoreCase("comment")) {
                 // Always returns null!
                 // So no need, but maybe in future?
-                question = question.answer(null, adapterID, null, null, null);
+                question = question.answer(null, null, null, null);
             }
             else if (question.getType().equalsIgnoreCase("referral")) {
                 question = Question.fromURL(question.getUrl().get(0), adapterID, address, ddrRecordId, session, null);
@@ -551,7 +551,7 @@ abstract public class TextServlet extends HttpServlet {
                 // comment or referral anyway.
                 if (!(start && (question.getType().equalsIgnoreCase("comment") || question.getType()
                                                 .equalsIgnoreCase("referral")))) {
-                    question = question.answer(address, config.getConfigId(), null, escapeInput.body, session);
+                    question = question.answer(address, null, escapeInput.body, session);
                 }
                 Return replystr = formQuestion(question, config.getConfigId(), address, null, session);
                 // fix for bug: #15 https://github.com/almende/dialog/issues/15

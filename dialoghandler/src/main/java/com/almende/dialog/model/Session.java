@@ -258,14 +258,13 @@ public class Session{
         return createSession(config, config.getMyAddress(), remoteAddress);
     }
 
-    public static Session createSession(AdapterConfig config, String fromAddress, String remoteAddress) {
+    public static Session createSession(AdapterConfig config, String localAddress, String remoteAddress) {
 
-        String internalSessionKey = config.getAdapterType() + "|" + fromAddress + "|" + remoteAddress;
-
+        String internalSessionKey = config.getAdapterType() + "|" + localAddress + "|" + remoteAddress;
         Session session = new Session();
         session.setAdapterID(config.getConfigId());
         session.setRemoteAddress(remoteAddress);
-        session.setLocalAddress(fromAddress);
+        session.setLocalAddress(localAddress);
         session.setType(config.getAdapterType());
         session.setKeyword(config.getKeyword());
         session.internalSession = internalSessionKey.toLowerCase();

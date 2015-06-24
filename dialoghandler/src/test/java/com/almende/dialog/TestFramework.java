@@ -41,8 +41,6 @@ import com.askfast.commons.Status;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
 
 /**
  * Test framework to be inherited by all test classes
@@ -53,7 +51,8 @@ public class TestFramework
     protected static final String localAddressMail      = "info@dialog-handler.appspotmail.com";
     protected static final String localAddressChat      = "info@dialog-handler.appspotchat.com";
     protected static final String remoteAddressEmail    = "info@askcs.com";
-    protected static final String localAddressBroadsoft 	= "0854881000";
+    protected static final String localAddressBroadsoft = "0854881000";
+    protected static final String localFullAddressBroadsoft = localAddressBroadsoft + "@blabla.voipit.nl";
     protected static final String remoteAddressVoice    = "0614765800";
     protected static final String TEST_PUBLIC_KEY    	= "agent1@ask-cs.com";
     protected static final String TEST_PRIVATE_KEY 		= "test_private_key";
@@ -96,22 +95,6 @@ public class TestFramework
         }
     }
     
-    public static String fetchResponse( String httpMethods, String url, String payload )
-    {
-        String result = "";
-        Client client = ParallelInit.getClient();
-        WebResource webResource = client.resource( url );
-        try
-        {
-            result = webResource.type( "text/plain" ).get( String.class );
-        }
-        catch ( Exception e )
-        {
-            e.printStackTrace();
-        }
-        return result;
-    }
-    
     public String createSessionKey(AdapterConfig adapterConfig, String responder) {
 
         return adapterConfig.getAdapterType() + "|" + adapterConfig.getMyAddress() + "|" +
@@ -126,23 +109,24 @@ public class TestFramework
     public AdapterConfig createBroadsoftAdapter() throws Exception {
 
         return createAdapterConfig(AdapterType.CALL.toString(), AdapterProviders.BROADSOFT, TEST_PUBLIC_KEY,
-                                   localAddressBroadsoft, "");
+                                   localAddressBroadsoft, localFullAddressBroadsoft, "");
     }
-    
+
     public AdapterConfig createTwilioAdapter() throws Exception {
 
         return createAdapterConfig(AdapterType.CALL.toString(), AdapterProviders.TWILIO, TEST_PUBLIC_KEY,
-                                   localAddressBroadsoft, "");
+                                   localAddressBroadsoft, localAddressBroadsoft, "");
     }
     
     public static AdapterConfig createAdapterConfig(String adapterType, AdapterProviders adapterProviders,
-        String accountId, String myAddress, String initiatAgentURL) throws Exception {
+        String accountId, String address, String myAddress, String initiatAgentURL) throws Exception {
 
         AdapterConfig adapterConfig = new AdapterConfig();
         adapterConfig.setAdapterType(adapterType.toLowerCase());
         adapterConfig.setAnonymous(false);
         adapterConfig.setPublicKey(accountId);
         adapterConfig.setMyAddress(myAddress);
+        adapterConfig.setAddress(address);
         adapterConfig.setAccessToken("1111|blabla");
         adapterConfig.setKeyword("TEST");
         adapterConfig.setInitialAgentURL(initiatAgentURL);

@@ -138,7 +138,7 @@ public class TwilioAdapter {
                                                                               url, session);
         session = session.reload();
         //fetch the question
-        Question question = Question.fromURL(url, loadAddress, config.getMyAddress(),
+        Question question = Question.fromURL(url, loadAddress, config.getFormattedMyAddress(),
                                              ddrRecord != null ? ddrRecord.getId() : null, session, null);
         if (question != null) {
             for (String address : addressNameMap.keySet()) {
@@ -291,8 +291,8 @@ public class TwilioAdapter {
             //fetch the question
             Question question = session.getQuestion();
             if (question == null) {
-                question = Question.fromURL(url, formattedRemoteId, localID, ddrRecord != null ? ddrRecord.getId()
-                    : null, session, extraParams);
+                question = Question.fromURL(url, formattedRemoteId, config.getFormattedMyAddress(),
+                                            ddrRecord != null ? ddrRecord.getId() : null, session, extraParams);
             }
 
             if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
@@ -442,6 +442,7 @@ public class TwilioAdapter {
             log.info(String.format("Question before answer is: %s", ServerUtils.serializeWithoutException(question)));
             
             if (question != null) {
+                
                 String responder = session.getRemoteAddress();
                 if (session.killed) {
                     log.warning("session is killed");
@@ -449,9 +450,7 @@ public class TwilioAdapter {
                 }
                 String answerForQuestion = question.getQuestion_expandedtext(session);
                 
-                question = question.answer(responder, session.getAdapterConfig().getConfigId(), answer_id,
-                                           answer_input, session);
-                
+                question = question.answer(responder, answer_id, answer_input, session);
                 log.info(String.format("Question after answer is: %s", ServerUtils.serializeWithoutException(question)));
                 session.setQuestion(question);
                 session.storeSession();
@@ -752,9 +751,7 @@ public class TwilioAdapter {
             log.info("call hangup with:" + session.getDirection() + ":" + session.getRemoteAddress() + ":" +
                      session.getLocalAddress());
             if (session.getQuestion() == null) {
-                Question question = Question.fromURL(session.getStartUrl(), session.getRemoteAddress(),
-                                                     session.getLocalAddress(), session.getDdrRecordId(), session,
-                                                     new HashMap<String, String>());
+                Question question = Question.fromURL(session.getStartUrl(), session.getRemoteAddress(), session);
                 session.setQuestion(question);
             }
             if (session.getQuestion() != null && !isEventTriggered("hangup", session)) {
@@ -902,7 +899,13 @@ public class TwilioAdapter {
             }
             else if (question.getType().equalsIgnoreCase("referral")) {
                 if (question.getUrl() != null && question.getUrl().size() == 1 && !question.getUrl().get(0).startsWith("tel:")) {
-                    question = Question.fromURL(question.getUrl().get(0), adapterID, address, ddrRecordId, session, extraParams);
+                    String localAddress = null;
+                    if (session != null) {
+                        localAddress = session.getAdapterConfig() != null ? session.getAdapterConfig()
+                                                .getFormattedMyAddress() : session.getLocalAddress();
+                    }
+                    question = Question.fromURL(question.getUrl().get(0), address, localAddress, ddrRecordId, session,
+                                                extraParams);
                     //question = question.answer(null, null, null);
                     //					break;
                 }

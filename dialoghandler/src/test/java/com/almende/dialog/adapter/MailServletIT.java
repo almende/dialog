@@ -4,7 +4,6 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import java.lang.reflect.Method;
-import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Properties;
@@ -27,6 +26,7 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.uuid.UUID;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.Language;
 
 @Category(IntegrationTest.class)
 public class MailServletIT extends TestFramework
@@ -71,7 +71,7 @@ public class MailServletIT extends TestFramework
         
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
-                                                          localAddressMail, initialAgentURL);
+                                                          localAddressMail, localAddressMail, initialAgentURL);
         //create session
         Session.createSession( adapterConfig, remoteAddressEmail );
         
@@ -107,12 +107,12 @@ public class MailServletIT extends TestFramework
         initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "question", "start" );
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
-                                                          localAddressMail, initialAgentURL);
+                                                          localAddressMail, localAddressMail, initialAgentURL);
         //create session
         Session session = Session.createSession( adapterConfig, remoteAddressEmail );
         TextMessage textMessage = mailAppointmentInteraction("hi");
         //update the question text in the textMessage
-        Question question = Question.fromURL(initialAgentURL, adapterConfig.getConfigId(), null, null);
+        Question question = Question.fromURL(initialAgentURL, remoteAddressEmail, session);
         if(question != null) {
             textMessage.setBody(question.getTextWithAnswerTexts(session));
         }
@@ -179,15 +179,13 @@ public class MailServletIT extends TestFramework
         String textMessage = "How are you doing?";
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
-                                                          localAddressMail, "");
-        //create session
-        Session.createSession( adapterConfig, remoteAddressEmail );
-
+                                                          localAddressMail, localAddressMail, "");
         //fetch and invoke the receieveMessage method
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put( remoteAddressEmail, "Test" );
-        String url = TestServlet.TEST_SERVLET_PATH + TestServlet.OPEN_QUESTION_URL_WITH_SPACES + "/"
-            + URLEncoder.encode( textMessage, "UTF-8" );
+        String url = TestServlet.TEST_SERVLET_PATH + TestServlet.OPEN_QUESTION_URL_WITH_SPACES;
+        url = ServerUtils.getURLWithQueryParams(url, "question", textMessage);
+        url = ServerUtils.getURLWithQueryParams(url, "lang", Language.ENGLISH_INDIA.getCode());
         
         MailServlet mailServlet = new MailServlet();
         mailServlet.startDialog(addressNameMap, null, null, url, "test", "sendDummyMessageTest", adapterConfig,

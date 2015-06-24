@@ -36,6 +36,7 @@ import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.utils.PhoneNumberUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -973,5 +974,21 @@ public class AdapterConfig {
     public void markAsPrivate() {
 
         getProperties().put(Adapter.IS_PRIVATE, true);
+    }
+    
+    /**
+     * Gets the formatted address of this adapter excluding the sip address
+     * suffix. if its a calling adapter.
+     * 
+     * @return
+     */
+    @JsonIgnore
+    public String getFormattedMyAddress() {
+
+        String address = getAddress() != null && !getAddress().isEmpty() ? getAddress() : getMyAddress();
+        if(isCallAdapter() || isSMSAdapter()) {
+            address = PhoneNumberUtils.formatNumber(address, null);
+        }
+        return address;
     }
 }

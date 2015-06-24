@@ -65,7 +65,7 @@ public class CMServletIT extends TestFramework {
         String senderName = "TestUser";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, "ASK", "");
+                                                          TEST_PUBLIC_KEY, "ASK", "ASK", "");
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put( remoteAddressVoice, null );
@@ -108,7 +108,7 @@ public class CMServletIT extends TestFramework {
         String senderName = "TestUser";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, remoteAddressVoice, "");
+                                                          TEST_PUBLIC_KEY, remoteAddressVoice, remoteAddressVoice, "");
 
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(remoteAddressVoice, "testUser1");
@@ -135,7 +135,8 @@ public class CMServletIT extends TestFramework {
         initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "questionType", QuestionInRequest.APPOINTMENT.name() );
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, initialAgentURL);
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localAddressBroadsoft, initialAgentURL);
         //create session
         Session.createSession( adapterConfig, PhoneNumberUtils.formatNumber(remoteAddressVoice, null ));
         TextMessage textMessage = smsAppointmentInteraction( "hi" );
@@ -159,7 +160,7 @@ public class CMServletIT extends TestFramework {
         String senderName = "TestUser";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, "ASK", "");
+                                                          TEST_PUBLIC_KEY, "ASK", "ASK", "");
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put(remoteAddressVoice, null);
@@ -203,7 +204,7 @@ public class CMServletIT extends TestFramework {
         String senderName = "TestUser";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, "ASK", "");
+                                                          TEST_PUBLIC_KEY, "ASK", "ASK", "");
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put(remoteAddressVoice, null);
@@ -344,7 +345,7 @@ public class CMServletIT extends TestFramework {
         String myAddress = "Ask-Fast";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, myAddress, TEST_PRIVATE_KEY);
+                                                          TEST_PUBLIC_KEY, myAddress, myAddress, TEST_PRIVATE_KEY);
 
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 1.0, "SMS outbound", UnitType.PART, null, null);
         
@@ -452,7 +453,7 @@ public class CMServletIT extends TestFramework {
         String myAddress = "Ask-Fast";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, myAddress, TEST_PRIVATE_KEY);
+                                                          TEST_PUBLIC_KEY, myAddress, myAddress, TEST_PRIVATE_KEY);
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put(remoteAddressVoice, null);
         outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, null, null,
@@ -538,7 +539,7 @@ public class CMServletIT extends TestFramework {
     public void inboundMBSMSTest() throws Exception {
 
         AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
-                                                       TEST_PUBLIC_KEY, "0642500086", null);
+                                                       TEST_PUBLIC_KEY, "0642500086", "0642500086", null);
         //create a session with already a question (meaning a message is already sent)
         Session session = Session.createSession(smsAdapter,
                                                      PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
@@ -546,7 +547,7 @@ public class CMServletIT extends TestFramework {
                                                        QuestionInRequest.APPOINTMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", "start");
         session.setStartUrl(url);
-        Question question = Question.fromURL(url, smsAdapter.getConfigId(), null, null, null, null);
+        Question question = Question.fromURL(url, remoteAddressVoice, session);
         session.setQuestion(question);
         session.storeSession();
         

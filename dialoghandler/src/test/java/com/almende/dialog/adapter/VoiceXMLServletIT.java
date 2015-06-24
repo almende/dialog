@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import javax.ws.rs.HttpMethod;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import org.apache.http.NameValuePair;
@@ -79,22 +78,22 @@ public class VoiceXMLServletIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localFullAddressBroadsoft, url);
 
         //create session
-        Session.createSession(adapterConfig, remoteAddressVoice);
+        Session session = Session.createSession(adapterConfig, remoteAddressVoice);
 
         //mock the Context
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        Response newDialog = voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
-                                                            uriInfo);
+        Response newDialog = voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice,
+                                                            localFullAddressBroadsoft, uriInfo);
         HashMap<String, String> answerVariables = assertOpenQuestionWithDTMFType(newDialog.getEntity().toString());
 
         //answer the dialog
-        Question retrivedQuestion = ServerUtils.deserialize(TestFramework.fetchResponse(HttpMethod.GET, url, null),
-                                                            Question.class);
+        Question retrivedQuestion = Question.fromURL(url, remoteAddressVoice, session);
         String mediaPropertyValue = retrivedQuestion.getMediaPropertyValue(MediumType.BROADSOFT,
                                                                            MediaPropertyKey.RETRY_LIMIT);
 
@@ -154,7 +153,8 @@ public class VoiceXMLServletIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localFullAddressBroadsoft, url);
 
         //mock the Context
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
@@ -183,8 +183,9 @@ public class VoiceXMLServletIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
-        adapterConfig.setXsiUser(localAddressBroadsoft + "@ask.ask.voipit.nl");
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localFullAddressBroadsoft, url);
+        adapterConfig.setXsiUser(localFullAddressBroadsoft);
         adapterConfig.setXsiSubscription(UUID.randomUUID().toString());
         adapterConfig.update();
 
@@ -194,7 +195,7 @@ public class VoiceXMLServletIT extends TestFramework {
         //trigger an outbound call
         VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner(), null);
         //fetch the session, assert that a ddrRecord is not attached still
-        Session session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localAddressBroadsoft,
+        Session session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localFullAddressBroadsoft,
                                                           PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         assertThat(session, notNullValue());
         assertThat(session.getDdrRecordId(), Matchers.notNullValue());
@@ -204,8 +205,8 @@ public class VoiceXMLServletIT extends TestFramework {
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         //mimick a fetch new dialog/ phone pickup
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        Response newDialog = voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
-                                                            uriInfo);
+        Response newDialog = voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice,
+                                                            localFullAddressBroadsoft, uriInfo);
         assertOpenQuestionWithDTMFType(newDialog.getEntity().toString());
         //a ddr must be attached to hte session
         session = Session.getSession(session.getKey());
@@ -218,18 +219,18 @@ public class VoiceXMLServletIT extends TestFramework {
         adapterConfig.update();
         
         String hangupXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
-                           "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" +
-                           localAddressBroadsoft +
-                           "@ask.ask.voipit.nl</subscriberId>" +
-                           "<applicationId>cc</applicationId><subscriptionId>" +
-                           adapterConfig.getXsiSubscription() +
-                           "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
-                           "\"http://schema.broadsoft.com/xsi-events\"><eventName>CallSessionEvent</eventName><call><callId>callhalf-12914560105:1</callId><extTrackingId>" +
-                           "10669651:1</extTrackingId><personality>Originator</personality><callState>Released</callState><releaseCause>Temporarily Unavailable</releaseCause>" +
-                           "<remoteParty><address>tel:" +
-                           remoteAddressVoice +
-                           "</address><callType>Network</callType></remoteParty><startTime>1401809063943</startTime>" +
-                           "<answerTime>1401809070192</answerTime><releaseTime>1401809370000</releaseTime></call></eventData></Event>";
+            "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" +
+            localFullAddressBroadsoft +
+            "</subscriberId>" +
+            "<applicationId>cc</applicationId><subscriptionId>" +
+            adapterConfig.getXsiSubscription() +
+            "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
+            "\"http://schema.broadsoft.com/xsi-events\"><eventName>CallSessionEvent</eventName><call><callId>callhalf-12914560105:1</callId><extTrackingId>" +
+            "10669651:1</extTrackingId><personality>Originator</personality><callState>Released</callState><releaseCause>Temporarily Unavailable</releaseCause>" +
+            "<remoteParty><address>tel:" +
+            remoteAddressVoice +
+            "</address><callType>Network</callType></remoteParty><startTime>1401809063943</startTime>" +
+            "<answerTime>1401809070192</answerTime><releaseTime>1401809370000</releaseTime></call></eventData></Event>";
 
         voiceXMLRESTProxy.receiveCCMessage(hangupXML);
         //fetch the ddrRecord again
@@ -350,8 +351,9 @@ public class VoiceXMLServletIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
-        adapterConfig.setXsiUser(localAddressBroadsoft + "@ask.ask.voipit.nl");
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localFullAddressBroadsoft, url);
+        adapterConfig.setXsiUser(localFullAddressBroadsoft);
         adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
         adapterConfig.update();
 
@@ -415,7 +417,7 @@ public class VoiceXMLServletIT extends TestFramework {
         outboundWithGlobalSwitchOnTest();
         
         //fetch the session
-        Session session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localAddressBroadsoft,
+        Session session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localFullAddressBroadsoft,
                                                           PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         //add a specific adapter switch
         String testMyAddress = "0854881002";
@@ -449,7 +451,7 @@ public class VoiceXMLServletIT extends TestFramework {
         session = Session.getSession(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
         assertTrue(session != null);
         assertThat(session.getLocalAddress(), Matchers.not(testMyAddress));
-        assertThat(session.getLocalAddress(), Matchers.is(localAddressBroadsoft));
+        assertThat(session.getLocalAddress(), Matchers.is(localFullAddressBroadsoft));
         assertEquals(AdapterType.CALL.toString().toLowerCase(), session.getType().toLowerCase());
         assertEquals(AdapterProviders.TWILIO.toString().toLowerCase(),
                      session.getAllExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY).toString().toLowerCase());
@@ -468,8 +470,9 @@ public class VoiceXMLServletIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
-        adapterConfig.setXsiUser(localAddressBroadsoft + "@ask.ask.voipit.nl");
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localFullAddressBroadsoft, url);
+        adapterConfig.setXsiUser(localFullAddressBroadsoft);
         adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
         adapterConfig.update();
 
@@ -687,7 +690,7 @@ public class VoiceXMLServletIT extends TestFramework {
             UriInfo uriInfo = Mockito.mock(UriInfo.class);
             Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
             new VoiceXMLRESTProxy().getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice,
-                                                 localAddressBroadsoft, uriInfo);
+                                                 localFullAddressBroadsoft, uriInfo);
         }
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
@@ -721,8 +724,8 @@ public class VoiceXMLServletIT extends TestFramework {
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        Response newDialog = voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
-                                       uriInfo);
+        Response newDialog = voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice,
+                                                            localFullAddressBroadsoft, uriInfo);
         assertThat(newDialog.getEntity().toString(), Matchers.not(Matchers.containsString(invalidNumber)));
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(1));
@@ -839,7 +842,7 @@ public class VoiceXMLServletIT extends TestFramework {
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
+        voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localFullAddressBroadsoft,
                                        uriInfo);
 
         //fetch current sesison
@@ -927,7 +930,7 @@ public class VoiceXMLServletIT extends TestFramework {
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
+        voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localFullAddressBroadsoft,
                                        uriInfo);
 
         //fetch current sesison
@@ -967,7 +970,8 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localFullAddressBroadsoft, url);
         adapterConfig.setDialogId(createDialog.getId());
         adapterConfig.update();
 
@@ -975,8 +979,8 @@ public class VoiceXMLServletIT extends TestFramework {
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        return voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localAddressBroadsoft,
-                                              uriInfo);
+        return voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice,
+                                              localFullAddressBroadsoft, uriInfo);
     }
     
     /**
@@ -991,7 +995,8 @@ public class VoiceXMLServletIT extends TestFramework {
         dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, null);
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localFullAddressBroadsoft, null);
         //trigger an outbound call
         return VoiceXMLRESTProxy.dial(remoteAddressVoice, dialog.getId(), adapterConfig, adapterConfig.getOwner(), null);
     }

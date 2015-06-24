@@ -725,11 +725,13 @@ public class DDRUtils
                         //publish charges
                         Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
                         //attach cost to ddr is prepaid type
-                        if (ddrRecord != null && !AccountType.POST_PAID.equals(ddrRecord.getAccountType())) {
-                            ddrRecord.setTotalCost(totalCost);
-                            ddrRecord.createOrUpdateWithLog(session);
+                        if (ddrRecord != null) {
+                            if (!AccountType.POST_PAID.equals(ddrRecord.getAccountType())) {
+                                ddrRecord.setTotalCost(totalCost);
+                                ddrRecord.createOrUpdateWithLog(session);
+                            }
+                            publishDDREntryToQueue(ddrRecord.getAccountId(), totalCost);
                         }
-                        publishDDREntryToQueue(ddrRecord.getAccountId(), totalCost);
                         result = true;
                     }
                     //if answerTimestamp and releastTimestamp is not found, add it to the queue

@@ -179,7 +179,7 @@ public class VoiceXMLRESTProxy {
                                                                               url, session);
         
         //fetch the question
-        Question question = Question.fromURL(url, config.getConfigId(), loadAddress,
+        Question question = Question.fromURL(url, loadAddress, 
                                              ddrRecord != null ? ddrRecord.getId() : null, session);
         if (question != null) {
 
@@ -401,8 +401,8 @@ public class VoiceXMLRESTProxy {
             
             question = session.getQuestion();
             if (question == null) {
-                question = Question.fromURL(url, externalRemoteID, config.getMyAddress(), session.getDdrRecordId(),
-                                            session, extraParams);
+                question = Question.fromURL(url, externalRemoteID, config.getFormattedMyAddress(),
+                                            session.getDdrRecordId(), session, extraParams);
             }
             if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
                 TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
@@ -458,8 +458,8 @@ public class VoiceXMLRESTProxy {
             
             Question question = session.getQuestion();
             if (question != null) {
+
                 String responder = session.getRemoteAddress();
-                
                 // after referral processing
                 if(callStatus!=null) {
                     
@@ -505,8 +505,7 @@ public class VoiceXMLRESTProxy {
                 if ("exit".equalsIgnoreCase(question.getType())) {
                     isExit = true;
                 }
-                question = question.answer(responder, session.getAdapterConfig().getConfigId(), answer_id,
-                                           answer_input, session);
+                question = question.answer(responder, answer_id, answer_input, session);
                 //reload the session
                 session = Session.getSession(sessionKey);
                 session.setQuestion(question);
@@ -557,6 +556,7 @@ public class VoiceXMLRESTProxy {
         String internalSessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + formattedAddress;
         Session session = Session.getSessionByInternalKey(internalSessionKey);
         if (session != null) {
+            localID = session.getAdapterConfig() != null ? session.getAdapterConfig().getFormattedMyAddress() : localID;
             if (session.getQuestion() != null) {
                 Question question = session.getQuestion();
                 String responder = session.getRemoteAddress();
@@ -564,11 +564,6 @@ public class VoiceXMLRESTProxy {
                 if (session.killed) {
                     return Response.status(Response.Status.BAD_REQUEST).build();
                 }
-                dialogLog.log(LogLevel.INFO,
-                              session.getAdapterConfig(),
-                              String.format("Wrong answer received from: %s for question: %s", responder,
-                                            question.getQuestion_expandedtext(session)), session);
-
                 HashMap<String, String> extras = new HashMap<String, String>();
                 extras.put("sessionKey", session.getKey());
                 extras.put("requester", session.getLocalAddress());
@@ -710,9 +705,10 @@ public class VoiceXMLRESTProxy {
             log.info("call hangup with:" + session.getDirection() + ":" + session.getRemoteAddress() + ":" +
                      session.getLocalAddress());
             if (session.getQuestion() == null) {
-                Question question = Question.fromURL(session.getStartUrl(), session.getRemoteAddress(),
-                                                     session.getLocalAddress(), session.getDdrRecordId(), session,
-                                                     new HashMap<String, String>());
+                String localAddress = session.getAdapterConfig() != null ? session.getAdapterConfig()
+                                                .getFormattedMyAddress() : session.getLocalAddress();
+                Question question = Question.fromURL(session.getStartUrl(), session.getRemoteAddress(), localAddress,
+                                                     session.getDdrRecordId(), session, new HashMap<String, String>());
                 session.setQuestion(question);
             }
             if (session.getQuestion() != null && !isEventTriggered("hangup", session, false)) {
@@ -765,8 +761,6 @@ public class VoiceXMLRESTProxy {
                                                                               "Answered", responder, timeMap, session);
             Thread questionEventRunnerThread = new Thread(questionEventRunner);
             questionEventRunnerThread.start();
-            dialogLog.log(LogLevel.INFO, session.getAdapterConfig(),
-                          String.format("Call from: %s answered by: %s", session.getLocalAddress(), responder), session);
         }
         return Response.ok("").build();
     }
@@ -849,7 +843,7 @@ public class VoiceXMLRESTProxy {
                             }
                             else if (rpChild.getNodeName().equals("userId")) {
                                 String sipAddress = rpChild.getTextContent();
-                                sipAddress = sipAddress.replace( "@ask.ask.voipit.nl", "" );
+                                sipAddress = sipAddress.split("@")[0];
                                 if(PhoneNumberUtils.getPhoneNumberType( sipAddress ) != PhoneNumberType.UNKNOWN) {
                                     address = sipAddress;
                                 }
@@ -1128,8 +1122,7 @@ public class VoiceXMLRESTProxy {
                 String answerForQuestion = question.getQuestion_expandedtext(session);
                 // If the recording is empty end the call.
                 if(answer_input!=null) {
-                    question = question.answer(responder, session.getAdapterConfig().getConfigId(), null, answer_input,
-                                               session);
+                    question = question.answer(responder, null, answer_input, session);
                 } else {
                     question = null;
                 }
@@ -1214,7 +1207,7 @@ public class VoiceXMLRESTProxy {
             }
             else if (question.getType().equalsIgnoreCase("referral")) {
                 if (question.getUrl() != null && question.getUrl().size() == 1 && !question.getUrl().get(0).startsWith("tel:")) {
-                    question = Question.fromURL(question.getUrl().get(0), adapterID, address, ddrRecordId, session);
+                    question = Question.fromURL(question.getUrl().get(0), address, ddrRecordId, session);
                     //question = question.answer(null, null, null);
                     //					break;
                 }
@@ -1693,9 +1686,9 @@ public class VoiceXMLRESTProxy {
         log.info("prompts formed at handleQuestion is: " + res.prompts);
 
         if (question != null) {
+            
             question.generateIds();
             session.setQuestion(question);
-            session.setRemoteAddress(remoteID);
             session.storeSession();
 
             //convert all text prompts to speech 
@@ -1796,7 +1789,6 @@ public class VoiceXMLRESTProxy {
             //store the remoteId as its lost while trying to trigger the answered event
             session.addExtras("referredCalledId", redirectedId);
             session.setQuestion(question);
-            session.setRemoteAddress(remoteID);
             //create a new ddr record and session to catch the redirect
             Session referralSession = Session.createSession(adapterConfig, redirectedId);
             log.info( "Referral Session created with interalkey: " + referralSession.getInternalSession() );

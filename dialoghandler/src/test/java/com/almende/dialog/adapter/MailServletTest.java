@@ -25,7 +25,7 @@ public class MailServletTest extends TestFramework
     {
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
-                                                          localAddressMail, "");
+                                                          localAddressMail, localAddressMail, "");
         //create session
         Session.createSession( adapterConfig, remoteAddressEmail );
 

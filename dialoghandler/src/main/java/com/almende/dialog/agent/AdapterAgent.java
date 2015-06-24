@@ -282,6 +282,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         else {
             isValidCredentials = true;
             config.setMyAddress(username);
+            config.setAddress(username.split("@")[0]);
         }
         try {
 

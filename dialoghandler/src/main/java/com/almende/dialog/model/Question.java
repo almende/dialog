@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
@@ -47,14 +46,19 @@ public class Question implements QuestionIntf {
     }
 
     // Factory functions:
-    public static Question fromURL(String url, String adapterID, String ddrRecordId, Session session) {
+    public static Question fromURL(String url, String remoteId, Session session) {
 
-        return fromURL(url, adapterID, "", ddrRecordId, session);
+        return fromURL(url, remoteId, session.getDdrRecordId(), session);
     }
 
-    public static Question fromURL(String url, String adapterID, String remoteID, String ddrRecordId, Session session) {
+    public static Question fromURL(String url, String remoteID, String ddrRecordId, Session session) {
 
-        return fromURL(url, adapterID, remoteID, ddrRecordId, session, null);
+        String localAddress = null;
+        if (session != null) {
+            localAddress = session.getAdapterConfig() != null ? session.getAdapterConfig().getFormattedMyAddress()
+                : session.getLocalAddress();
+        }
+        return fromURL(url, remoteID, localAddress, ddrRecordId, session, null);
     }
     
     public static Question fromURL(String url, String remoteID, String fromID, String ddrRecordId, Session session,
@@ -195,7 +199,7 @@ public class Question implements QuestionIntf {
         }
     }
 
-    public Question answer(String responder, String adapterID, String answer_id, String answer_input, Session session) {
+    public Question answer(String responder, String answer_id, String answer_input, Session session) {
 
         log.info("answerTest: " + answer_input);
         String sessionKey = session != null ? session.getKey() : null;
@@ -291,7 +295,7 @@ public class Question implements QuestionIntf {
             }
         }
         else if (answer_input == null) {
-            return retryLoadingQuestion(adapterID, answer_input, sessionKey);
+            return retryLoadingQuestion(answer_input, sessionKey);
         }
 
         Question newQ = null;
@@ -301,8 +305,8 @@ public class Question implements QuestionIntf {
             // error handling?
             if (answered) {
                 HashMap<String, Object> extras = null;
-                if (adapterID != null) {
-                    String localAddress = AdapterConfig.getAdapterConfig(adapterID).getMyAddress();
+                if (session != null && session.getAdapterConfig() != null) {
+                    String localAddress = session.getAdapterConfig().getFormattedMyAddress();
                     if (localAddress != null) {
                         extras = new HashMap<String, Object>();
                         extras.put("requester", localAddress);
@@ -313,7 +317,7 @@ public class Question implements QuestionIntf {
             if (newQ != null) {
                 return newQ;
             }
-            return retryLoadingQuestion(adapterID, answer_input, sessionKey);
+            return retryLoadingQuestion(answer_input, sessionKey);
         }
         else {
             // flush any existing retry counters for this session
@@ -322,14 +326,14 @@ public class Question implements QuestionIntf {
 
         // Send answer to answer.callback.
         AnswerPost ans = new AnswerPost(this.getQuestion_id(), answer.getAnswer_id(), answer_input, responder);
-        ans.getExtras().put("adapterId", adapterID);
+        ans.getExtras().put("adapterId", session.getAdapterID());
         String requester = null;
-        if (adapterID != null) {
-            requester = AdapterConfig.getAdapterConfig(adapterID).getMyAddress();
+        ans.getExtras().put("sessionKey", sessionKey);
+        if (session.getAdapterConfig() != null) {
+            requester = session.getAdapterConfig().getFormattedMyAddress();  
         }
         if (requester != null) {
             ans.getExtras().put("requester", requester);
-            ans.getExtras().put("sessionKey", sessionKey);
         }
         String url = answer.getCallback();
         // Check if answer.callback gives new question for this dialog
@@ -406,7 +410,7 @@ public class Question implements QuestionIntf {
                 return null;
             }
             else {
-                return retryLoadingQuestion(null, null, sessionKey);
+                return retryLoadingQuestion(null, sessionKey);
             }
         }
 
@@ -423,7 +427,8 @@ public class Question implements QuestionIntf {
                 parentSessionKey = session.getParentSessionKey();
                 accountId = session.getAccountId();
                 ddrRecordId = session.getDdrRecordId();
-                requester = session.getLocalAddress();
+                requester = session.getAdapterConfig() != null ? session.getAdapterConfig().getFormattedMyAddress()
+                    : session.getLocalAddress();
             }
             HashMap<String, String> askFastRequestQueryParams = getAskFastRequestQueryParams(requester, responder,
                                                                                              sessionKey,
@@ -777,12 +782,11 @@ public class Question implements QuestionIntf {
      * (intended for VOICE) simple retry mechanism to reload the question
      * finitely.
      * 
-     * @param adapterID
      * @param answer_input
      * @param sessionKey
      * @return
      */
-    protected Question retryLoadingQuestion(String adapterID, String answer_input, String sessionKey) {
+    protected Question retryLoadingQuestion(String answer_input, String sessionKey) {
 
         String retryLoadLimit = getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT);
         retryLoadLimit = retryLoadLimit != null ? retryLoadLimit : String.valueOf(DEFAULT_MAX_QUESTION_LOAD);

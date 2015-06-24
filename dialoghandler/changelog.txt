@@ -1,6 +1,10 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+24-6-2015, version 1.10.1
+- fix: send only requester number. ignore sip address suffix. 
+- fix: add only formatted sip address to ddr records 
+
 23-6-2015, version 1.10.0
 - feature: conference call capabilities
 - update: session instances are passed around.

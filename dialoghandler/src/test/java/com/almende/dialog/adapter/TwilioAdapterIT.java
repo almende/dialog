@@ -46,6 +46,7 @@ import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.twilio.sdk.verbs.Gather;
+import com.twilio.sdk.verbs.Hangup;
 import com.twilio.sdk.verbs.Redirect;
 import com.twilio.sdk.verbs.Say;
 import com.twilio.sdk.verbs.TwiMLResponse;
@@ -117,11 +118,11 @@ public class TwilioAdapterIT extends TestFramework {
             if(DDRTypeCategory.INCOMING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
 
                 assertThat(ddrRecord.getToAddress().keySet().iterator().next(),
-                           Matchers.is(adapterConfig.getMyAddress()));
+                           Matchers.is(adapterConfig.getFormattedMyAddress()));
                 assertTrue(ddrRecord.getFromAddress().equals(PhoneNumberUtils.formatNumber(inboundAddress, null)));
             }
             else {
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getMyAddress()));
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getFormattedMyAddress()));
                 assertTrue(ddrRecord.getToAddress().keySet()
                                     .contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
             }
@@ -199,7 +200,7 @@ public class TwilioAdapterIT extends TestFramework {
                 assertTrue(ddrRecord.getFromAddress().equals(PhoneNumberUtils.formatNumber(inboundAddress, null)));
             }
             else if(DDRTypeCategory.OUTGOING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getMyAddress()));
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getFormattedMyAddress()));
                 assertTrue(ddrRecord.getToAddress().keySet()
                                     .contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)) ||
                     ddrRecord.getToAddress().keySet()
@@ -227,7 +228,8 @@ public class TwilioAdapterIT extends TestFramework {
 
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localAddressBroadsoft, url);
         adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
         adapterConfig.setDialogId(createDialog.getId());
         adapterConfig.update();
@@ -246,7 +248,7 @@ public class TwilioAdapterIT extends TestFramework {
         assertEquals(ddrRecords.size(), 1);
         for (DDRRecord ddrRecord : ddrRecords) {
             assertEquals("inbound", ddrRecord.getDirection());
-            assertEquals(adapterConfig.getMyAddress(), ddrRecord.getToAddress().keySet().iterator().next());
+            assertEquals(adapterConfig.getFormattedMyAddress(), ddrRecord.getToAddress().keySet().iterator().next());
             assertEquals(PhoneNumberUtils.formatNumber(remoteAddressVoice, null), ddrRecord.getFromAddress());
         }
     }
@@ -270,7 +272,8 @@ public class TwilioAdapterIT extends TestFramework {
 
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localAddressBroadsoft, url);
         adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
         adapterConfig.setDialogId(createDialog.getId());
         adapterConfig.update();
@@ -311,7 +314,8 @@ public class TwilioAdapterIT extends TestFramework {
 
         //create Twilio adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localAddressBroadsoft, url);
         adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
         adapterConfig.setDialogId(createDialog.getId());
         adapterConfig.update();
@@ -349,6 +353,73 @@ public class TwilioAdapterIT extends TestFramework {
         say.setLanguage(lang);
         expected.append(say);
 
+        assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+    }
+    
+    /**
+     * Test to check if answers with mixed dtmf key input works. E.g. should
+     * work with both index based and dtmfKey:// prefix key based
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void inboundPhoneCall_ClosedWithMixedDTMFKeyTest() throws Exception {
+
+        //new DDRRecordAgent().generateDefaultDDRTypes();
+
+        String accountSid = UUID.randomUUID().toString();
+        String callSid = UUID.randomUUID().toString();
+        TwilioSimulator simulator = new TwilioSimulator(TestFramework.host, accountSid);
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.CLOSED_YES_NO.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
+        url = ServerUtils.getURLWithQueryParams(url, "prefix1", "null");
+        url = ServerUtils.getURLWithQueryParams(url, "prefix2", "dtmfKey://");
+        url = ServerUtils.getURLWithQueryParams(url, "lang", Language.ENGLISH_UNITEDSTATES.getCode());
+
+        //create a dialog
+        Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+
+        //create Twilio adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localAddressBroadsoft, url);
+        adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
+        adapterConfig.setDialogId(createDialog.getId());
+        adapterConfig.update();
+
+        String resp = simulator.initiateInboundCall(callSid, remoteAddressVoice, localAddressBroadsoft);
+
+        String lang = Language.ENGLISH_UNITEDSTATES.getCode();
+        TwiMLResponse expected = new TwiMLResponse();
+        Gather gather = new Gather();
+        gather.getAttributes().put("action", TestFramework.host + "/rest/twilio/answer");
+        gather.getAttributes().put("numDigits", "1");
+        gather.getAttributes().put("finishOnKey", "");
+        gather.getAttributes().put("method", "GET");
+        gather.getAttributes().put("timeout", "5");
+        Say say = new Say(TEST_MESSAGE);
+        say.setLanguage(lang);
+        gather.append(say);
+        expected.append(gather);
+        Redirect redirect = new Redirect(TestFramework.host + "/rest/twilio/timeout");
+        redirect.getAttributes().put("method", "GET");
+        expected.append(redirect);
+
+        assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+
+        resp = simulator.nextQuestion("1");
+        //it should just repeat the question.. as the question is a mix of dtmf and null answer texts
+        assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+        
+        //but pressing 2 as it matches the dtmf key should work
+        resp = simulator.nextQuestion("2");
+        expected = new TwiMLResponse();
+        say = new Say("You chose 2");
+        say.setLanguage(lang);
+        expected.append(say);
+        expected.append(new Hangup());
         assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
     }
 
@@ -807,7 +878,8 @@ public class TwilioAdapterIT extends TestFramework {
 
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, url);
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localAddressBroadsoft, url);
         adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
         adapterConfig.setDialogId(createDialog.getId());
         adapterConfig.update();

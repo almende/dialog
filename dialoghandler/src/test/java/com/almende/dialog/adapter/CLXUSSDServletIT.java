@@ -30,7 +30,7 @@ public class CLXUSSDServletIT extends TestFramework{
         addressNameMap.put(remoteAdressVoice2, senderName);
 
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), null, TEST_PUBLIC_KEY,
-                                                          remoteAddressVoice, "");
+                                                          remoteAddressVoice, "", "");
         // for test ser real password and username
         adapterConfig.setAccessToken("ASKFastBV_h_ugw0");
         adapterConfig.setAccessTokenSecret("qMA3gBY5");
@@ -53,7 +53,7 @@ public class CLXUSSDServletIT extends TestFramework{
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("questionType", "comment");
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), null, TEST_PUBLIC_KEY,
-                                                          "31624107792", "");
+                                                          "31624107792", "", "");
         CLXUSSDServlet servlet = new CLXUSSDServlet();
         servlet.sendMessage("hallo", "hey", "me", "vincent", "31624107792", "vincent", map, adapterConfig,
                             adapterConfig.getOwner(), null);
@@ -68,7 +68,7 @@ public class CLXUSSDServletIT extends TestFramework{
         addressNameMap.put(remoteAdressVoice2, senderName);
 
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), AdapterProviders.CLX,
-                                                          TEST_PUBLIC_KEY, "", "");
+                                                          TEST_PUBLIC_KEY, "", "", "");
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", message);
@@ -83,7 +83,7 @@ public class CLXUSSDServletIT extends TestFramework{
         addressNameMap.put(remoteAdressVoice2, senderName);
 
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), AdapterProviders.CLX,
-                                                          TEST_PUBLIC_KEY, "", "");
+                                                          TEST_PUBLIC_KEY, "", "", "");
 
         Session.createSession(adapterConfig, "31624107792");
 

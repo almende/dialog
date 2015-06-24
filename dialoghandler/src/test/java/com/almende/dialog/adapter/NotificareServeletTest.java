@@ -29,7 +29,7 @@ public class NotificareServeletTest extends TestFramework {
         addressNameMap.put(remoteAdressVoice2, senderName);
 
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.PUSH.toString(), AdapterProviders.NOTIFICARE,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, "");
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, "", "");
         //set tokens beore testing
         adapterConfig.setAccessToken("");
         adapterConfig.setAccessTokenSecret("");

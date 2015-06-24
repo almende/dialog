@@ -414,13 +414,15 @@ public class DDRUtils
                         units = units != null ? units : 1;
                         ddrRecord = new DDRRecord(ttsDDRType.getTypeId(), session.getAdapterConfig(),
                                                   session.getAccountId(), units.intValue());
+                        String localAddress = session.getAdapterConfig() != null ? session.getAdapterConfig()
+                                                    .getFormattedMyAddress() : session.getLocalAddress();
                         //set the from and to address
                         if("inbound".equalsIgnoreCase(session.getDirection())) {
                             ddrRecord.setFromAddress(session.getRemoteAddress());
-                            ddrRecord.addToAddress(session.getLocalAddress());
+                            ddrRecord.addToAddress(localAddress);
                         }
                         else {
-                            ddrRecord.setFromAddress(session.getLocalAddress());
+                            ddrRecord.setFromAddress(localAddress);
                             ddrRecord.addToAddress(session.getRemoteAddress());
                         }
                         ddrRecord.addSessionKey(session.getKey());
@@ -474,12 +476,14 @@ public class DDRUtils
                         ddrRecord = new DDRRecord(ttsDDRType.getTypeId(), session.getAdapterConfig(),
                                                   session.getAccountId(), 1);
                         //set the from and to address
+                        String localAddress = session.getAdapterConfig() != null ? session.getAdapterConfig()
+                                                    .getFormattedMyAddress() : session.getLocalAddress();
                         if("inbound".equalsIgnoreCase(session.getDirection())) {
                             ddrRecord.setFromAddress(session.getRemoteAddress());
-                            ddrRecord.addToAddress(session.getLocalAddress());
+                            ddrRecord.addToAddress(localAddress);
                         }
                         else {
-                            ddrRecord.setFromAddress(session.getLocalAddress());
+                            ddrRecord.setFromAddress(localAddress);
                             ddrRecord.addToAddress(session.getRemoteAddress());
                         }
                         ddrRecord.addSessionKey(session.getKey());
@@ -863,15 +867,15 @@ public class DDRUtils
                                                     accountId, 1);
                 switch (status) {
                     case SENT:
-                        String fromAddress = senderName != null && !senderName.isEmpty() ? senderName : config
-                                                        .getMyAddress();
+                        String fromAddress = senderName != null && !senderName.isEmpty() ? senderName
+                            : config.getFormattedMyAddress();
                         ddrRecord.setFromAddress(fromAddress);
                         ddrRecord.setToAddress(addresses);
                         break;
                     case RECEIVED:
                         ddrRecord.setFromAddress(addresses.keySet().iterator().next());
                         Map<String, String> toAddresses = new HashMap<String, String>();
-                        toAddresses.put(config.getMyAddress(), "");
+                        toAddresses.put(config.getFormattedMyAddress(), "");
                         ddrRecord.setToAddress(toAddresses);
                         break;
                     default:

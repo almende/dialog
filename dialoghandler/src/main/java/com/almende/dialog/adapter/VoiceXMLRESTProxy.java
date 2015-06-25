@@ -622,10 +622,6 @@ public class VoiceXMLRESTProxy {
             if (session.killed) {
                 return Response.status(Response.Status.BAD_REQUEST).build();
             }
-            dialogLog.log(LogLevel.INFO,
-                          session.getAdapterConfig(),
-                          String.format("Timeout from: %s for question: %s", responder,
-                                        question.getQuestion_expandedtext(session)), session);
             HashMap<String, Object> extras = new HashMap<String, Object>();
             extras.put("sessionKey", sessionKey);
             extras.put("requester", session.getLocalAddress());
@@ -671,11 +667,6 @@ public class VoiceXMLRESTProxy {
             if (session.killed) {
                 return Response.status(Response.Status.BAD_REQUEST).build();
             }
-            dialogLog.log(LogLevel.INFO,
-                          session.getAdapterConfig(),
-                          String.format("Wrong answer received from: %s for question: %s", responder,
-                                        question.getQuestion_expandedtext(session)), session);
-
             HashMap<String, String> extras = new HashMap<String, String>();
             extras.put("sessionKey", sessionKey);
             extras.put("requester", session.getLocalAddress());
@@ -1111,14 +1102,6 @@ public class VoiceXMLRESTProxy {
                     log.warning("session is killed");
                     return Response.status(Response.Status.BAD_REQUEST).build();
                 }
-                if (question.getType() != null && !question.getType().equalsIgnoreCase("comment")) {
-                    dialogLog.log(LogLevel.INFO,
-                                  session.getAdapterConfig(),
-                                  String.format("Answer input: %s from: %s to question: %s", answer_input,
-                                                session.getRemoteAddress(), question.getQuestion_expandedtext(session)),
-                                  session);
-                }
-                
                 String answerForQuestion = question.getQuestion_expandedtext(session);
                 // If the recording is empty end the call.
                 if(answer_input!=null) {

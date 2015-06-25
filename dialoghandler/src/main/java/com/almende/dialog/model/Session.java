@@ -31,6 +31,7 @@ public class Session{
 //    private static ConnectionFactory rabbitMQConnectionFactory;
 //    private static final String SESSION_QUEUE_NAME = "SESSION_POST_PROCESS_QUEUE";
     public static final String SESSION_KEY = "sessionKey";
+    public static final String IS_TEST_SESSION_KEY = "isTest";
     public static final String PARENT_SESSION_KEY = "parentSessionKey";
     public static final String CHILD_SESSION_KEY = "childSessionKey";
     public static final String TRACKING_TOKEN_KEY = "trackingToken";
@@ -911,5 +912,23 @@ public class Session{
     public Session reload() {
 
         return getSession(key);
+    }
+    
+    /**
+     * Marks the session as a test session. no ddr records are created for this.
+     */
+    @JsonIgnore
+    public void setAsTestSession() {
+        addExtras(Session.IS_TEST_SESSION_KEY, "true");
+    }
+    
+    /**
+     * Returns if the session is market as for testing. no ddr records must be created.
+     * @return
+     */
+    @JsonIgnore
+    public boolean isTestSession() {
+
+        return Boolean.parseBoolean(getAllExtras().get(IS_TEST_SESSION_KEY));
     }
 }

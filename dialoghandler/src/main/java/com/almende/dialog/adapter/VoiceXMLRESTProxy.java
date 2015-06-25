@@ -323,7 +323,7 @@ public class VoiceXMLRESTProxy {
     @Produces("application/voicexml")
     public Response getNewDialog(@QueryParam("direction") String direction, @QueryParam("remoteID") String remoteID,
         @QueryParam("externalRemoteID") String externalRemoteID, @QueryParam("localID") String localID,
-        @Context UriInfo ui) {
+        @QueryParam("isTest") Boolean isTest, @Context UriInfo ui) {
 
         log.info("call started:" + direction + ":" + remoteID + ":" + localID);
         this.host = ui.getBaseUri().toString().replace(":80/", "/");
@@ -355,6 +355,9 @@ public class VoiceXMLRESTProxy {
                 dialogLog.log(LogLevel.WARNING, config,
                               String.format("Dialog url encoding failed. Error: %s ", e.toString()), session);
             }
+            if (isTest != null && Boolean.TRUE.equals(isTest)) {
+                session.setAsTestSession();
+            }
             ddrRecord = session.getDDRRecord();
         }
         else if (direction.equals("inbound")) {
@@ -371,6 +374,9 @@ public class VoiceXMLRESTProxy {
                 }
             }
             session = Session.createSession(config, formattedRemoteId);
+            if (isTest != null && Boolean.TRUE.equals(isTest)) {
+                session.setAsTestSession();
+            }
             session.setAccountId(config.getOwner());
             session.setRemoteAddress(externalRemoteID);
             session.storeSession();

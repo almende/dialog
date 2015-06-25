@@ -56,7 +56,7 @@ public class TestFramework
     protected static final String remoteAddressVoice    = "0614765800";
     protected static final String TEST_PUBLIC_KEY    	= "agent1@ask-cs.com";
     protected static final String TEST_PRIVATE_KEY 		= "test_private_key";
-    private Server server = null;
+    private Server server;
     public static final int jettyPort = 8078;
     public static final String host = "http://localhost:"+jettyPort+"/dialoghandler";
     private static final Logger log = Logger.getLogger(TestFramework.class.toString());
@@ -300,7 +300,7 @@ public class TestFramework
      */
     public void startJettyServer() throws Exception {
 
-        if (server == null || server.isRunning()) {
+        if (server == null || !server.isRunning()) {
             server = new Server(jettyPort);
             server.setStopAtShutdown(true);
             WebAppContext webAppContext = new WebAppContext("src/test/webapp/WEB-INF/web.xml", "/dialoghandler");

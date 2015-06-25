@@ -54,7 +54,7 @@ public class DDRRecordAgentIT extends TestFramework {
     private static final String ADAPTER_ID_KEY = "ADAPTER_ID";
     private static final String ACCOUNT_ID_KEY = "ACCOUNT_ID";
     private static final String TEST_ACCOUNTID = UUID.randomUUID().toString();
-    
+
     /**
      * check if a ddr created for a PRE_PAID accounts stays the same. cost is
      * saved in the ddrs and not calculated at request time.
@@ -117,9 +117,10 @@ public class DDRRecordAgentIT extends TestFramework {
         }
         assertThat(assertCount, Matchers.is(2));
     }
-    
+
     /**
-     * check if a ddr is created but only service costs are attached for a PRIVATE adapter. 
+     * check if a ddr is created but only service costs are attached for a
+     * PRIVATE adapter.
      * 
      * @throws Exception
      */
@@ -145,8 +146,7 @@ public class DDRRecordAgentIT extends TestFramework {
                 assertThat(ddrRecord.getStatusForAddress(remoteAddressEmail), Matchers.is(CommunicationStatus.SENT));
                 ddrRecord.setShouldGenerateCosts(true);
                 ddrRecord.setShouldIncludeServiceCosts(true);
-                assertThat(ddrRecord.getTotalCost(),
-                           Matchers.is(DDRUtils.getCeilingAtPrecision(serviceCost, 3)));
+                assertThat(ddrRecord.getTotalCost(), Matchers.is(DDRUtils.getCeilingAtPrecision(serviceCost, 3)));
                 assertCount++;
             }
             else if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_ADAPTER_PRICE_KEY))) {
@@ -155,7 +155,7 @@ public class DDRRecordAgentIT extends TestFramework {
         }
         assertThat(assertCount, Matchers.is(2));
     }
-    
+
     /**
      * check if a ddr is created but only service costs are attached for a
      * PRIVATE trial account adapter.
@@ -167,7 +167,7 @@ public class DDRRecordAgentIT extends TestFramework {
 
         ddrHasOnlyServiceCostsForPrivateTrialAdatperTest(AccountType.TRIAL);
     }
-    
+
     /**
      * check if a ddr is created but only service costs are attached for a
      * PRIVATE prepaid account adapter.
@@ -179,7 +179,7 @@ public class DDRRecordAgentIT extends TestFramework {
 
         ddrHasOnlyServiceCostsForPrivateTrialAdatperTest(AccountType.PRE_PAID);
     }
-    
+
     /**
      * check if a ddr is created but only service costs are attached for a
      * PRIVATE prepaid account adapter.
@@ -191,7 +191,7 @@ public class DDRRecordAgentIT extends TestFramework {
 
         ddrHasOnlyServiceCostsForPrivateTrialAdatperTest(AccountType.POST_PAID);
     }
-    
+
     /**
      * check if a ddr is created but only service costs are attached for a
      * PRIVATE given account type
@@ -220,8 +220,7 @@ public class DDRRecordAgentIT extends TestFramework {
                     ddrRecord.setShouldGenerateCosts(true);
                     ddrRecord.setShouldIncludeServiceCosts(true);
                 }
-                assertThat(ddrRecord.getTotalCost(),
-                           Matchers.is(DDRUtils.getCeilingAtPrecision(serviceCost, 3)));
+                assertThat(ddrRecord.getTotalCost(), Matchers.is(DDRUtils.getCeilingAtPrecision(serviceCost, 3)));
                 assertCount++;
             }
             else if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_ADAPTER_PRICE_KEY))) {
@@ -230,58 +229,56 @@ public class DDRRecordAgentIT extends TestFramework {
         }
         assertThat(assertCount, Matchers.is(2));
     }
-    
+
     /**
-     * check if initiating an outgoing SMS will create a ddr record and add all its costs correctly
+     * check if initiating an outgoing SMS will create a ddr record and add all
+     * its costs correctly
+     * 
      * @throws Exception
      */
     @Test
-    public void outgoingSMSCallAddsADDRRecordTest() throws Exception
-    {
+    public void outgoingSMSCallAddsADDRRecordTest() throws Exception {
+
         //create a dummy message which is above 160chars length
-        String message = URLEncoder.encode(
-                "Gunaydin! Bugun yapilacak olan Hollanda yerel secimlerinde oylarimizi kullanalim! Delftte ben Sinan Ozkaya daha fazla is imkanlari ve esit hak ve ozgurlukler icin adayim. Gelecek donemde birlikte olmak uzere!  (GroenLinks, Liste 5, no3)",
-                "UTF-8" );
+        String message = URLEncoder.encode("Gunaydin! Bugun yapilacak olan Hollanda yerel secimlerinde oylarimizi kullanalim! Delftte ben Sinan Ozkaya daha fazla is imkanlari ve esit hak ve ozgurlukler icin adayim. Gelecek donemde birlikte olmak uzere!  (GroenLinks, Liste 5, no3)",
+                                           "UTF-8");
         Map<String, String> addressNameMap = new HashMap<String, String>();
-        addressNameMap.put( remoteAddressVoice, "Test" );
+        addressNameMap.put(remoteAddressVoice, "Test");
         Map<String, String> resultMap = createDDRPricesAndAdapterAndSendOutBound(UnitType.PART, AdapterType.SMS,
                                                                                  message, addressNameMap, false,
                                                                                  AccountType.PRE_PAID);
-        
-        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( TEST_ACCOUNTID );
-        assertThat( allDdrRecords.size(), Matchers.is( 2 ) );
+
+        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId(TEST_ACCOUNTID);
+        assertThat(allDdrRecords.size(), Matchers.is(2));
 
         double totalCost = 0.0;
         int assertCount = 0;
-        for ( DDRRecord ddrRecord : allDdrRecords )
-        {
-            Double ddrCost = DDRUtils.calculateDDRCost( ddrRecord );
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            Double ddrCost = DDRUtils.calculateDDRCost(ddrRecord);
             totalCost += ddrCost;
-            assertThat( ddrRecord.getAccountId(), Matchers.is( resultMap.get( ACCOUNT_ID_KEY ) ) );
-            assertThat( ddrRecord.getAdapterId(), Matchers.is( resultMap.get( ADAPTER_ID_KEY ) ) );
-            if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
-            {
-                assertThat( ddrCost, Matchers.is( 1.0 ) );
-                assertThat( ddrRecord.getQuantity(), Matchers.is( 2 ) );
-                assertThat( ddrRecord.getFromAddress(), Matchers.is( "Test Customer" ) );
+            assertThat(ddrRecord.getAccountId(), Matchers.is(resultMap.get(ACCOUNT_ID_KEY)));
+            assertThat(ddrRecord.getAdapterId(), Matchers.is(resultMap.get(ADAPTER_ID_KEY)));
+            if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
+                assertThat(ddrCost, Matchers.is(1.0));
+                assertThat(ddrRecord.getQuantity(), Matchers.is(2));
+                assertThat(ddrRecord.getFromAddress(), Matchers.is("Test Customer"));
                 for (String address : addressNameMap.keySet()) {
                     address = PhoneNumberUtils.formatNumber(address, null);
-                    assertThat( ddrRecord.getToAddress().get(address), Matchers.is("Test") );
+                    assertThat(ddrRecord.getToAddress().get(address), Matchers.is("Test"));
                 }
                 assertThat(ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
                            Matchers.is(CommunicationStatus.SENT));
-                assertCount ++;
+                assertCount++;
             }
-            else if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_ADAPTER_PRICE_KEY ) ) )
-            {
-                assertThat( ddrCost, Matchers.is( 10.0 ) );
+            else if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_ADAPTER_PRICE_KEY))) {
+                assertThat(ddrCost, Matchers.is(10.0));
                 assertCount++;
             }
         }
-        assertThat( assertCount, Matchers.is( 2 ) );
-        assertThat( totalCost, Matchers.is( 11.0 ) );
+        assertThat(assertCount, Matchers.is(2));
+        assertThat(totalCost, Matchers.is(11.0));
     }
-    
+
     /**
      * check if initiating an outgoing CALL will create a ddr record and add all
      * its costs correctly.
@@ -333,7 +330,7 @@ public class DDRRecordAgentIT extends TestFramework {
         //-----------------------------------------------------------------------
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice, localFullAddressBroadsoft,
-                                       uri);
+                                       null, uri);
         allDdrRecords = getDDRRecordsByAccountId(resultMap.get(ACCOUNT_ID_KEY));
         for (DDRRecord ddrRecord : allDdrRecords) {
             ddrRecord.setShouldGenerateCosts(true);
@@ -404,7 +401,7 @@ public class DDRRecordAgentIT extends TestFramework {
         assertThat(assertCount, Matchers.is(2));
         assertThat(totalCost, Matchers.is(12.5));
     }
-    
+
     /**
      * check if initiating an outgoing call will create a ddr record Ignore this
      * in a maven test build as it will send emails automatically
@@ -414,73 +411,71 @@ public class DDRRecordAgentIT extends TestFramework {
     @SuppressWarnings("deprecation")
     @Test
     @Ignore
-    public void outgoingEMAILCallAddsADDRRecordTest() throws Exception
-    {
+    public void outgoingEMAILCallAddsADDRRecordTest() throws Exception {
+
         Map<String, String> addressNameMap = new HashMap<String, String>();
-        addressNameMap.put( remoteAddressEmail, "Test" );
+        addressNameMap.put(remoteAddressEmail, "Test");
         Map<String, String> resultMap = createDDRPricesAndAdapterAndSendOutBound(UnitType.PART, AdapterType.EMAIL,
                                                                                  "test", addressNameMap, false,
                                                                                  AccountType.POST_PAID);
 
-        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
-        assertThat( allDdrRecords.size(), Matchers.is( 2 ) );
+        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId(resultMap.get(ACCOUNT_ID_KEY));
+        assertThat(allDdrRecords.size(), Matchers.is(2));
 
         double totalCost = 0.0;
         int assertCount = 0;
-        for ( DDRRecord ddrRecord : allDdrRecords )
-        {
-            Double ddrCost = DDRUtils.calculateDDRCost( ddrRecord );
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            Double ddrCost = DDRUtils.calculateDDRCost(ddrRecord);
             totalCost += ddrCost;
-            assertThat( ddrRecord.getAccountId(), Matchers.is( resultMap.get( ACCOUNT_ID_KEY ) ) );
-            assertThat( ddrRecord.getAdapterId(), Matchers.is( resultMap.get( ADAPTER_ID_KEY ) ) );
-            if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
-            {
-                assertThat( ddrCost, Matchers.is( 0.5 ) );
-                assertThat( ddrRecord.getFromAddress(), Matchers.is( MailServlet.DEFAULT_SENDER_EMAIL ) );
-                assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
-                assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
+            assertThat(ddrRecord.getAccountId(), Matchers.is(resultMap.get(ACCOUNT_ID_KEY)));
+            assertThat(ddrRecord.getAdapterId(), Matchers.is(resultMap.get(ADAPTER_ID_KEY)));
+            if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
+                assertThat(ddrCost, Matchers.is(0.5));
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(MailServlet.DEFAULT_SENDER_EMAIL));
+                assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
+                assertThat(ddrRecord.getStatus(), Matchers.is(CommunicationStatus.SENT));
                 assertThat(ddrRecord.getAdditionalInfo().get(Session.SESSION_KEY), Matchers.notNullValue());
                 assertCount++;
             }
-            else if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_ADAPTER_PRICE_KEY ) ) )
-            {
-                assertThat( ddrCost, Matchers.is( 10.0 ) );
+            else if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_ADAPTER_PRICE_KEY))) {
+                assertThat(ddrCost, Matchers.is(10.0));
                 assertCount++;
             }
         }
-        assertThat( assertCount, Matchers.is( 2 ) );
-        assertThat( totalCost, Matchers.is( 10.5 ) );
+        assertThat(assertCount, Matchers.is(2));
+        assertThat(totalCost, Matchers.is(10.5));
     }
-    
+
     /**
-     * this tests the edge case, when a call is answered, but the hangup xml is received before the answerxml.
-     * Assert that the session is not deleted and added to the queue. And post processing is done.
-     * @throws Exception 
+     * this tests the edge case, when a call is answered, but the hangup xml is
+     * received before the answerxml. Assert that the session is not deleted and
+     * added to the queue. And post processing is done.
+     * 
+     * @throws Exception
      */
     @SuppressWarnings("deprecation")
     @Test
-    public void outgoingCallPickupAndImmediateHangupTest() throws Exception{
-        
+    public void outgoingCallPickupAndImmediateHangupTest() throws Exception {
+
         new DDRRecordAgent().generateDefaultDDRTypes();
-        
-        String formattedRemoteAddressVoice = PhoneNumberUtils.formatNumber( remoteAddressVoice, null );
+
+        String formattedRemoteAddressVoice = PhoneNumberUtils.formatNumber(remoteAddressVoice, null);
         Map<String, String> addressNameMap = new HashMap<String, String>();
-        addressNameMap.put( formattedRemoteAddressVoice, "" );
+        addressNameMap.put(formattedRemoteAddressVoice, "");
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", "Test");
         Map<String, String> resultMap = createDDRPricesAndAdapterAndSendOutBound(UnitType.MINUTE, AdapterType.CALL,
                                                                                  url, addressNameMap, false,
                                                                                  AccountType.PRE_PAID);
-        
+
         //check if a ddr record is created
-        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
+        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId(resultMap.get(ACCOUNT_ID_KEY));
         //initially only one record is created corresponding to the adapter creation
-        assertThat( allDdrRecords.size(), Matchers.is( 2 ) );
+        assertThat(allDdrRecords.size(), Matchers.is(2));
         double totalCost = 0.0;
         int assertCount = 0;
-        for ( DDRRecord ddrRecord : allDdrRecords )
-        {
+        for (DDRRecord ddrRecord : allDdrRecords) {
             assertThat(ddrRecord.getAccountId(), Matchers.is(resultMap.get(ACCOUNT_ID_KEY)));
             assertThat(ddrRecord.getAdapterId(), Matchers.is(resultMap.get(ADAPTER_ID_KEY)));
             assertThat(ddrRecord.getQuantity(), Matchers.is(1));
@@ -490,39 +485,36 @@ public class DDRRecordAgentIT extends TestFramework {
                 assertThat(ddrCost, Matchers.is(10.0));
                 assertCount++;
             }
-            else if(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.OUTGOING_COMMUNICATION_COST)) {
+            else if (ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.OUTGOING_COMMUNICATION_COST)) {
                 assertThat(ddrCost, Matchers.is(0.0));
                 assertCount++;
             }
         }
-        assertThat( totalCost, Matchers.is( 10.0 ) );
+        assertThat(totalCost, Matchers.is(10.0));
         assertThat(assertCount, Matchers.is(2));
 
         //mimick behaviour or outbound calling being triggered and answered
-        UriInfo uri = Mockito.mock( UriInfo.class );
-        Mockito.when( uri.getBaseUri() ).thenReturn( new URI( "http://localhost:8082/dialoghandler/vxml/new" ) );
+        UriInfo uri = Mockito.mock(UriInfo.class);
+        Mockito.when(uri.getBaseUri()).thenReturn(new URI("http://localhost:8082/dialoghandler/vxml/new"));
         //-----------------------------------------------------------------------
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         voiceXMLRESTProxy.getNewDialog("outbound", formattedRemoteAddressVoice, formattedRemoteAddressVoice,
-                                       localFullAddressBroadsoft, uri);
-        allDdrRecords = getDDRRecordsByAccountId( resultMap.get( ACCOUNT_ID_KEY ) );
-        for ( DDRRecord ddrRecord : allDdrRecords )
-        {
-            Double ddrCost = DDRUtils.calculateDDRCost( ddrRecord );
-            assertThat( ddrRecord.getAccountId(), Matchers.is( resultMap.get( ACCOUNT_ID_KEY ) ) );
-            assertThat( ddrRecord.getAdapterId(), Matchers.is( resultMap.get( ADAPTER_ID_KEY ) ) );
-            if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_COMMUNICATION_PRICE_KEY ) ) )
-            {
-                assertThat( ddrCost, Matchers.is( 0.0 ) );
-                assertThat( ddrRecord.getQuantity(), Matchers.is( 1 ) );
+                                       localFullAddressBroadsoft, null, uri);
+        allDdrRecords = getDDRRecordsByAccountId(resultMap.get(ACCOUNT_ID_KEY));
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            Double ddrCost = DDRUtils.calculateDDRCost(ddrRecord);
+            assertThat(ddrRecord.getAccountId(), Matchers.is(resultMap.get(ACCOUNT_ID_KEY)));
+            assertThat(ddrRecord.getAdapterId(), Matchers.is(resultMap.get(ADAPTER_ID_KEY)));
+            if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
+                assertThat(ddrCost, Matchers.is(0.0));
+                assertThat(ddrRecord.getQuantity(), Matchers.is(1));
                 assertThat(ddrRecord.getFromAddress(),
                            Matchers.is(PhoneNumberUtils.formatNumber(localAddressBroadsoft, null)));
-                assertThat( ddrRecord.getToAddress(), Matchers.is( addressNameMap ) );
-                assertThat( ddrRecord.getStatus(), Matchers.is( CommunicationStatus.SENT ) );
+                assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
+                assertThat(ddrRecord.getStatus(), Matchers.is(CommunicationStatus.SENT));
             }
-            else if ( ddrRecord.getDdrTypeId().equals( resultMap.get( DDR_ADAPTER_PRICE_KEY ) ) )
-            {
-                assertThat( ddrCost, Matchers.is( 10.0 ) );
+            else if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_ADAPTER_PRICE_KEY))) {
+                assertThat(ddrCost, Matchers.is(10.0));
             }
         }
         //assert that a session exists
@@ -537,25 +529,26 @@ public class DDRRecordAgentIT extends TestFramework {
         //start the session agent
         SessionAgent sessionAgent = new SessionAgent();
         sessionAgent.onInit();
-        
+
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(resultMap.get(ADAPTER_ID_KEY));
         adapterConfig.setXsiSubscription(UUID.randomUUID().toString());
         adapterConfig.update();
-        
+
         //send hangup ccxml without a answerTime
         String hangupXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
-                           "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257" +
-                           "</sequenceNumber><subscriberId>" +
-                           localFullAddressBroadsoft + "</subscriberId>" +
-                           "<applicationId>cc</applicationId><subscriptionId>" +
-                           adapterConfig.getXsiSubscription() +
-                           "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=\"http://schema.broadsoft.com/xsi-events\">" +
-                           "<eventName>CallSessionEvent</eventName><call><callId>callhalf-12914560105:1</callId>" +
-                           "<extTrackingId>10669651:1</extTrackingId><personality>Originator</personality><callState>Released" +
-                           "</callState><releaseCause>Temporarily Unavailable</releaseCause><remoteParty><address>tel:" +
-                           remoteAddressVoice +
-                           "</address><callType>Network</callType></remoteParty>" +
-                           "<startTime>1401809063943</startTime><releaseTime>1401809070192</releaseTime></call></eventData></Event>";
+            "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257" +
+            "</sequenceNumber><subscriberId>" +
+            localFullAddressBroadsoft +
+            "</subscriberId>" +
+            "<applicationId>cc</applicationId><subscriptionId>" +
+            adapterConfig.getXsiSubscription() +
+            "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=\"http://schema.broadsoft.com/xsi-events\">" +
+            "<eventName>CallSessionEvent</eventName><call><callId>callhalf-12914560105:1</callId>" +
+            "<extTrackingId>10669651:1</extTrackingId><personality>Originator</personality><callState>Released" +
+            "</callState><releaseCause>Temporarily Unavailable</releaseCause><remoteParty><address>tel:" +
+            remoteAddressVoice +
+            "</address><callType>Network</callType></remoteParty>" +
+            "<startTime>1401809063943</startTime><releaseTime>1401809070192</releaseTime></call></eventData></Event>";
 
         voiceXMLRESTProxy.receiveCCMessage(hangupXML);
         //assert that a session still exists
@@ -564,16 +557,17 @@ public class DDRRecordAgentIT extends TestFramework {
         //assert that a session doesnt exist and is processed
         Collection<Session> sessions = Session.getAllSessions();
         assertThat(sessions, Matchers.emptyCollectionOf(Session.class));
-        
+
         //check that all ddrs are processed
-        Collection<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null,resultMap.get( ACCOUNT_ID_KEY ), null, null, null, null, null, null, null, null);
+        Collection<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, resultMap.get(ACCOUNT_ID_KEY), null, null,
+                                                                   null, null, null, null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(2));
         for (DDRRecord ddrRecord : ddrRecords) {
-            
+
             DDRType ddrType = DDRType.getDDRType(ddrRecord.getDdrTypeId());
             if (DDRTypeCategory.INCOMING_COMMUNICATION_COST.equals(ddrType.getCategory()) ||
                 DDRTypeCategory.OUTGOING_COMMUNICATION_COST.equals(ddrType.getCategory())) {
-                
+
                 ddrRecord.setShouldGenerateCosts(true);
                 assertThat(ddrRecord, Matchers.notNullValue());
                 assertThat(ddrRecord.getStart(), Matchers.notNullValue());
@@ -660,29 +654,32 @@ public class DDRRecordAgentIT extends TestFramework {
         result.put(DDR_COMMUNICATION_PRICE_KEY, ddrPriceForCommunication.getDdrTypeId());
         return result;
     }
-    
+
     /**
      * @param name
      * @param unitType
      * @return
      * @throws Exception
      */
-    protected DDRPrice getTestDDRPrice( DDRTypeCategory category, double price, String name, UnitType unitType,
-        AdapterType adapterType, String adapterId ) throws Exception
-    {
+    protected DDRPrice getTestDDRPrice(DDRTypeCategory category, double price, String name, UnitType unitType,
+        AdapterType adapterType, String adapterId) throws Exception {
 
         DDRRecordAgent ddrRecordAgent = new DDRRecordAgent();
-        Object ddrPriceObject = ddrRecordAgent.createDDRPriceWithNewDDRType(name, category.name(),
-                                                                      TimeUtils.getServerCurrentTimeInMillis(),
-                                                                      TimeUtils.getCurrentServerTimePlusMinutes(100),
-                                                                      price, 0, 10, 1, unitType.name(),
-                                                                      adapterType != null ? adapterType.name() : null,
-                                                                      adapterId, null);
-        TypeUtil<DDRPrice> injector = new TypeUtil<DDRPrice>(){};
-        return injector.inject( ddrPriceObject );
+        Object ddrPriceObject = ddrRecordAgent.createDDRPriceWithNewDDRType(name,
+                                                                            category.name(),
+                                                                            TimeUtils.getServerCurrentTimeInMillis(),
+                                                                            TimeUtils.getCurrentServerTimePlusMinutes(100),
+                                                                            price, 0, 10, 1, unitType.name(),
+                                                                            adapterType != null ? adapterType.name()
+                                                                                : null, adapterId, null);
+        TypeUtil<DDRPrice> injector = new TypeUtil<DDRPrice>() {
+        };
+        return injector.inject(ddrPriceObject);
     }
-    
-    /** get ddr records for this accountId
+
+    /**
+     * get ddr records for this accountId
+     * 
      * @param resultMap
      * @return
      * @throws Exception
@@ -696,7 +693,7 @@ public class DDRRecordAgentIT extends TestFramework {
         Collection<DDRRecord> allDdrRecords = typesInjector.inject(ddrRecords);
         return allDdrRecords;
     }
-    
+
     private void updateAdapterAsPrivate(Boolean isPrivate, AdapterConfig adapter) {
 
         if (isPrivate != null && isPrivate) {

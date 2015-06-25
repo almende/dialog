@@ -898,7 +898,7 @@ public class DDRUtils
                 if(config.isPrivate()) {
                     ddrRecord.addAdditionalInfo(Adapter.IS_PRIVATE, true);
                 }
-                ddrRecord.createOrUpdateWithLog(sessionKeyMap);
+                ddrRecord = ddrRecord.createOrUpdateWithLog(sessionKeyMap);
                 return ddrRecord;
             }
         }

@@ -139,7 +139,7 @@ public class DDRRecord
     }
     
     @JsonIgnore
-    public void createOrUpdate() {
+    public DDRRecord createOrUpdate() {
 
         _id = _id != null && !_id.isEmpty() ? _id : org.bson.types.ObjectId.get().toStringMongod();
         correctDotData = true;
@@ -153,28 +153,31 @@ public class DDRRecord
             this.start = this.start != null ? this.start : TimeUtils.getServerCurrentTimeInMillis();
             collection.insert(this);
         }
+        return this;
     }
     
     /**
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
      */
     @JsonIgnore
-    public void createOrUpdateWithLog(Session session) {
+    public DDRRecord createOrUpdateWithLog(Session session) {
 
-        createOrUpdate();
-        if (session != null) {
-            new com.almende.dialog.Logger().ddr(getAdapter(), this, session);
+        if(session != null && session.isTestSession()) {
+            return null;
         }
+        return createOrUpdate();
     }
     
     /**
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
      */
-    public void createOrUpdateWithLog(Map<String, Session> sessionKeyMap) {
+    public DDRRecord createOrUpdateWithLog(Map<String, Session> sessionKeyMap) {
 
+        DDRRecord ddrRecord = null;
         for (Session session : sessionKeyMap.values()) {
-            createOrUpdateWithLog(session);
+            ddrRecord = createOrUpdateWithLog(session);
         }
+        return ddrRecord;
     }
     
     /**

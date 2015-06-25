@@ -217,9 +217,10 @@ public class TwilioAdapter {
     @Produces("application/xml")
     public Response getNewDialog(@QueryParam("CallSid") String CallSid, @QueryParam("AccountSid") String AccountSid,
         @QueryParam("From") String localID, @QueryParam("To") String remoteID,
-        @QueryParam("Direction") String direction, @QueryParam("ForwardedFrom") String forwardedFrom) {
+        @QueryParam("Direction") String direction, @QueryParam("ForwardedFrom") String forwardedFrom,
+        @QueryParam("isTest") Boolean isTest) {
 
-        return getNewDialogPost(CallSid, AccountSid, localID, remoteID, direction, forwardedFrom);
+        return getNewDialogPost(CallSid, AccountSid, localID, remoteID, direction, forwardedFrom, isTest);
     }
 	
     @Path("new")
@@ -227,7 +228,7 @@ public class TwilioAdapter {
     @Produces("application/xml")
     public Response getNewDialogPost(@FormParam("CallSid") String CallSid, @FormParam("AccountSid") String AccountSid,
         @FormParam("From") String localID, @FormParam("To") String remoteID, @FormParam("Direction") String direction,
-        @FormParam("ForwardedFrom") String forwardedFrom) {
+        @FormParam("ForwardedFrom") String forwardedFrom, @QueryParam("isTest") Boolean isTest) {
 
         log.info("call started:" + direction + ":" + remoteID + ":" + localID);
         localID = checkAnonymousCallerId(localID);
@@ -256,6 +257,9 @@ public class TwilioAdapter {
             session = Session.createSession(config, formattedRemoteId);
             session.setAccountId(config.getOwner());
             session.setExternalSession(CallSid);
+            if (isTest != null && Boolean.TRUE.equals(isTest)) {
+                session.setAsTestSession();
+            }
             session.storeSession();
             url = config.getURLForInboundScenario(session);
             try {

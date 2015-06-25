@@ -982,7 +982,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         datastore.store(config);
 
-        if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(config.getAdapterType(), config))) {
+        if (AdapterProviders.BROADSOFT.equals(config.getProvider())) {
             Broadsoft bs = new Broadsoft(config);
             bs.hideCallerId(config.isAnonymous());
         }

@@ -22,7 +22,6 @@ import javax.ws.rs.core.Response.Status;
 import com.almende.dialog.Settings;
 import com.almende.dialog.adapter.tools.Broadsoft;
 import com.almende.dialog.agent.AdapterAgent;
-import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.TimeUtils;
 import com.almende.util.jackson.JOM;
@@ -119,7 +118,7 @@ public class AdapterConfig {
             TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
             datastore.store(newConfig);
 
-            if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(newConfig.getAdapterType(), newConfig))) {
+            if (AdapterProviders.BROADSOFT.equals(newConfig.getProvider())) {
                 Broadsoft bs = new Broadsoft(newConfig);
                 bs.hideCallerId(newConfig.isAnonymous());
             }
@@ -228,7 +227,7 @@ public class AdapterConfig {
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         adapterType = adapterType.toLowerCase();
         datastore.update(this);
-        if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(getAdapterType(), this))) {
+        if (AdapterProviders.BROADSOFT.equals(getProvider())) {
             Broadsoft bs = new Broadsoft(this);
             bs.hideCallerId(this.isAnonymous());
         }

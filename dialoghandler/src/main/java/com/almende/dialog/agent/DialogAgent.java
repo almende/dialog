@@ -113,7 +113,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         try {
             AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, null, null);
             if (config != null &&
-                AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(config.getAdapterType(), config))) {
+                AdapterProviders.BROADSOFT.equals(config.getProvider())) {
                 return VoiceXMLRESTProxy.getActiveCalls(config);
             }
         }
@@ -127,7 +127,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
         try {
             AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, null, null);
-            if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(config.getAdapterType(), config))) {
+            if (AdapterProviders.BROADSOFT.equals(config.getProvider())) {
                 return VoiceXMLRESTProxy.getActiveCallsInfo(config);
             }
         }
@@ -141,7 +141,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
         try {
             AdapterConfig config = AdapterConfig.findAdapterConfigFromList(adapterID, null, null);
-            if (AdapterProviders.BROADSOFT.equals(DialogAgent.getProvider(config.getAdapterType(), config))) {
+            if (AdapterProviders.BROADSOFT.equals(config.getProvider())) {
                 return VoiceXMLRESTProxy.killActiveCalls(config);
             }
         }
@@ -341,7 +341,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                                                 .getByValue(adapterType));
                 //apply global switch if application
                 if (globalSwitchAdapter != null) {
-                    switchAdapterIfGlobalSettingsFound(adapterType, config, globalSwitchAdapter);
+                    switchAdapterIfGlobalSettingsFound(config, globalSwitchAdapter);
                 }
                 adapterType = config.getAdapterType();
                 AdapterProviders provider = getProvider(adapterType, config);
@@ -351,7 +351,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                     ServerUtils.isNullOrEmpty(config.getAccessTokenSecret()) &&
                     ServerUtils.isNullOrEmpty(config.getXsiUser()) && ServerUtils.isNullOrEmpty(config.getXsiPasswd())) {
 
-                    switchAdapterIfGlobalSettingsFound(adapterType, config, provider);
+                    switchAdapterIfGlobalSettingsFound(config, provider);
                 }
                 
                 if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_XMPP)) {
@@ -935,7 +935,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
     /**
      * Get the provider attached to this adapter by checking the
-     * adapterProperties and adapterType
+     * adapterProperties of the adapter or default provider settings
      * 
      * @param adapterType
      * @param config
@@ -944,9 +944,8 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     public static AdapterProviders getProvider(String adapterType, AdapterConfig config) {
 
         AdapterProviders provider = null;
-        if (config.getProperties().get(AdapterConfig.ADAPTER_PROVIDER_KEY) != null) {
-            Object adapterProvider = config.getProperties().get(AdapterConfig.ADAPTER_PROVIDER_KEY);
-            provider = AdapterProviders.getByValue(adapterProvider.toString());
+        if (config != null) {
+            provider = config.getProvider();
         }
         //check if the adapter type has the provider info in it
         else if (AdapterProviders.getByValue(adapterType) != null) {
@@ -1093,18 +1092,16 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      * when a particular provider goes down. Gives an option to switch globally.
      * Generally applicable to SMS and CALL type channels only
      * 
-     * @param adapterType
      * @param config
      * @param adapterProvider
      * @param globalSwitchProviderCredentials
      */
-    private void switchAdapterIfGlobalSettingsFound(String adapterType, AdapterConfig config,
-        AdapterProviders adapterProvider) {
+    private void switchAdapterIfGlobalSettingsFound(AdapterConfig config, AdapterProviders adapterProvider) {
 
         Map<AdapterProviders, Map<String, AdapterConfig>> globalSwitchProviderCredentials = getGlobalProviderCredentials();
         //check if there is a global switch on adapters
-        if (mustCredentialsBeFetchedFromGlobal(adapterType, adapterProvider, config) &&
-            globalSwitchProviderCredentials != null && globalSwitchProviderCredentials.get(adapterProvider) != null) {
+        if (mustCredentialsBeFetchedFromGlobal(adapterProvider, config) && globalSwitchProviderCredentials != null &&
+            globalSwitchProviderCredentials.get(adapterProvider) != null) {
 
             Map<String, AdapterConfig> credentialsForSelectedAdapter = globalSwitchProviderCredentials
                                             .get(adapterProvider);
@@ -1138,15 +1135,14 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      * 
      * @return
      */
-    private boolean mustCredentialsBeFetchedFromGlobal(String adapterType, AdapterProviders provider,
-        AdapterConfig config) {
+    private boolean mustCredentialsBeFetchedFromGlobal(AdapterProviders provider, AdapterConfig config) {
 
         //return true if the providers dont match or the adapter credentials are missing
         if (provider != null &&
-            !provider.equals(getProvider(adapterType, config)) ||
+            !provider.equals(config.getProvider()) ||
             (ServerUtils.isNullOrEmpty(config.getAccessToken()) &&
-             ServerUtils.isNullOrEmpty(config.getAccessTokenSecret()) && ServerUtils.isNullOrEmpty(config.getXsiUser()) && ServerUtils
-                                            .isNullOrEmpty(config.getXsiPasswd()))) {
+                ServerUtils.isNullOrEmpty(config.getAccessTokenSecret()) &&
+                ServerUtils.isNullOrEmpty(config.getXsiUser()) && ServerUtils.isNullOrEmpty(config.getXsiPasswd()))) {
 
             return true;
         }

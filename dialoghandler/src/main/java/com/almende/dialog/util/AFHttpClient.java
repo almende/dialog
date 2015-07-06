@@ -2,7 +2,9 @@ package com.almende.dialog.util;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 import com.almende.dialog.Settings;
+import com.almende.dialog.model.QuestionEventRunner;
 import com.almende.dialog.util.http.UserAgentInterceptor;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.RequestLog;
@@ -19,6 +21,7 @@ public class AFHttpClient {
 
     private OkHttpClient client = null;
     private String basicAuthCredentials = null;
+    private static Logger log = Logger.getLogger(QuestionEventRunner.class.getName());
 
     public AFHttpClient() {
 
@@ -26,7 +29,7 @@ public class AFHttpClient {
         client.setConnectTimeout(15, TimeUnit.SECONDS);
         client.networkInterceptors().add(new UserAgentInterceptor("ASK-Fast/1.0"));
     }
-
+    
     public ResponseLog get(String url) throws Exception {
 
         return get(url, false, null, null, null);
@@ -177,6 +180,44 @@ public class AFHttpClient {
             }
         }
         return responseLog;
+    }
+    
+    /**
+     * Performs a delete request on the given parameters
+     * 
+     * @param url
+     * @param type
+     * @param async
+     *            performs an async request if set to true, returns null in this case.
+     * @return
+     * @throws Exception
+     */
+    public ResponseLog delete(final String url, boolean async) throws Exception {
+
+        if (async) {
+            Thread asyncThread = new Thread(new Runnable() {
+
+                @Override
+                public void run() {
+
+                    try {
+                        delete(url, false);
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                        log.severe(String.format("Executing async delete request failed. Error: %s", e.toString()));
+                    }
+                }
+            });
+            asyncThread.start();
+            return null;
+        }
+        else {
+            long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
+            Request request = getBuilderWIthBasicAuthHeader(url).delete().build();
+            Response response = client.newCall(request).execute();
+            return new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
+        }
     }
 
     public ResponseLog put(String json, String url, String type) throws Exception {

@@ -19,6 +19,7 @@ import com.almende.dialog.util.TimeUtils;
 import com.almende.util.jackson.JOM;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.QueryResultIterator;
+import com.almende.util.twigmongo.SortDirection;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
@@ -301,10 +302,12 @@ public class Session{
     public static Session getSessionByInternalKey(String internalSessionKey) {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        QueryResultIterator<Session> sessionIterator = datastore
-                                        .find().type(Session.class)
-                                        .addFilter("internalSession", FilterOperator.EQUAL,
-                                                   internalSessionKey.toLowerCase()).now();
+        RootFindCommand<Session> sessionFindCommand = datastore.find().type(Session.class);
+        sessionFindCommand = sessionFindCommand.addFilter("internalSession", FilterOperator.EQUAL,
+                                                          internalSessionKey.toLowerCase());
+        sessionFindCommand.addSort("creationTimestamp", SortDirection.DESCENDING);
+        sessionFindCommand.fetchMaximum(1);
+        QueryResultIterator<Session> sessionIterator = sessionFindCommand.now();
         if (sessionIterator != null && sessionIterator.hasNext()) {
             return sessionIterator.next();
         }

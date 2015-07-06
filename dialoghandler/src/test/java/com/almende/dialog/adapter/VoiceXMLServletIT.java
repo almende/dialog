@@ -487,7 +487,7 @@ public class VoiceXMLServletIT extends TestFramework {
         String sessionKey1 = VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner(),
                                                     null);
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
-        voiceXMLRESTProxy.timeout(UUID.randomUUID().toString(), sessionKey1);
+        voiceXMLRESTProxy.timeout(UUID.randomUUID().toString(), sessionKey1, null);
 
         //validate that the session has it
         Session session = Session.getSession(sessionKey1);

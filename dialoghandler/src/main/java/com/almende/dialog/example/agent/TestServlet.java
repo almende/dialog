@@ -238,6 +238,12 @@ public class TestServlet extends HttpServlet
         super.doPut( req, resp );
     }
     
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+        TestServlet.logForTest("url", req.getServletPath() + req.getPathInfo());
+    }
+    
     public static String getJsonSimpleCommentQuestion(String questionText, String language) {
 
         Question question = new Question();

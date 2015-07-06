@@ -7,20 +7,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.broadsoft.Registration;
 import com.almende.dialog.broadsoft.UserProfile;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
+import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.sun.jersey.api.client.Client;
@@ -91,9 +89,7 @@ public class Broadsoft {
             try {
                 String result = sendRequestWithRetry(webResource, queryKeyValue, HTTPMethod.POST, null);
                 log.info("Result from BroadSoft: " + result);
-                dialogLog.info(config, "Start outbound call to: " + address, session);
                 //flush retryCount
-
                 retryCounter.remove(webResource.toString());
                 String callId = getCallId(result);
                 if (ServerUtils.isInUnitTestingEnvironment() && callId == null) {
@@ -214,6 +210,39 @@ public class Broadsoft {
 		}
 		return null;
 	}
+    
+    /**
+     * Deletes the event subscription in the xsi portal of broadsoft. It tries
+     * to connect a max of {@link Broadsoft#MAX_RETRY_COUNT} times
+     * 
+     * @param subscriptionId
+     * @return
+     */
+    public boolean deleteSubscription(String subscriptionId) {
+
+        if (config != null) {
+            String deleteURL = XSI_URL + XSI_EVENTS + "subscription/" + subscriptionId;
+            AFHttpClient client = ParallelInit.getAFHttpClient();
+            client.authorizeClient(config.getXsiUser(), config.getXsiPasswd());
+            if (retryCounter.get(deleteURL) == null) {
+                retryCounter.put(deleteURL, 0);
+            }
+            while (retryCounter.get(deleteURL) != null && retryCounter.get(deleteURL) < MAX_RETRY_COUNT) {
+                try {
+                    client.delete(deleteURL, true);
+                    return true;
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                    log.severe(String.format("Problems deleting subscription: %s. Message: %s", subscriptionId,
+                                             e.getMessage()));
+                    Integer retry = retryCounter.get(deleteURL);
+                    retryCounter.put(deleteURL, ++retry);
+                }
+            }
+        }
+        return false;
+    }
 	
 	public boolean endCall(String callId) {
 		

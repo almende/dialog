@@ -5,14 +5,26 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import java.util.Map;
+import org.hamcrest.Matchers;
+import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import com.almende.dialog.IntegrationTest;
 import com.almende.dialog.TestFramework;
+import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
+import com.almende.dialog.util.AFHttpClient;
+import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
+import com.almende.util.ParallelInit;
 import com.almende.util.jackson.JOM;
+import com.askfast.commons.entity.ResponseLog;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+@Category(IntegrationTest.class)
 public class QuestionTest extends TestFramework {
 
     @Test
@@ -139,5 +151,29 @@ public class QuestionTest extends TestFramework {
             .iterator().next().getCallback() );
         
         assertTrue( fromJSON.toJSON().contains( "ANSWER_INPUT_MIN_LENGTH\":\"3\"" ) );
+    }
+    
+    /**
+     * Check if the async delete request spawns new thread and performs the request asyncronously
+     * @throws Exception 
+     */
+    @Test
+    public void asyncDeleteTest() throws Exception {
+        
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.OPEN_QUESTION.name());
+        AFHttpClient afHttpClient = ParallelInit.getAFHttpClient();
+        
+        //non async call
+        ResponseLog deleteResponse = afHttpClient.delete(url, false);
+        Assert.assertThat(deleteResponse, Matchers.notNullValue());
+        Assert.assertThat(TestServlet.getLogObject("url"), Matchers.notNullValue());
+        
+        //async call
+        TestServlet.clearLogObject();
+        Assert.assertThat(TestServlet.getLogObject("url"), Matchers.nullValue());
+        deleteResponse = afHttpClient.delete(url, true);
+        Assert.assertThat(deleteResponse, Matchers.nullValue());
+        Assert.assertThat(TestServlet.getLogObject("url"), Matchers.notNullValue());
     }
 }

@@ -1813,7 +1813,7 @@ public class VoiceXMLRESTProxy {
                     e.printStackTrace();
                     log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
                 }
-                referralSession.setDirection(session.getDirection());
+                referralSession.setDirection("transfer");
                 referralSession.setTrackingToken(session.getTrackingToken());
             }
             referralSession.setQuestion(session.getQuestion());

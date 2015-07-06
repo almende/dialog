@@ -1,6 +1,11 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+06-7-2015, version 1.10.3
+- update: added subscription deletion of broadsoft events when they dont match
+- fix: do not create new referral session if already active. call timeout instead.
+- fix: changed the direction of a redirection call while creating new session
+
 29-6-2015, version 1.10.2
 - fix: create logs asynchronously 
 

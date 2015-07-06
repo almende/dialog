@@ -633,8 +633,11 @@ public class DDRRecord
         
         return accountType;
     }
+    
     public void setAccountType(AccountType accountType) {
     
+        //update null accountType with POST_PAID
+        accountType = accountType != null ? accountType : AccountType.POST_PAID;
         this.accountType = accountType;
     }
     

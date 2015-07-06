@@ -611,8 +611,8 @@ public class VoiceXMLRESTProxy {
     @Path("timeout")
     @GET
     @Produces("application/voicexml+xml")
-    public Response timeout(@QueryParam("questionId") String question_id, @QueryParam("sessionKey") String sessionKey)
-        throws Exception {
+    public Response timeout(@QueryParam("questionId") String question_id, @QueryParam("sessionKey") String sessionKey,
+        String timeoutMessage) throws Exception {
 
         String reply = "<vxml><exit/></vxml>";
         Session session = Session.getSession(sessionKey);
@@ -629,7 +629,8 @@ public class VoiceXMLRESTProxy {
             HashMap<String, Object> extras = new HashMap<String, Object>();
             extras.put("sessionKey", sessionKey);
             extras.put("requester", session.getLocalAddress());
-            question = question.event("timeout", "No answer received", extras, responder, session);
+            timeoutMessage = timeoutMessage != null ? timeoutMessage : "No answer received"; 
+            question = question.event("timeout", timeoutMessage, extras, responder, session);
             session.setQuestion(question);
             if (question != null) {
                 String retryLimit = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.RETRY_LIMIT);
@@ -781,9 +782,14 @@ public class VoiceXMLRESTProxy {
 
             AdapterConfig config = AdapterConfig.findAdapterConfigByUsername(subscriberId.getTextContent());
 
-            if (!config.getXsiSubscription().equals(subscriptionId)) {
+            if (subscriptionId == null || !subscriptionId.equals(config.getXsiSubscription())) {
+                
                 log.warning("Ignoring because of subscriptionId: " + subscriptionId + " doesn't match :" +
-                            config.getXsiSubscription());
+                    config.getXsiSubscription());
+                //asyncronously remove this subscriptions
+                boolean deleteSubscriptionStatus = new Broadsoft(config).deleteSubscription(subscriptionId);
+                log.info(String.format("Deleting subscriptionId: %s returned status: %s", subscriptionId,
+                                       deleteSubscriptionStatus));
                 return Response.ok().build();
             }
 
@@ -1789,8 +1795,33 @@ public class VoiceXMLRESTProxy {
             //store the remoteId as its lost while trying to trigger the answered event
             session.addExtras("referredCalledId", redirectedId);
             session.setQuestion(question);
+            //flush the redirect session if its still existing and not active
+            Session referralSession = Session.getSessionByInternalKey(adapterConfig.getAdapterType(),
+                                                                      adapterConfig.getMyAddress(), redirectedId);
+            if (referralSession != null) {
+                String responseMessage = checkIfCallAlreadyInSession(redirectedId, adapterConfig, referralSession);
+                if (responseMessage == null) {
+                    referralSession.drop();
+                }
+                else {
+                    log.severe("Referral session existing and active. " + responseMessage);
+                    //call timeout on the parent session
+                    try {
+                        session.storeSession();
+                        Response timeout = timeout(null, session.getKey(), responseMessage);
+                        if (timeout != null && timeout.getEntity() != null) {
+                            log.warning(String.format("Returning timeout question formed: %s", timeout.getEntity()
+                                                                                                      .toString()));
+                            return timeout.getEntity().toString();
+                        }
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
             //create a new ddr record and session to catch the redirect
-            Session referralSession = Session.createSession(adapterConfig, redirectedId);
+            referralSession = Session.createSession(adapterConfig, redirectedId);
             log.info( "Referral Session created with interalkey: " + referralSession.getInternalSession() );
             referralSession.setAccountId(session.getAccountId());
             referralSession.addExtras("originalRemoteId", remoteID);
@@ -1813,7 +1844,7 @@ public class VoiceXMLRESTProxy {
                     e.printStackTrace();
                     log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
                 }
-                referralSession.setDirection(session.getDirection());
+                referralSession.setDirection("transfer");
                 referralSession.setTrackingToken(session.getTrackingToken());
             }
             referralSession.setQuestion(session.getQuestion());

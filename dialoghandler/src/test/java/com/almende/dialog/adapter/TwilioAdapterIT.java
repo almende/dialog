@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
@@ -35,12 +36,15 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.sim.TwilioSimulator;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DialogRequestDetails;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
@@ -489,6 +493,10 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
                 continue;
             }
+            else if (queryParams.getName().equals("askFastAccountId")) {
+                assertThat(queryParams.getValue(), Matchers.is(TEST_PUBLIC_KEY));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
@@ -599,6 +607,10 @@ public class TwilioAdapterIT extends TestFramework {
             }
             else if (queryParams.getName().equals("id")) {
                 assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
+                continue;
+            }
+            else if (queryParams.getName().equals("askFastAccountId")) {
+                assertThat(queryParams.getValue(), Matchers.is(TEST_PUBLIC_KEY));
                 continue;
             }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
@@ -771,6 +783,10 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
                 continue;
             }
+            else if (queryParams.getName().equals("askFastAccountId")) {
+                assertThat(queryParams.getValue(), Matchers.is(TEST_PUBLIC_KEY));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
@@ -843,6 +859,10 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
                 continue;
             }
+            else if (queryParams.getName().equals("askFastAccountId")) {
+                assertThat(queryParams.getValue(), Matchers.is(TEST_PUBLIC_KEY));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
@@ -892,6 +912,52 @@ public class TwilioAdapterIT extends TestFramework {
                                                              null, null, null, null, null);
         //make sure there is no costs involved, as the ddr price attached is for VoiceRSS tts and not acapela
         assertThat(ddrRecords.size(), Matchers.is(0));
+    }
+    
+    /**
+     * Test if the
+     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequestDetails)}
+     * gives an error code if the question is not fetched by the dialog agent
+     * @throws UnsupportedEncodingException 
+     */
+    @Test
+    public void outboundCallWithoutQuestionTest() throws Exception {
+        
+        dialogAgent = new DialogAgent();
+        //setup bad question url
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH + "wrongURL", "questionType",
+                                                       QuestionInRequest.TWELVE_INPUT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+        
+        //create mail adapter
+        AdapterConfig adapterConfig = createTwilioAdapter();
+        adapterConfig.update();
+        
+        //setup to generate ddrRecords
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
+                           null);
+        
+        DialogRequestDetails details = new DialogRequestDetails();
+        details.setAccountID(adapterConfig.getOwner());
+        details.setAdapterID(adapterConfig.getConfigId());
+        details.setAddress(remoteAddressVoice);
+        details.setBearerToken(UUID.randomUUID().toString());
+        details.setMethod("outboundCall");
+        details.setUrl(url);
+        RestResponse outboundCallResponse = dialogAgent.outboundCallWithDialogRequest(details);
+        assertEquals(Status.BAD_REQUEST.getStatusCode(), outboundCallResponse.getCode());
+        assertThat(outboundCallResponse.getMessage(), Matchers.is(DialogAgent.getQuestionNotFetchedMessage(url)));
+        
+        //verify that the session is not saved
+        assertEquals(0, Session.getAllSessions().size());
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertEquals(1, ddrRecords.size());
+        assertEquals(CommunicationStatus.ERROR,
+                     ddrRecords.iterator().next()
+                               .getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+        assertEquals(1, ddrRecords.iterator().next().getStatusPerAddress().size());
     }
 
     /**

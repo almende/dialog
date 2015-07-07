@@ -2,15 +2,21 @@ package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Properties;
+import java.util.UUID;
 import javax.mail.Message;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
+import javax.ws.rs.core.Response.Status;
+import org.hamcrest.Matchers;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -18,14 +24,21 @@ import com.almende.dialog.IntegrationTest;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DDRRecordAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
+import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
+import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.util.uuid.UUID;
+import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DialogRequestDetails;
 import com.askfast.commons.entity.Language;
 
 @Category(IntegrationTest.class)
@@ -42,7 +55,8 @@ public class MailServletIT extends TestFramework
         String testMessage = "testMessage";
         //create mail adapter
         AdapterConfig adapterConfig = createEmailAdapter("askfasttest@gmail.com", "askask2times", null, null, null,
-                                                         null, null, null, null, new UUID().toString(), null, null);
+                                                         null, null, null, null, UUID.randomUUID().toString(), null,
+                                                         null);
         //create session
         Session.createSession( adapterConfig, remoteAddressEmail );
         
@@ -214,6 +228,49 @@ public class MailServletIT extends TestFramework
         String reply = TestServlet.APPOINTMENT_YES_ANSWER + " \n \n \n2013/9/6 <" + localAddressMail +"> \n \n> U heeft een ongeldig aantal gegeven. " +
         		"Geef een getal tussen 1 en 100 000. \n> \n \n \n \n--  \nKind regards, \nShravan Shetty "; 
         mailAppointmentInteraction( reply );
+    }
+    
+    /**
+     * Test if the
+     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequestDetails)}
+     * gives an error code if the question is not fetched by the dialog agent
+     * @throws UnsupportedEncodingException 
+     */
+    @Test
+    public void outboundCallWithoutQuestionTest() throws Exception {
+        
+        DialogAgent dialogAgent = new DialogAgent();
+        //setup bad question url
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH + "wrongURL", "questionType",
+                                                       QuestionInRequest.TWELVE_INPUT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+        
+        //create mail adapter
+        AdapterConfig adapterConfig = createEmailAdapter("test@test.com", "testtest", null, null, null, null, null,
+                                                         null, null, TEST_PUBLIC_KEY, null, null);
+        //setup to generate ddrRecords
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.PART,
+                           AdapterType.EMAIL, null);
+        
+        DialogRequestDetails details = new DialogRequestDetails();
+        details.setAccountID(adapterConfig.getOwner());
+        details.setAdapterID(adapterConfig.getConfigId());
+        details.setAddress(remoteAddressEmail);
+        details.setBearerToken(UUID.randomUUID().toString());
+        details.setMethod("outboundCall");
+        details.setUrl(url);
+        RestResponse outboundCallResponse = dialogAgent.outboundCallWithDialogRequest(details);
+        assertEquals(Status.BAD_REQUEST.getStatusCode(), outboundCallResponse.getCode());
+        assertThat(outboundCallResponse.getMessage(), Matchers.is(DialogAgent.getQuestionNotFetchedMessage(url)));
+        
+        //verify that the session is not saved
+        assertEquals(0, Session.getAllSessions().size());
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertEquals(1, ddrRecords.size());
+        assertEquals(CommunicationStatus.ERROR, ddrRecords.iterator().next().getStatusForAddress(remoteAddressEmail));
+        assertEquals(1, ddrRecords.iterator().next().getStatusPerAddress().size());
     }
     
     /**

@@ -23,6 +23,7 @@ import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.jackson.JOM;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.utils.PhoneNumberUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -720,7 +721,24 @@ public class DDRRecord
      * @param status
      */
     public void addStatusForAddress(String address, CommunicationStatus status) {
-        getStatusPerAddress().put(address, status);
+
+        AdapterConfig adapter = getAdapter();
+        if (adapter != null && (adapter.isCallAdapter() || adapter.isSMSAdapter())) {
+            address = PhoneNumberUtils.formatNumber(address, null);
+        }
+        getStatusPerAddress().put(getDotReplacedString(address), status);
+    }
+    
+    /**
+     * add a status all all the address
+     * @param addresses
+     * @param status
+     */
+    public void setStatusForAddresses(Collection<String> addresses, CommunicationStatus status) {
+
+        for (String address : addresses) {
+            addStatusForAddress(getDotReplacedString(address), CommunicationStatus.ERROR);
+        }
     }
     
     /**

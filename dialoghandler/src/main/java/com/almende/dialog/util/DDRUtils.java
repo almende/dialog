@@ -45,6 +45,7 @@ public class DDRUtils
     //create a single static connection for publishing ddrs
     private static ConnectionFactory rabbitMQConnectionFactory;
     private static final String PUBLISH_QUEUE_NAME = "DDR_PUBLISH_QUEUE";
+    public static final String DDR_MESSAGE_KEY = "message";
     
     /** creates a DDR Record for this adapterid and owner. <br>
      * Preconditions: <br>
@@ -65,7 +66,7 @@ public class DDRUtils
                     config.getOwner(), 1 );
                 ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );
                 ddrRecord.setAccountType(config.getAccountType());
-                ddrRecord.addAdditionalInfo("message",
+                ddrRecord.addAdditionalInfo(DDR_MESSAGE_KEY,
                                             String.format("Type: %s Address: %s", config.getAdapterType(),
                                                           config.getMyAddress()));
                 ddrRecord.createOrUpdate();
@@ -429,7 +430,7 @@ public class DDRUtils
                         if (ttsProvider != null) {
                             ddrRecord.addAdditionalInfo("TTSProvider", ttsProvider);
                         }
-                        ddrRecord.addAdditionalInfo("message", message);
+                        ddrRecord.addAdditionalInfo(DDR_MESSAGE_KEY, message);
                         ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
                         ddrRecord.createOrUpdate();
                         break;
@@ -493,7 +494,7 @@ public class DDRUtils
                         if (ttsAccountId != null) {
                             ddrRecord.addAdditionalInfo("ttsAccountId", ttsAccountId);
                         }
-                        ddrRecord.addAdditionalInfo("message", "Service costs");
+                        ddrRecord.addAdditionalInfo(DDR_MESSAGE_KEY, "Service costs");
                         ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
                         ddrRecord.createOrUpdate();
                         break;
@@ -890,7 +891,7 @@ public class DDRUtils
                     ddrRecord.addStatusForAddress(address, status);
                 }
                 ddrRecord.setAccountType(config.getAccountType());
-                ddrRecord.addAdditionalInfo("message", message);
+                ddrRecord.addAdditionalInfo(DDR_MESSAGE_KEY, message);
                 ddrRecord.setSessionKeysFromMap(sessionKeyMap);
                 ddrRecord.addAdditionalInfo(DDRType.DDR_CATEGORY_KEY, category);
                 //set the ddrRecord time with server current time creationTime.

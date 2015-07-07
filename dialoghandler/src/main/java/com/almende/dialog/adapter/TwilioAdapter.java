@@ -38,6 +38,7 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.QuestionEventRunner;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
@@ -195,15 +196,28 @@ public class TwilioAdapter {
                 else {
                     result.put(address, "Invalid address");
                     log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
+                    if(ddrRecord != null) {
+                        ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
+                        ddrRecord.createOrUpdate();
+                    }
+                    sessionMap.remove(formattedAddress);
+                    session.drop();
                 }
             }
         }
         else {
-            log.severe(String.format("Question not fetched from: %s. Request for outbound call rejected ",
-                                     dialogIdOrUrl));
+            log.severe(DialogAgent.getQuestionNotFetchedMessage(dialogIdOrUrl));
             dialogLog.log(LogLevel.SEVERE, session.getAdapterConfig(),
-                          String.format("Question not fetched from: %s. Request for outbound call rejected ",
-                                        dialogIdOrUrl), session);
+                          DialogAgent.getQuestionNotFetchedMessage(dialogIdOrUrl), session);
+            if(ddrRecord != null) {
+
+                ddrRecord.setStatusForAddresses(addressNameMap.keySet(), CommunicationStatus.ERROR);
+                ddrRecord.addAdditionalInfo(DDRUtils.DDR_MESSAGE_KEY,
+                                            DialogAgent.getQuestionNotFetchedMessage(dialogIdOrUrl));
+                ddrRecord.createOrUpdate();
+            }
+            session.drop();
+            throw new Exception(DialogAgent.getQuestionNotFetchedMessage(dialogIdOrUrl));
         }
         if(ddrRecord != null) {
             ddrRecord.setSessionKeysFromMap(sessionMap);

@@ -8,14 +8,17 @@ import java.util.logging.Logger;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import com.almende.dialog.LogLevel;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.dialog.util.ServerUtils;
@@ -124,8 +127,8 @@ abstract public class TextServlet extends HttpServlet {
         }
     }
 
-    public Return formQuestion(Question question, String adapterID, String address, String ddrRecordId,
-                               Session session) {
+    public Return
+        formQuestion(Question question, String adapterID, String address, String ddrRecordId, Session session) {
 
         String reply = "";
         String sessionKey = session != null ? session.getKey() : null;
@@ -260,7 +263,7 @@ abstract public class TextServlet extends HttpServlet {
         }
         //create a session for the first remote address
         String firstRemoteAddress = fetchFirstRemoteAddress(addressNameMap, addressCcNameMap, addressBccNameMap,
-                                                             loadAddress);
+                                                            loadAddress);
         if (config.isSMSAdapter()) {
             firstRemoteAddress = PhoneNumberUtils.formatNumber(firstRemoteAddress, null);
             senderNameForDDR = senderName != null ? new String(senderName) : senderNameForDDR;
@@ -276,12 +279,12 @@ abstract public class TextServlet extends HttpServlet {
             session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, provider.toString());
         }
         session.storeSession();
-        
+
         dialogIdOrUrl = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
         session.setStartUrl(dialogIdOrUrl);
         session.setRemoteAddress(firstRemoteAddress);
         session.storeSession();
-        
+
         // add addresses in cc and bcc map
         Map<String, Object> extras = new HashMap<String, Object>();
         HashMap<String, String> fullAddressMap = new HashMap<String, String>(addressNameMap);
@@ -293,7 +296,7 @@ abstract public class TextServlet extends HttpServlet {
             fullAddressMap.putAll(addressBccNameMap);
             extras.put(MailServlet.BCC_ADDRESS_LIST_KEY, addressBccNameMap);
         }
-        
+
         //create a ddr record
         sessionKeyMap.put(firstRemoteAddress, session);
         DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, senderNameForDDR,
@@ -303,7 +306,7 @@ abstract public class TextServlet extends HttpServlet {
         // If it is a broadcast don't provide the remote address because it is deceiving.
         Question question = Question.fromURL(dialogIdOrUrl, loadAddress, config.getMyAddress(),
                                              ddrRecord != null ? ddrRecord.getId() : null, session, null);
-        
+
         if (question != null) {
 
             //fetch the senderName
@@ -363,10 +366,12 @@ abstract public class TextServlet extends HttpServlet {
                     // Add key to the map (for the return)
                     sessionKeyMap.put(formattedAddress, session);
                     result.put(formattedAddress, session.getKey());
-                    
+
                 }
                 else {
                     result.put(address, "Invalid address");
+                    sessionKeyMap.remove(formattedAddress);
+                    session.drop();
                     log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
                 }
             }
@@ -376,7 +381,7 @@ abstract public class TextServlet extends HttpServlet {
             if (config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)) {
                 if (Language.DUTCH.equals(Language.getByValue(question.getPreferred_language()))) {
                     res.reply = "Dit is een proefaccount. Overweeg alstublieft om uw account te upgraden. \n" +
-                                res.reply;
+                        res.reply;
                 }
                 else {
                     res.reply = "This is a trial account. Please consider upgrading your account. \n" + res.reply;
@@ -393,7 +398,17 @@ abstract public class TextServlet extends HttpServlet {
             }
         }
         else {
-            result.put("Error", "Question JSON not found in dialog/url: " + dialogIdOrUrl);
+            logger.log(LogLevel.SEVERE, session.getAdapterConfig(),
+                       DialogAgent.getQuestionNotFetchedMessage(dialogIdOrUrl), session);
+            if (ddrRecord != null) {
+
+                ddrRecord.setStatusForAddresses(fullAddressMap.keySet(), CommunicationStatus.ERROR);
+                ddrRecord.addAdditionalInfo(DDRUtils.DDR_MESSAGE_KEY,
+                                            DialogAgent.getQuestionNotFetchedMessage(dialogIdOrUrl));
+                ddrRecord.createOrUpdate();
+            }
+            session.drop();
+            throw new Exception(DialogAgent.getQuestionNotFetchedMessage(dialogIdOrUrl));
         }
         return result;
     }
@@ -467,7 +482,7 @@ abstract public class TextServlet extends HttpServlet {
         if (session == null) {
             log.info("No session so retrieving config");
             config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress, keyword);
-            
+
             count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress,
                                                getSenderName(null, config, null, null), address, toName, extras,
                                                config, config.getOwner(), null);
@@ -550,7 +565,7 @@ abstract public class TextServlet extends HttpServlet {
                 // Do not answer a question, when it's the first and the type is
                 // comment or referral anyway.
                 if (!(start && (question.getType().equalsIgnoreCase("comment") || question.getType()
-                                                .equalsIgnoreCase("referral")))) {
+                                                                                          .equalsIgnoreCase("referral")))) {
                     question = question.answer(address, null, escapeInput.body, session);
                 }
                 Return replystr = formQuestion(question, config.getConfigId(), address, null, session);
@@ -597,7 +612,7 @@ abstract public class TextServlet extends HttpServlet {
      * @return
      */
     private int processEscapeInputCommand(TextMessage msg, String fromName, AdapterConfig config, String accountId,
-                                          EscapeInputCommand escapeInput, Session session) throws Exception {
+        EscapeInputCommand escapeInput, Session session) throws Exception {
 
         log.info(String.format("escape charecter seen.. input %s", escapeInput.body));
         int result = 0;
@@ -605,8 +620,8 @@ abstract public class TextServlet extends HttpServlet {
         if (cmd.startsWith("language=") && session != null) {
             escapeInput.preferred_language = cmd.substring(9);
             if (escapeInput.preferred_language.indexOf(' ') != -1)
-                escapeInput.preferred_language = escapeInput.preferred_language
-                                                .substring(0, escapeInput.preferred_language.indexOf(' '));
+                escapeInput.preferred_language = escapeInput.preferred_language.substring(0,
+                                                                                          escapeInput.preferred_language.indexOf(' '));
 
             session.setLanguage(escapeInput.preferred_language);
 
@@ -629,7 +644,7 @@ abstract public class TextServlet extends HttpServlet {
             String[] command = cmd.split(" ");
             if (command.length == 1) {
                 escapeInput.reply = "The following commands are understood:\n" + "/help <command>\n" + "/reset \n"
-                                    + "/language=<lang_code>\n";
+                    + "/language=<lang_code>\n";
             }
             else {
                 if (command[1].equals("reset")) {
@@ -740,7 +755,7 @@ abstract public class TextServlet extends HttpServlet {
                                                                         copyOfAddressNameMap.size(), message,
                                                                         sessionKeyMap);
         }
-        
+
         //update the sessions to the extras
         if (sessionKeyMap != null && !sessionKeyMap.isEmpty()) {
             extras.put(Session.SESSION_KEY, sessionKeyMap);
@@ -749,12 +764,12 @@ abstract public class TextServlet extends HttpServlet {
         Integer count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId,
                                          ddrRecord);
         //reload the ddrRecord
-        if(ddrRecord != null) {
+        if (ddrRecord != null) {
             ddrRecord = ddrRecord.reload();
             ddrRecord.setQuantity(count);
             ddrRecord.createOrUpdate();
         }
-        
+
         //push the cost to hte queue
         Double totalCost = DDRUtils.calculateDDRCost(ddrRecord, true);
         DDRUtils.publishDDREntryToQueue(accountId, totalCost);
@@ -767,7 +782,7 @@ abstract public class TextServlet extends HttpServlet {
     }
 
     private TextMessage receiveMessageAndAttachCharge(HttpServletRequest req, HttpServletResponse resp)
-                                                                                                       throws Exception {
+        throws Exception {
 
         TextMessage receiveMessage = receiveMessage(req, resp);
         try {
@@ -848,22 +863,20 @@ abstract public class TextServlet extends HttpServlet {
                 addressNameMap.putAll(ccAddressNameMap);
             }
             else {
-                log.severe(String.format("CC list seen but not of Map type: %s", ServerUtils
-                                                .serializeWithoutException(extras.get(MailServlet.CC_ADDRESS_LIST_KEY))));
+                log.severe(String.format("CC list seen but not of Map type: %s",
+                                         ServerUtils.serializeWithoutException(extras.get(MailServlet.CC_ADDRESS_LIST_KEY))));
             }
         }
         //add bcc list
         if (extras.get(MailServlet.BCC_ADDRESS_LIST_KEY) != null) {
             if (extras.get(MailServlet.BCC_ADDRESS_LIST_KEY) instanceof Map) {
                 @SuppressWarnings("unchecked")
-                Map<String, String> bccAddressNameMap = (Map<String, String>) extras
-                                                .get(MailServlet.BCC_ADDRESS_LIST_KEY);
+                Map<String, String> bccAddressNameMap = (Map<String, String>) extras.get(MailServlet.BCC_ADDRESS_LIST_KEY);
                 addressNameMap.putAll(bccAddressNameMap);
             }
             else {
                 log.severe(String.format("BCC list seen but not of Map type: %s",
-                                         ServerUtils.serializeWithoutException(extras
-                                                                         .get(MailServlet.BCC_ADDRESS_LIST_KEY))));
+                                         ServerUtils.serializeWithoutException(extras.get(MailServlet.BCC_ADDRESS_LIST_KEY))));
             }
         }
         return addressNameMap;
@@ -904,8 +917,8 @@ abstract public class TextServlet extends HttpServlet {
      * @return
      */
     private String fetchFirstRemoteAddress(final Map<String, String> addressNameMap,
-                                           final Map<String, String> addressCcNameMap,
-                                           final Map<String, String> addressBccNameMap, final String loadAddress) {
+        final Map<String, String> addressCcNameMap, final Map<String, String> addressBccNameMap,
+        final String loadAddress) {
 
         String firstAddressAddress = null;
         if (loadAddress != null) {

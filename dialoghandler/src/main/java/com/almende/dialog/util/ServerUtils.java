@@ -373,6 +373,7 @@ public class ServerUtils
             serviceProvider = ttsInfo.getProvider() != null ? ttsInfo.getProvider().name() : null;
             format = ttsInfo.getFormat();
             ttsAccountId = ttsInfo.getTtsAccountId();
+            accountId = session.getAccountId();
 
             textForSpeech = textForSpeech.replace("text://", "");
             

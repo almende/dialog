@@ -335,10 +335,6 @@ abstract public class TextServlet extends HttpServlet {
                     if (!session.getRemoteAddress().equals(formattedAddress)) {
                         // store the session first
                         session = Session.getOrCreateSession(config, formattedAddress);
-                        session.setAccountId(accountId);
-                        session.setDirection("outbound");
-                        session.setQuestion(question);
-                        session.setLocalName(senderName);
                         String preferred_language = session != null ? session.getLanguage() : null;
                         if (preferred_language == null) {
                             preferred_language = config.getPreferred_language();
@@ -358,6 +354,10 @@ abstract public class TextServlet extends HttpServlet {
                             session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, provider.toString());
                         }
                     }
+                    session.setAccountId(accountId);
+                    session.setDirection("outbound");
+                    session.setQuestion(question);
+                    session.setLocalName(senderName);
                     session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
                     //save this session
                     session.storeSession();

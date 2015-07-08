@@ -204,6 +204,11 @@ public class MailServletIT extends TestFramework
         MailServlet mailServlet = new MailServlet();
         mailServlet.startDialog(addressNameMap, null, null, url, "test", "sendDummyMessageTest", adapterConfig,
                                 adapterConfig.getOwner());
+        
+        //assert that one session is created
+        List<Session> allSessions = Session.getAllSessions();
+        assertThat(allSessions.size(), Matchers.is(1));
+        assertThat(allSessions.iterator().next().getQuestion(), Matchers.notNullValue());
 
         Message message = super.getMessageFromDetails( remoteAddressEmail, localAddressMail, textMessage,
             "sendDummyMessageTest" );

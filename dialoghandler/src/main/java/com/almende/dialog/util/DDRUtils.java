@@ -829,9 +829,9 @@ public class DDRUtils
             if (applyServiceCharge) {
 
                 String adapterId = config != null ? config.getConfigId() : null;
-                DDRPrice ddrPriceForDialogService = fetchDDRPrice(DDRTypeCategory.SERVICE_COST,
-                                                                  AdapterType.getByValue(config.getAdapterType()),
-                                                                  adapterId, UnitType.PART, null);
+                AdapterType adapterType = config != null ? AdapterType.getByValue(config.getAdapterType()) : null;
+                DDRPrice ddrPriceForDialogService = fetchDDRPrice(DDRTypeCategory.SERVICE_COST, adapterType, adapterId,
+                                                                  UnitType.PART, null);
                 Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
                 //get the max of the service cost and the communication cost
                 result = Math.max(result, serviceCost);

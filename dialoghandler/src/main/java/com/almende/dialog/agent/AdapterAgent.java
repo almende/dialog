@@ -288,11 +288,10 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
 
             if (isValidCredentials) {
                 AdapterConfig newConfig = createAdapter(config, isPrivate);
-                return new RestResponse(getVersion(), newConfig.getConfigId(), Response.Status.OK.getStatusCode(), "OK");
+                return RestResponse.ok(getVersion(), newConfig.getConfigId());
             }
             else {
-                return new RestResponse(getVersion(), null, Response.Status.FORBIDDEN.getStatusCode(),
-                                        "Unauthorized credentials. Please try again.");
+                return RestResponse.forbidden(getVersion(), "Unauthorized credentials. Please try again.");
             }
         }
         catch (Exception e) {

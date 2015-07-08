@@ -744,7 +744,7 @@ public class DDRRecord
     public void setStatusForAddresses(Collection<String> addresses, CommunicationStatus status) {
 
         for (String address : addresses) {
-            addStatusForAddress(getDotReplacedString(address), CommunicationStatus.ERROR);
+            addStatusForAddress(getDotReplacedString(address), status);
         }
     }
     

@@ -34,6 +34,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.joda.time.DateTime;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
@@ -262,6 +263,8 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             else {
                 simpleMessage.setFrom(new InternetAddress(from));
             }
+            Map<String, Session> sessions = DialogAgent.getSessionsFromExtras(extras);
+            sessions = sessions != null ? sessions : new HashMap<String, Session>(1);
             for (String address : addressNameMap.keySet()) {
                 String toName = addressNameMap.get(address) != null ? addressNameMap.get(address) : address;
                 try {
@@ -276,6 +279,10 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                     if (ddrRecord != null) {
                         ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                         ddrRecord.addAdditionalInfo(address, errorMessage);
+                    }
+                    if(sessions.get(address) != null) {
+                        sessions.get(address).drop();
+                        sessions.remove(address);
                     }
                 }
             }
@@ -301,6 +308,10 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                                 if (ddrRecord != null) {
                                     ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                                     ddrRecord.addAdditionalInfo(address, errorMessage);
+                                }
+                                if(sessions.get(address) != null) {
+                                    sessions.get(address).drop();
+                                    sessions.remove(address);
                                 }
                             }
                         }
@@ -330,6 +341,10 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                                 if (ddrRecord != null) {
                                     ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                                     ddrRecord.addAdditionalInfo(address, errorMessage);
+                                }
+                                if(sessions.get(address) != null) {
+                                    sessions.get(address).drop();
+                                    sessions.remove(address);
                                 }
                             }
                         }

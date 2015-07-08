@@ -799,7 +799,6 @@ abstract public class TextServlet extends HttpServlet {
                 }
                 session.setCreationTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
                 session.storeSession();
-                logger.info(session.getAdapterConfig(), ServerUtils.serialize(receiveMessage), session);
             }
             //attach charges for incoming
             AdapterConfig config = AdapterConfig.findAdapterConfig(getAdapterType(), receiveMessage.getLocalAddress());

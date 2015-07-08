@@ -1120,6 +1120,7 @@ public class DDRUtils
                         ddrRecord.addAdditionalInfo(address, "Invalid address");
                         ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                         ddrRecord.createOrUpdate();
+                        session.drop();
                     }
                 }
                 catch (Exception e) {

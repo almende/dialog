@@ -6,15 +6,14 @@ import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
-import com.almende.util.jackson.JOM;
 import com.askfast.commons.utils.PhoneNumberUtils;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 
 public class RouteSMS {
@@ -57,12 +56,7 @@ public class RouteSMS {
         //add an interceptor so that send Messages is not enabled for unit tests
 
         //fetch the sessions
-        Map<String, Session> sessionMap = null;
-        Object sessionsObject = extras != null ? extras.get(Session.SESSION_KEY) : null;
-        if (sessionsObject != null) {
-            sessionMap = JOM.getInstance().convertValue(sessionsObject, new TypeReference<Map<String, Session>>() {
-            });
-        }
+        Map<String, Session> sessionMap = DialogAgent.getSessionsFromExtras(extras);
         AFHttpClient afHttpClient = ParallelInit.getAFHttpClient();
         URIBuilder uriBuilder = new URIBuilder(url);
         uriBuilder.addParameter("username", userName);

@@ -937,6 +937,24 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         return String.format(NO_QUESTION_FOUND_MESSAGE, dialogIdOrUrl);
     }
     
+    /**
+     * Fetches the sessionKeyMap from the extras param. Looks for a <address,
+     * Session> value corresponding to the {@link Session#SESSION_KEY} key
+     * 
+     * @param extras
+     * @return
+     */
+    public static Map<String, Session> getSessionsFromExtras(Map<String, Object> extras) {
+
+        Map<String, Session> sessionKeyMap = null;
+        Object sessionsObject = extras != null ? extras.get(Session.SESSION_KEY) : null;
+        if (sessionsObject != null) {
+            sessionKeyMap = JOM.getInstance().convertValue(sessionsObject, new TypeReference<Map<String, Session>>() {
+            });
+        }
+        return sessionKeyMap;
+    }
+    
 //    /**
 //     * Get the buffered outbound requests based on accountId
 //     * @return

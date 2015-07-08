@@ -7,17 +7,16 @@ import java.util.logging.Logger;
 import org.znerd.xmlenc.XMLOutputter;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
-import com.almende.util.jackson.JOM;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -106,13 +105,7 @@ public class CM {
             for (String to : addressNameMap.keySet()) {
 
                 //fetch the sessions
-                Map<String, Session> sessionKeyMap = null;
-                Object sessionsObject = extras != null ? extras.get(Session.SESSION_KEY) : null;
-                if (sessionsObject != null) {
-                    sessionKeyMap = JOM.getInstance().convertValue(sessionsObject,
-                                                                   new TypeReference<Map<String, Session>>() {
-                                                                   });
-                }
+                Map<String, Session> sessionKeyMap = DialogAgent.getSessionsFromExtras(extras);
                 Session session = sessionKeyMap != null ? sessionKeyMap.get(to) : null;
                 String ddrRecordId = ddrRecord != null ? ddrRecord.getId() : null;
                 //check if its a mobile number, if no ignore, log, drop session and continue
@@ -196,7 +189,7 @@ public class CM {
         }
         return sw;
     }
-	
+
     public static boolean isGSMSeven(CharSequence str0) {
 
         if (str0 == null) {

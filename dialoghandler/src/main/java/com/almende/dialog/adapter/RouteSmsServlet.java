@@ -252,6 +252,9 @@ public class RouteSmsServlet extends TextServlet {
                     if (isErrorInDelivery(statusCode)) {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
                         ddrRecord.addAdditionalInfo(to, "ERROR: " + routeSMSStatus.getDescription());
+                        if (session != null) {
+                            session.drop();
+                        }
                     }
                     else if (statusCode.equalsIgnoreCase("DELIVRD")) {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.DELIVERED);
@@ -265,7 +268,7 @@ public class RouteSmsServlet extends TextServlet {
                     log.warning(String.format("No ddr record found for id: %s", routeSMSStatus.getDdrRecordId()));
                 }
                 //check if session is killed. if so drop it :)
-                if (session.isKilled() && isSMSsDelivered(ddrRecord)) {
+                if (session != null && session.isKilled() && isSMSsDelivered(ddrRecord)) {
                     session.drop();
                 }
                 routeSMSStatus.store();

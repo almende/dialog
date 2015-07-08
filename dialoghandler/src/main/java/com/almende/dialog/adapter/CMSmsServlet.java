@@ -281,9 +281,6 @@ public class CMSmsServlet extends TextServlet {
                             TestServlet.logForTest(getAdapterType(), cmStatus);
                         }
                         webResource.type("text/plain").post(String.class, callbackPayload);
-                        dialogLog.info(cmStatus.getAdapterConfig(), String
-                                                        .format("POST request with payload %s sent to: %s",
-                                                                callbackPayload, cmStatus.getCallback()), session);
                     }
                     catch (Exception ex) {
                         log.severe("Callback failed. Message: " + ex.getLocalizedMessage());
@@ -301,6 +298,7 @@ public class CMSmsServlet extends TextServlet {
                     else {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
                         ddrRecord.addAdditionalInfo(to, "ERROR: " + cmStatus.getDescription());
+                        session.drop();
                     }
                     ddrRecord.createOrUpdate();
                 }

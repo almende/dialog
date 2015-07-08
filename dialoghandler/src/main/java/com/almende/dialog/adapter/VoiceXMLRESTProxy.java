@@ -1830,6 +1830,8 @@ public class VoiceXMLRESTProxy {
             referralSession.setAccountId(session.getAccountId());
             referralSession.addExtras("originalRemoteId", remoteID);
             referralSession.addExtras("redirect", "true");
+            referralSession.setQuestion(session.getQuestion());
+            referralSession.addExtras(Session.PARENT_SESSION_KEY, session.getKey());
             referralSession.storeSession();
             if (session.getDirection() != null) {
                 DDRRecord ddrRecord = null;
@@ -1839,8 +1841,6 @@ public class VoiceXMLRESTProxy {
                                                                                 redirectedId, 1, url, referralSession);
                     referralSession = referralSession.reload();
                     if (ddrRecord != null) {
-                        ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
-                        ddrRecord.createOrUpdate();
                         referralSession.setDdrRecordId(ddrRecord.getId());
                     }
                 }
@@ -1849,10 +1849,7 @@ public class VoiceXMLRESTProxy {
                     log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
                 }
                 referralSession.setDirection("transfer");
-                referralSession.setTrackingToken(session.getTrackingToken());
             }
-            referralSession.setQuestion(session.getQuestion());
-            referralSession.addExtras(Session.PARENT_SESSION_KEY, session.getKey());
             referralSession.storeSession();
             session.addChildSessionKey( referralSession.getKey() );
             session.storeSession();

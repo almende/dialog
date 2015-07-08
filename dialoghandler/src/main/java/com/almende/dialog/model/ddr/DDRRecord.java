@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import org.bson.types.ObjectId;
 import org.mongojack.DBCursor;
 import org.mongojack.DBQuery;
 import org.mongojack.DBQuery.Query;
@@ -766,20 +767,6 @@ public class DDRRecord
                 : "outbound";
         }
         return null;
-    }
-    
-    /**
-     * Adds a tracking token corresponding to the key and value
-     */
-    public void addTrackingToken(String address, String trackingToken) {
-
-        Object trackingTokensObject = getAdditionalInfo().get(Session.TRACKING_TOKEN_KEY);
-        trackingTokensObject = trackingTokensObject != null ? trackingTokensObject : new HashMap<String, String>();
-        Map<String, String> trackingTokens = JOM.getInstance().convertValue(trackingTokensObject,
-                                                                            new TypeReference<Map<String, String>>() {
-                                                                            });
-        trackingTokens.put(address, trackingToken);
-        addAdditionalInfo(Session.TRACKING_TOKEN_KEY, trackingTokens);
     }
     
     /**

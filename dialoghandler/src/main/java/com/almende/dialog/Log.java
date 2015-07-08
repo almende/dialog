@@ -61,7 +61,6 @@ public class Log implements Serializable {
                 this.message = message;
                 this.timestamp = System.currentTimeMillis();
                 this.sessionKey = sessionKey;
-                this.trackingToken = session.getTrackingToken();
                 this.ddrRecordId = ddrRecordId != null ? ddrRecordId : session.getDdrRecordId();
                 this.accountId = session.getAccountId();
             }
@@ -94,7 +93,6 @@ public class Log implements Serializable {
             this.message = message;
             this.timestamp = System.currentTimeMillis();
             this.sessionKey = session.getKey();
-            this.trackingToken = session.getTrackingToken();
             this.ddrRecordId = ddrRecordId != null ? ddrRecordId : session.getDdrRecordId();
             this.accountId = session.getAccountId();
         }

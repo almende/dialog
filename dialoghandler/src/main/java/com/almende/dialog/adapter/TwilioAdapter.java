@@ -1477,8 +1477,6 @@ public class TwilioAdapter {
                                                                             urls, referralSession);
                 referralSession = referralSession.reload();
                 if (ddrRecord != null) {
-                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, referralSession.getTrackingToken());
-                    ddrRecord.createOrUpdate();
                     referralSession.setDdrRecordId(ddrRecord.getId());
                 }
             }
@@ -1486,11 +1484,8 @@ public class TwilioAdapter {
                 e.printStackTrace();
                 log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
             }
-            referralSession.setDirection("outbound");
-            referralSession.setTrackingToken(session.getTrackingToken());
+            referralSession.setDirection("transfer");
         }
-        referralSession.setQuestion(session.getQuestion());
-        referralSession.addExtras(Session.PARENT_SESSION_KEY, session.getKey());
         referralSession.storeSession();
         session.addChildSessionKey( referralSession.getKey() );
         session.storeSession();

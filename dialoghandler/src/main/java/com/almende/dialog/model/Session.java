@@ -35,7 +35,6 @@ public class Session{
     public static final String IS_TEST_SESSION_KEY = "isTest";
     public static final String PARENT_SESSION_KEY = "parentSessionKey";
     public static final String CHILD_SESSION_KEY = "childSessionKey";
-    public static final String TRACKING_TOKEN_KEY = "trackingToken";
     public static final String EXTERNAL_CONFERENCE_KEY = "conferenceKey";
     /**
      * Tag used by calling adapters to mark it in the session if a call is
@@ -67,7 +66,6 @@ public class Session{
     
     String keyword;
     String adapterID;
-    String trackingToken;
     String creationTimestamp;
     String startTimestamp;
     String answerTimestamp;
@@ -272,7 +270,6 @@ public class Session{
         session.internalSession = internalSessionKey.toLowerCase();
         session.key = UUID.randomUUID().toString();
         session.creationTimestamp = String.valueOf(TimeUtils.getServerCurrentTimeInMillis());
-        session.setTrackingToken(UUID.randomUUID().toString());
         session.storeSession();
         log.info("new session created with id: " + session.key);
         session.existingSession = false;
@@ -595,15 +592,6 @@ public class Session{
     }
     
     
-    public String getTrackingToken() {
-        return this.trackingToken;
-    }
-    
-    
-    public void setTrackingToken(String trackingToken) {
-        this.trackingToken = trackingToken;     
-    }
-
     public String getStartTimestamp()
     {
         return startTimestamp;

@@ -815,10 +815,8 @@ abstract public class TextServlet extends HttpServlet {
 
             if (session != null) {
                 receiveMessage.getExtras().put(Session.SESSION_KEY, session.getKey());
-                receiveMessage.getExtras().put(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
                 if (ddrRecord != null) {
                     ddrRecord.addAdditionalInfo(Session.SESSION_KEY, session.getKey());
-                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, session.getTrackingToken());
                     receiveMessage.getExtras().put(DDRRecord.DDR_RECORD_KEY, ddrRecord.getId());
                     ddrRecord.createOrUpdate();
 

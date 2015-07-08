@@ -106,6 +106,10 @@ public class DDRRecord
      */
     AccountType accountType;
     
+    //links to other ddrRecords, parent and children
+    String parentId;
+    Collection<String> childIds;
+    
     /**
      * total cost is not sent for any ddr if its a post paid account
      */
@@ -143,7 +147,7 @@ public class DDRRecord
     @JsonIgnore
     public DDRRecord createOrUpdate() {
 
-        _id = _id != null && !_id.isEmpty() ? _id : org.bson.types.ObjectId.get().toStringMongod();
+        _id = _id != null && !_id.isEmpty() ? _id : ObjectId.get().toStringMongod();
         correctDotData = true;
         JacksonDBCollection<DDRRecord, String> collection = getCollection();
         DDRRecord existingDDRRecord = collection.findOneById(_id);
@@ -800,17 +804,85 @@ public class DDRRecord
                     if (session.getExternalSession() != null) {
                         addAdditionalInfo("externalSessionKey", session.getExternalSession());
                     }
+                    //attach the child and the parent ddrRecord Ids
+                    updateParentAndChildDDRRecordIds(session);
                 }
             }
             addAdditionalInfo(Session.SESSION_KEY, sessionKeyMap);
         }
     }
-    
+
     @JsonIgnore
     public DDRTypeCategory getTypeCategory() {
 
         DDRType ddrType = DDRType.getDDRType(ddrTypeId);
         return ddrType != null ? ddrType.getCategory() : null;
+    }
+    
+    public String getParentId() {
+        
+        return parentId;
+    }
+
+    
+    public void setParentId(String parentId) {
+    
+        this.parentId = parentId;
+    }
+
+    
+    public Collection<String> getChildIds() {
+    
+        return childIds;
+    }
+
+    
+    public void setChildIds(Collection<String> childIds) {
+    
+        this.childIds = childIds;
+    }
+    
+    @JsonIgnore
+    public void addChildId(String childId) {
+
+        if (childId != null) {
+            childIds = childIds != null ? childIds : new HashSet<String>();
+            childIds.add(childId);
+        }
+    }
+    
+    /**
+     * Gets the linked parentDDRRecord, if any
+     * @return
+     * @throws Exception
+     */
+    @JsonIgnore
+    public DDRRecord getParentDdrRecord() throws Exception {
+
+        if (getParentId() != null) {
+            return getDDRRecord(getParentId(), accountId);
+        }
+        return null;
+    }
+    
+    /**
+     * Gets all the linked childDDRRecords, if any.
+     * @return
+     * @throws Exception
+     */
+    @JsonIgnore
+    public ArrayList<DDRRecord> getChildDDRRecords() throws Exception {
+
+        ArrayList<DDRRecord> childDDRRecords = new ArrayList<DDRRecord>();
+        if (getChildIds() != null) {
+            for (String childId : childIds) {
+                DDRRecord childDdrRecord = getDDRRecord(childId, accountId);
+                if (childDdrRecord != null) {
+                    childDDRRecords.add(childDdrRecord);
+                }
+            }
+        }
+        return childDDRRecords;
     }
     
     /**
@@ -853,5 +925,28 @@ public class DDRRecord
             return copyOfData;
         }
         return null;
+    }
+    
+    /**
+     * Updates/adds (commits to mongo too) the linked parent ddrRecord with this
+     * child ddrRecordId (via Session) and also sets the parentDDRRecorid to
+     * this instance (doesnt commit to mongo).
+     * 
+     * @param session
+     */
+    private void updateParentAndChildDDRRecordIds(Session session) {
+
+        Session parentSession = session.getParentSession();
+        if(parentSession != null) {
+            DDRRecord parentDDRRecord = parentSession.getDDRRecord();
+            if(parentDDRRecord != null) {
+                if(getId() == null) {
+                    setId(ObjectId.get().toStringMongod());
+                }
+                parentDDRRecord.addChildId(getId());
+                parentDDRRecord.createOrUpdate();
+                setParentId(parentDDRRecord.getId());
+            }
+        }
     }
 }

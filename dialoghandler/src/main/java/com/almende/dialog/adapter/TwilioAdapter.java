@@ -713,7 +713,7 @@ public class TwilioAdapter {
             String direction = session.getDirection();
             if(direction==null && call!=null) {
                 direction = call.getDirection() != null && call.getDirection().equalsIgnoreCase("outbound-dial") ? "outbound"
-                                                                                                                   : "inbound";
+                    : "inbound";
             }
             try {
                 // Only update the call times if the session belongs to the callSID
@@ -1465,9 +1465,12 @@ public class TwilioAdapter {
         referralSession.addExtras("originalRemoteId", originalRemoteID);
         referralSession.addExtras("redirect", "true");
         referralSession.setAccountId(session.getAccountId());
+        referralSession.setQuestion(session.getQuestion());
+        referralSession.addExtras(Session.PARENT_SESSION_KEY, session.getKey());
         referralSession.storeSession();
         
         if (session.getDirection() != null) {
+            
             DDRRecord ddrRecord = null;
             String urls = StringUtils.join( question.getUrl(), "," );
             try {

@@ -10,6 +10,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -246,9 +247,9 @@ public class VoiceXMLServletIT extends TestFramework {
         voiceXMLRESTProxy.receiveCCMessage(hangupXML);
         //fetch the ddrRecord again
         DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+        assertThat(ddrRecord, Matchers.notNullValue());
         ddrRecord.setShouldGenerateCosts(true);
         ddrRecord.setShouldIncludeServiceCosts(true);
-        assertThat(ddrRecord, Matchers.notNullValue());
         assertThat(ddrRecord.getDuration(), Matchers.greaterThan(0L));
         assertThat(ddrRecord.getStart(), Matchers.is(1401809070192L));
     }
@@ -806,6 +807,45 @@ public class VoiceXMLServletIT extends TestFramework {
             }
         }
         assertThat(ddrInfoCount, Matchers.is(1));
+    }
+    
+    /**
+     * Test to check if the ddr records are linked when a referral is triggered
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void inboundPhoneCall_ReferralHasLinkedDDRRecordsTest() throws Exception {
+
+        String referralNumber = "0611111111";
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.REFERRAL.name());
+        url = ServerUtils.getURLWithQueryParams(url, "address", referralNumber);
+        url = ServerUtils.getURLWithQueryParams(url, "question", "Hello...");
+
+        //perform a secured inbound call
+        performSecuredInboundCall(null, null, null, url, false);
+
+        List<Session> allSessions = Session.getAllSessions();
+        assertThat(allSessions.size(), Matchers.is(2));
+
+        //fetch the parent session (initial call that triggers the inbound call)
+        Session parentSession = null;
+        for (Session session : allSessions) {
+            if (session.getDirection().equals("inbound")) {
+                parentSession = session;
+            }
+        }
+        assertThat(parentSession, Matchers.notNullValue());
+        DDRRecord parentDDRRecord = parentSession.getDDRRecord();
+        assertThat(parentDDRRecord, Matchers.notNullValue());
+
+        //assert that the parent ddrRecord has child ddrRecords linked
+        assertThat(parentDDRRecord.getChildIds().size(), Matchers.is(1));
+        ArrayList<DDRRecord> childDDRRecords = parentDDRRecord.getChildDDRRecords();
+        assertThat(childDDRRecords.size(), Matchers.is(1));
+        assertThat(childDDRRecords.iterator().next().getParentId(), Matchers.is(parentDDRRecord.getId()));
     }
 
     /**

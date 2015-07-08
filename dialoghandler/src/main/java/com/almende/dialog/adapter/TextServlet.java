@@ -581,6 +581,7 @@ abstract public class TextServlet extends HttpServlet {
 
         try {
             session.setQuestion(question);
+            session.setDirection("outbound");
             session.storeSession();
             count = sendMessageAndAttachCharge(escapeInput.reply, subject, localaddress, fromName, address, toName,
                                                extras, config, session.getAccountId(), session);
@@ -781,31 +782,55 @@ abstract public class TextServlet extends HttpServlet {
         return count;
     }
 
+    /**
+     * Receives the message from the request and creates a ddr record for it
+     * @param req
+     * @param resp
+     * @return
+     * @throws Exception
+     */
     private TextMessage receiveMessageAndAttachCharge(HttpServletRequest req, HttpServletResponse resp)
         throws Exception {
 
         TextMessage receiveMessage = receiveMessage(req, resp);
+        return receiveMessageAndAttachCharge(receiveMessage);
+    }
+
+    /**
+     * Receives the message from the Text message. Seperated from the
+     * {@link TextServlet#receiveMessage(HttpServletRequest, HttpServletResponse)}
+     * to each unit testing on 8th July 2015
+     * 
+     * @param receiveMessage
+     * @return
+     */
+    protected TextMessage receiveMessageAndAttachCharge(TextMessage receiveMessage) {
+
         try {
             //create a session if it does not exist
-            Session session = Session.getOrCreateSession(getAdapterType(), receiveMessage.getLocalAddress(),
-                                                         receiveMessage.getAddress());
+            Session session = Session.getSessionByInternalKey(getAdapterType(), receiveMessage.getLocalAddress(),
+                                                              receiveMessage.getAddress());
+            AdapterConfig config = null;
             //update the current timestamp
             if (session != null) {
-                AdapterConfig adapterConfig = session.getAdapterConfig();
+                config = session.getAdapterConfig();
                 //update the owner accountId if its not an existing session. 
                 //So for pure inbound session. and not a reply on a closed/open question.
-                if (adapterConfig != null && !session.isExistingSession()) {
-                    session.setAccountId(adapterConfig.getOwner());
+                if (config != null && !session.isExistingSession()) {
+                    session.setAccountId(config.getOwner());
                 }
                 session.setCreationTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
+                //update the direction of the session
+                session.setDirection("inbound");
                 session.storeSession();
             }
             //attach charges for incoming
-            AdapterConfig config = AdapterConfig.findAdapterConfig(getAdapterType(), receiveMessage.getLocalAddress());
+            config = config != null ? config : AdapterConfig.findAdapterConfig(getAdapterType(),
+                                                                               receiveMessage.getLocalAddress());
             DDRRecord ddrRecord = null;
             try {
-                ddrRecord = createDDRForIncoming(config, receiveMessage.getAddress(), receiveMessage.getBody(),
-                                                 session.getAccountId(), session);
+                ddrRecord = createDDRForIncoming(config, session.getAccountId(), receiveMessage.getAddress(),
+                                                 receiveMessage.getBody(), session);
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -824,11 +849,11 @@ abstract public class TextServlet extends HttpServlet {
                     session.storeSession();
                 }
             }
-            //reload the ddrRecord
-            ddrRecord = ddrRecord != null ? ddrRecord.reload() : null;
             //push the cost to hte queue
             Double totalCost = DDRUtils.calculateDDRCost(ddrRecord, true);
-            DDRUtils.publishDDREntryToQueue(session.getAccountId(), totalCost);
+            if (session != null) {
+                DDRUtils.publishDDREntryToQueue(session.getAccountId(), totalCost);
+            }
             //attach cost to ddr is prepaid type or trial account
             if (ddrRecord != null && !AccountType.POST_PAID.equals(ddrRecord.getAccountType())) {
                 ddrRecord.setTotalCost(totalCost);

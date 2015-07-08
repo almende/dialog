@@ -873,12 +873,14 @@ public class DDRUtils
                             : config.getFormattedMyAddress();
                         ddrRecord.setFromAddress(fromAddress);
                         ddrRecord.setToAddress(addresses);
+                        ddrRecord.setDirection("outbound");
                         break;
                     case RECEIVED:
                         ddrRecord.setFromAddress(addresses.keySet().iterator().next());
                         Map<String, String> toAddresses = new HashMap<String, String>();
                         toAddresses.put(config.getFormattedMyAddress(), "");
                         ddrRecord.setToAddress(toAddresses);
+                        ddrRecord.setDirection("inbound");
                         break;
                     default:
                         throw new Exception("Unknown CommunicationStatus seen: " + status.name());

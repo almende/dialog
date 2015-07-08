@@ -34,8 +34,7 @@ public class VoiceXMLServletTest extends TestFramework {
         
         Question question = getCommentQuestion();
         AdapterConfig adapter = createBroadsoftAdapter();
-        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         
         String result = renderQuestion(question, adapter, remoteAddressVoice, session);
         
@@ -69,8 +68,7 @@ public class VoiceXMLServletTest extends TestFramework {
     public void renderReferralQuestionTest() throws Exception {
         Question question = getReferralQuestion( false, false, false );
         AdapterConfig adapter = createBroadsoftAdapter();
-        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         
         String result = renderQuestion( question, adapter, remoteAddressVoice, session );
         System.out.println("Res: "+result);
@@ -91,8 +89,7 @@ public class VoiceXMLServletTest extends TestFramework {
     public void renderMultiReferralQuestionTest() throws Exception {
         Question question = getReferralQuestion( false, false, true );
         AdapterConfig adapter = createBroadsoftAdapter();
-        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         
         String result = renderQuestion( question, adapter, remoteAddressVoice, session );
         System.out.println("Res: "+result);
@@ -119,8 +116,7 @@ public class VoiceXMLServletTest extends TestFramework {
 
         Question question = getOpenDTMFQuestion();
         AdapterConfig adapter = createBroadsoftAdapter();
-        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         String result = renderQuestion(question, adapter, remoteAddressVoice, session);
         assertOpenQuestionWithDTMFType( result );
     }
@@ -130,8 +126,7 @@ public class VoiceXMLServletTest extends TestFramework {
 
         Question question = getOpenAudioQuestion();
         AdapterConfig adapter = createBroadsoftAdapter();
-        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
 
         String result = renderQuestion(question, adapter, remoteAddressVoice, session);
         TestServlet.logForTest(AdapterType.CALL.toString(), COMMENT_QUESTION_AUDIO);
@@ -157,7 +152,7 @@ public class VoiceXMLServletTest extends TestFramework {
         //create an adapter
         AdapterConfig adapter = createBroadsoftAdapter();
         //create a session
-        Session session = createSession(createSessionKey(adapter, remoteAddressVoice));
+        Session session = createSession(adapter, remoteAddressVoice);
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         voiceXMLRESTProxy.hangup(session);
     }

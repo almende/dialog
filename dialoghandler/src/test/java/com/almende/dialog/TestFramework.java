@@ -101,9 +101,9 @@ public class TestFramework
                PhoneNumberUtils.formatNumber(responder, null);
     }
     
-    public Session createSession(String sessionKey) {
+    public Session createSession(AdapterConfig adapterConfig, String responder) {
 
-        return Session.getOrCreateSession(sessionKey);
+        return Session.createSession(adapterConfig, responder);
     }
     
     public AdapterConfig createBroadsoftAdapter() throws Exception {

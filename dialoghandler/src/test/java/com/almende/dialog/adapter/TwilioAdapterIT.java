@@ -288,10 +288,13 @@ public class TwilioAdapterIT extends TestFramework {
         assertThat(initiateInboundCall,
                    Matchers.not(Matchers.containsString(URLDecoder.decode(invalidNumber, "UTF-8"))));
         List<Session> allSessions = Session.getAllSessions();
-        assertThat(allSessions.size(), Matchers.is(1));
-        DDRRecord ddrRecord = allSessions.iterator().next().getDDRRecord();
-        assertThat(ddrRecord, Matchers.notNullValue());
+        //all sessions must now be flushed
+        assertThat(allSessions.size(), Matchers.is(0));
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertThat(ddrRecords.size(), Matchers.is(1));
         int ddrInfoCount = 0;
+        DDRRecord ddrRecord = ddrRecords.iterator().next();
         for (String infoKey : ddrRecord.getAdditionalInfo().keySet()) {
             if (URLDecoder.decode(invalidNumber, "UTF-8").equals(infoKey)) {
                 assertThat(ddrRecord.getAdditionalInfo().get(infoKey).toString(), Matchers.is("Invalid address"));

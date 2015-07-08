@@ -98,7 +98,7 @@ public class NotificareServlet extends TextServlet {
             String value = URLDecoder.decode(fields[1], "UTF-8");
             map.put(name, value);
         }
-        Session ses = Session.getOrCreateSession(map.get("sessionkey"));
+        Session ses = Session.getSession(map.get("sessionkey"));
         if (ses != null) {
             AdapterConfig adapterConfig = ses.getAdapterConfig();
             //update the owner accountId if its not an existing session. 

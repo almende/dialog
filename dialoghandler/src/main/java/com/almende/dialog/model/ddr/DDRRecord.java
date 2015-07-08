@@ -109,6 +109,7 @@ public class DDRRecord
     //links to other ddrRecords, parent and children
     String parentId;
     Collection<String> childIds;
+    String direction;
     
     /**
      * total cost is not sent for any ddr if its a post paid account
@@ -762,15 +763,19 @@ public class DDRRecord
      * gets the direction of this ddrRecord based on the toAddress and the adapter address
      * @return either "inbound" or "outbound"
      */
-    @JsonIgnore
     public String getDirection() {
 
         //if the from address is not equal to the adapter address, its an incoming communication
-        if (getToAddress() != null && getAdapter() != null) {
+        if (direction == null && getToAddress() != null && getAdapter() != null) {
             return getToAddress().containsKey(getAdapter().getFormattedMyAddress()) && getToAddress().size() == 1 ? "inbound"
                 : "outbound";
         }
-        return null;
+        return direction;
+    }
+    
+    public void setDirection(String direction) {
+
+        this.direction = direction;
     }
     
     /**

@@ -109,7 +109,114 @@ public class MailServletIT extends TestFramework
     }
     
     /**
-     * test if a "hi" TextMessage is generated and processed properly by XMPP servlet
+     * Test if an outbound Appointment question TextMessage is sent and incoming
+     * messages to it are accepted as a new session. Should pesist one session
+     * and multiple ddrRecords
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void SendAppointmentNewSessionMessageTest() throws Exception
+    {
+
+        //setup actions to generate ddr records when the email is sent or received
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "outgoing", UnitType.PART,
+                           AdapterType.EMAIL, null);
+        createTestDDRPrice(DDRTypeCategory.INCOMING_COMMUNICATION_COST, 0.1, "outgoing", UnitType.PART,
+                           AdapterType.EMAIL, null);
+        
+        //prepare outbound question url
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.APPOINTMENT.name());
+        url = ServerUtils.getURLWithQueryParams( url, "question", "start" );
+        
+        //create mail adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+                                                          localAddressMail, localAddressMail, null);
+        //send email
+        new DialogAgent().outboundCall(remoteAddressEmail, "TEST", "TEST SUBJECT", url, null,
+                                       adapterConfig.getConfigId(), TEST_PUBLIC_KEY, null);
+        
+        List<Session> allSessions = Session.getAllSessions();
+        assertThat(allSessions.size(), Matchers.is(1));
+        assertThat(allSessions.iterator().next().getDirection(), Matchers.is("outbound"));
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertThat(ddrRecords.size(), Matchers.is(1));
+    }
+    
+    /**
+     * Test if an outbound Appointment Accept question. A TextMessage is sent
+     * and incoming messages to it are accepted with the existing sesison.
+     * Should pesist one session and multiple ddrRecords
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void SendAppointmentAcceptMessageTest() throws Exception
+    {
+
+        SendAppointmentNewSessionMessageTest();
+        
+        //accept the invitation
+        mailAppointmentInteraction("Yup");
+        List<Session> allSessions = Session.getAllSessions();
+        assertThat(allSessions.size(), Matchers.is(1));
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertThat(ddrRecords.size(), Matchers.is(3));
+        int inboundCount = 0;
+        int outboundCount = 0;
+        for (DDRRecord ddrRecord : ddrRecords) {
+            if(ddrRecord.getDirection().equals("inbound")) {
+                inboundCount++;
+            }
+            if(ddrRecord.getDirection().equals("outbound")) {
+                outboundCount++;
+            }
+        }
+        assertTrue(inboundCount == 1);
+        assertTrue(outboundCount == 2);
+    }
+    
+    /**
+     * Test if an outbound Appointment minutes available question. A TextMessage
+     * is sent and incoming messages to it are accepted with the existing
+     * sesison. Should pesist one session and multiple ddrRecords
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void SendAppointmentMinutesAvailableMessageTest() throws Exception
+    {
+
+        SendAppointmentAcceptMessageTest();
+        
+        //accept the invitation
+        mailAppointmentInteraction("50");
+        List<Session> allSessions = Session.getAllSessions();
+        //as it is the end of the question sequence, all sessions must be flushed
+        assertThat(allSessions.size(), Matchers.is(0));
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertThat(ddrRecords.size(), Matchers.is(5));
+        int inboundCount = 0;
+        int outboundCount = 0;
+        for (DDRRecord ddrRecord : ddrRecords) {
+            if(ddrRecord.getDirection().equals("inbound")) {
+                inboundCount++;
+            }
+            if(ddrRecord.getDirection().equals("outbound")) {
+                outboundCount++;
+            }
+        }
+        assertTrue(inboundCount == 2);
+        assertTrue(outboundCount == 3);
+    }
+    
+    /**
+     * test if a "hi" TextMessage is generated and processed properly by Mail servlet
      *  as a new session
      * @throws Exception 
      */
@@ -312,6 +419,11 @@ public class MailServletIT extends TestFramework
                                                                   Arrays.asList( MimeMessage.class, String.class ) );
         TextMessage textMessage = (TextMessage) invokeMethodByReflection( fetchMethodByReflection, mailServlet, 
                                                        Arrays.asList( mimeMessage, localAddressMail ));
+        //attach ddrs for the received messages
+        Method receiveMessageAndAttachChargeMethod = fetchMethodByReflection("receiveMessageAndAttachCharge",
+                                                                             TextServlet.class, TextMessage.class);
+        invokeMethodByReflection(receiveMessageAndAttachChargeMethod, mailServlet, textMessage);
+        
         //fetch the processMessage function
         Method processMessage = fetchMethodByReflection( "processMessage", TextServlet.class,  TextMessage.class);
         int count = (Integer) invokeMethodByReflection( processMessage, mailServlet, textMessage );

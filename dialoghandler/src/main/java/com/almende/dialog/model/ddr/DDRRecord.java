@@ -202,12 +202,14 @@ public class DDRRecord
     
     /**
      * Fetch the ddr records based the input parameters. fetches the records
-     * that matches to all the parameters given. The accountId is mandatory and rest are optional
+     * that matches to all the parameters given. The accountId is mandatory and
+     * rest are optional
      * 
-     * @param adapterId 
-     * @param accountId Mandatory field
+     * @param adapterId
+     * @param accountId
+     *            Mandatory field
      * @param fromAddress
-     * @param ddrTypeId
+     * @param ddrTypeIds
      * @param status
      * @param startTime
      * @param endTime
@@ -217,7 +219,8 @@ public class DDRRecord
      * @return
      */
     public static List<DDRRecord> getDDRRecords(String adapterId, String accountId, String fromAddress,
-        String ddrTypeId, CommunicationStatus status, Long startTime, Long endTime, Collection<String> sessionKeys, Integer offset, Integer limit) {
+        Collection<String> ddrTypeIds, CommunicationStatus status, Long startTime, Long endTime,
+        Collection<String> sessionKeys, Integer offset, Integer limit) {
 
         limit = limit != null && limit <= 1000 ? limit : 1000;
         offset = offset != null ? offset : 0;
@@ -231,8 +234,8 @@ public class DDRRecord
         if (fromAddress != null) {
             queryList.add(DBQuery.is("fromAddress", fromAddress));
         }
-        if (ddrTypeId != null) {
-            queryList.add(DBQuery.is("ddrTypeId", ddrTypeId));
+        if (ddrTypeIds != null) {
+            queryList.add(DBQuery.in("ddrTypeId", ddrTypeIds));
         }
         if (startTime != null) {
             queryList.add(DBQuery.greaterThanEquals("start", startTime));
@@ -240,15 +243,14 @@ public class DDRRecord
         if (endTime != null) {
             queryList.add(DBQuery.lessThanEquals("start", endTime));
         }
-        
-        
+
         Query[] dbQueries = new Query[queryList.size()];
         for (int queryCounter = 0; queryCounter < queryList.size(); queryCounter++) {
             dbQueries[queryCounter] = queryList.get(queryCounter);
         }
         DBCursor<DDRRecord> ddrCursor = collection.find(DBQuery.and(dbQueries));
-        
-        if(sessionKeys != null) {
+
+        if (sessionKeys != null) {
             ddrCursor = ddrCursor.in("sessionKeys", sessionKeys);
         }
         List<DDRRecord> result = ddrCursor.skip(offset).limit(limit).sort(DBSort.desc("start")).toArray();
@@ -257,7 +259,7 @@ public class DDRRecord
             for (DDRRecord ddrRecord : result) {
                 if (status.equals(ddrRecord.getStatus()) ||
                     (ddrRecord.getStatusPerAddress() != null && ddrRecord.getStatusPerAddress().values()
-                                                    .contains(status))) {
+                                                                         .contains(status))) {
                     resultByStatus.add(ddrRecord);
                 }
             }

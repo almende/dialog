@@ -8,6 +8,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -882,8 +883,9 @@ public class TwilioAdapterIT extends TestFramework {
                            null);
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_SERVICE_COST);
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, ddrType.getTypeId(), null,
-                                                             null, null, null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null,
+                                                             Arrays.asList(ddrType.getTypeId()), null, null, null,
+                                                             null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         ddrRecord.setShouldGenerateCosts(true);
@@ -908,8 +910,9 @@ public class TwilioAdapterIT extends TestFramework {
         //invoke an outbound call with acapella tts
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, ddrType.getTypeId(), null,
-                                                             null, null, null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null,
+                                                             Arrays.asList(ddrType.getTypeId()), null, null, null,
+                                                             null, null, null);
         //make sure there is no costs involved, as the ddr price attached is for VoiceRSS tts and not acapela
         assertThat(ddrRecords.size(), Matchers.is(0));
     }

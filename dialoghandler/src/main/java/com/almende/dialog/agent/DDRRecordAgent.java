@@ -105,17 +105,18 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * @return
      * @throws Exception
      */
+    @Override
     public Object getDDRRecords(@Name("adapterId") @Optional String adapterId, @Name("accountId") String accountId,
-        @Name("fromAddress") @Optional String fromAddress, @Name("typeId") @Optional String typeId,
+        @Name("fromAddress") @Optional String fromAddress, @Name("typeId") @Optional Collection<String> typeIds,
         @Name("communicationStatus") @Optional String status, @Name("startTime") @Optional Long startTime,
         @Name("endTime") @Optional Long endTime, @Name("sessionKeys") @Optional Collection<String> sessionKeys,
         @Name("offset") @Optional Integer offset, @Name("limit") @Optional Integer limit,
         @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
         @Name("shouldIncludeServiceCosts") @Optional Boolean shouldIncludeServiceCosts) throws Exception {
 
-        CommunicationStatus communicationStatus = status != null && !status.isEmpty() ? CommunicationStatus
-                                        .fromJson(status) : null;
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterId, accountId, fromAddress, typeId,
+        CommunicationStatus communicationStatus = status != null && !status.isEmpty() ? CommunicationStatus.fromJson(status)
+            : null;
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterId, accountId, fromAddress, typeIds,
                                                              communicationStatus, startTime, endTime, sessionKeys,
                                                              offset, limit);
         if (shouldGenerateCosts != null && shouldGenerateCosts) {

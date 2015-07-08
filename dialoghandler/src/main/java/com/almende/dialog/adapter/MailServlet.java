@@ -38,6 +38,7 @@ import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
@@ -273,6 +274,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                     String errorMessage = String.format("Error in adding TO: receipient: %s (%s). Ignored. Message: %s",
                                                         address, toName, e.toString());
                     if (ddrRecord != null) {
+                        ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                         ddrRecord.addAdditionalInfo(address, errorMessage);
                     }
                 }
@@ -297,6 +299,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                                                                     address, toName, e.toString());
                                 e.printStackTrace();
                                 if (ddrRecord != null) {
+                                    ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                                     ddrRecord.addAdditionalInfo(address, errorMessage);
                                 }
                             }
@@ -325,6 +328,7 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                                                                     address, toName, e.toString());
                                 e.printStackTrace();
                                 if (ddrRecord != null) {
+                                    ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                                     ddrRecord.addAdditionalInfo(address, errorMessage);
                                 }
                             }

@@ -25,6 +25,7 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 
@@ -55,6 +56,7 @@ public class XMPPServlet extends TextServlet implements MessageListener, ChatMan
                     ddrRecord.addAdditionalInfo(to,
                                                 String.format("Sending xmpp chat: %s to: %s might be incomplete. Contact just added in AddressBook",
                                                               message, to));
+                    ddrRecord.addStatusForAddress(to, CommunicationStatus.UNKNOWN);
                     ddrRecord.createOrUpdate();
                 }
             }

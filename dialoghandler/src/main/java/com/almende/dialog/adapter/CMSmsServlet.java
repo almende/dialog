@@ -300,7 +300,7 @@ public class CMSmsServlet extends TextServlet {
                     }
                     else {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
-                        ddrRecord.addAdditionalInfo("ERROR", cmStatus.getDescription());
+                        ddrRecord.addAdditionalInfo(to, "ERROR: " + cmStatus.getDescription());
                     }
                     ddrRecord.createOrUpdate();
                 }

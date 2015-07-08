@@ -237,9 +237,6 @@ public class RouteSmsServlet extends TextServlet {
                         if (ServerUtils.isInUnitTestingEnvironment()) {
                             TestServlet.logForTest(getAdapterType(), routeSMSStatus);
                         }
-                        dialogLog.info(routeSMSStatus.getAdapterConfig(), String
-                                                        .format("POST request with payload %s sent to: %s",
-                                                                callbackPayload, routeSMSStatus.getCallback()), session);
                     }
                     catch (Exception ex) {
                         log.severe("Callback failed. Message: " + ex.getLocalizedMessage());
@@ -247,8 +244,6 @@ public class RouteSmsServlet extends TextServlet {
                 }
                 else {
                     log.info("Reference: " + messageId + ". No delivered callback found.");
-                    dialogLog.info(routeSMSStatus.getAdapterConfig(), "No delivered callback found for reference: " +
-                                                                      messageId, session);
                 }
                 //fetch ddr corresponding to this
                 DDRRecord ddrRecord = DDRRecord.getDDRRecord(routeSMSStatus.getDdrRecordId(),
@@ -256,7 +251,7 @@ public class RouteSmsServlet extends TextServlet {
                 if (ddrRecord != null) {
                     if (isErrorInDelivery(statusCode)) {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
-                        ddrRecord.addAdditionalInfo("ERROR", routeSMSStatus.getDescription());
+                        ddrRecord.addAdditionalInfo(to, "ERROR: " + routeSMSStatus.getDescription());
                     }
                     else if (statusCode.equalsIgnoreCase("DELIVRD")) {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.DELIVERED);

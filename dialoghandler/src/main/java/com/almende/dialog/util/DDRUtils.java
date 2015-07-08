@@ -1118,6 +1118,7 @@ public class DDRUtils
                     DDRRecord ddrRecord = session.getDDRRecord();
                     if (ddrRecord != null) {
                         ddrRecord.addAdditionalInfo(address, "Invalid address");
+                        ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                         ddrRecord.createOrUpdate();
                     }
                 }

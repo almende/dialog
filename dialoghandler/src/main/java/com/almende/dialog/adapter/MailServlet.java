@@ -142,8 +142,10 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             msg.setBody(getText((Part) mp.getBodyPart(0)));
             Session ses = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_EMAIL, msg.getLocalAddress(),
                                                           msg.getAddress());
+            log.info(String.format("Email body: %s with content type: %s", msg.getBody(), mp.getBodyPart(0)
+                                                                                            .getContentType()));
             if (ses != null && ses.getQuestion() != null && ses.getQuestion().getType().equals("closed")) {
-                msg.setBody(getFristLineOfEmail(msg, mp.getBodyPart(0).getContentType()));
+                msg.setBody(getFirstLineOfEmail(msg, mp.getBodyPart(0).getContentType()));
                 log.info("Receive mail trimmed down body: " + msg.getBody());
             }
             else {
@@ -190,22 +192,22 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
 		return null;
 	}
 	
-	protected String getFristLineOfEmail(TextMessage message, String contentType)throws Exception{
-		String[] lines;
-		if(contentType.equals("text/html")){
-			lines = message.getBody().split("<br/?>");
+    protected String getFirstLineOfEmail(TextMessage message, String contentType) throws Exception {
 
-		}else{
-			lines =message.getBody().split("\r?\n"); 
-
-		}
-		for(int i =0; i < lines.length; i++){
-			if(!("".equals(lines[i]))) {
-				return lines[i];
-			}
-		}
-		return "";
-	}
+        String[] lines;
+        if (contentType.equals("text/html")) {
+            lines = message.getBody().split("<br/?>");
+        }
+        else {
+            lines = message.getBody().split("\r?\n");
+        }
+        for (int i = 0; i < lines.length; i++) {
+            if (!("".equals(lines[i]))) {
+                return lines[i];
+            }
+        }
+        return "";
+    }
 
     @Deprecated
     /**

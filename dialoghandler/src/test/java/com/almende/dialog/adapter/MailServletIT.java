@@ -274,6 +274,22 @@ public class MailServletIT extends TestFramework
     }
     
     /**
+     * Check if email body is trimmed off the signature and only the first line
+     * of the email is considered as answer
+     * @throws Exception 
+     */
+    @Test
+    public void mailBodyWithSignatureTrimTest() throws Exception {
+
+        TextMessage textMessage = new TextMessage();
+        textMessage.setBody("yup\r\n\r\nOn Wed, Jul 8, 2015 at 3:19 PM, blabla@bla.com <\r\nblaSender@bla.com> "
+            + "wrote:\r\n\r\n> Are you available today? [ Yup | Nope ]\r\n\r\n\r\n\r\n\r\n-- \r\nKind regards,"
+            + "\r\nBLA BLA\r\nBLA BLA Engineer\r\nBLA-BLA Company");
+        String fristLineOfEmail = new MailServlet().getFirstLineOfEmail(textMessage, "");
+        assertThat(fristLineOfEmail, Matchers.is("yup"));
+    }
+    
+    /**
      * @return
      * @throws Exception
      */

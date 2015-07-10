@@ -1549,7 +1549,8 @@ public class VoiceXMLRESTProxy {
         //assign a default voice mail length if one is not specified
         String voiceMessageLengthProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
                                                                            MediaPropertyKey.VOICE_MESSAGE_LENGTH);
-        voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "15s";
+        //Default broadsoft voicemail length to 5mins if length not found
+        voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "300";
         if (!voiceMessageLengthProperty.endsWith("s")) {
             log.warning("Voicemail length must be end with 's'. E.g. 40s. Found: " + voiceMessageLengthProperty);
             voiceMessageLengthProperty += "s";

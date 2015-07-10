@@ -913,4 +913,35 @@ public class Session{
 
         return Boolean.parseBoolean(getAllExtras().get(IS_TEST_SESSION_KEY));
     }
+    
+    /**
+     * Creates a new session with same of the following values: <br>
+     * 1. {@link Session#accountId} <br>
+     * 2. {@link Session#startUrl} <br>
+     * 3. {@link Session#remoteAddress} <br>
+     * 4. {@link Session#localAddress} <br>
+     * 5. {@link Session#type} <br>
+     * 6. {@link Session#internalSession} <br>
+     * 7. {@link Session#adapterID} <br>
+     * 8. {@link Session#question} <br>
+     * 9. {@link Session#localName} <br>
+     * 10. {@link Session#keyword} <br>
+     * @param session
+     * @return
+     */
+    public static Session cloneSession(Session session, String direction) {
+        
+        Session clonedSession = null;
+        if (session != null) {
+            clonedSession = createSession(session.getAdapterConfig(), session.getRemoteAddress());
+            clonedSession.setAccountId(session.getAccountId());
+            clonedSession.setStartUrl(session.getStartUrl());
+            clonedSession.setQuestion(session.getQuestion());
+            clonedSession.setDirection(direction);
+            clonedSession.setLocalName(session.localName);
+            clonedSession.setKeyword(session.keyword);
+            clonedSession.storeSession();
+        }
+        return clonedSession;
+    }
 }

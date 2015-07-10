@@ -28,7 +28,6 @@ import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.utils.PhoneNumberUtils;
-import com.askfast.commons.utils.TimeUtils;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
@@ -478,24 +477,30 @@ abstract public class TextServlet extends HttpServlet {
         Map<String, Object> extras = msg.getExtras();
         AdapterConfig config;
         Session session = Session.getSessionByInternalKey(getAdapterType() + "|" + localaddress + "|" + address);
+        //create a new session to mark the outbound communication
+        Session newSessionForOutbound = Session.cloneSession(session, "outbound");
+        session.drop();
+
         // If session is null it means the adapter is not found.
-        if (session == null) {
+        if (newSessionForOutbound == null) {
             log.info("No session so retrieving config");
             config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress, keyword);
-
+            // Create new session to store the send in the ddr.
+            newSessionForOutbound = Session.createSession(config, address, true);
+            newSessionForOutbound.setAccountId(config.getOwner());
+            newSessionForOutbound.setKeyword(keyword);
+            newSessionForOutbound.setDirection("outbound");
+            newSessionForOutbound.storeSession();
             count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress,
                                                getSenderName(null, config, null, null), address, toName, extras,
-                                               config, config.getOwner(), null);
-            // Create new session to store the send in the ddr.
-            session = Session.createSession(config, address, true);
-            session.setAccountId(config.getOwner());
-            session.setKeyword(keyword);
-            session.setDirection("inbound");
-            session.storeSession();
+                                               config, config.getOwner(), newSessionForOutbound);
+            //drop the session
+            newSessionForOutbound.drop();
             return count;
         }
-        config = session.getAdapterConfig();
-        String fromName = session.getLocalName() != null && !session.getLocalName().isEmpty() ? session.getLocalName()
+        config = newSessionForOutbound.getAdapterConfig();
+        String fromName = newSessionForOutbound.getLocalName() != null &&
+            !newSessionForOutbound.getLocalName().isEmpty() ? newSessionForOutbound.getLocalName()
             : getSenderName(null, config, null, null);
         // TODO: Remove this check, this is now to support backward
         // compatibility (write patch)
@@ -505,27 +510,29 @@ abstract public class TextServlet extends HttpServlet {
             if (config == null) {
                 config = AdapterConfig.findAdapterConfig(getAdapterType(), localaddress);
                 try {
-                    fromName = session.getLocalName() != null && !session.getLocalName().isEmpty() ? session.getLocalName()
-                        : getSenderName(null, config, null, session);
+                    fromName = newSessionForOutbound.getLocalName() != null &&
+                        !newSessionForOutbound.getLocalName().isEmpty() ? newSessionForOutbound.getLocalName()
+                        : getSenderName(null, config, null, newSessionForOutbound);
                     count = sendMessageAndAttachCharge(getNoConfigMessage(), subject, localaddress, fromName, address,
-                                                       toName, extras, config, session.getAccountId(), session);
+                                                       toName, extras, config, newSessionForOutbound.getAccountId(),
+                                                       newSessionForOutbound);
                 }
                 catch (Exception ex) {
                     log.severe(ex.getLocalizedMessage());
                 }
                 return count;
             }
-            session.setAdapterID(config.getConfigId());
-            session.storeSession();
+            newSessionForOutbound.setAdapterID(config.getConfigId());
+            newSessionForOutbound.storeSession();
         }
 
         //check if the keyword matches that of the adapter keyword
-        if ("inbound".equalsIgnoreCase(session.getDirection()) && config.getKeyword() != null &&
+        if ("inbound".equalsIgnoreCase(newSessionForOutbound.getDirection()) && config.getKeyword() != null &&
             config.getKeyword().equalsIgnoreCase(keyword)) {
             //perform a case insensitive replacement
             body = body.replaceFirst("(?i)" + keyword, "").trim();
         }
-        String preferred_language = session.getLanguage();
+        String preferred_language = newSessionForOutbound.getLanguage();
 
         EscapeInputCommand escapeInput = new EscapeInputCommand();
         escapeInput.skip = false;
@@ -534,10 +541,11 @@ abstract public class TextServlet extends HttpServlet {
         escapeInput.reply = "I'm sorry, I don't know what to say. Please retry talking with me at a later time.";
 
         if (!escapeInput.skip && escapeInput.body.toLowerCase().trim().charAt(0) == '/') {
-            count = processEscapeInputCommand(msg, fromName, config, session.getAccountId(), escapeInput, session);
+            count = processEscapeInputCommand(msg, fromName, config, newSessionForOutbound.getAccountId(), escapeInput,
+                                              newSessionForOutbound);
             log.info(escapeInput.toString());
         }
-        Question question = session.getQuestion();
+        Question question = newSessionForOutbound.getQuestion();
         if (!escapeInput.skip) {
             if (escapeInput.preferred_language == null) {
                 escapeInput.preferred_language = "nl";
@@ -550,13 +558,14 @@ abstract public class TextServlet extends HttpServlet {
             if (question == null) {
                 if (config.getDialog() != null && "".equals(config.getDialog().getUrl())) {
                     question = Question.fromURL(this.host + DEMODIALOG, address, localaddress,
-                                                session.getDdrRecordId(), session, extraParams);
+                                                newSessionForOutbound.getDdrRecordId(), newSessionForOutbound,
+                                                extraParams);
                 }
                 else {
-                    question = Question.fromURL(config.getURLForInboundScenario(session), address, localaddress,
-                                                session.getDdrRecordId(), session, extraParams);
+                    question = Question.fromURL(config.getURLForInboundScenario(newSessionForOutbound), address,
+                                                localaddress, newSessionForOutbound.getDdrRecordId(),
+                                                newSessionForOutbound, extraParams);
                 }
-                session.setDirection("inbound");
                 start = true;
             }
 
@@ -566,37 +575,38 @@ abstract public class TextServlet extends HttpServlet {
                 // comment or referral anyway.
                 if (!(start && (question.getType().equalsIgnoreCase("comment") || question.getType()
                                                                                           .equalsIgnoreCase("referral")))) {
-                    question = question.answer(address, null, escapeInput.body, session);
+                    question = question.answer(address, null, escapeInput.body, newSessionForOutbound);
                 }
-                Return replystr = formQuestion(question, config.getConfigId(), address, null, session);
+                Return replystr = formQuestion(question, config.getConfigId(), address, null, newSessionForOutbound);
                 // fix for bug: #15 https://github.com/almende/dialog/issues/15
                 escapeInput.reply = URLDecoder.decode(replystr.reply, "UTF-8");
                 question = replystr.question;
             }
             else {
                 log.severe(String.format("Question is null. Couldnt fetch Question from session, nor initialAgentURL: %s nor from demoDialog",
-                                         config.getURLForInboundScenario(session), this.host + DEMODIALOG));
+                                         config.getURLForInboundScenario(newSessionForOutbound), this.host + DEMODIALOG));
             }
         }
 
         try {
-            session.setQuestion(question);
-            session.setDirection("outbound");
-            session.storeSession();
+            newSessionForOutbound.setQuestion(question);
+            newSessionForOutbound.storeSession();
             count = sendMessageAndAttachCharge(escapeInput.reply, subject, localaddress, fromName, address, toName,
-                                               extras, config, session.getAccountId(), session);
+                                               extras, config, newSessionForOutbound.getAccountId(),
+                                               newSessionForOutbound);
             //flush the session is no more question is there
             if (question == null) {
                 //dont flush the session yet if its an sms. the DLR callback needs a session.
                 //instead just mark the session that it can be killed 
                 if (AdapterAgent.ADAPTER_TYPE_SMS.equalsIgnoreCase(config.getAdapterType())) {
                     //refetch session
-                    session = Session.getSessionByInternalKey(Session.getInternalSessionKey(config, address));
-                    session.setKilled(true);
-                    session.storeSession();
+                    newSessionForOutbound = Session.getSessionByInternalKey(Session.getInternalSessionKey(config,
+                                                                                                          address));
+                    newSessionForOutbound.setKilled(true);
+                    newSessionForOutbound.storeSession();
                 }
                 else {
-                    session.drop();
+                    newSessionForOutbound.drop();
                 }
             }
         }
@@ -811,6 +821,8 @@ abstract public class TextServlet extends HttpServlet {
             Session session = Session.getSessionByInternalKey(getAdapterType(), receiveMessage.getLocalAddress(),
                                                               receiveMessage.getAddress());
             AdapterConfig config = null;
+            Session newInboundSession = null;
+            
             //update the current timestamp
             if (session != null) {
                 config = session.getAdapterConfig();
@@ -819,40 +831,41 @@ abstract public class TextServlet extends HttpServlet {
                 if (config != null && !session.isExistingSession()) {
                     session.setAccountId(config.getOwner());
                 }
-                session.setCreationTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
-                //update the direction of the session
-                session.setDirection("inbound");
-                session.storeSession();
+                //create a new session to mark the start of a new inbound communication
+                newInboundSession = Session.cloneSession(session, "inbound");
+                //drop the old session
+                session.drop();
             }
             //attach charges for incoming
             config = config != null ? config : AdapterConfig.findAdapterConfig(getAdapterType(),
                                                                                receiveMessage.getLocalAddress());
+            String accountId = newInboundSession != null ? newInboundSession.getAccountId() : null;
             DDRRecord ddrRecord = null;
             try {
-                ddrRecord = createDDRForIncoming(config, session.getAccountId(), receiveMessage.getAddress(),
-                                                 receiveMessage.getBody(), session);
+                ddrRecord = createDDRForIncoming(config, accountId, receiveMessage.getAddress(),
+                                                 receiveMessage.getBody(), newInboundSession);
             }
             catch (Exception e) {
                 e.printStackTrace();
                 log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
             }
 
-            if (session != null) {
-                receiveMessage.getExtras().put(Session.SESSION_KEY, session.getKey());
+            if (newInboundSession != null) {
+                receiveMessage.getExtras().put(Session.SESSION_KEY, newInboundSession.getKey());
                 if (ddrRecord != null) {
-                    ddrRecord.addAdditionalInfo(Session.SESSION_KEY, session.getKey());
+                    ddrRecord.addAdditionalInfo(Session.SESSION_KEY, newInboundSession.getKey());
                     receiveMessage.getExtras().put(DDRRecord.DDR_RECORD_KEY, ddrRecord.getId());
                     ddrRecord.createOrUpdate();
 
                     //store the ddrRecord in the session
-                    session.setDdrRecordId(ddrRecord.getId());
-                    session.storeSession();
+                    newInboundSession.setDdrRecordId(ddrRecord.getId());
+                    newInboundSession.storeSession();
                 }
             }
             //push the cost to hte queue
             Double totalCost = DDRUtils.calculateDDRCost(ddrRecord, true);
-            if (session != null) {
-                DDRUtils.publishDDREntryToQueue(session.getAccountId(), totalCost);
+            if (newInboundSession != null) {
+                DDRUtils.publishDDREntryToQueue(newInboundSession.getAccountId(), totalCost);
             }
             //attach cost to ddr is prepaid type or trial account
             if (ddrRecord != null && !AccountType.POST_PAID.equals(ddrRecord.getAccountType())) {

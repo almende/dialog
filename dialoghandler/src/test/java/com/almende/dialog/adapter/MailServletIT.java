@@ -159,10 +159,15 @@ public class MailServletIT extends TestFramework
 
         SendAppointmentNewSessionMessageTest();
         
+        //validate that new sessions are created for each transactions
+        Session firstSession = Session.getAllSessions().iterator().next();
+        
         //accept the invitation
         mailAppointmentInteraction("Yup");
         List<Session> allSessions = Session.getAllSessions();
+        //make sure a new session is created and old one is discarded. 
         assertThat(allSessions.size(), Matchers.is(1));
+        assertThat(allSessions.iterator().next().getKey(), Matchers.not(firstSession.getKey()));
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
                                                              null, null);
         assertThat(ddrRecords.size(), Matchers.is(3));

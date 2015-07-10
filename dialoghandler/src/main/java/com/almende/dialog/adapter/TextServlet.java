@@ -370,7 +370,7 @@ abstract public class TextServlet extends HttpServlet {
                 else {
                     result.put(address, "Invalid address");
                     sessionKeyMap.remove(formattedAddress);
-                    session.drop();
+                    session.dropIfRemoteAddressMatches(formattedAddress);
                     log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
                 }
             }

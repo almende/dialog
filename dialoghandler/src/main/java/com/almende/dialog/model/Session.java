@@ -153,6 +153,14 @@ public class Session{
             datastore.delete(session);
         }
     }
+    
+    @JsonIgnore
+    public void dropIfRemoteAddressMatches(String remoteAddress) {
+
+        if (remoteAddress != null && remoteAddress.equals(this.remoteAddress)) {
+            drop();
+        }
+    }
 	
     public static void drop( String key )
     {

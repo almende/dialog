@@ -187,7 +187,7 @@ public class VoiceXMLRESTProxy {
             for (String address : addressNameMap.keySet()) {
 
                 String formattedAddress = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
-                if (formattedAddress != null) {
+                if (formattedAddress != null && PhoneNumberUtils.isValidPhoneNumber(formattedAddress)) {
 
                     //ignore the address for which the session is already created.
                     if (!formattedAddress.equals(session.getRemoteAddress())) {
@@ -203,7 +203,7 @@ public class VoiceXMLRESTProxy {
                             }
                             else {
                                 //recreate a fresh session
-                                session.drop();
+                                session.dropIfRemoteAddressMatches(formattedAddress);
                                 session = Session.createSession(config, formattedAddress);
                             }
                         }
@@ -221,9 +221,9 @@ public class VoiceXMLRESTProxy {
                     session.setQuestion(question);
                     session.setAccountId(accountId);
                     session.addExtras(DialogAgent.BEARER_TOKEN_KEY, bearerToken);
-                    session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId(): null);
+                    session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
                     session.storeSession();
-                    
+
                     String extSession = "";
                     Broadsoft bs = new Broadsoft(config);
                     String subscriptiion = bs.startSubscription();
@@ -244,14 +244,13 @@ public class VoiceXMLRESTProxy {
                     resultMap.put(formattedAddress, session.getKey());
                 }
                 else {
-                    resultMap.put(address, "Invalid address");
+                    resultMap.put(address, String.format(DialogAgent.INVALID_ADDRESS_MESSAGE, address));
                     if(ddrRecord != null) {
                         ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                         ddrRecord.createOrUpdate();
                     }
-                    resultMap.remove(formattedAddress);
-                    session.drop();
-                    log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
+                    sessionMap.remove(formattedAddress);
+                    session.dropIfRemoteAddressMatches(formattedAddress);
                 }
             }
         }

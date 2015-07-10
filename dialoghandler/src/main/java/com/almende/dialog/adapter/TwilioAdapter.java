@@ -113,8 +113,8 @@ public class TwilioAdapter {
             loadAddress = PhoneNumberUtils.formatNumber(loadAddress, null);
         }
         //create a session for the first remote address
-        String firstRemoteAddress = loadAddress != null ? new String(loadAddress) : new String(addressNameMap.keySet()
-                                        .iterator().next());
+        String firstRemoteAddress = loadAddress != null && !loadAddress.trim().isEmpty() ? new String(loadAddress)
+            : new String(addressNameMap.keySet().iterator().next());
         firstRemoteAddress = PhoneNumberUtils.formatNumber(firstRemoteAddress, null);
         Session session = Session.getOrCreateSession(config, firstRemoteAddress);
         session.setAccountId(accountId);
@@ -144,7 +144,7 @@ public class TwilioAdapter {
         if (question != null) {
             for (String address : addressNameMap.keySet()) {
                 String formattedAddress = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
-                if (formattedAddress != null) {
+                if (formattedAddress != null && PhoneNumberUtils.isValidPhoneNumber(formattedAddress)) {
 
                     //ignore the address for which the session is already created.
                     if (!formattedAddress.equals(session.getRemoteAddress())) {
@@ -165,6 +165,11 @@ public class TwilioAdapter {
                     session.addExtras(AdapterConfig.ACCESS_TOKEN_KEY, config.getAccessToken());
                     session.addExtras(AdapterConfig.ACCESS_TOKEN_SECRET_KEY, config.getAccessTokenSecret());
                     session.storeSession();
+                    
+                    if(ddrRecord != null) {
+                        ddrRecord.addStatusForAddress(formattedAddress, CommunicationStatus.SENT);
+                        ddrRecord.createOrUpdate();
+                    }
                     
                     String extSession = "";
                     if (!ServerUtils.isInUnitTestingEnvironment()) {
@@ -194,14 +199,14 @@ public class TwilioAdapter {
                     result.put(formattedAddress, session.getKey());
                 }
                 else {
-                    result.put(address, "Invalid address");
+                    result.put(address, String.format(DialogAgent.INVALID_ADDRESS_MESSAGE, address));
                     log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
                     if(ddrRecord != null) {
                         ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                         ddrRecord.createOrUpdate();
                     }
                     sessionMap.remove(formattedAddress);
-                    session.drop();
+                    session.dropIfRemoteAddressMatches(formattedAddress);
                 }
             }
         }

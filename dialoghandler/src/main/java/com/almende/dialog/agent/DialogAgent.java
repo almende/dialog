@@ -64,6 +64,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     public static final String BEARER_TOKEN_KEY = "BEARER_TOKEN";
     private static final String DEFAULT_TTS_ACCOUNT_ID_KEY = "DEFAULT_TTS_ACCOUNTID";
     private static final String NO_QUESTION_FOUND_MESSAGE = "Question not fetched from: %s. Request for outbound call rejected ";
+    public static final String INVALID_ADDRESS_MESSAGE = "Address %s is invalid";
     
     /**
      * Used by the Tests to store any default communication providers. Usually 
@@ -884,6 +885,27 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         catch (Exception e) {
             return new RestResponse(Settings.DIALOG_HANDLER_VERSION, Status.BAD_REQUEST.getReasonPhrase(),
                                     Status.BAD_REQUEST.getStatusCode(), e.getLocalizedMessage());
+        }
+        //validate the result. If any call is triggered succesfully with invalid address return code: 201
+        //if all are successful return 200
+        if (result != null) {
+            boolean isInvalidAddressFound = false;
+            boolean isValidAddressFound = false;
+            for (String address : result.keySet()) {
+                
+                String sessionMessage = result.get(address);
+                if(sessionMessage.equals(String.format(INVALID_ADDRESS_MESSAGE, address))) {
+                    isInvalidAddressFound = true;
+                }
+                else {
+                    isValidAddressFound = true;
+                }
+            }
+            if(isInvalidAddressFound) {
+                //if atleast one valid address is found, return 201 else return 400
+                Status status = isValidAddressFound ? Status.CREATED : Status.BAD_REQUEST;
+                return new RestResponse(getVersion(), result, status.getStatusCode(), status.getReasonPhrase());
+            }
         }
         return RestResponse.ok(Settings.DIALOG_HANDLER_VERSION, result);
     }

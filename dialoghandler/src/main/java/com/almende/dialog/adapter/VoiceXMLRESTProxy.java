@@ -300,7 +300,7 @@ public class VoiceXMLRESTProxy {
     @Produces("application/srgs+xml")
     public Response getDTMF2Hash(@QueryParam("minlength") String minLength, @QueryParam("maxlength") String maxLength) {
 
-        minLength = (minLength != null && !minLength.isEmpty()) ? minLength : "1";
+        minLength = (minLength != null && !minLength.isEmpty()) ? minLength : "0";
         maxLength = (maxLength != null && !maxLength.isEmpty()) ? maxLength : "";
         String repeat = minLength.equals(maxLength) ? minLength : (minLength + "-" + maxLength);
         String result = "<?xml version=\"1.0\"?> " +

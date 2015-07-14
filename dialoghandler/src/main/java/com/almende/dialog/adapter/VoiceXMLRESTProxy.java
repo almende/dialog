@@ -223,6 +223,11 @@ public class VoiceXMLRESTProxy {
                     session.addExtras(DialogAgent.BEARER_TOKEN_KEY, bearerToken);
                     session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
                     session.storeSession();
+                    
+                    if(ddrRecord != null) {
+                        ddrRecord.addStatusForAddress(formattedAddress, CommunicationStatus.SENT);
+                        ddrRecord.createOrUpdate();
+                    }
 
                     String extSession = "";
                     Broadsoft bs = new Broadsoft(config);

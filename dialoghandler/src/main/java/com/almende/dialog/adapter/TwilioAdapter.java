@@ -167,6 +167,7 @@ public class TwilioAdapter {
                     session.storeSession();
                     
                     if(ddrRecord != null) {
+                        ddrRecord.addToAddress(formattedAddress);
                         ddrRecord.addStatusForAddress(formattedAddress, CommunicationStatus.SENT);
                         ddrRecord.createOrUpdate();
                     }
@@ -712,7 +713,7 @@ public class TwilioAdapter {
             call = client.getAccount().getCall(callSid);
         }
 
-        if (session == null && callSid!=null) {
+        if (session == null && callSid != null) {
             remoteID = call.getTo();
             session = Session.getSessionByExternalKey(callSid);
         } 

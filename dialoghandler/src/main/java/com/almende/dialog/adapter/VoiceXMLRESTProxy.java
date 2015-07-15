@@ -225,6 +225,7 @@ public class VoiceXMLRESTProxy {
                     session.storeSession();
                     
                     if(ddrRecord != null) {
+                        ddrRecord.addToAddress(formattedAddress);
                         ddrRecord.addStatusForAddress(formattedAddress, CommunicationStatus.SENT);
                         ddrRecord.createOrUpdate();
                     }

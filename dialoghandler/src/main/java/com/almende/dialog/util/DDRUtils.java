@@ -235,14 +235,11 @@ public class DDRUtils
             if (ddrRecord.getStart() != null) {
                 duration = (releaseTime != null ? releaseTime : TimeUtils.getServerCurrentTimeInMillis()) -
                            ddrRecord.getStart();
-                //add default serialized info to begin with
-                String toAddress = ddrRecord.getToAddressString();
-                if (ddrRecord.getToAddress() != null && !ddrRecord.getToAddress().isEmpty()) {
-                    toAddress = ddrRecord.getToAddress().keySet().iterator().next();
-                }
+                String address = "inbound".equals(session.getDirection()) ? session.getLocalAddress()
+                    : session.getRemoteAddress();
                 //if there is an address found, add status
-                if (toAddress != null) {
-                    ddrRecord.addStatusForAddress(toAddress, CommunicationStatus.FINISHED);
+                if (address != null) {
+                    ddrRecord.addStatusForAddress(address, CommunicationStatus.FINISHED);
                 }
             }
             else {

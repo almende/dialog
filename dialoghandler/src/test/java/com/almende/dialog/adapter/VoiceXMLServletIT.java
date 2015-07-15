@@ -231,6 +231,25 @@ public class VoiceXMLServletIT extends TestFramework {
         adapterConfig.setXsiSubscription(UUID.randomUUID().toString());
         adapterConfig.update();
 
+        String activeXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
+            "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" +
+            localFullAddressBroadsoft +
+            "</subscriberId>" +
+            "<applicationId>cc</applicationId><subscriptionId>" +
+            adapterConfig.getXsiSubscription() +
+            "</subscriptionId><eventData xsi1:type=\"xsi:CallEvent\" xmlns:xsi=" +
+            "\"http://schema.broadsoft.com/xsi-events\"><eventName>CallSessionEvent</eventName><call><callId>callhalf-12914560105:1</callId><extTrackingId>" +
+            "10669651:1</extTrackingId><personality>Originator</personality><callState>Active</callState><remoteParty><address>tel:" +
+            remoteAddressVoice +
+            "</address><callType>Network</callType></remoteParty><startTime>1401809063943</startTime>" +
+            "<answerTime>1401809070192</answerTime><releaseTime>1401809370000</releaseTime></call></eventData></Event>";
+        voiceXMLRESTProxy.receiveCCMessage(activeXML);
+
+        //check that the ddr addres status is switched to RECEIVED
+        DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+        assertEquals(CommunicationStatus.RECEIVED,
+                     ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+        
         String hangupXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
             "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" +
             localFullAddressBroadsoft +
@@ -247,12 +266,15 @@ public class VoiceXMLServletIT extends TestFramework {
 
         voiceXMLRESTProxy.receiveCCMessage(hangupXML);
         //fetch the ddrRecord again
-        DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
+        ddrRecord = ddrRecord.reload();
         assertThat(ddrRecord, Matchers.notNullValue());
         ddrRecord.setShouldGenerateCosts(true);
         ddrRecord.setShouldIncludeServiceCosts(true);
         assertThat(ddrRecord.getDuration(), Matchers.greaterThan(0L));
         assertThat(ddrRecord.getStart(), Matchers.is(1401809070192L));
+        //check that the ddr addres status is switched to FINISHED
+        assertEquals(CommunicationStatus.FINISHED,
+                     ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
     }
 
     /**
@@ -270,9 +292,6 @@ public class VoiceXMLServletIT extends TestFramework {
         //fetch all the ddrRecords
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
                                                              null, null);
-        //        List<Log> allLogs = Logger.findAllLogs();
-        //        assertThat(allLogs.size(), Matchers.not(0));
-
         //make sure that all the logs belong to atleast one ddrRecord
         //        int logsCount = 0;
         long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
@@ -280,7 +299,6 @@ public class VoiceXMLServletIT extends TestFramework {
         for (DDRRecord ddrRecord : ddrRecords) {
             List<Log> logsForDDRRecord = Logger.find(TEST_PUBLIC_KEY, ddrRecord.getId(), null, null, null, null, null,
                                                      null);
-            //            logsCount += logsForDDRRecord.size();
             for (Log log : logsForDDRRecord) {
                 assertThat(log.getAccountId(), Matchers.is(ddrRecord.getAccountId()));
                 assertThat(log.getAccountId(), Matchers.notNullValue());
@@ -292,8 +310,6 @@ public class VoiceXMLServletIT extends TestFramework {
         assertThat(isDDRLogFound, Matchers.is(false));
         long endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
         log.info(String.format("Fetch by ddrRecord took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
-        //        assertThat(logsCount, Matchers.is(allLogs.size()));
-        //        assertThat(logsCount, Matchers.not(0));
 
         //test the difference in timings to fetch all
         startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
@@ -317,9 +333,6 @@ public class VoiceXMLServletIT extends TestFramework {
         //fetch all the ddrRecords
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
                                                              null, null);
-        //        List<Log> allLogs = Logger.findAllLogs();
-        //        assertThat(allLogs.size(), Matchers.not(0));
-
         //make sure that all the logs belong to atleast one ddrRecord
         //        int logsCount = 0;
         long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
@@ -327,7 +340,6 @@ public class VoiceXMLServletIT extends TestFramework {
         for (DDRRecord ddrRecord : ddrRecords) {
             List<Log> logsForDDRRecord = Logger.find(TEST_PUBLIC_KEY, ddrRecord.getId(), null, null, null, null, null,
                                                      null);
-            //            logsCount += logsForDDRRecord.size();
             for (Log log : logsForDDRRecord) {
                 assertThat(log.getAccountId(), Matchers.is(ddrRecord.getAccountId()));
                 assertThat(log.getAccountId(), Matchers.notNullValue());
@@ -339,8 +351,6 @@ public class VoiceXMLServletIT extends TestFramework {
         assertThat(isDDRLogFound, Matchers.is(false));
         long endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
         log.info(String.format("Fetch by ddrRecord took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
-        //        assertThat(logsCount, Matchers.is(allLogs.size()));
-        //        assertThat(logsCount, Matchers.not(0));
 
         //test the difference in timings to fetch all
         startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
@@ -1113,6 +1123,7 @@ public class VoiceXMLServletIT extends TestFramework {
         assertEquals(CommunicationStatus.SENT,
                      ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
         assertEquals(2, ddrRecords.iterator().next().getStatusPerAddress().size());
+        
     }
     
     /**

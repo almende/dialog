@@ -42,6 +42,7 @@ import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.sim.TwilioSimulator;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
 import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
@@ -159,10 +160,12 @@ public class TwilioAdapterIT extends TestFramework {
 
         //answer the preconnect with the ignore reply
         Response answer = twilioAdapter.answer(null, "2", adapterConfig.getMyAddress(), remoteAddressVoice,
-                                               "outbound-dial", null, null, null, testCallId1, null);
+                                               "outbound-api", null, null, null, testCallId1, null);
         assertEquals("<Response><Say language=\"nl-nl\">You chose 2</Say><Hangup></Hangup></Response>".toLowerCase(),
                      answer.getEntity().toString().toLowerCase());
-
+        twilioAdapter.receiveCCMessage(testCallId1, adapterConfig.getMyAddress(), remoteAddressVoice, "outbound-api",
+                                       "completed");
+        
         //mock new redirect call to the second number
         answer = twilioAdapter.answer(null, null, adapterConfig.getMyAddress(), inboundAddress, "inbound", null, null,
                                       null, testCallId, null);
@@ -196,23 +199,34 @@ public class TwilioAdapterIT extends TestFramework {
                                           answer.getEntity().toString());
         ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null);
         Assert.assertThat(ddrRecords.size(), Matchers.is(3));
+        int statusCount = 0;
         for (DDRRecord ddrRecord : ddrRecords) {
 
             Assert.assertThat(ddrRecord, Matchers.notNullValue());
-            if(DDRTypeCategory.INCOMING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
+            if (DDRTypeCategory.INCOMING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
 
                 assertThat(ddrRecord.getToAddress().keySet().iterator().next(),
                            Matchers.is(adapterConfig.getFormattedMyAddress()));
                 assertTrue(ddrRecord.getFromAddress().equals(PhoneNumberUtils.formatNumber(inboundAddress, null)));
+                assertEquals(CommunicationStatus.RECEIVED,
+                             ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(localAddressBroadsoft, null)));
             }
-            else if(DDRTypeCategory.OUTGOING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
+            else if (DDRTypeCategory.OUTGOING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
                 assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getFormattedMyAddress()));
-                assertTrue(ddrRecord.getToAddress().keySet()
-                                    .contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)) ||
-                    ddrRecord.getToAddress().keySet()
-                             .contains(PhoneNumberUtils.formatNumber(secondRemoteAddress, null)));
+                if (ddrRecord.getToAddress().keySet().contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null))) {
+                    assertEquals(CommunicationStatus.MISSED,
+                                 ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+                    statusCount++;
+                }
+                else if (ddrRecord.getToAddress().keySet()
+                                  .contains(PhoneNumberUtils.formatNumber(secondRemoteAddress, null))) {
+                    assertEquals(CommunicationStatus.RECEIVED,
+                                 ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(secondRemoteAddress, null)));
+                    statusCount++;
+                }
             }
         }
+        assertEquals(2, statusCount);
     }
 
     @Test
@@ -1055,6 +1069,31 @@ public class TwilioAdapterIT extends TestFramework {
         assertEquals(CommunicationStatus.ERROR,
                      ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber("0611223", null)));
         assertEquals(CommunicationStatus.SENT,
+                     ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+        assertEquals(2, ddrRecords.iterator().next().getStatusPerAddress().size());
+        
+        //finalize the call. fetch the callSid from the session
+        Session sessionForValidNumber = Session.getSessionByInternalKey(adapterConfig.getAdapterType(),
+                                                                        adapterConfig.getMyAddress(),
+                                                                        PhoneNumberUtils.formatNumber(remoteAddressVoice,
+                                                                                                      null));
+        //update with some answer timestamp
+        sessionForValidNumber.setAnswerTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
+        sessionForValidNumber.storeSession();
+        
+        assertNotNull(sessionForValidNumber);
+        new TwilioAdapter().receiveCCMessage(sessionForValidNumber.getExternalSession(),
+                                             sessionForValidNumber.getLocalAddress(),
+                                             sessionForValidNumber.getRemoteAddress(),
+                                             sessionForValidNumber.getDirection(), "completed");
+        //validate the ddrRecords again
+        ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                             null, null);
+        assertEquals(1, ddrRecords.size());
+        ddrRecord = ddrRecords.iterator().next();
+        assertEquals(CommunicationStatus.ERROR,
+                     ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber("0611223", null)));
+        assertEquals(CommunicationStatus.FINISHED,
                      ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
         assertEquals(2, ddrRecords.iterator().next().getStatusPerAddress().size());
     }

@@ -408,7 +408,6 @@ public class DDRRecordAgentIT extends TestFramework {
      * 
      * @throws Exception
      */
-    @SuppressWarnings("deprecation")
     @Test
     @Ignore
     public void outgoingEMAILCallAddsADDRRecordTest() throws Exception {
@@ -433,7 +432,7 @@ public class DDRRecordAgentIT extends TestFramework {
                 assertThat(ddrCost, Matchers.is(0.5));
                 assertThat(ddrRecord.getFromAddress(), Matchers.is(MailServlet.DEFAULT_SENDER_EMAIL));
                 assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
-                assertThat(ddrRecord.getStatus(), Matchers.is(CommunicationStatus.SENT));
+                assertThat(ddrRecord.getStatusForAddress(remoteAddressEmail), Matchers.is(CommunicationStatus.SENT));
                 assertThat(ddrRecord.getAdditionalInfo().get(Session.SESSION_KEY), Matchers.notNullValue());
                 assertCount++;
             }
@@ -453,7 +452,6 @@ public class DDRRecordAgentIT extends TestFramework {
      * 
      * @throws Exception
      */
-    @SuppressWarnings("deprecation")
     @Test
     public void outgoingCallPickupAndImmediateHangupTest() throws Exception {
 
@@ -511,7 +509,8 @@ public class DDRRecordAgentIT extends TestFramework {
                 assertThat(ddrRecord.getFromAddress(),
                            Matchers.is(PhoneNumberUtils.formatNumber(localAddressBroadsoft, null)));
                 assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
-                assertThat(ddrRecord.getStatus(), Matchers.is(CommunicationStatus.SENT));
+                assertThat(ddrRecord.getStatusPerAddress().values().iterator().next(),
+                           Matchers.is(CommunicationStatus.SENT));
             }
             else if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_ADAPTER_PRICE_KEY))) {
                 assertThat(ddrCost, Matchers.is(10.0));

@@ -27,6 +27,7 @@ import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -37,6 +38,7 @@ import com.mongodb.DB;
  * @author Shravan
  */
 @JsonPropertyOrder({"totalCost"})
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DDRRecord
 {
     protected static final Logger log = Logger.getLogger(DDRRecord.class.getName());
@@ -92,7 +94,6 @@ public class DDRRecord
     Long start;
     Long duration;
     Collection<String> sessionKeys;
-    CommunicationStatus status;
     Map<String, CommunicationStatus> statusPerAddress;
     
     @JsonIgnore
@@ -160,6 +161,7 @@ public class DDRRecord
             this.start = this.start != null ? this.start : TimeUtils.getServerCurrentTimeInMillis();
             collection.insert(this);
         }
+        log.info("ddr record saved: " + ServerUtils.serializeWithoutException(this));
         return this;
     }
     
@@ -263,9 +265,9 @@ public class DDRRecord
         if (result != null && !result.isEmpty() && status != null) {
             ArrayList<DDRRecord> resultByStatus = new ArrayList<DDRRecord>();
             for (DDRRecord ddrRecord : result) {
-                if (status.equals(ddrRecord.getStatus()) ||
-                    (ddrRecord.getStatusPerAddress() != null && ddrRecord.getStatusPerAddress().values()
-                                                                         .contains(status))) {
+                if (ddrRecord.getStatusPerAddress() != null &&
+                    ddrRecord.getStatusPerAddress().values().contains(status)) {
+                    
                     resultByStatus.add(ddrRecord);
                 }
             }
@@ -451,32 +453,6 @@ public class DDRRecord
     public void setDuration( Long duration )
     {
         this.duration = duration;
-    }
-    /**
-     * @deprecated
-     * kept for backward compatibility. Use {@link DDRRecord#getStatusForAddress(String)} to get status
-     * for an address or {@link DDRRecord#getStatusPerAddress()} for fetching all statuses
-     * @return
-     */
-    public CommunicationStatus getStatus()
-    {
-        //return the only statusPerAddress if its there and this is null
-        if(status == null && statusPerAddress != null && statusPerAddress.size() == 1) {
-            return statusPerAddress.values().iterator().next();
-        }
-        return status;
-    }
-    
-    /**
-     * @deprecated
-     * kept for backward compatibility. Use {@link DDRRecord#setStatusPerAddress(Map)} to set status
-     * for all addresses or {@link DDRRecord#addStatusForAddress(String, CommunicationStatus)} for 
-     * a single addres
-     * @return
-     */
-    public void setStatus( CommunicationStatus status )
-    {
-        this.status = status;
     }
 
     /**
@@ -680,23 +656,6 @@ public class DDRRecord
     public Map<String, CommunicationStatus> getStatusPerAddress() {
 
         statusPerAddress = statusPerAddress != null ? statusPerAddress : new HashMap<String, CommunicationStatus>();
-        //if status is there but statusPerAddress is empty, use status
-        if (status != null && (statusPerAddress == null || statusPerAddress.isEmpty())) {
-
-            try {
-                Map<String, String> toAddresses = ServerUtils.deserialize(toAddressString, false,
-                                                                          new TypeReference<Map<String, String>>() {
-                                                                          });
-                if (toAddresses != null) {
-                    for (String address : toAddresses.keySet()) {
-                        statusPerAddress.put(address, status);
-                    }
-                }
-            }
-            catch (Exception e) {
-                log.severe(String.format("ToAddress map couldnt be deserialized: %s", toAddressString));
-            }
-        }
         //make sure each of the key is dot replaced
         if (!statusPerAddress.isEmpty()) {
             HashMap<String, CommunicationStatus> statusPerAddressCopy = new HashMap<String, CommunicationStatus>();

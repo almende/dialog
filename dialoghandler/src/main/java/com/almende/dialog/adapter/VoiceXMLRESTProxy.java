@@ -764,9 +764,19 @@ public class VoiceXMLRESTProxy {
         //for direction = transfer (redirect event), json should not be null        
         //make sure that the answered call is not triggered twice
         if (session != null && session.getQuestion() != null && !isEventTriggered("answered", session, true)) {
+            
+            //update the communication status to received status
+            DDRRecord ddrRecord = session.getDDRRecord();
+            if (ddrRecord != null) {
+
+                String address = "inbound".equals(session.getDirection()) ? session.getLocalAddress()
+                    : session.getRemoteAddress();
+                ddrRecord.addStatusForAddress(address, CommunicationStatus.RECEIVED);
+                ddrRecord.createOrUpdate();
+            }
+            
             String responder = session.getRemoteAddress();
             String referredCalledId = session.getAllExtras().get("referredCalledId");
-            //HashMap<String, Object> timeMap = getTimeMap(startTime, answerTime, null);
             HashMap<String, Object> timeMap = new HashMap<String, Object>();
             timeMap.put("referredCalledId", referredCalledId);
             timeMap.put("sessionKey", sessionKey);

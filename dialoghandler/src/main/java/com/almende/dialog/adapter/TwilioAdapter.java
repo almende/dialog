@@ -663,6 +663,15 @@ public class TwilioAdapter {
         //make sure that the answered call is not triggered twice
         if (session != null && session.getQuestion() != null && !isEventTriggered("answered", session)) {
             
+            //update the communication status to received status
+            DDRRecord ddrRecord = session.getDDRRecord();
+            if (ddrRecord != null) {
+
+                String address = "inbound".equals(session.getDirection()) ? session.getLocalAddress()
+                    : session.getRemoteAddress();
+                ddrRecord.addStatusForAddress(address, CommunicationStatus.RECEIVED);
+                ddrRecord.createOrUpdate();
+            }
             String responder = session.getRemoteAddress();
             String referredCalledId = session.getAllExtras().get("referredCalledId");
             HashMap<String, Object> timeMap = new HashMap<String, Object>();
@@ -695,11 +704,11 @@ public class TwilioAdapter {
         // There are 2 cases where we don't receive a callSid:
         // 1 is when there is a referral to multiple users
         // 2 is when the child session is created but the status is never processed
-        if(callSid!=null) {
+        if (callSid != null && !ServerUtils.isInUnitTestingEnvironment()) {
             String accountSid = config.getAccessToken();
             String authToken = config.getAccessTokenSecret();
             TwilioRestClient client = new TwilioRestClient(accountSid, authToken);
-    
+
             call = client.getAccount().getCall(callSid);
         }
 

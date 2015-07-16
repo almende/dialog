@@ -1515,15 +1515,22 @@ public class VoiceXMLRESTProxy {
                     if (retryCount < Integer.parseInt(retryLimit)) {
                         outputter.attribute("next", "retry?questionId=" + question.getQuestion_id() + "&sessionKey=" +
                                                     URLEncoder.encode(sessionKey, "UTF-8"));
-                        //                                        Question.updateRetryCount( sessionKey );
                     }
                     else {
                         outputter.attribute("next", "retry?questionId=" + question.getQuestion_id());
-                        //                                        Question.flushRetryCount( sessionKey );
                     }
                 }
                 outputter.endTag();
                 outputter.endTag();
+                
+                //if answer input dont match, repeat the question again.(call timeout)
+                outputter.startTag("nomatch");
+                outputter.startTag("goto");
+                outputter.attribute("next", "timeout?questionId=" + question.getQuestion_id() + "&sessionKey=" +
+                    URLEncoder.encode(sessionKey, "UTF-8"));
+                outputter.endTag();
+                outputter.endTag();
+                
                 outputter.startTag("filled");
                 outputter.startTag("assign");
                 outputter.attribute("name", "answerInput");

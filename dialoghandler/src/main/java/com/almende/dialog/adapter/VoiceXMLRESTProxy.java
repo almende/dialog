@@ -225,7 +225,6 @@ public class VoiceXMLRESTProxy {
                     session.storeSession();
                     
                     if(ddrRecord != null) {
-                        ddrRecord.addToAddress(formattedAddress);
                         ddrRecord.addStatusForAddress(formattedAddress, CommunicationStatus.SENT);
                         ddrRecord.createOrUpdate();
                     }
@@ -276,6 +275,7 @@ public class VoiceXMLRESTProxy {
             throw new Exception(DialogAgent.getQuestionNotFetchedMessage(dialogIdOrUrl));
         }
         if(ddrRecord != null) {
+            ddrRecord.setToAddress(addressNameMap);
             ddrRecord.setSessionKeysFromMap(sessionMap);
             ddrRecord.createOrUpdate();
         }

@@ -298,7 +298,7 @@ public class VoiceXMLServletTest extends TestFramework {
         assertEquals( "questionId", questionIdNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
         assertEquals( "sessionKey", sessionKeyNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
         assertEquals( "field", field.getNodeName() );
-        assertEquals( 4, field.getChildNodes().getLength() );
+        assertEquals( 5, field.getChildNodes().getLength() );
 
         if(answerInputNode.getAttributes().getNamedItem( "expr" ) != null)
         {

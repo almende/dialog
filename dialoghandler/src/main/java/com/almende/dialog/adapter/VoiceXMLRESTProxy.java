@@ -769,11 +769,8 @@ public class VoiceXMLRESTProxy {
             
             //update the communication status to received status
             DDRRecord ddrRecord = session.getDDRRecord();
-            if (ddrRecord != null) {
-
-                String address = "inbound".equals(session.getDirection()) ? session.getLocalAddress()
-                    : session.getRemoteAddress();
-                ddrRecord.addStatusForAddress(address, CommunicationStatus.RECEIVED);
+            if (ddrRecord != null && !"inbound".equals(session.getDirection())) {
+                ddrRecord.addStatusForAddress(session.getRemoteAddress(), CommunicationStatus.RECEIVED);
                 ddrRecord.createOrUpdate();
             }
             

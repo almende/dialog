@@ -208,8 +208,6 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(ddrRecord.getToAddress().keySet().iterator().next(),
                            Matchers.is(adapterConfig.getFormattedMyAddress()));
                 assertTrue(ddrRecord.getFromAddress().equals(PhoneNumberUtils.formatNumber(inboundAddress, null)));
-                assertEquals(CommunicationStatus.RECEIVED,
-                             ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(localAddressBroadsoft, null)));
             }
             else if (DDRTypeCategory.OUTGOING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
                 assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getFormattedMyAddress()));

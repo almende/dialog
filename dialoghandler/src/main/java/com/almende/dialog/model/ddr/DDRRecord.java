@@ -690,8 +690,9 @@ public class DDRRecord
     public void addStatusForAddress(String address, CommunicationStatus status) {
 
         AdapterConfig adapter = getAdapter();
-        if (adapter != null && (adapter.isCallAdapter() || adapter.isSMSAdapter())) {
-            address = PhoneNumberUtils.formatNumber(address, null);
+        if (address != null && adapter != null && (adapter.isCallAdapter() || adapter.isSMSAdapter())) {
+            
+            address = PhoneNumberUtils.formatNumber(address.trim().split("@")[0], null);
         }
         getStatusPerAddress().put(getDotReplacedString(address), status);
     }

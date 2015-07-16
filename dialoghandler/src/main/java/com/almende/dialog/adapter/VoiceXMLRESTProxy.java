@@ -11,6 +11,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1248,22 +1249,7 @@ public class VoiceXMLRESTProxy {
         return new Return(prompts, question);
     }
 
-    protected String renderComment(Question question, ArrayList<String> prompts, String sessionKey) {
-
-        String redirectTimeoutProperty = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT);
-        //assign a default timeout if one is not specified
-        String redirectTimeout = redirectTimeoutProperty != null ? redirectTimeoutProperty : "40s";
-        if (!redirectTimeout.endsWith("s")) {
-            log.warning("Redirect timeout must be end with 's'. E.g. 40s. Found: " + redirectTimeout);
-            redirectTimeout += "s";
-        }
-
-        String redirectTypeProperty = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TYPE);
-        String redirectType = redirectTypeProperty != null ? redirectTypeProperty.toLowerCase() : "bridge";
-        if (!redirectType.equals("blind") && !redirectType.equals("bridge")) {
-            log.warning("Redirect must be blind or bridge. Found: " + redirectTimeout);
-            redirectTypeProperty = "bridge";
-        }
+    protected String renderComment(Question question, Collection<String> prompts, String sessionKey) {
 
         StringWriter sw = new StringWriter();
         try {
@@ -1275,9 +1261,26 @@ public class VoiceXMLRESTProxy {
             outputter.startTag("form");
             if (question != null && question.getType().equalsIgnoreCase("referral")) {
 
+                String redirectTimeoutProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                                MediaPropertyKey.TIMEOUT);
+                //assign a default timeout if one is not specified
+                String redirectTimeout = redirectTimeoutProperty != null ? redirectTimeoutProperty : "40s";
+                if (!redirectTimeout.endsWith("s")) {
+                    log.warning("Redirect timeout must be end with 's'. E.g. 40s. Found: " + redirectTimeout);
+                    redirectTimeout += "s";
+                }
+
+                String redirectTypeProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                             MediaPropertyKey.TYPE);
+                String redirectType = redirectTypeProperty != null ? redirectTypeProperty.toLowerCase() : "bridge";
+                if (!redirectType.equals("blind") && !redirectType.equals("bridge")) {
+                    log.warning("Redirect must be blind or bridge. Found: " + redirectTimeout);
+                    redirectTypeProperty = "bridge";
+                }
+
                 String address = question.getUrl().get(0);
                 if (DDRUtils.validateAddressAndUpdateDDRIfInvalid(address, sessionKey)) {
-                    
+
                     outputter.startTag("transfer");
                     outputter.attribute("name", "thisCall");
                     outputter.attribute("dest", question.getUrl().get(0));
@@ -1326,7 +1329,7 @@ public class VoiceXMLRESTProxy {
                 if (question != null) {
                     outputter.startTag("goto");
                     outputter.attribute("next", getAnswerUrl() + "?questionId=" + question.getQuestion_id() +
-                                                "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8"));
+                        "&sessionKey=" + URLEncoder.encode(sessionKey, "UTF-8"));
                     outputter.endTag();
                 }
                 outputter.endTag();
@@ -1659,7 +1662,7 @@ public class VoiceXMLRESTProxy {
         outputter.endTag(); // form
     }
 
-    protected String renderExitQuestion(List<String> prompts, String sessionKey) {
+    protected String renderExitQuestion(Collection<String> prompts, String sessionKey) {
 
         StringWriter sw = new StringWriter();
         try {
@@ -1669,21 +1672,21 @@ public class VoiceXMLRESTProxy {
             outputter.attribute("version", "2.1");
             outputter.attribute("xmlns", "http://www.w3.org/2001/vxml");
             outputter.startTag("form");
-            outputter.startTag("block");
-            for (String prompt : prompts) {
-                outputter.startTag("prompt");
-                outputter.startTag("audio");
-                outputter.attribute("src", prompt);
-                outputter.endTag(); // audio
-                outputter.endTag(); // prompt
+            if (prompts != null && !prompts.isEmpty()) {
+                outputter.startTag("block");
+                for (String prompt : prompts) {
+                    outputter.startTag("prompt");
+                    outputter.startTag("audio");
+                    outputter.attribute("src", prompt);
+                    outputter.endTag(); // audio
+                    outputter.endTag(); // prompt
+                }
+                outputter.endTag(); // block
             }
-            outputter.endTag(); // block
-            
             outputter.startTag("block");
-            outputter.startTag("disconnect");
+            outputter.startTag("exit");
             outputter.endTag(); // block
             outputter.endTag(); // disconnect
-            
             outputter.endTag(); // form
             outputter.endTag(); // vxml
             outputter.endDocument();
@@ -1693,7 +1696,7 @@ public class VoiceXMLRESTProxy {
         }
         return sw.toString();
     }
-
+    
     private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, Session session) {
 
         String result = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>";

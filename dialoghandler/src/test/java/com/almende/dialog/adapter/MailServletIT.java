@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import javax.mail.Message;
@@ -404,6 +405,99 @@ public class MailServletIT extends TestFramework
             + "\r\nBLA BLA\r\nBLA BLA Engineer\r\nBLA-BLA Company");
         String fristLineOfEmail = new MailServlet().getFirstLineOfEmail(textMessage, "");
         assertThat(fristLineOfEmail, Matchers.is("yup"));
+    }
+    
+    /**
+     * Test if a proper response is received when an outbound email is triggered
+     * for wrong email address
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void invalidEmailAddressTest() throws Exception
+    {
+
+        String invalidAddres = "112dd";
+        //setup actions to generate ddr records when the email is sent or received
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "outgoing", UnitType.PART,
+                           AdapterType.EMAIL, null);
+        
+        //prepare outbound question url
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.APPOINTMENT.name());
+        url = ServerUtils.getURLWithQueryParams( url, "question", "start" );
+        
+        //create mail adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+                                                          localAddressMail, localAddressMail, null);
+        //send email
+        DialogRequestDetails dialogRequestDetails = new DialogRequestDetails();
+        dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
+        dialogRequestDetails.setAdapterID(adapterConfig.getConfigId());
+        dialogRequestDetails.setAddress(invalidAddres);
+        dialogRequestDetails.setSenderName("TestEmail");
+        dialogRequestDetails.setSubject("This is a test email");
+        dialogRequestDetails.setUrl(url);
+        
+        RestResponse dialogRequest = new DialogAgent().outboundCallWithDialogRequest(dialogRequestDetails);
+        
+        assertThat(dialogRequest.getCode(), Matchers.is(400));
+        assertThat(dialogRequest.getResult(Map.class).get(invalidAddres).toString(),
+                   Matchers.is(String.format(DialogAgent.INVALID_ADDRESS_MESSAGE, invalidAddres)));
+        
+        List<Session> allSessions = Session.getAllSessions();
+        assertThat(allSessions.size(), Matchers.is(0));
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertThat(ddrRecords.size(), Matchers.is(1));
+    }
+    
+    /**
+     * Test if a proper response is received when an outbound email is triggered
+     * for one wrong email address and one valid
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void invalidAndValidEmailAddressTest() throws Exception {
+
+        String invalidAddres = "112dd";
+        //setup actions to generate ddr records when the email is sent or received
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "outgoing", UnitType.PART,
+                           AdapterType.EMAIL, null);
+
+        //prepare outbound question url
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.APPOINTMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+
+        //create mail adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+                                                          localAddressMail, localAddressMail, null);
+        //send email
+        DialogRequestDetails dialogRequestDetails = new DialogRequestDetails();
+        dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
+        dialogRequestDetails.setAdapterID(adapterConfig.getConfigId());
+        dialogRequestDetails.setAddressList(Arrays.asList(invalidAddres, remoteAddressEmail));
+        dialogRequestDetails.setSenderName("TestEmail");
+        dialogRequestDetails.setSubject("This is a test email");
+        dialogRequestDetails.setUrl(url);
+
+        RestResponse dialogRequest = new DialogAgent().outboundCallWithDialogRequest(dialogRequestDetails);
+
+        assertThat(dialogRequest.getCode(), Matchers.is(201));
+        assertThat(dialogRequest.getResult(Map.class).get(invalidAddres).toString(),
+                   Matchers.is(String.format(DialogAgent.INVALID_ADDRESS_MESSAGE, invalidAddres)));
+        assertThat(dialogRequest.getResult(Map.class).get(remoteAddressEmail).toString(),
+                   Matchers.not(String.format(DialogAgent.INVALID_ADDRESS_MESSAGE, invalidAddres)));
+
+        List<Session> allSessions = Session.getAllSessions();
+        assertThat(allSessions.size(), Matchers.is(1));
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertThat(ddrRecords.size(), Matchers.is(1));
     }
     
     /**

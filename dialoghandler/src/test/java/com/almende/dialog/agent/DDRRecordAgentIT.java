@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.UUID;
 import javax.ws.rs.core.UriInfo;
 import org.hamcrest.Matchers;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -409,7 +408,6 @@ public class DDRRecordAgentIT extends TestFramework {
      * @throws Exception
      */
     @Test
-    @Ignore
     public void outgoingEMAILCallAddsADDRRecordTest() throws Exception {
 
         Map<String, String> addressNameMap = new HashMap<String, String>();

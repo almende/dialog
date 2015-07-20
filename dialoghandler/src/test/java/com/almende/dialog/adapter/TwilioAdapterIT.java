@@ -961,7 +961,6 @@ public class TwilioAdapterIT extends TestFramework {
         details.setAdapterID(adapterConfig.getConfigId());
         details.setAddress(remoteAddressVoice);
         details.setBearerToken(UUID.randomUUID().toString());
-        details.setMethod("outboundCall");
         details.setUrl(url);
         RestResponse outboundCallResponse = dialogAgent.outboundCallWithDialogRequest(details);
         assertEquals(Status.BAD_REQUEST.getStatusCode(), outboundCallResponse.getCode());
@@ -1053,7 +1052,6 @@ public class TwilioAdapterIT extends TestFramework {
         details.setAdapterID(adapterConfig.getConfigId());
         details.setAddressList(Arrays.asList("0611223", remoteAddressVoice));
         details.setBearerToken(UUID.randomUUID().toString());
-        details.setMethod("outboundCallWithList");
         details.setUrl(url);
         RestResponse outboundCallResponse = dialogAgent.outboundCallWithDialogRequest(details);
         assertEquals(Status.CREATED.getStatusCode(), outboundCallResponse.getCode());

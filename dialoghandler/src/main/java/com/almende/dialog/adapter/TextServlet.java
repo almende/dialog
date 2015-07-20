@@ -5,6 +5,7 @@ import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+import javax.mail.internet.InternetAddress;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -26,8 +27,10 @@ import com.almende.util.ParallelInit;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 
 @SuppressWarnings("serial")
 abstract public class TextServlet extends HttpServlet {
@@ -327,6 +330,20 @@ abstract public class TextServlet extends HttpServlet {
                 String formattedAddress = address; //initialize formatted address to be the original one
                 if (config.isSMSAdapter()) {
                     formattedAddress = PhoneNumberUtils.formatNumber(address, null);
+                    if (!PhoneNumberType.MOBILE.equals(PhoneNumberUtils.getPhoneNumberType(formattedAddress))) {
+                        formattedAddress = null;
+                    }
+                }
+                else if (AdapterType.EMAIL.equals(AdapterType.getByValue(config.getAdapterType()))) {
+
+                    try {
+                        InternetAddress internetAddress = new InternetAddress(formattedAddress, fullAddressMap.get(formattedAddress));
+                        internetAddress.validate();
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                        formattedAddress = null;
+                    }
                 }
                 if (formattedAddress != null) {
 
@@ -368,9 +385,13 @@ abstract public class TextServlet extends HttpServlet {
 
                 }
                 else {
-                    result.put(address, "Invalid address");
-                    sessionKeyMap.remove(formattedAddress);
-                    session.dropIfRemoteAddressMatches(formattedAddress);
+                    result.put(address, String.format(DialogAgent.INVALID_ADDRESS_MESSAGE, address));
+                    sessionKeyMap.remove(address);
+                    session.dropIfRemoteAddressMatches(address);
+                    if(ddrRecord != null) {
+                        ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
+                        ddrRecord.createOrUpdate();
+                    }
                     log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
                 }
             }
@@ -389,11 +410,13 @@ abstract public class TextServlet extends HttpServlet {
             // fix for bug: #15 https://github.com/almende/dialog/issues/15
             res.reply = URLDecoder.decode(res.reply, "UTF-8");
             //update formatted address list in ddrRecord
-            int count = broadcastMessageAndAttachCharge(res.reply, subject, localaddress, senderName,
-                                                        formattedAddressNameToMap, extras, config, accountId,
-                                                        sessionKeyMap, ddrRecord);
-            if (count < 1) {
-                log.severe("Error generating XML");
+            if (!sessionKeyMap.isEmpty()) {
+                int count = broadcastMessageAndAttachCharge(res.reply, subject, localaddress, senderName,
+                                                            formattedAddressNameToMap, extras, config, accountId,
+                                                            sessionKeyMap, ddrRecord);
+                if (count < 1) {
+                    log.severe("Error generating XML");
+                }
             }
         }
         else {

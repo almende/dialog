@@ -65,6 +65,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     private static final String DEFAULT_TTS_ACCOUNT_ID_KEY = "DEFAULT_TTS_ACCOUNTID";
     private static final String NO_QUESTION_FOUND_MESSAGE = "Question not fetched from: %s. Request for outbound call rejected ";
     public static final String INVALID_ADDRESS_MESSAGE = "Address %s is invalid";
+    public static final String INVALID_METHOD_TYPE_MESSAGE = "Unknown outbound method type: ";
     
     /**
      * Used by the Tests to store any default communication providers. Usually 
@@ -820,8 +821,23 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
         HashMap<String, String> result = new HashMap<String, String>();
         try {
-            if (dialogDetails != null && dialogDetails.getMethod() != null) {
+            if (dialogDetails != null) {
                 String dialogMethod = dialogDetails.getMethod();
+                if(dialogMethod == null) {
+                    if(dialogDetails.getAddress() != null && !dialogDetails.getAddress().trim().isEmpty()) {
+                        dialogMethod = "outboundCall"; 
+                    }
+                    else if(dialogDetails.getAddressList() != null && !dialogDetails.getAddressList().isEmpty()) {
+                        dialogMethod = "outboundCallWithList";
+                    }
+                    else if (!isNullOrEmpty(dialogDetails.getAddressMap()) ||
+                        !isNullOrEmpty(dialogDetails.getAddressCcMap()) ||
+                        !isNullOrEmpty(dialogDetails.getAddressBccMap())) {
+                        
+                        dialogMethod = "outboundCallWithMap";
+                    }
+                }
+                
                 switch (dialogMethod) {
                     case "outboundCall":
                         if (dialogDetails.getAddress() != null) {
@@ -877,6 +893,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                                                      dialogDetails.getAccountID(), dialogDetails.getBearerToken());
                         break;
                     default:
+                        result.put("Error", INVALID_METHOD_TYPE_MESSAGE + dialogMethod);
                         break;
                 }
             }
@@ -894,7 +911,9 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             for (String address : result.keySet()) {
                 
                 String sessionMessage = result.get(address);
-                if(sessionMessage.equals(String.format(INVALID_ADDRESS_MESSAGE, address))) {
+                if (sessionMessage.equals(String.format(INVALID_ADDRESS_MESSAGE, address)) ||
+                    sessionMessage.startsWith(INVALID_METHOD_TYPE_MESSAGE)) {
+                    
                     isInvalidAddressFound = true;
                 }
                 else {

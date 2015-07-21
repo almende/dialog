@@ -8,10 +8,12 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
@@ -35,12 +37,16 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.sim.TwilioSimulator;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.dialog.util.TimeUtils;
+import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DialogRequestDetails;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
@@ -105,7 +111,8 @@ public class TwilioAdapterIT extends TestFramework {
 
         //trigger an incoming call        
         Response newInboundResponse = twilioAdapter.getNewDialogPost(testCallId, TEST_PUBLIC_KEY, inboundAddress,
-                                                                     adapterConfig.getMyAddress(), "inbound", null);
+                                                                     adapterConfig.getMyAddress(), "inbound", null,
+                                                                     null);
         //validate that a session is created with a ddr record
         List<Session> allSessions = Session.getAllSessions();
         Assert.assertThat(allSessions.size(), Matchers.is(2));
@@ -153,10 +160,12 @@ public class TwilioAdapterIT extends TestFramework {
 
         //answer the preconnect with the ignore reply
         Response answer = twilioAdapter.answer(null, "2", adapterConfig.getMyAddress(), remoteAddressVoice,
-                                               "outbound-dial", null, null, null, testCallId1, null);
+                                               "outbound-api", null, null, null, testCallId1, null);
         assertEquals("<Response><Say language=\"nl-nl\">You chose 2</Say><Hangup></Hangup></Response>".toLowerCase(),
                      answer.getEntity().toString().toLowerCase());
-
+        twilioAdapter.receiveCCMessage(testCallId1, adapterConfig.getMyAddress(), remoteAddressVoice, "outbound-api",
+                                       "completed");
+        
         //mock new redirect call to the second number
         answer = twilioAdapter.answer(null, null, adapterConfig.getMyAddress(), inboundAddress, "inbound", null, null,
                                       null, testCallId, null);
@@ -190,23 +199,32 @@ public class TwilioAdapterIT extends TestFramework {
                                           answer.getEntity().toString());
         ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null);
         Assert.assertThat(ddrRecords.size(), Matchers.is(3));
+        int statusCount = 0;
         for (DDRRecord ddrRecord : ddrRecords) {
 
             Assert.assertThat(ddrRecord, Matchers.notNullValue());
-            if(DDRTypeCategory.INCOMING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
+            if (DDRTypeCategory.INCOMING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
 
                 assertThat(ddrRecord.getToAddress().keySet().iterator().next(),
-                           Matchers.is(adapterConfig.getMyAddress()));
+                           Matchers.is(adapterConfig.getFormattedMyAddress()));
                 assertTrue(ddrRecord.getFromAddress().equals(PhoneNumberUtils.formatNumber(inboundAddress, null)));
             }
-            else if(DDRTypeCategory.OUTGOING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
+            else if (DDRTypeCategory.OUTGOING_COMMUNICATION_COST.equals(ddrRecord.getTypeCategory())) {
                 assertThat(ddrRecord.getFromAddress(), Matchers.is(adapterConfig.getFormattedMyAddress()));
-                assertTrue(ddrRecord.getToAddress().keySet()
-                                    .contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)) ||
-                    ddrRecord.getToAddress().keySet()
-                             .contains(PhoneNumberUtils.formatNumber(secondRemoteAddress, null)));
+                if (ddrRecord.getToAddress().keySet().contains(PhoneNumberUtils.formatNumber(remoteAddressVoice, null))) {
+                    assertEquals(CommunicationStatus.MISSED,
+                                 ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+                    statusCount++;
+                }
+                else if (ddrRecord.getToAddress().keySet()
+                                  .contains(PhoneNumberUtils.formatNumber(secondRemoteAddress, null))) {
+                    assertEquals(CommunicationStatus.RECEIVED,
+                                 ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(secondRemoteAddress, null)));
+                    statusCount++;
+                }
             }
         }
+        assertEquals(2, statusCount);
     }
 
     @Test
@@ -282,10 +300,13 @@ public class TwilioAdapterIT extends TestFramework {
         assertThat(initiateInboundCall,
                    Matchers.not(Matchers.containsString(URLDecoder.decode(invalidNumber, "UTF-8"))));
         List<Session> allSessions = Session.getAllSessions();
-        assertThat(allSessions.size(), Matchers.is(1));
-        DDRRecord ddrRecord = allSessions.iterator().next().getDDRRecord();
-        assertThat(ddrRecord, Matchers.notNullValue());
+        //all sessions must now be flushed
+        assertThat(allSessions.size(), Matchers.is(0));
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertThat(ddrRecords.size(), Matchers.is(1));
         int ddrInfoCount = 0;
+        DDRRecord ddrRecord = ddrRecords.iterator().next();
         for (String infoKey : ddrRecord.getAdditionalInfo().keySet()) {
             if (URLDecoder.decode(invalidNumber, "UTF-8").equals(infoKey)) {
                 assertThat(ddrRecord.getAdditionalInfo().get(infoKey).toString(), Matchers.is("Invalid address"));
@@ -444,8 +465,8 @@ public class TwilioAdapterIT extends TestFramework {
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
-        Response securedDialogResponse = performSecuredInboundCall("inbound", "testuserName", "testpassword", ttsInfo,
-                                                                   url);
+        Response securedDialogResponse = performSecuredCall("inbound", "testuserName", "testpassword", ttsInfo, url,
+                                                            null);
         assertTrue(securedDialogResponse != null);
         //make sure that the tts source generated has a service and voice
         Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
@@ -488,8 +509,54 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
                 continue;
             }
+            else if (queryParams.getName().equals("askFastAccountId")) {
+                assertThat(queryParams.getValue(), Matchers.is(TEST_PUBLIC_KEY));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
+    }
+    
+    /**
+     * /**
+     * This test is to check if the inbound functionality works for a dialog
+     * with the right credentials for the secured url access, but no ddr records
+     * are created when a test flag is set to true
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void inboundPhoneCall_DoesNotCreateDDRWithFlagTest() throws Exception {
+
+        inboundPhoneCall_WithSecuredDialogAndTTSInfoTest();
+        //validate that ddr records are created when isTest is set to false
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        Assert.assertThat(ddrRecords.size(), Matchers.equalTo(1));
+        
+        //trigger a second incoming call with test flag to be true. flush all sessions, adapters and ddrRecords
+        setup();
+        
+        //trigger a second inbound call with test flag set to true
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.INCOMING_COMMUNICATION_COST, 0.1, "Test incoming costs", UnitType.MINUTE,
+                           null, null);
+        new DDRRecordAgent().generateDefaultDDRTypes();
+
+        TTSInfo ttsInfo = new TTSInfo();
+        ttsInfo.setProvider(TTSProvider.ACAPELA);
+        String ttsAccountId = UUID.randomUUID().toString();
+        ttsInfo.setTtsAccountId(ttsAccountId);
+        ttsInfo.setVoiceUsed("testtest");
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
+        performSecuredCall("inbound", "testuserName", "testpassword", ttsInfo, url, true);
+
+        //validate that ddr records are created when isTest is set to false
+        ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null);
+        Assert.assertThat(ddrRecords.size(), Matchers.equalTo(0));
     }
 
     /**
@@ -514,8 +581,8 @@ public class TwilioAdapterIT extends TestFramework {
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
-        Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
-                                                                   url);
+        Response securedDialogResponse = performSecuredCall("outbound", "testuserName", "testpassword", ttsInfo, url,
+                                                            null);
         assertNotNull(securedDialogResponse);
         //make sure that the tts source generated has a service and voice
         Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
@@ -558,6 +625,10 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
                 continue;
             }
+            else if (queryParams.getName().equals("askFastAccountId")) {
+                assertThat(queryParams.getValue(), Matchers.is(TEST_PUBLIC_KEY));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
@@ -596,8 +667,8 @@ public class TwilioAdapterIT extends TestFramework {
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         String message = "How are you doing? today";
         url = ServerUtils.getURLWithQueryParams(url, "question", message);
-        Response securedDialogResponse = performSecuredInboundCall(direction, "testuserName", "testpassword", ttsInfo,
-                                                                   url);
+        Response securedDialogResponse = performSecuredCall(direction, "testuserName", "testpassword", ttsInfo, url,
+                                                            null);
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
@@ -645,8 +716,8 @@ public class TwilioAdapterIT extends TestFramework {
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         String message = "How are you doing? today";
         url = ServerUtils.getURLWithQueryParams(url, "question", message);
-        Response securedDialogResponse = performSecuredInboundCall("inbound", "testuserName", "testpassword", ttsInfo,
-                                                                   url);
+        Response securedDialogResponse = performSecuredCall("inbound", "testuserName", "testpassword", ttsInfo,
+                                                                   url, null);
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
@@ -684,8 +755,8 @@ public class TwilioAdapterIT extends TestFramework {
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
-        Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
-                                                                   url);
+        Response securedDialogResponse = performSecuredCall("outbound", "testuserName", "testpassword", ttsInfo,
+                                                                   url, null);
         assertTrue(securedDialogResponse != null);
         //make sure that the tts source generated has a service and voice
         Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
@@ -728,6 +799,10 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
                 continue;
             }
+            else if (queryParams.getName().equals("askFastAccountId")) {
+                assertThat(queryParams.getValue(), Matchers.is(TEST_PUBLIC_KEY));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
@@ -756,8 +831,8 @@ public class TwilioAdapterIT extends TestFramework {
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "lang", Language.FRENCH_FRANCE.getCode());
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
-        Response securedDialogResponse = performSecuredInboundCall("outbound", "testuserName", "testpassword", ttsInfo,
-                                                                   url);
+        Response securedDialogResponse = performSecuredCall("outbound", "testuserName", "testpassword", ttsInfo,
+                                                                   url, null);
         assertTrue(securedDialogResponse != null);
         //make sure that the tts source generated has a service and voice
         Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
@@ -800,6 +875,10 @@ public class TwilioAdapterIT extends TestFramework {
                 assertThat(queryParams.getValue(), Matchers.is(ttsAccountId));
                 continue;
             }
+            else if (queryParams.getName().equals("askFastAccountId")) {
+                assertThat(queryParams.getValue(), Matchers.is(TEST_PUBLIC_KEY));
+                continue;
+            }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
         }
     }
@@ -819,8 +898,9 @@ public class TwilioAdapterIT extends TestFramework {
                            null);
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_SERVICE_COST);
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, ddrType.getTypeId(), null,
-                                                             null, null, null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null,
+                                                             Arrays.asList(ddrType.getTypeId()), null, null, null,
+                                                             null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         ddrRecord.setShouldGenerateCosts(true);
@@ -845,10 +925,173 @@ public class TwilioAdapterIT extends TestFramework {
         //invoke an outbound call with acapella tts
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, ddrType.getTypeId(), null,
-                                                             null, null, null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null,
+                                                             Arrays.asList(ddrType.getTypeId()), null, null, null,
+                                                             null, null, null);
         //make sure there is no costs involved, as the ddr price attached is for VoiceRSS tts and not acapela
         assertThat(ddrRecords.size(), Matchers.is(0));
+    }
+    
+    /**
+     * Test if the
+     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequestDetails)}
+     * gives an error code if the question is not fetched by the dialog agent
+     * @throws UnsupportedEncodingException 
+     */
+    @Test
+    public void outboundCallWithoutQuestionTest() throws Exception {
+        
+        dialogAgent = new DialogAgent();
+        //setup bad question url
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH + "wrongURL", "questionType",
+                                                       QuestionInRequest.TWELVE_INPUT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+        
+        //create mail adapter
+        AdapterConfig adapterConfig = createTwilioAdapter();
+        adapterConfig.update();
+        
+        //setup to generate ddrRecords
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
+                           null);
+        
+        DialogRequestDetails details = new DialogRequestDetails();
+        details.setAccountID(adapterConfig.getOwner());
+        details.setAdapterID(adapterConfig.getConfigId());
+        details.setAddress(remoteAddressVoice);
+        details.setBearerToken(UUID.randomUUID().toString());
+        details.setUrl(url);
+        RestResponse outboundCallResponse = dialogAgent.outboundCallWithDialogRequest(details);
+        assertEquals(Status.BAD_REQUEST.getStatusCode(), outboundCallResponse.getCode());
+        assertThat(outboundCallResponse.getMessage(), Matchers.is(DialogAgent.getQuestionNotFetchedMessage(url)));
+        
+        //verify that the session is not saved
+        assertEquals(0, Session.getAllSessions().size());
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertEquals(1, ddrRecords.size());
+        assertEquals(CommunicationStatus.ERROR,
+                     ddrRecords.iterator().next()
+                               .getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+        assertEquals(1, ddrRecords.iterator().next().getStatusPerAddress().size());
+    }
+    
+    /**
+     * Test if the
+     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequestDetails)}
+     * gives an error code if the question is fetched by the dialog agent but
+     * the telephone number is invalid
+     * 
+     * @throws UnsupportedEncodingException
+     */
+    @Test
+    public void outboundCallWithQuestionInvalidAddressTest() throws Exception {
+
+        dialogAgent = new DialogAgent();
+        //setup bad question url
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.TWELVE_INPUT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+
+        //create mail adapter
+        AdapterConfig adapterConfig = createTwilioAdapter();
+
+        //setup to generate ddrRecords
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
+                           null);
+
+        DialogRequestDetails details = new DialogRequestDetails();
+        details.setAccountID(adapterConfig.getOwner());
+        details.setAdapterID(adapterConfig.getConfigId());
+        details.setAddress("0611223"); //invalid address
+        details.setBearerToken(UUID.randomUUID().toString());
+        details.setMethod("outboundCall");
+        details.setUrl(url);
+        RestResponse outboundCallResponse = dialogAgent.outboundCallWithDialogRequest(details);
+        assertEquals(Status.BAD_REQUEST.getStatusCode(), outboundCallResponse.getCode());
+
+        //verify that the session is not saved
+        assertEquals(0, Session.getAllSessions().size());
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertEquals(1, ddrRecords.size());
+        assertEquals(CommunicationStatus.ERROR,
+                     ddrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber("0611223", null)));
+        assertEquals(1, ddrRecords.iterator().next().getStatusPerAddress().size());
+    }
+    
+    /**
+     * Test if the
+     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequestDetails)}
+     * gives an error code if the question is fetched by the dialog agent but
+     * the telephone numbers are a mix of valid and invalid numbers
+     * 
+     * @throws UnsupportedEncodingException
+     */
+    @Test
+    public void outboundCallWithQuestionInvalidAndValidAddressTest() throws Exception {
+
+        dialogAgent = new DialogAgent();
+        //setup bad question url
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.TWELVE_INPUT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+
+        //create mail adapter
+        AdapterConfig adapterConfig = createTwilioAdapter();
+
+        //setup to generate ddrRecords
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
+                           null);
+
+        DialogRequestDetails details = new DialogRequestDetails();
+        details.setAccountID(adapterConfig.getOwner());
+        details.setAdapterID(adapterConfig.getConfigId());
+        details.setAddressList(Arrays.asList("0611223", remoteAddressVoice));
+        details.setBearerToken(UUID.randomUUID().toString());
+        details.setUrl(url);
+        RestResponse outboundCallResponse = dialogAgent.outboundCallWithDialogRequest(details);
+        assertEquals(Status.CREATED.getStatusCode(), outboundCallResponse.getCode());
+
+        //verify that the session is not saved
+        assertEquals(1, Session.getAllSessions().size());
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertEquals(1, ddrRecords.size());
+        DDRRecord ddrRecord = ddrRecords.iterator().next();
+        assertEquals(CommunicationStatus.ERROR,
+                     ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber("0611223", null)));
+        assertEquals(CommunicationStatus.SENT,
+                     ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+        assertEquals(2, ddrRecords.iterator().next().getStatusPerAddress().size());
+        
+        //finalize the call. fetch the callSid from the session
+        Session sessionForValidNumber = Session.getSessionByInternalKey(adapterConfig.getAdapterType(),
+                                                                        adapterConfig.getMyAddress(),
+                                                                        PhoneNumberUtils.formatNumber(remoteAddressVoice,
+                                                                                                      null));
+        //update with some answer timestamp
+        sessionForValidNumber.setAnswerTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
+        sessionForValidNumber.storeSession();
+        
+        assertNotNull(sessionForValidNumber);
+        new TwilioAdapter().receiveCCMessage(sessionForValidNumber.getExternalSession(),
+                                             sessionForValidNumber.getLocalAddress(),
+                                             sessionForValidNumber.getRemoteAddress(),
+                                             sessionForValidNumber.getDirection(), "completed");
+        //validate the ddrRecords again
+        ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                             null, null);
+        assertEquals(1, ddrRecords.size());
+        ddrRecord = ddrRecords.iterator().next();
+        assertEquals(CommunicationStatus.ERROR,
+                     ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber("0611223", null)));
+        assertEquals(CommunicationStatus.FINISHED,
+                     ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+        assertEquals(2, ddrRecords.iterator().next().getStatusPerAddress().size());
     }
 
     /**
@@ -856,8 +1099,8 @@ public class TwilioAdapterIT extends TestFramework {
      * @throws Exception
      * @throws URISyntaxException
      */
-    private Response performSecuredInboundCall(String direction, String username, String password, TTSInfo ttsInfo,
-        String url) throws Exception {
+    private Response performSecuredCall(String direction, String username, String password, TTSInfo ttsInfo,
+        String url, Boolean isTest) throws Exception {
 
         if (url == null) {
             url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
@@ -905,6 +1148,6 @@ public class TwilioAdapterIT extends TestFramework {
             remoteAddress = tmpLocalId;
         }
         return new TwilioAdapter().getNewDialog(callSid, UUID.randomUUID().toString(), localAddress, remoteAddress,
-                                                direction, null);
+                                                direction, null, isTest);
     }
 }

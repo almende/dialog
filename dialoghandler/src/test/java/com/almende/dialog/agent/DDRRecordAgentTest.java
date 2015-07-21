@@ -4,12 +4,16 @@ package com.almende.dialog.agent;
 
 import static org.junit.Assert.assertThat;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.junit.Test;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
@@ -158,6 +162,43 @@ public class DDRRecordAgentTest extends TestFramework
         //assert three ddrs are created. 1 for adapter creation. 2 for suscriptions
         Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( TEST_ACCOUNTID );
         assertThat(allDdrRecords.size(), Matchers.is(3));
+    }
+    
+    /**
+     * Check if the ddr record is saved properly and the toAddressString is
+     * serialized properly and saved
+     * @throws Exception 
+     */
+    @Test
+    public void saveDDRRecordTest() throws Exception {
+       
+        AdapterConfig adapterConfig = createBroadsoftAdapter();
+        Session session = createSession(adapterConfig, remoteAddressVoice);
+        
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.MINUTE, AdapterType.CALL,
+                           null);
+        DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, TEST_PUBLIC_KEY, remoteAddressVoice, 1,
+                                                        "some test message", session);
+        //fetch the ddrRecord
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        DDRRecord ddrRecord = ddrRecords.iterator().next();
+        //toaddress check
+        Map<String, String> toAddress = new HashMap<String, String>(1);
+        toAddress.put(session.getRemoteAddress(), "");
+        assertThat(ddrRecord.getToAddress(), Matchers.is(toAddress));
+        
+        //add one more element to the toList
+        String secondRemoteAddress = "0612345678";
+        toAddress.put(secondRemoteAddress, "");
+        
+        ddrRecord.addToAddress(secondRemoteAddress);
+        ddrRecord.createOrUpdate();
+        
+        ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null);
+        ddrRecord = ddrRecords.iterator().next();
+        assertThat(ddrRecord.getToAddress(), Matchers.is(toAddress));
     }
 
     /**

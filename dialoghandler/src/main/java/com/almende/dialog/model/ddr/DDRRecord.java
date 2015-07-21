@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import org.bson.types.ObjectId;
 import org.mongojack.DBCursor;
 import org.mongojack.DBQuery;
 import org.mongojack.DBQuery.Query;
@@ -23,8 +24,10 @@ import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.jackson.JOM;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.utils.PhoneNumberUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -35,6 +38,7 @@ import com.mongodb.DB;
  * @author Shravan
  */
 @JsonPropertyOrder({"totalCost"})
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class DDRRecord
 {
     protected static final Logger log = Logger.getLogger(DDRRecord.class.getName());
@@ -90,7 +94,6 @@ public class DDRRecord
     Long start;
     Long duration;
     Collection<String> sessionKeys;
-    CommunicationStatus status;
     Map<String, CommunicationStatus> statusPerAddress;
     
     @JsonIgnore
@@ -103,6 +106,11 @@ public class DDRRecord
      * This can be got from the adapterId too, but just makes it more explicit
      */
     AccountType accountType;
+    
+    //links to other ddrRecords, parent and children
+    String parentId;
+    Collection<String> childIds;
+    String direction;
     
     /**
      * total cost is not sent for any ddr if its a post paid account
@@ -139,9 +147,9 @@ public class DDRRecord
     }
     
     @JsonIgnore
-    public void createOrUpdate() {
+    public DDRRecord createOrUpdate() {
 
-        _id = _id != null && !_id.isEmpty() ? _id : org.bson.types.ObjectId.get().toStringMongod();
+        _id = _id != null && !_id.isEmpty() ? _id : ObjectId.get().toStringMongod();
         correctDotData = true;
         JacksonDBCollection<DDRRecord, String> collection = getCollection();
         DDRRecord existingDDRRecord = collection.findOneById(_id);
@@ -153,28 +161,32 @@ public class DDRRecord
             this.start = this.start != null ? this.start : TimeUtils.getServerCurrentTimeInMillis();
             collection.insert(this);
         }
+        log.info("ddr record saved: " + ServerUtils.serializeWithoutException(this));
+        return this;
     }
     
     /**
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
      */
     @JsonIgnore
-    public void createOrUpdateWithLog(Session session) {
+    public DDRRecord createOrUpdateWithLog(Session session) {
 
-        createOrUpdate();
-        if (session != null) {
-            new com.almende.dialog.Logger().ddr(getAdapter(), this, session);
+        if(session != null && session.isTestSession()) {
+            return null;
         }
+        return createOrUpdate();
     }
     
     /**
      * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
      */
-    public void createOrUpdateWithLog(Map<String, Session> sessionKeyMap) {
+    public DDRRecord createOrUpdateWithLog(Map<String, Session> sessionKeyMap) {
 
+        DDRRecord ddrRecord = null;
         for (Session session : sessionKeyMap.values()) {
-            createOrUpdateWithLog(session);
+            ddrRecord = createOrUpdateWithLog(session);
         }
+        return ddrRecord;
     }
     
     /**
@@ -198,12 +210,14 @@ public class DDRRecord
     
     /**
      * Fetch the ddr records based the input parameters. fetches the records
-     * that matches to all the parameters given. The accountId is mandatory and rest are optional
+     * that matches to all the parameters given. The accountId is mandatory and
+     * rest are optional
      * 
-     * @param adapterId 
-     * @param accountId Mandatory field
+     * @param adapterId
+     * @param accountId
+     *            Mandatory field
      * @param fromAddress
-     * @param ddrTypeId
+     * @param ddrTypeIds
      * @param status
      * @param startTime
      * @param endTime
@@ -213,7 +227,8 @@ public class DDRRecord
      * @return
      */
     public static List<DDRRecord> getDDRRecords(String adapterId, String accountId, String fromAddress,
-        String ddrTypeId, CommunicationStatus status, Long startTime, Long endTime, Collection<String> sessionKeys, Integer offset, Integer limit) {
+        Collection<String> ddrTypeIds, CommunicationStatus status, Long startTime, Long endTime,
+        Collection<String> sessionKeys, Integer offset, Integer limit) {
 
         limit = limit != null && limit <= 1000 ? limit : 1000;
         offset = offset != null ? offset : 0;
@@ -227,8 +242,8 @@ public class DDRRecord
         if (fromAddress != null) {
             queryList.add(DBQuery.is("fromAddress", fromAddress));
         }
-        if (ddrTypeId != null) {
-            queryList.add(DBQuery.is("ddrTypeId", ddrTypeId));
+        if (ddrTypeIds != null) {
+            queryList.add(DBQuery.in("ddrTypeId", ddrTypeIds));
         }
         if (startTime != null) {
             queryList.add(DBQuery.greaterThanEquals("start", startTime));
@@ -236,24 +251,23 @@ public class DDRRecord
         if (endTime != null) {
             queryList.add(DBQuery.lessThanEquals("start", endTime));
         }
-        
-        
+
         Query[] dbQueries = new Query[queryList.size()];
         for (int queryCounter = 0; queryCounter < queryList.size(); queryCounter++) {
             dbQueries[queryCounter] = queryList.get(queryCounter);
         }
         DBCursor<DDRRecord> ddrCursor = collection.find(DBQuery.and(dbQueries));
-        
-        if(sessionKeys != null) {
+
+        if (sessionKeys != null) {
             ddrCursor = ddrCursor.in("sessionKeys", sessionKeys);
         }
         List<DDRRecord> result = ddrCursor.skip(offset).limit(limit).sort(DBSort.desc("start")).toArray();
         if (result != null && !result.isEmpty() && status != null) {
             ArrayList<DDRRecord> resultByStatus = new ArrayList<DDRRecord>();
             for (DDRRecord ddrRecord : result) {
-                if (status.equals(ddrRecord.getStatus()) ||
-                    (ddrRecord.getStatusPerAddress() != null && ddrRecord.getStatusPerAddress().values()
-                                                    .contains(status))) {
+                if (ddrRecord.getStatusPerAddress() != null &&
+                    ddrRecord.getStatusPerAddress().values().contains(status)) {
+                    
                     resultByStatus.add(ddrRecord);
                 }
             }
@@ -439,32 +453,6 @@ public class DDRRecord
     public void setDuration( Long duration )
     {
         this.duration = duration;
-    }
-    /**
-     * @deprecated
-     * kept for backward compatibility. Use {@link DDRRecord#getStatusForAddress(String)} to get status
-     * for an address or {@link DDRRecord#getStatusPerAddress()} for fetching all statuses
-     * @return
-     */
-    public CommunicationStatus getStatus()
-    {
-        //return the only statusPerAddress if its there and this is null
-        if(status == null && statusPerAddress != null && statusPerAddress.size() == 1) {
-            return statusPerAddress.values().iterator().next();
-        }
-        return status;
-    }
-    
-    /**
-     * @deprecated
-     * kept for backward compatibility. Use {@link DDRRecord#setStatusPerAddress(Map)} to set status
-     * for all addresses or {@link DDRRecord#addStatusForAddress(String, CommunicationStatus)} for 
-     * a single addres
-     * @return
-     */
-    public void setStatus( CommunicationStatus status )
-    {
-        this.status = status;
     }
 
     /**
@@ -668,23 +656,6 @@ public class DDRRecord
     public Map<String, CommunicationStatus> getStatusPerAddress() {
 
         statusPerAddress = statusPerAddress != null ? statusPerAddress : new HashMap<String, CommunicationStatus>();
-        //if status is there but statusPerAddress is empty, use status
-        if (status != null && (statusPerAddress == null || statusPerAddress.isEmpty())) {
-
-            try {
-                Map<String, String> toAddresses = ServerUtils.deserialize(toAddressString, false,
-                                                                          new TypeReference<Map<String, String>>() {
-                                                                          });
-                if (toAddresses != null) {
-                    for (String address : toAddresses.keySet()) {
-                        statusPerAddress.put(address, status);
-                    }
-                }
-            }
-            catch (Exception e) {
-                log.severe(String.format("ToAddress map couldnt be deserialized: %s", toAddressString));
-            }
-        }
         //make sure each of the key is dot replaced
         if (!statusPerAddress.isEmpty()) {
             HashMap<String, CommunicationStatus> statusPerAddressCopy = new HashMap<String, CommunicationStatus>();
@@ -717,7 +688,25 @@ public class DDRRecord
      * @param status
      */
     public void addStatusForAddress(String address, CommunicationStatus status) {
-        getStatusPerAddress().put(address, status);
+
+        AdapterConfig adapter = getAdapter();
+        if (address != null && adapter != null && (adapter.isCallAdapter() || adapter.isSMSAdapter())) {
+            
+            address = PhoneNumberUtils.formatNumber(address.trim().split("@")[0], null);
+        }
+        getStatusPerAddress().put(getDotReplacedString(address), status);
+    }
+    
+    /**
+     * add a status all all the address
+     * @param addresses
+     * @param status
+     */
+    public void setStatusForAddresses(Collection<String> addresses, CommunicationStatus status) {
+
+        for (String address : addresses) {
+            addStatusForAddress(getDotReplacedString(address), status);
+        }
     }
     
     /**
@@ -734,29 +723,19 @@ public class DDRRecord
      * gets the direction of this ddrRecord based on the toAddress and the adapter address
      * @return either "inbound" or "outbound"
      */
-    @JsonIgnore
     public String getDirection() {
 
         //if the from address is not equal to the adapter address, its an incoming communication
-        if (getToAddress() != null && getAdapter() != null) {
+        if (direction == null && getToAddress() != null && getAdapter() != null) {
             return getToAddress().containsKey(getAdapter().getFormattedMyAddress()) && getToAddress().size() == 1 ? "inbound"
                 : "outbound";
         }
-        return null;
+        return direction;
     }
     
-    /**
-     * Adds a tracking token corresponding to the key and value
-     */
-    public void addTrackingToken(String address, String trackingToken) {
+    public void setDirection(String direction) {
 
-        Object trackingTokensObject = getAdditionalInfo().get(Session.TRACKING_TOKEN_KEY);
-        trackingTokensObject = trackingTokensObject != null ? trackingTokensObject : new HashMap<String, String>();
-        Map<String, String> trackingTokens = JOM.getInstance().convertValue(trackingTokensObject,
-                                                                            new TypeReference<Map<String, String>>() {
-                                                                            });
-        trackingTokens.put(address, trackingToken);
-        addAdditionalInfo(Session.TRACKING_TOKEN_KEY, trackingTokens);
+        this.direction = direction;
     }
     
     /**
@@ -790,17 +769,85 @@ public class DDRRecord
                     if (session.getExternalSession() != null) {
                         addAdditionalInfo("externalSessionKey", session.getExternalSession());
                     }
+                    //attach the child and the parent ddrRecord Ids
+                    updateParentAndChildDDRRecordIds(session);
                 }
             }
             addAdditionalInfo(Session.SESSION_KEY, sessionKeyMap);
         }
     }
-    
+
     @JsonIgnore
     public DDRTypeCategory getTypeCategory() {
 
         DDRType ddrType = DDRType.getDDRType(ddrTypeId);
         return ddrType != null ? ddrType.getCategory() : null;
+    }
+    
+    public String getParentId() {
+        
+        return parentId;
+    }
+
+    
+    public void setParentId(String parentId) {
+    
+        this.parentId = parentId;
+    }
+
+    
+    public Collection<String> getChildIds() {
+    
+        return childIds;
+    }
+
+    
+    public void setChildIds(Collection<String> childIds) {
+    
+        this.childIds = childIds;
+    }
+    
+    @JsonIgnore
+    public void addChildId(String childId) {
+
+        if (childId != null) {
+            childIds = childIds != null ? childIds : new HashSet<String>();
+            childIds.add(childId);
+        }
+    }
+    
+    /**
+     * Gets the linked parentDDRRecord, if any
+     * @return
+     * @throws Exception
+     */
+    @JsonIgnore
+    public DDRRecord getParentDdrRecord() throws Exception {
+
+        if (getParentId() != null) {
+            return getDDRRecord(getParentId(), accountId);
+        }
+        return null;
+    }
+    
+    /**
+     * Gets all the linked childDDRRecords, if any.
+     * @return
+     * @throws Exception
+     */
+    @JsonIgnore
+    public ArrayList<DDRRecord> getChildDDRRecords() throws Exception {
+
+        ArrayList<DDRRecord> childDDRRecords = new ArrayList<DDRRecord>();
+        if (getChildIds() != null) {
+            for (String childId : childIds) {
+                DDRRecord childDdrRecord = getDDRRecord(childId, accountId);
+                if (childDdrRecord != null) {
+                    childDDRRecords.add(childDdrRecord);
+                }
+            }
+        }
+        return childDDRRecords;
     }
     
     /**
@@ -843,5 +890,28 @@ public class DDRRecord
             return copyOfData;
         }
         return null;
+    }
+    
+    /**
+     * Updates/adds (commits to mongo too) the linked parent ddrRecord with this
+     * child ddrRecordId (via Session) and also sets the parentDDRRecorid to
+     * this instance (doesnt commit to mongo).
+     * 
+     * @param session
+     */
+    private void updateParentAndChildDDRRecordIds(Session session) {
+
+        Session parentSession = session.getParentSession();
+        if(parentSession != null) {
+            DDRRecord parentDDRRecord = parentSession.getDDRRecord();
+            if(parentDDRRecord != null) {
+                if(getId() == null) {
+                    setId(ObjectId.get().toStringMongod());
+                }
+                parentDDRRecord.addChildId(getId());
+                parentDDRRecord.createOrUpdate();
+                setParentId(parentDDRRecord.getId());
+            }
+        }
     }
 }

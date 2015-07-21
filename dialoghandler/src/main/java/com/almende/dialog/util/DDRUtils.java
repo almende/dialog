@@ -2,6 +2,7 @@ package com.almende.dialog.util;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashMap;
@@ -45,6 +46,7 @@ public class DDRUtils
     //create a single static connection for publishing ddrs
     private static ConnectionFactory rabbitMQConnectionFactory;
     private static final String PUBLISH_QUEUE_NAME = "DDR_PUBLISH_QUEUE";
+    public static final String DDR_MESSAGE_KEY = "message";
     
     /** creates a DDR Record for this adapterid and owner. <br>
      * Preconditions: <br>
@@ -65,7 +67,7 @@ public class DDRUtils
                     config.getOwner(), 1 );
                 ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );
                 ddrRecord.setAccountType(config.getAccountType());
-                ddrRecord.addAdditionalInfo("message",
+                ddrRecord.addAdditionalInfo(DDR_MESSAGE_KEY,
                                             String.format("Type: %s Address: %s", config.getAdapterType(),
                                                           config.getMyAddress()));
                 ddrRecord.createOrUpdate();
@@ -233,14 +235,11 @@ public class DDRUtils
             if (ddrRecord.getStart() != null) {
                 duration = (releaseTime != null ? releaseTime : TimeUtils.getServerCurrentTimeInMillis()) -
                            ddrRecord.getStart();
-                //add default serialized info to begin with
-                String toAddress = ddrRecord.getToAddressString();
-                if (ddrRecord.getToAddress() != null && !ddrRecord.getToAddress().isEmpty()) {
-                    toAddress = ddrRecord.getToAddress().keySet().iterator().next();
-                }
+                String address = "inbound".equals(session.getDirection()) ? session.getLocalAddress()
+                    : session.getRemoteAddress();
                 //if there is an address found, add status
-                if (toAddress != null) {
-                    ddrRecord.addStatusForAddress(toAddress, CommunicationStatus.FINISHED);
+                if (address != null) {
+                    ddrRecord.addStatusForAddress(address, CommunicationStatus.FINISHED);
                 }
             }
             else {
@@ -285,8 +284,8 @@ public class DDRUtils
                                                              adapterConfig.getConfigId(), null, null);
             //fetch the ddr based on the details
             List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterConfig.getConfigId(), adapterConfig.getOwner(),
-                                                                 null, subscriptionDDRType.getTypeId(), null, null,
-                                                                 null, null, null, null);
+                                                                 null, Arrays.asList(subscriptionDDRType.getTypeId()),
+                                                                 null, null, null, null, null, null);
             DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
             newestDDRRecord = fetchNewestDdrRecord(ddrRecords);
             //flag for creating new ddrRecord
@@ -429,7 +428,7 @@ public class DDRUtils
                         if (ttsProvider != null) {
                             ddrRecord.addAdditionalInfo("TTSProvider", ttsProvider);
                         }
-                        ddrRecord.addAdditionalInfo("message", message);
+                        ddrRecord.addAdditionalInfo(DDR_MESSAGE_KEY, message);
                         ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
                         ddrRecord.createOrUpdate();
                         break;
@@ -493,7 +492,7 @@ public class DDRUtils
                         if (ttsAccountId != null) {
                             ddrRecord.addAdditionalInfo("ttsAccountId", ttsAccountId);
                         }
-                        ddrRecord.addAdditionalInfo("message", "Service costs");
+                        ddrRecord.addAdditionalInfo(DDR_MESSAGE_KEY, "Service costs");
                         ddrRecord.setStart(TimeUtils.getServerCurrentTimeInMillis());
                         ddrRecord.createOrUpdate();
                         break;
@@ -827,9 +826,9 @@ public class DDRUtils
             if (applyServiceCharge) {
 
                 String adapterId = config != null ? config.getConfigId() : null;
-                DDRPrice ddrPriceForDialogService = fetchDDRPrice(DDRTypeCategory.SERVICE_COST,
-                                                                  AdapterType.getByValue(config.getAdapterType()),
-                                                                  adapterId, UnitType.PART, null);
+                AdapterType adapterType = config != null ? AdapterType.getByValue(config.getAdapterType()) : null;
+                DDRPrice ddrPriceForDialogService = fetchDDRPrice(DDRTypeCategory.SERVICE_COST, adapterType, adapterId,
+                                                                  UnitType.PART, null);
                 Double serviceCost = ddrPriceForDialogService != null ? ddrPriceForDialogService.getPrice() : 0.0;
                 //get the max of the service cost and the communication cost
                 result = Math.max(result, serviceCost);
@@ -871,12 +870,14 @@ public class DDRUtils
                             : config.getFormattedMyAddress();
                         ddrRecord.setFromAddress(fromAddress);
                         ddrRecord.setToAddress(addresses);
+                        ddrRecord.setDirection("outbound");
                         break;
                     case RECEIVED:
                         ddrRecord.setFromAddress(addresses.keySet().iterator().next());
                         Map<String, String> toAddresses = new HashMap<String, String>();
                         toAddresses.put(config.getFormattedMyAddress(), "");
                         ddrRecord.setToAddress(toAddresses);
+                        ddrRecord.setDirection("inbound");
                         break;
                     default:
                         throw new Exception("Unknown CommunicationStatus seen: " + status.name());
@@ -890,7 +891,7 @@ public class DDRUtils
                     ddrRecord.addStatusForAddress(address, status);
                 }
                 ddrRecord.setAccountType(config.getAccountType());
-                ddrRecord.addAdditionalInfo("message", message);
+                ddrRecord.addAdditionalInfo(DDR_MESSAGE_KEY, message);
                 ddrRecord.setSessionKeysFromMap(sessionKeyMap);
                 ddrRecord.addAdditionalInfo(DDRType.DDR_CATEGORY_KEY, category);
                 //set the ddrRecord time with server current time creationTime.
@@ -898,7 +899,7 @@ public class DDRUtils
                 if(config.isPrivate()) {
                     ddrRecord.addAdditionalInfo(Adapter.IS_PRIVATE, true);
                 }
-                ddrRecord.createOrUpdateWithLog(sessionKeyMap);
+                ddrRecord = ddrRecord.createOrUpdateWithLog(sessionKeyMap);
                 return ddrRecord;
             }
         }
@@ -1116,7 +1117,9 @@ public class DDRUtils
                     DDRRecord ddrRecord = session.getDDRRecord();
                     if (ddrRecord != null) {
                         ddrRecord.addAdditionalInfo(address, "Invalid address");
+                        ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                         ddrRecord.createOrUpdate();
+                        session.drop();
                     }
                 }
                 catch (Exception e) {

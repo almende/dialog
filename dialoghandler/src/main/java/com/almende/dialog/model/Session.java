@@ -32,9 +32,9 @@ public class Session{
 //    private static ConnectionFactory rabbitMQConnectionFactory;
 //    private static final String SESSION_QUEUE_NAME = "SESSION_POST_PROCESS_QUEUE";
     public static final String SESSION_KEY = "sessionKey";
+    public static final String IS_TEST_SESSION_KEY = "isTest";
     public static final String PARENT_SESSION_KEY = "parentSessionKey";
     public static final String CHILD_SESSION_KEY = "childSessionKey";
-    public static final String TRACKING_TOKEN_KEY = "trackingToken";
     public static final String EXTERNAL_CONFERENCE_KEY = "conferenceKey";
     /**
      * Tag used by calling adapters to mark it in the session if a call is
@@ -66,7 +66,6 @@ public class Session{
     
     String keyword;
     String adapterID;
-    String trackingToken;
     String creationTimestamp;
     String startTimestamp;
     String answerTimestamp;
@@ -154,6 +153,14 @@ public class Session{
             datastore.delete(session);
         }
     }
+    
+    @JsonIgnore
+    public void dropIfRemoteAddressMatches(String remoteAddress) {
+
+        if (remoteAddress != null && remoteAddress.equals(this.remoteAddress)) {
+            drop();
+        }
+    }
 	
     public static void drop( String key )
     {
@@ -161,15 +168,6 @@ public class Session{
         if (session != null) {
             session.drop();
         }
-    }
-
-    public static Session getOrCreateSession(String adapterType, String localAddress, String address) {
-        return getOrCreateSession(adapterType + "|" + localAddress + "|" + address);
-    }
-    
-    public static Session getOrCreateSession(String key) {
-
-        return getOrCreateSession(key, null);
     }
 
     public static Session getOrCreateSession(AdapterConfig config, String remoteAddress) {
@@ -199,61 +197,61 @@ public class Session{
         return session;
     }
     
-    @JsonIgnore
-    public static Session getOrCreateSession(String internalSessionKey, String keyword) {
-
-        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        Session session = datastore.load(Session.class, internalSessionKey.toLowerCase());
-        // If there is no session create a new one for the user
-        if (session == null) {
-            String[] split = internalSessionKey.split("\\|");
-
-            if (split.length == 3) {
-                String type = split[0];
-                String localaddress = split[1];
-                AdapterConfig config = null;
-                ArrayList<AdapterConfig> configs = AdapterConfig.findAdapters(type, localaddress, null);
-                // This assume there is a default keyword
-                if (configs.size() == 0) {
-                    log.warning("No adapter found for new session type: " + type + " address: " + localaddress);
-                    return null;
-                }
-                else if (configs.size() == 1) {
-                    config = configs.get(0);
-                    log.info("Adapter found for new session type: " + type + " address: " + localaddress);
-                }
-                else {
-                    AdapterConfig defaultConfig = null;
-                    for (AdapterConfig conf : configs) {
-                        if (conf.getKeyword() == null) {
-                            defaultConfig = conf;
-                        }
-                        else if (keyword != null && conf.getKeyword().equals(keyword)) {
-                            config = conf;
-                        }
-                    }
-                    if (config == null) {
-                        log.warning("No adapter with right keyword so using default type: " + type + " address: " +
-                                    localaddress);
-                        config = defaultConfig;
-                    }
-                    else {
-                        log.info("Adapter found with right keyword type: " + type + " address: " + localaddress +
-                                 " keyword: " + keyword);
-                    }
-                }
-                session = createSession(config, split[2]);
-            }
-            else {
-                log.severe("getSession: incorrect key given:" + internalSessionKey);
-            }
-            session.existingSession = false;
-        }
-        else {
-            session.existingSession = true;
-        }
-        return session;
-    }
+//    @JsonIgnore
+//    public static Session getOrCreateSession(String internalSessionKey, String keyword) {
+//
+//        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+//        Session session = datastore.load(Session.class, internalSessionKey.toLowerCase());
+//        // If there is no session create a new one for the user
+//        if (session == null) {
+//            String[] split = internalSessionKey.split("\\|");
+//
+//            if (split.length == 3) {
+//                String type = split[0];
+//                String localaddress = split[1];
+//                AdapterConfig config = null;
+//                ArrayList<AdapterConfig> configs = AdapterConfig.findAdapters(type, localaddress, null);
+//                // This assume there is a default keyword
+//                if (configs.size() == 0) {
+//                    log.warning("No adapter found for new session type: " + type + " address: " + localaddress);
+//                    return null;
+//                }
+//                else if (configs.size() == 1) {
+//                    config = configs.get(0);
+//                    log.info("Adapter found for new session type: " + type + " address: " + localaddress);
+//                }
+//                else {
+//                    AdapterConfig defaultConfig = null;
+//                    for (AdapterConfig conf : configs) {
+//                        if (conf.getKeyword() == null) {
+//                            defaultConfig = conf;
+//                        }
+//                        else if (keyword != null && conf.getKeyword().equals(keyword)) {
+//                            config = conf;
+//                        }
+//                    }
+//                    if (config == null) {
+//                        log.warning("No adapter with right keyword so using default type: " + type + " address: " +
+//                                    localaddress);
+//                        config = defaultConfig;
+//                    }
+//                    else {
+//                        log.info("Adapter found with right keyword type: " + type + " address: " + localaddress +
+//                                 " keyword: " + keyword);
+//                    }
+//                }
+//                session = createSession(config, split[2]);
+//            }
+//            else {
+//                log.severe("getSession: incorrect key given:" + internalSessionKey);
+//            }
+//            session.existingSession = false;
+//        }
+//        else {
+//            session.existingSession = true;
+//        }
+//        return session;
+//    }
     
     public static Session createSession(AdapterConfig config, String remoteAddress) {
         return createSession(config, config.getMyAddress(), remoteAddress);
@@ -271,7 +269,6 @@ public class Session{
         session.internalSession = internalSessionKey.toLowerCase();
         session.key = UUID.randomUUID().toString();
         session.creationTimestamp = String.valueOf(TimeUtils.getServerCurrentTimeInMillis());
-        session.setTrackingToken(UUID.randomUUID().toString());
         session.storeSession();
         log.info("new session created with id: " + session.key);
         session.existingSession = false;
@@ -594,15 +591,6 @@ public class Session{
     }
     
     
-    public String getTrackingToken() {
-        return this.trackingToken;
-    }
-    
-    
-    public void setTrackingToken(String trackingToken) {
-        this.trackingToken = trackingToken;     
-    }
-
     public String getStartTimestamp()
     {
         return startTimestamp;
@@ -914,5 +902,54 @@ public class Session{
     public Session reload() {
 
         return getSession(key);
+    }
+    
+    /**
+     * Marks the session as a test session. no ddr records are created for this.
+     */
+    @JsonIgnore
+    public void setAsTestSession() {
+        addExtras(Session.IS_TEST_SESSION_KEY, "true");
+    }
+    
+    /**
+     * Returns if the session is market as for testing. no ddr records must be created.
+     * @return
+     */
+    @JsonIgnore
+    public boolean isTestSession() {
+
+        return Boolean.parseBoolean(getAllExtras().get(IS_TEST_SESSION_KEY));
+    }
+    
+    /**
+     * Creates a new session with same of the following values: <br>
+     * 1. {@link Session#accountId} <br>
+     * 2. {@link Session#startUrl} <br>
+     * 3. {@link Session#remoteAddress} <br>
+     * 4. {@link Session#localAddress} <br>
+     * 5. {@link Session#type} <br>
+     * 6. {@link Session#internalSession} <br>
+     * 7. {@link Session#adapterID} <br>
+     * 8. {@link Session#question} <br>
+     * 9. {@link Session#localName} <br>
+     * 10. {@link Session#keyword} <br>
+     * @param session
+     * @return
+     */
+    public static Session cloneSession(Session session, String direction) {
+        
+        Session clonedSession = null;
+        if (session != null) {
+            clonedSession = createSession(session.getAdapterConfig(), session.getRemoteAddress());
+            clonedSession.setAccountId(session.getAccountId());
+            clonedSession.setStartUrl(session.getStartUrl());
+            clonedSession.setQuestion(session.getQuestion());
+            clonedSession.setDirection(direction);
+            clonedSession.setLocalName(session.localName);
+            clonedSession.setKeyword(session.keyword);
+            clonedSession.storeSession();
+        }
+        return clonedSession;
     }
 }

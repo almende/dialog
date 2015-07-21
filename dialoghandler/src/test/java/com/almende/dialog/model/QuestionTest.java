@@ -17,7 +17,6 @@ import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.jackson.JOM;
 import com.askfast.commons.entity.ResponseLog;
@@ -174,6 +173,7 @@ public class QuestionTest extends TestFramework {
         Assert.assertThat(TestServlet.getLogObject("url"), Matchers.nullValue());
         deleteResponse = afHttpClient.delete(url, true);
         Assert.assertThat(deleteResponse, Matchers.nullValue());
+        Thread.sleep(1000);
         Assert.assertThat(TestServlet.getLogObject("url"), Matchers.notNullValue());
     }
 }

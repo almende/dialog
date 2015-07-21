@@ -176,8 +176,7 @@ public class Logger {
      */
     public void log(LogLevel level, AdapterConfig adapter, String message, Session session) {
 
-        if (session != null && session.getTrackingToken() != null &&
-            (LogLevel.SEVERE.equals(level) || LogLevel.WARNING.equals(level))) {
+        if (session != null && (LogLevel.SEVERE.equals(level) || LogLevel.WARNING.equals(level))) {
             
             MongoCollection collection = getCollection();
             Log devLog = new Log(level, adapter, message, session);

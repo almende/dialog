@@ -34,10 +34,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.joda.time.DateTime;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
@@ -140,8 +142,10 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             msg.setBody(getText((Part) mp.getBodyPart(0)));
             Session ses = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_EMAIL, msg.getLocalAddress(),
                                                           msg.getAddress());
+            log.info(String.format("Email body: %s with content type: %s", msg.getBody(), mp.getBodyPart(0)
+                                                                                            .getContentType()));
             if (ses != null && ses.getQuestion() != null && ses.getQuestion().getType().equals("closed")) {
-                msg.setBody(getFristLineOfEmail(msg, mp.getBodyPart(0).getContentType()));
+                msg.setBody(getFirstLineOfEmail(msg, mp.getBodyPart(0).getContentType()));
                 log.info("Receive mail trimmed down body: " + msg.getBody());
             }
             else {
@@ -188,22 +192,22 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
 		return null;
 	}
 	
-	protected String getFristLineOfEmail(TextMessage message, String contentType)throws Exception{
-		String[] lines;
-		if(contentType.equals("text/html")){
-			lines = message.getBody().split("<br/?>");
+    protected String getFirstLineOfEmail(TextMessage message, String contentType) throws Exception {
 
-		}else{
-			lines =message.getBody().split("\r?\n"); 
-
-		}
-		for(int i =0; i < lines.length; i++){
-			if(!("".equals(lines[i]))) {
-				return lines[i];
-			}
-		}
-		return "";
-	}
+        String[] lines;
+        if (contentType.equals("text/html")) {
+            lines = message.getBody().split("<br/?>");
+        }
+        else {
+            lines = message.getBody().split("\r?\n");
+        }
+        for (int i = 0; i < lines.length; i++) {
+            if (!("".equals(lines[i]))) {
+                return lines[i];
+            }
+        }
+        return "";
+    }
 
     @Deprecated
     /**
@@ -261,6 +265,8 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
             else {
                 simpleMessage.setFrom(new InternetAddress(from));
             }
+            Map<String, Session> sessions = DialogAgent.getSessionsFromExtras(extras);
+            sessions = sessions != null ? sessions : new HashMap<String, Session>(1);
             for (String address : addressNameMap.keySet()) {
                 String toName = addressNameMap.get(address) != null ? addressNameMap.get(address) : address;
                 try {
@@ -273,7 +279,12 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                     String errorMessage = String.format("Error in adding TO: receipient: %s (%s). Ignored. Message: %s",
                                                         address, toName, e.toString());
                     if (ddrRecord != null) {
+                        ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                         ddrRecord.addAdditionalInfo(address, errorMessage);
+                    }
+                    if(sessions.get(address) != null) {
+                        sessions.get(address).drop();
+                        sessions.remove(address);
                     }
                 }
             }
@@ -297,7 +308,12 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                                                                     address, toName, e.toString());
                                 e.printStackTrace();
                                 if (ddrRecord != null) {
+                                    ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                                     ddrRecord.addAdditionalInfo(address, errorMessage);
+                                }
+                                if(sessions.get(address) != null) {
+                                    sessions.get(address).drop();
+                                    sessions.remove(address);
                                 }
                             }
                         }
@@ -325,7 +341,12 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
                                                                     address, toName, e.toString());
                                 e.printStackTrace();
                                 if (ddrRecord != null) {
+                                    ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
                                     ddrRecord.addAdditionalInfo(address, errorMessage);
+                                }
+                                if(sessions.get(address) != null) {
+                                    sessions.get(address).drop();
+                                    sessions.remove(address);
                                 }
                             }
                         }

@@ -364,7 +364,8 @@ public class ServerUtils
         String ttsAccountId = null;
         String accountId = null;
         
-        if (ttsInfo != null) {
+        if (ttsInfo != null && session != null) {
+            
             language = ttsInfo.getLanguage().getCode();
             speed = ttsInfo.getSpeed();
             codec = ttsInfo.getCodec();

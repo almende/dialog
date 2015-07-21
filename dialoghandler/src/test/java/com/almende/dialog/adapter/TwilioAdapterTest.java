@@ -45,8 +45,7 @@ public class TwilioAdapterTest extends TestFramework{
 
         Question question = getCommentQuestion( false );
         AdapterConfig adapter = createTwilioAdapter();
-        String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         String result = renderQuestion( question, adapter, session);
 
         Document doc = getXMLDocumentBuilder( result );
@@ -69,8 +68,7 @@ public class TwilioAdapterTest extends TestFramework{
 
         Question question = getCommentQuestion( true );
         AdapterConfig adapter = createBroadsoftAdapter();
-        String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         String result = renderQuestion(question, adapter, session);
 
         Document doc = getXMLDocumentBuilder( result );
@@ -95,8 +93,7 @@ public class TwilioAdapterTest extends TestFramework{
 
         Question question = getOpenQuestion( false, false );
         AdapterConfig adapter = createTwilioAdapter();
-        String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         String result = renderQuestion(question, adapter, session);
 
         log.info( "Result Open Question: " + result );
@@ -123,8 +120,7 @@ public class TwilioAdapterTest extends TestFramework{
 
         Question question = getOpenQuestion( false, true );
         AdapterConfig adapter = createTwilioAdapter();
-        String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         String result = renderQuestion( question, adapter, session);
 
         log.info( "Result Open Question: " + result );
@@ -157,8 +153,7 @@ public class TwilioAdapterTest extends TestFramework{
 
         Question question = getClosedQuestion( false );
         AdapterConfig adapter = createTwilioAdapter();
-        String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         String result = renderQuestion( question, adapter, session);
 
         Document doc = getXMLDocumentBuilder( result );
@@ -193,8 +188,7 @@ public class TwilioAdapterTest extends TestFramework{
 
         Question question = getReferralQuestion( false, false,false );
         AdapterConfig adapter = createTwilioAdapter();
-        String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         String result = renderQuestion( question, adapter, session);
 
         log.info( "Result Referral Question: " + result );
@@ -228,8 +222,7 @@ public class TwilioAdapterTest extends TestFramework{
 
         Question question = getReferralQuestion( true, false,false );
         AdapterConfig adapter = createTwilioAdapter();
-        String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         String result = renderQuestion( question, adapter, session);
 
         log.info( "Result Referral Question: " + result );
@@ -263,8 +256,7 @@ public class TwilioAdapterTest extends TestFramework{
 
         Question question = getReferralQuestion( true, true, false );
         AdapterConfig adapter = createTwilioAdapter();
-        String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         String result = renderQuestion( question, adapter, session );
 
         log.info( "Result Referral Question: " + result );
@@ -301,8 +293,7 @@ public class TwilioAdapterTest extends TestFramework{
 
         Question question = getReferralQuestion( false, false, true );
         AdapterConfig adapter = createTwilioAdapter();
-        String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         String result = renderQuestion( question, adapter, session);
 
         log.info( "Result Referral Question: " + result );
@@ -341,8 +332,7 @@ public class TwilioAdapterTest extends TestFramework{
 
         Question question = getReferralQuestion( true, true, true );
         AdapterConfig adapter = createTwilioAdapter();
-        String sessionKey = createSessionKey( adapter, remoteAddressVoice );
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         String result = renderQuestion( question, adapter, session);
 
         log.info( "Result Referral Question: " + result );

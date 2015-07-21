@@ -1,6 +1,20 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+21-1-2015, version 1.11.0
+- feature: added parent and child linked ddrRecordIds
+- feature: create twilio adapter with subaccounts
+- fix: add all toAddresses in ddr
+- fix: update ddrRecord when address is invalid (status: ERROR)
+- fix: delete/drop sessions when error in Communication status.
+- fix: question was not set in any sessions of text adapters.
+- fix: fixed some voicemail time properties
+- fix: evaluate result from outbound call, and attach appropriate error code
+- fix: issue with formatting voip addresses
+- fix: issue with exit question broadsoft
+- fix: add only outgoing calls to status communication as received.
+- fix: email address outbound showed sent for invalid email address. 
+
 07-7-2015, version 1.10.4
 - fix: add accountId to tts url
 

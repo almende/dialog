@@ -16,6 +16,7 @@ import com.almende.dialog.IntegrationTest;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.SMSDeliveryStatus;
+import com.almende.dialog.agent.DDRRecordAgent;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
@@ -26,7 +27,6 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
-import com.almende.eve.protocol.jsonrpc.formats.JSONRPCException;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.utils.PhoneNumberUtils;
@@ -126,9 +126,12 @@ public class RouteSMSIT extends TestFramework {
      * 
      * @throws Exception
      */
-    @Test(expected=JSONRPCException.class)
+    @Test
     public void outBoundSMSWithInvalidSenderIdCheck() throws Exception {
 
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.07, "sms charge", UnitType.PART,
+                           AdapterType.SMS, "");
         String senderName = "TestUser122342345";
 
         //create SMS adapter
@@ -146,8 +149,16 @@ public class RouteSMSIT extends TestFramework {
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put(remoteAddressVoice, null);
 
-        outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
-                               "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+        boolean isExceptionThrown = false;
+        try {
+
+            outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT,
+                                   senderName, "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+        }
+        catch (Exception e) {
+            isExceptionThrown = true;
+        }
+        Assert.assertThat(isExceptionThrown, Matchers.is(true));
         //fetch sessions
         List<Session> allSessions = Session.getAllSessions();
         //no sessions must be found
@@ -156,9 +167,10 @@ public class RouteSMSIT extends TestFramework {
         //fetch the sms ddr records
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
                                                              null, null);
-        Assert.assertThat(allSessions.size(), Matchers.is(1));
+        Assert.assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
-        Assert.assertThat(ddrRecord.getStatusForAddress(remoteAddressVoice), Matchers.is(CommunicationStatus.ERROR));
+        Assert.assertThat(ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
+                          Matchers.is(CommunicationStatus.ERROR));
 
         //check the SMSDeliveryStatus
         List<SMSDeliveryStatus> allSMSStatus = SMSDeliveryStatus.fetchAll();

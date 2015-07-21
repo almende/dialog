@@ -1,19 +1,16 @@
 package com.almende.dialog.adapter;
 
 import java.io.StringWriter;
-import java.util.ArrayList;
-
+import java.util.Collection;
 import javax.ws.rs.Path;
-
 import org.znerd.xmlenc.XMLOutputter;
-
 import com.almende.dialog.model.Question;
 
 @Path("/vvxml/")
 public class VoxeoVoiceXMLRESTProxy extends VoiceXMLRESTProxy {
 	
-	@Override
-	protected String renderComment(Question question,ArrayList<String> prompts, String sessionKey){
+    @Override
+    protected String renderComment(Question question, Collection<String> prompts, String sessionKey) {
 		
 		String localID = sessionKey.split("\\|")[1];
 		/*String handleTimeoutURL = "/vxml/timeout";

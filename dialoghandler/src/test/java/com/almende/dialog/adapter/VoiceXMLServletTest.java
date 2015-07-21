@@ -34,8 +34,7 @@ public class VoiceXMLServletTest extends TestFramework {
         
         Question question = getCommentQuestion();
         AdapterConfig adapter = createBroadsoftAdapter();
-        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         
         String result = renderQuestion(question, adapter, remoteAddressVoice, session);
         
@@ -69,8 +68,7 @@ public class VoiceXMLServletTest extends TestFramework {
     public void renderReferralQuestionTest() throws Exception {
         Question question = getReferralQuestion( false, false, false );
         AdapterConfig adapter = createBroadsoftAdapter();
-        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         
         String result = renderQuestion( question, adapter, remoteAddressVoice, session );
         System.out.println("Res: "+result);
@@ -91,8 +89,7 @@ public class VoiceXMLServletTest extends TestFramework {
     public void renderMultiReferralQuestionTest() throws Exception {
         Question question = getReferralQuestion( false, false, true );
         AdapterConfig adapter = createBroadsoftAdapter();
-        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         
         String result = renderQuestion( question, adapter, remoteAddressVoice, session );
         System.out.println("Res: "+result);
@@ -119,8 +116,7 @@ public class VoiceXMLServletTest extends TestFramework {
 
         Question question = getOpenDTMFQuestion();
         AdapterConfig adapter = createBroadsoftAdapter();
-        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
         String result = renderQuestion(question, adapter, remoteAddressVoice, session);
         assertOpenQuestionWithDTMFType( result );
     }
@@ -130,15 +126,14 @@ public class VoiceXMLServletTest extends TestFramework {
 
         Question question = getOpenAudioQuestion();
         AdapterConfig adapter = createBroadsoftAdapter();
-        String sessionKey = createSessionKey(adapter, remoteAddressVoice);
-        Session session = createSession(sessionKey);
+        Session session = createSession(adapter, remoteAddressVoice);
 
         String result = renderQuestion(question, adapter, remoteAddressVoice, session);
         TestServlet.logForTest(AdapterType.CALL.toString(), COMMENT_QUESTION_AUDIO);
         String expected = String.format("<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\">"
-                                            + "<form id=\"ComposeMessage\"><record name=\"file\" beep=\"true\" maxtime=\"15s\" dtmfterm=\"true\"><prompt timeout=\"5s\">"
-                                            + "<audio src=\"%1$s\"/></prompt><noinput><prompt><audio src=\"%1$s\"/></prompt></noinput>"
-                                            + "<catch event=\"connection.disconnect.hangup\"><submit next=\"upload?questionId=1&"
+                                            + "<form id=\"ComposeMessage\"><record name=\"file\" beep=\"true\" maxtime=\"300s\" dtmfterm=\"true\">" 
+                                            + "<prompt timeout=\"5s\"><audio src=\"%1$s\"/></prompt><noinput><prompt><audio src=\"%1$s\"/></prompt>" 
+                                            + "</noinput><catch event=\"connection.disconnect.hangup\"><submit next=\"upload?questionId=1&"
                                             + "amp;sessionKey=%2$s\" namelist=\"file\" method=\"post\" enctype=\"multipart/form-data\"/>"
                                             + "</catch><filled><submit next=\"upload?questionId=1&amp;sessionKey=%2$s\" namelist=\"file\" "
                                             + "method=\"post\" enctype=\"multipart/form-data\"/></filled></record></form></vxml>",
@@ -157,7 +152,7 @@ public class VoiceXMLServletTest extends TestFramework {
         //create an adapter
         AdapterConfig adapter = createBroadsoftAdapter();
         //create a session
-        Session session = createSession(createSessionKey(adapter, remoteAddressVoice));
+        Session session = createSession(adapter, remoteAddressVoice);
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         voiceXMLRESTProxy.hangup(session);
     }
@@ -303,7 +298,7 @@ public class VoiceXMLServletTest extends TestFramework {
         assertEquals( "questionId", questionIdNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
         assertEquals( "sessionKey", sessionKeyNode.getAttributes().getNamedItem( "name" ).getNodeValue() );
         assertEquals( "field", field.getNodeName() );
-        assertEquals( 4, field.getChildNodes().getLength() );
+        assertEquals( 5, field.getChildNodes().getLength() );
 
         if(answerInputNode.getAttributes().getNamedItem( "expr" ) != null)
         {

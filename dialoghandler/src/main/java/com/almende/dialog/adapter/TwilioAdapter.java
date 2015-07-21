@@ -38,6 +38,7 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.QuestionEventRunner;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
@@ -112,8 +113,8 @@ public class TwilioAdapter {
             loadAddress = PhoneNumberUtils.formatNumber(loadAddress, null);
         }
         //create a session for the first remote address
-        String firstRemoteAddress = loadAddress != null ? new String(loadAddress) : new String(addressNameMap.keySet()
-                                        .iterator().next());
+        String firstRemoteAddress = loadAddress != null && !loadAddress.trim().isEmpty() ? new String(loadAddress)
+            : new String(addressNameMap.keySet().iterator().next());
         firstRemoteAddress = PhoneNumberUtils.formatNumber(firstRemoteAddress, null);
         Session session = Session.getOrCreateSession(config, firstRemoteAddress);
         session.setAccountId(accountId);
@@ -143,7 +144,7 @@ public class TwilioAdapter {
         if (question != null) {
             for (String address : addressNameMap.keySet()) {
                 String formattedAddress = PhoneNumberUtils.formatNumber(address, PhoneNumberFormat.E164);
-                if (formattedAddress != null) {
+                if (formattedAddress != null && PhoneNumberUtils.isValidPhoneNumber(formattedAddress)) {
 
                     //ignore the address for which the session is already created.
                     if (!formattedAddress.equals(session.getRemoteAddress())) {
@@ -164,6 +165,11 @@ public class TwilioAdapter {
                     session.addExtras(AdapterConfig.ACCESS_TOKEN_KEY, config.getAccessToken());
                     session.addExtras(AdapterConfig.ACCESS_TOKEN_SECRET_KEY, config.getAccessTokenSecret());
                     session.storeSession();
+                    
+                    if(ddrRecord != null) {
+                        ddrRecord.addStatusForAddress(formattedAddress, CommunicationStatus.SENT);
+                        ddrRecord.createOrUpdate();
+                    }
                     
                     String extSession = "";
                     if (!ServerUtils.isInUnitTestingEnvironment()) {
@@ -193,19 +199,33 @@ public class TwilioAdapter {
                     result.put(formattedAddress, session.getKey());
                 }
                 else {
-                    result.put(address, "Invalid address");
+                    result.put(address, String.format(DialogAgent.INVALID_ADDRESS_MESSAGE, address));
                     log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
+                    if(ddrRecord != null) {
+                        ddrRecord.addStatusForAddress(address, CommunicationStatus.ERROR);
+                        ddrRecord.createOrUpdate();
+                    }
+                    sessionMap.remove(formattedAddress);
+                    session.dropIfRemoteAddressMatches(formattedAddress);
                 }
             }
         }
         else {
-            log.severe(String.format("Question not fetched from: %s. Request for outbound call rejected ",
-                                     dialogIdOrUrl));
+            log.severe(DialogAgent.getQuestionNotFetchedMessage(dialogIdOrUrl));
             dialogLog.log(LogLevel.SEVERE, session.getAdapterConfig(),
-                          String.format("Question not fetched from: %s. Request for outbound call rejected ",
-                                        dialogIdOrUrl), session);
+                          DialogAgent.getQuestionNotFetchedMessage(dialogIdOrUrl), session);
+            if(ddrRecord != null) {
+
+                ddrRecord.setStatusForAddresses(addressNameMap.keySet(), CommunicationStatus.ERROR);
+                ddrRecord.addAdditionalInfo(DDRUtils.DDR_MESSAGE_KEY,
+                                            DialogAgent.getQuestionNotFetchedMessage(dialogIdOrUrl));
+                ddrRecord.createOrUpdate();
+            }
+            session.drop();
+            throw new Exception(DialogAgent.getQuestionNotFetchedMessage(dialogIdOrUrl));
         }
         if(ddrRecord != null) {
+            ddrRecord.setToAddress(addressNameMap);
             ddrRecord.setSessionKeysFromMap(sessionMap);
             ddrRecord.createOrUpdate();
         }
@@ -217,9 +237,10 @@ public class TwilioAdapter {
     @Produces("application/xml")
     public Response getNewDialog(@QueryParam("CallSid") String CallSid, @QueryParam("AccountSid") String AccountSid,
         @QueryParam("From") String localID, @QueryParam("To") String remoteID,
-        @QueryParam("Direction") String direction, @QueryParam("ForwardedFrom") String forwardedFrom) {
+        @QueryParam("Direction") String direction, @QueryParam("ForwardedFrom") String forwardedFrom,
+        @QueryParam("isTest") Boolean isTest) {
 
-        return getNewDialogPost(CallSid, AccountSid, localID, remoteID, direction, forwardedFrom);
+        return getNewDialogPost(CallSid, AccountSid, localID, remoteID, direction, forwardedFrom, isTest);
     }
 	
     @Path("new")
@@ -227,7 +248,7 @@ public class TwilioAdapter {
     @Produces("application/xml")
     public Response getNewDialogPost(@FormParam("CallSid") String CallSid, @FormParam("AccountSid") String AccountSid,
         @FormParam("From") String localID, @FormParam("To") String remoteID, @FormParam("Direction") String direction,
-        @FormParam("ForwardedFrom") String forwardedFrom) {
+        @FormParam("ForwardedFrom") String forwardedFrom, @QueryParam("isTest") Boolean isTest) {
 
         log.info("call started:" + direction + ":" + remoteID + ":" + localID);
         localID = checkAnonymousCallerId(localID);
@@ -256,6 +277,9 @@ public class TwilioAdapter {
             session = Session.createSession(config, formattedRemoteId);
             session.setAccountId(config.getOwner());
             session.setExternalSession(CallSid);
+            if (isTest != null && Boolean.TRUE.equals(isTest)) {
+                session.setAsTestSession();
+            }
             session.storeSession();
             url = config.getURLForInboundScenario(session);
             try {
@@ -640,6 +664,12 @@ public class TwilioAdapter {
         //make sure that the answered call is not triggered twice
         if (session != null && session.getQuestion() != null && !isEventTriggered("answered", session)) {
             
+            //update the communication status to received status
+            DDRRecord ddrRecord = session.getDDRRecord();
+            if (ddrRecord != null && !"inbound".equals(session.getDirection())) {
+                ddrRecord.addStatusForAddress(session.getRemoteAddress(), CommunicationStatus.RECEIVED);
+                ddrRecord.createOrUpdate();
+            }
             String responder = session.getRemoteAddress();
             String referredCalledId = session.getAllExtras().get("referredCalledId");
             HashMap<String, Object> timeMap = new HashMap<String, Object>();
@@ -672,15 +702,15 @@ public class TwilioAdapter {
         // There are 2 cases where we don't receive a callSid:
         // 1 is when there is a referral to multiple users
         // 2 is when the child session is created but the status is never processed
-        if(callSid!=null) {
+        if (callSid != null && !ServerUtils.isInUnitTestingEnvironment()) {
             String accountSid = config.getAccessToken();
             String authToken = config.getAccessTokenSecret();
             TwilioRestClient client = new TwilioRestClient(accountSid, authToken);
-    
+
             call = client.getAccount().getCall(callSid);
         }
 
-        if (session == null && callSid!=null) {
+        if (session == null && callSid != null) {
             remoteID = call.getTo();
             session = Session.getSessionByExternalKey(callSid);
         } 
@@ -695,7 +725,7 @@ public class TwilioAdapter {
             String direction = session.getDirection();
             if(direction==null && call!=null) {
                 direction = call.getDirection() != null && call.getDirection().equalsIgnoreCase("outbound-dial") ? "outbound"
-                                                                                                                   : "inbound";
+                    : "inbound";
             }
             try {
                 // Only update the call times if the session belongs to the callSID
@@ -1160,7 +1190,7 @@ public class TwilioAdapter {
         // Set timeout
         String timeoutProperty = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT);
         timeoutProperty = timeoutProperty != null ? timeoutProperty : "20";
-        int timeout = 5;
+        int timeout = 20;
         try {
             timeout = Integer.parseInt(timeoutProperty);
         }
@@ -1447,9 +1477,12 @@ public class TwilioAdapter {
         referralSession.addExtras("originalRemoteId", originalRemoteID);
         referralSession.addExtras("redirect", "true");
         referralSession.setAccountId(session.getAccountId());
+        referralSession.setQuestion(session.getQuestion());
+        referralSession.addExtras(Session.PARENT_SESSION_KEY, session.getKey());
         referralSession.storeSession();
         
         if (session.getDirection() != null) {
+            
             DDRRecord ddrRecord = null;
             String urls = StringUtils.join( question.getUrl(), "," );
             try {
@@ -1459,8 +1492,6 @@ public class TwilioAdapter {
                                                                             urls, referralSession);
                 referralSession = referralSession.reload();
                 if (ddrRecord != null) {
-                    ddrRecord.addAdditionalInfo(Session.TRACKING_TOKEN_KEY, referralSession.getTrackingToken());
-                    ddrRecord.createOrUpdate();
                     referralSession.setDdrRecordId(ddrRecord.getId());
                 }
             }
@@ -1468,11 +1499,8 @@ public class TwilioAdapter {
                 e.printStackTrace();
                 log.severe(String.format("Continuing without DDR. Error: %s", e.toString()));
             }
-            referralSession.setDirection("outbound");
-            referralSession.setTrackingToken(session.getTrackingToken());
+            referralSession.setDirection("transfer");
         }
-        referralSession.setQuestion(session.getQuestion());
-        referralSession.addExtras(Session.PARENT_SESSION_KEY, session.getKey());
         referralSession.storeSession();
         session.addChildSessionKey( referralSession.getKey() );
         session.storeSession();

@@ -1,6 +1,7 @@
 package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -8,6 +9,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.net.URLEncoder;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -15,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Response.Status;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.codehaus.plexus.util.StringInputStream;
@@ -36,6 +39,7 @@ import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.SMSDeliveryStatus;
 import com.almende.dialog.agent.AdapterAgent;
+import com.almende.dialog.agent.DDRRecordAgent;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
@@ -46,8 +50,10 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.ServerUtils;
+import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DialogRequestDetails;
 import com.askfast.commons.utils.PhoneNumberUtils;
 
 @SuppressWarnings("deprecation")
@@ -703,6 +709,138 @@ public class CMServletIT extends TestFramework {
         assertEquals("ASK", session2.getLocalAddress());
         assertEquals(AdapterAgent.ADAPTER_TYPE_SMS.toLowerCase(), session2.getType().toLowerCase());
         assertTrue(session.getKey() != session2.getKey());
+    }
+    
+    /**
+     * Test if a proper response is received when an outbound email is triggered
+     * for one wrong email address and one valid
+     * 
+     * @throws Exception
+     */
+    @SuppressWarnings("unchecked")
+    @Test
+    public void invalidAndValidEmailAddressTest() throws Exception {
+
+        String invalidAddres = "112dd";
+        //setup actions to generate ddr records when the email is sent or received
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "outgoing", UnitType.PART,
+                           AdapterType.SMS, null);
+
+        //prepare outbound question url
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.APPOINTMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+
+        //create mail adapter
+        AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
+                                                       TEST_PUBLIC_KEY, "0642500086", "0642500086", null);
+        //send email
+        DialogRequestDetails dialogRequestDetails = new DialogRequestDetails();
+        dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
+        dialogRequestDetails.setAdapterID(smsAdapter.getConfigId());
+        dialogRequestDetails.setAddressList(Arrays.asList(invalidAddres, remoteAddressVoice));
+        dialogRequestDetails.setUrl(url);
+
+        RestResponse dialogRequest = new DialogAgent().outboundCallWithDialogRequest(dialogRequestDetails);
+
+        assertThat(dialogRequest.getCode(), Matchers.is(201));
+        Map<String, String> result = (Map<String, String>) dialogRequest.getResult(Map.class);
+        assertThat(result.get(invalidAddres).toString(),
+                   Matchers.is(String.format(DialogAgent.INVALID_ADDRESS_MESSAGE, invalidAddres)));
+        assertThat(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)).toString(),
+                   Matchers.not(String.format(DialogAgent.INVALID_ADDRESS_MESSAGE, invalidAddres)));
+
+        List<Session> allSessions = Session.getAllSessions();
+        assertThat(allSessions.size(), Matchers.is(1));
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertThat(ddrRecords.size(), Matchers.is(1));
+    }
+    
+    /**
+     * Test if a proper response is received when an outbound email is triggered
+     * for no method and also no address given. So basically a dialog method
+     * isnt deduced based on the addresses given
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void invalidDialogMethodAndEmptyAddressTest() throws Exception {
+
+        //setup actions to generate ddr records when the email is sent or received
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "outgoing", UnitType.PART,
+                           AdapterType.SMS, null);
+
+        //prepare outbound question url
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.APPOINTMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+
+        //create mail adapter
+        AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
+                                                       TEST_PUBLIC_KEY, "0642500086", "0642500086", null);
+        //send email
+        DialogRequestDetails dialogRequestDetails = new DialogRequestDetails();
+        dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
+        dialogRequestDetails.setAdapterID(smsAdapter.getConfigId());
+        dialogRequestDetails.setUrl(url);
+
+        RestResponse dialogRequest = new DialogAgent().outboundCallWithDialogRequest(dialogRequestDetails);
+
+        assertThat(dialogRequest.getCode(), Matchers.is(400));
+        assertThat(dialogRequest.getResult().toString(), Matchers.is(Status.BAD_REQUEST.getReasonPhrase()));
+
+        List<Session> allSessions = Session.getAllSessions();
+        assertThat(allSessions.size(), Matchers.is(0));
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertThat(ddrRecords.size(), Matchers.is(0));
+    }
+    
+    /**
+     * Test if a proper response is received when an outbound email is triggered
+     * for no method and also no address given. So basically a dialog method
+     * isnt deduced based on the addresses given
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void invalidDialogMethodTest() throws Exception {
+
+        //setup actions to generate ddr records when the email is sent or received
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "outgoing", UnitType.PART,
+                           AdapterType.SMS, null);
+
+        //prepare outbound question url
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.APPOINTMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+
+        //create mail adapter
+        AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
+                                                       TEST_PUBLIC_KEY, "0642500086", "0642500086", null);
+        //send email
+        DialogRequestDetails dialogRequestDetails = new DialogRequestDetails();
+        dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
+        dialogRequestDetails.setAdapterID(smsAdapter.getConfigId());
+        dialogRequestDetails.setAddress(remoteAddressVoice);
+        dialogRequestDetails.setMethod("invalid method");
+        dialogRequestDetails.setUrl(url);
+
+        RestResponse dialogRequest = new DialogAgent().outboundCallWithDialogRequest(dialogRequestDetails);
+
+        assertThat(dialogRequest.getCode(), Matchers.is(400));
+        assertThat(dialogRequest.getResult(Map.class).get("Error").toString(),
+                   Matchers.is(DialogAgent.INVALID_METHOD_TYPE_MESSAGE + "invalid method"));
+
+        List<Session> allSessions = Session.getAllSessions();
+        assertThat(allSessions.size(), Matchers.is(0));
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
+                                                             null, null);
+        assertThat(ddrRecords.size(), Matchers.is(0));
     }
 
     private HashMap<String, String> outBoundSMSCallXMLTest(Map<String, String> addressNameMap,

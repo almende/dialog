@@ -50,8 +50,11 @@ import com.askfast.commons.entity.ScheduledTask;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.TwilioRestException;
+import com.twilio.sdk.resource.instance.Account;
 import com.twilio.sdk.resource.instance.Application;
+import com.twilio.sdk.resource.instance.IncomingPhoneNumber;
 import com.twilio.sdk.resource.list.ApplicationList;
+import com.twilio.sdk.resource.list.IncomingPhoneNumberList;
 
 @Access(AccessType.PUBLIC)
 public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface {
@@ -373,6 +376,85 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
             return newConfig.getConfigId();
         }
         return null;
+    }
+    
+    public String moveTwilioAdapterToSubAccount(@Name("adapterId") String adapterId, @Name("accountSid") String accountSid,
+        @Name("authToken") String authToken) throws TwilioRestException {
+        
+        AdapterConfig adapter = AdapterConfig.getAdapterConfig( adapterId );
+        
+        TwilioRestClient client = new TwilioRestClient( adapter.getAccessToken(), adapter.getAccessTokenSecret() );
+        TwilioRestClient subAccountClient = new TwilioRestClient( accountSid, authToken );
+        Account account = subAccountClient.getAccount();
+        if(account==null) {
+            return null;
+        }
+        
+        Map<String, String> params = new HashMap<String, String>();
+        params.put("PhoneNumber", adapter.getAddress());
+        
+        String numberSid = null;
+        IncomingPhoneNumberList numbers = client.getAccount().getIncomingPhoneNumbers( params );
+        for(IncomingPhoneNumber number : numbers) {
+            
+            numberSid = number.getSid();
+            
+            params = new HashMap<String, String>();
+            params.put("AccountSid", accountSid);
+            number.update( params );
+        }
+        
+        IncomingPhoneNumber number = subAccountClient.getAccount().getIncomingPhoneNumber( numberSid );
+        
+        params = new HashMap<String, String>();
+        params.put( "VoiceApplicationSid", getApplicationId( accountSid, authToken ) );
+        number.update( params );
+        
+        adapter.setAccessToken( accountSid );
+        adapter.setAccessTokenSecret( authToken );
+        adapter.update();
+        
+        return adapter.getConfigId();
+    }
+    
+    public String moveTwilioAdapterToMainAccount(@Name("adapterId") String adapterId, @Name("accountSid") String accountSid,
+                                                @Name("authToken") String authToken) throws TwilioRestException {
+                                                
+        AdapterConfig adapter = AdapterConfig.getAdapterConfig( adapterId );
+        
+        TwilioRestClient client = new TwilioRestClient( accountSid, authToken );
+        Account account = client.getAccount();
+        if(account==null) {
+            return null;
+        }
+        
+        Map<String, String> params = new HashMap<String, String>();
+        params.put("PhoneNumber", adapter.getAddress());
+        
+        String numberSid = null;
+        IncomingPhoneNumberList numbers = client.getAccount(adapter.getAccessToken()).getIncomingPhoneNumbers( params );
+        for(IncomingPhoneNumber number : numbers) {
+            
+            numberSid = number.getSid();
+            
+            params = new HashMap<String, String>();
+            params.put("AccountSid", accountSid);
+            number.update( params );
+            
+            break;
+        }
+        
+        IncomingPhoneNumber number = client.getAccount().getIncomingPhoneNumber( numberSid );
+        
+        params = new HashMap<String, String>();
+        params.put( "VoiceApplicationSid", getApplicationId( accountSid, authToken ) );
+        number.update( params );
+        
+        adapter.setAccessToken( accountSid );
+        adapter.setAccessTokenSecret( authToken );
+        adapter.update();
+        
+        return adapter.getConfigId();
     }
 	
     public String createEmailAdapter(@Name("emailAddress") String emailAddress, @Name("password") String password,

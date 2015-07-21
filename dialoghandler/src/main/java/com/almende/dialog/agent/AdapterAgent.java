@@ -1,14 +1,16 @@
 package com.almende.dialog.agent;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
 import javax.ws.rs.core.Response;
+
 import org.jivesoftware.smack.XMPPException;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -39,7 +41,6 @@ import com.askfast.commons.RestResponse;
 import com.askfast.commons.Status;
 import com.askfast.commons.agent.ScheduleAgent;
 import com.askfast.commons.agent.intf.AdapterAgentInterface;
-import com.askfast.commons.agent.intf.DialogAgentInterface;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
 import com.askfast.commons.entity.AdapterProviders;
@@ -47,6 +48,10 @@ import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.ScheduledTask;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.twilio.sdk.TwilioRestClient;
+import com.twilio.sdk.TwilioRestException;
+import com.twilio.sdk.resource.instance.Application;
+import com.twilio.sdk.resource.list.ApplicationList;
 
 @Access(AccessType.PUBLIC)
 public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface {
@@ -348,7 +353,7 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         String externalAddress = "+31" + normAddress;
 
         Twilio twilio = new Twilio(accountSid, authToken);
-        String id = twilio.buyPhoneNumber(address, getApplicationId());
+        String id = twilio.buyPhoneNumber(address, getApplicationId(accountSid, authToken));
 
         if (id != null) {
 
@@ -1059,13 +1064,30 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         return address;
     }
     
-    private DialogAgentInterface getDialogAgent(String id) {
-        return createAgentProxy( URI.create("local:"+id), DialogAgentInterface.class );
-    }
-    
-    private String getApplicationId() {
-        DialogAgentInterface dialogAgent = getDialogAgent( "dialog" );
-        return dialogAgent.getApplicationId();
+    public String getApplicationId(@Name("accountSID") String accountSid, @Name("authToken") String authToken) throws TwilioRestException {
+        
+        String voiceUrl = "http://" + Settings.HOST + "/dialoghandler/rest/twilio/new";
+        String ccUrl = "http://" + Settings.HOST + "/dialoghandler/rest/twilio/cc";
+        
+        TwilioRestClient client = new TwilioRestClient( accountSid, authToken );
+        ApplicationList applications = client.getAccount().getApplications();
+        for(Application app : applications) {
+            
+            if(app.getVoiceUrl().equals( voiceUrl )) {
+                return app.getSid();
+            }
+        }
+        
+        Map<String, String> params = new HashMap<String, String>();
+        params.put("FriendlyName","AskFast Gateway");
+        params.put("VoiceUrl",voiceUrl);
+        params.put("VoiceMethod","GET");
+        params.put("VoiceFallbackUrl",voiceUrl);
+        params.put("VoiceFallbackMethod", "POST");
+        params.put("StatusCallback", ccUrl);
+        params.put("StatusCallbackMethod","GET");
+        Application app = applications.create( params );
+        return app.getSid();
     }
     
     public String getVersion() {

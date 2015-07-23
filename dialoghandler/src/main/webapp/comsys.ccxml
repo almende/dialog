@@ -25,27 +25,19 @@
   
   <eventprocessor statevariable="currentState" >
     <transition state="initial" event="connection.alerting">
-      <log expr="'*** Caller ID via SIP header = ' + event$.connection.protocol.sip.headers.From"/>
-      <log expr="'*** Callee ID via SIP header = ' + event$.connection.protocol.sip.headers.To"/>
       <log expr="'*** The calledID is ' + event$.connection.local"/>
       <log expr="'*** The calleeID is ' + event$.connection.remote"/>
       <script>
           var remote = event$.connection.remote;
-          var strings = remote.split('@');
-
-          var from = event$.info.sip.headers['from'];
 
           localID = event$.connection.local;
-          remoteID = strings[0];
+          remoteID = remote;
           externalRemoteID = remoteID;
-          if(from.indexOf('Anonymous')!=-1) {
-            externalRemoteID = '';
-          }
           
-          var domain   = strings[1];
+          var domain   = "outbound";
           if (domain.substring(0,8) == "outbound") {
             direction = "outbound";
-            dialURL = "sip:"+remoteID+"@asb-02.voipit.nl";
+            dialURL = "tel:"+remoteID;
           }
         </script>
         <!-- When outbound ctd:ctdConn and requester is being called with: inConn -->

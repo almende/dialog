@@ -22,6 +22,7 @@
   <var name="preconVxmlScript" expr="'rest/comsys/vxml/preconnect'" />
   <var name="connectedVxmlScript" expr="'rest/comsys/vxml/connected'" />
   <var name="currentState" expr="'initial'" />
+  <var name="callId" expr="session.values.callId" />
   
   <eventprocessor statevariable="currentState" >
     <transition state="initial" event="connection.alerting">
@@ -33,12 +34,6 @@
           localID = event$.connection.local;
           remoteID = remote;
           externalRemoteID = remoteID;
-          
-          var domain   = "outbound";
-          if (domain.substring(0,8) == "outbound") {
-            direction = "outbound";
-            dialURL = "tel:"+remoteID;
-          }
         </script>
         <!-- When outbound ctd:ctdConn and requester is being called with: inConn -->
         <if cond="direction == 'outbound'">
@@ -53,7 +48,7 @@
 
     <transition state="initial" event="connection.connected">
       <if cond="inConn == event$.connectionid">
-	    <dialogstart src="vxmlScript" connectionid="inConn" dialogid="dialogID" namelist="direction localID remoteID externalRemoteID"/>
+	    <dialogstart src="vxmlScript" connectionid="inConn" dialogid="dialogID" namelist="direction localID remoteID externalRemoteID callId"/>
 	    <if cond="ctdConn != ''">
 	        <disconnect connectionid="ctdConn"/>
 	    </if>

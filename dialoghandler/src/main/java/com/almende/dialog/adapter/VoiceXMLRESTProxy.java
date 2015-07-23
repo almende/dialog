@@ -77,15 +77,15 @@ public class VoiceXMLRESTProxy {
 
     protected static final Logger log = Logger.getLogger(VoiceXMLRESTProxy.class.getName());
     protected static final com.almende.dialog.Logger dialogLog = new com.almende.dialog.Logger();
-    private static final int LOOP_DETECTION = 10;
-    private static final String DTMFGRAMMAR = "dtmf2hash";
-    private static final String PLAY_TRIAL_AUDIO_KEY = "playTrialAccountAudio";
-    private static final int MAX_RETRIES = 1;
+    protected static final int LOOP_DETECTION = 10;
+    protected static final String DTMFGRAMMAR = "dtmf2hash";
+    protected static final String PLAY_TRIAL_AUDIO_KEY = "playTrialAccountAudio";
+    protected static final int MAX_RETRIES = 1;
     protected String TIMEOUT_URL = "timeout";
     protected String UPLOAD_URL = "upload";
     protected String EXCEPTION_URL = "exception";
     @SuppressWarnings( "unused" )
-    private String host = "";
+    protected String host = "";
 
     public static void killSession(Session session) {
 
@@ -1701,7 +1701,7 @@ public class VoiceXMLRESTProxy {
         return sw.toString();
     }
     
-    private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, Session session) {
+    protected Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, Session session) {
 
         String result = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>";
         Return res = formQuestion(question, adapterConfig.getConfigId(), remoteID, null, session);
@@ -1976,7 +1976,7 @@ public class VoiceXMLRESTProxy {
      * @param session
      * @return error message is the call is already in place. else returns null
      */
-    private static String checkIfCallAlreadyInSession(String address, AdapterConfig config, Session session) {
+    protected static String checkIfCallAlreadyInSession(String address, AdapterConfig config, Session session) {
 
         log.warning(String.format("Existing session %s. Will check with provider if its actually true",
                                   session.getKey()));
@@ -2010,7 +2010,7 @@ public class VoiceXMLRESTProxy {
      * @param session
      * @return
      */
-    private static boolean isEventTriggered(String eventName, Session session, boolean updateSession) {
+    protected static boolean isEventTriggered(String eventName, Session session, boolean updateSession) {
 
         if (session != null) {
             if (session.getAllExtras().get("event_" + eventName) != null) {

@@ -39,10 +39,12 @@
         <if cond="direction == 'outbound'">
             <assign name="ctdConn" expr="event$.connectionid"/>
             <accept connectionid="ctdConn"/>
+            <connect connectionid="ctdConn"/>
             <createcall dest="dialURL" connectionid="inConn" timeout="timeout" />
         <else />
             <assign name="inConn" expr="event$.connectionid"/>
             <accept connectionid="inConn"/>
+            <connect connectionid="inConn"/>
         </if>
     </transition>
 

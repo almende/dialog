@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -35,6 +36,7 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -42,6 +44,7 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
+
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -223,6 +226,8 @@ public class VoiceXMLRESTProxy {
                     session.setAccountId(accountId);
                     session.addExtras(DialogAgent.BEARER_TOKEN_KEY, bearerToken);
                     session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
+                    //update the startTime of the session
+                    session.setStartTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
                     session.storeSession();
                     
                     if(ddrRecord != null) {
@@ -1855,6 +1860,7 @@ public class VoiceXMLRESTProxy {
             referralSession.addExtras("redirect", "true");
             referralSession.setQuestion(session.getQuestion());
             referralSession.addExtras(Session.PARENT_SESSION_KEY, session.getKey());
+            referralSession.setStartTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
             referralSession.storeSession();
             if (session.getDirection() != null) {
                 DDRRecord ddrRecord = null;

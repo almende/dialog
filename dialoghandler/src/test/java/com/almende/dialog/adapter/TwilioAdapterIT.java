@@ -1075,7 +1075,6 @@ public class TwilioAdapterIT extends TestFramework {
                                                                                                       null));
         
         //update with some answer timestamp
-        sessionForValidNumber.setStartTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
         sessionForValidNumber.setAnswerTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
         sessionForValidNumber.storeSession();
         

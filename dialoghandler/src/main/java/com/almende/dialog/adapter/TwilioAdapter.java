@@ -14,6 +14,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
+
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -23,7 +24,9 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+
 import org.apache.commons.lang.StringUtils;
+
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -137,7 +140,7 @@ public class TwilioAdapter {
         //create a ddr record
         DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, firstRemoteAddress, 1,
                                                                               url, session);
-        session = session.reload();
+        //session = session.reload();
         //fetch the question
         Question question = Question.fromURL(url, loadAddress, config.getFormattedMyAddress(),
                                              ddrRecord != null ? ddrRecord.getId() : null, session, null);
@@ -151,6 +154,7 @@ public class TwilioAdapter {
                         //create a new session for every call request 
                         session = Session.createSession(config, formattedAddress);
                     }
+                    
                     session.killed = false;
                     session.setStartUrl(url);
                     session.setAccountId(accountId);
@@ -164,6 +168,8 @@ public class TwilioAdapter {
                     //update session with account credentials
                     session.addExtras(AdapterConfig.ACCESS_TOKEN_KEY, config.getAccessToken());
                     session.addExtras(AdapterConfig.ACCESS_TOKEN_SECRET_KEY, config.getAccessTokenSecret());
+                    //update the startTime of the session
+                    session.setStartTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
                     session.storeSession();
                     
                     if(ddrRecord != null) {
@@ -1479,6 +1485,8 @@ public class TwilioAdapter {
         referralSession.setAccountId(session.getAccountId());
         referralSession.setQuestion(session.getQuestion());
         referralSession.addExtras(Session.PARENT_SESSION_KEY, session.getKey());
+        //update the startTime of the session
+        referralSession.setStartTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
         referralSession.storeSession();
         
         if (session.getDirection() != null) {

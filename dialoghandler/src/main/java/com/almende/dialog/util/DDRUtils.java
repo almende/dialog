@@ -105,9 +105,6 @@ public class DDRUtils
             toAddressMap.put(toAddress, "");
             HashMap<String, Session> sessionKeyMap = new HashMap<String, Session>();
             sessionKeyMap.put(toAddress, session);
-            //update the startTime of the session
-            session.setStartTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
-            session.storeSession();
             return createDDRRecordOnCommunication(config, accountId, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, null,
                                                   toAddressMap, CommunicationStatus.SENT, quantity, message,
                                                   sessionKeyMap);

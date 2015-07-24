@@ -275,7 +275,7 @@ public class TwilioAdapterIT extends TestFramework {
     public void inboundPhoneCall_InvalidReferralTest() throws Exception {
 
         new DDRRecordAgent().generateDefaultDDRTypes();
-        String invalidNumber = "%2b3161234567";
+        String invalidNumber = "+3161234567";
         String accountSid = UUID.randomUUID().toString();
         String callSid = UUID.randomUUID().toString();
         TwilioSimulator simulator = new TwilioSimulator(TestFramework.host, accountSid);
@@ -298,7 +298,7 @@ public class TwilioAdapterIT extends TestFramework {
 
         String initiateInboundCall = simulator.initiateInboundCall(callSid, remoteAddressVoice, localAddressBroadsoft);
         assertThat(initiateInboundCall,
-                   Matchers.not(Matchers.containsString(URLDecoder.decode(invalidNumber, "UTF-8"))));
+                   Matchers.not(Matchers.containsString(invalidNumber)));
         List<Session> allSessions = Session.getAllSessions();
         //all sessions must now be flushed
         assertThat(allSessions.size(), Matchers.is(0));
@@ -308,7 +308,7 @@ public class TwilioAdapterIT extends TestFramework {
         int ddrInfoCount = 0;
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         for (String infoKey : ddrRecord.getAdditionalInfo().keySet()) {
-            if (URLDecoder.decode(invalidNumber, "UTF-8").equals(infoKey)) {
+            if (invalidNumber.equals(infoKey)) {
                 assertThat(ddrRecord.getAdditionalInfo().get(infoKey).toString(), Matchers.is("Invalid address"));
                 ddrInfoCount++;
             }
@@ -1055,7 +1055,7 @@ public class TwilioAdapterIT extends TestFramework {
         details.setUrl(url);
         RestResponse outboundCallResponse = dialogAgent.outboundCallWithDialogRequest(details);
         assertEquals(Status.CREATED.getStatusCode(), outboundCallResponse.getCode());
-
+        
         //verify that the session is not saved
         assertEquals(1, Session.getAllSessions().size());
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
@@ -1073,6 +1073,7 @@ public class TwilioAdapterIT extends TestFramework {
                                                                         adapterConfig.getMyAddress(),
                                                                         PhoneNumberUtils.formatNumber(remoteAddressVoice,
                                                                                                       null));
+        
         //update with some answer timestamp
         sessionForValidNumber.setAnswerTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
         sessionForValidNumber.storeSession();

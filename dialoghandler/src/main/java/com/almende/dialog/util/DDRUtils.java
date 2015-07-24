@@ -105,9 +105,6 @@ public class DDRUtils
             toAddressMap.put(toAddress, "");
             HashMap<String, Session> sessionKeyMap = new HashMap<String, Session>();
             sessionKeyMap.put(toAddress, session);
-            //update the startTime of the session
-            session.setStartTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
-            session.storeSession();
             return createDDRRecordOnCommunication(config, accountId, DDRTypeCategory.OUTGOING_COMMUNICATION_COST, null,
                                                   toAddressMap, CommunicationStatus.SENT, quantity, message,
                                                   sessionKeyMap);
@@ -1104,13 +1101,7 @@ public class DDRUtils
      */
     public static boolean validateAddressAndUpdateDDRIfInvalid(String address, Session session) {
 
-        try {
-            address = address != null ? URLDecoder.decode(address.replaceFirst("tel:", "").trim(), "UTF-8") : null;
-        }
-        catch (UnsupportedEncodingException e) {
-            log.severe(e.toString());
-            e.printStackTrace();
-        }
+        address = address != null ? address.replaceFirst("tel:", "").trim() : null;
         if (!PhoneNumberUtils.isValidPhoneNumber(address)) {
             if (session != null && session.getDDRRecord() != null) {
                 try {

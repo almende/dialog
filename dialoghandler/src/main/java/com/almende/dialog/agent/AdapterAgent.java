@@ -392,8 +392,13 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         preferredLanguage = (preferredLanguage == null ? "nl" : preferredLanguage);
         anonymous = (anonymous == null ? false : anonymous);
 
-        String normAddress = address.replaceFirst("^0", "").replace("+31", "");
-        String externalAddress = "+31" + normAddress;
+        String externalAddress = address;
+        
+        if(address.startsWith( "0" )) {
+            // TODO: Add proper country code
+            String normAddress = address.replaceFirst("^0", "");
+            externalAddress = "+31" + normAddress;
+        }
 
         Twilio twilio = new Twilio(accountSid, authToken);
         String id = twilio.buyPhoneNumber(address, getApplicationId(accountSid, authToken));

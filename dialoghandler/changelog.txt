@@ -1,6 +1,10 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+24-1-2015, version 1.11.1
+- fix: the ability for redirect to international numbers
+- fix: buy international numbers from twilio
+
 21-1-2015, version 1.11.0
 - feature: added parent and child linked ddrRecordIds
 - feature: create twilio adapter with subaccounts

@@ -789,7 +789,7 @@ public class VoiceXMLServletIT extends TestFramework {
     public void outboundPhoneCall_InvalidReferralTest() throws Exception {
 
         new DDRRecordAgent().generateDefaultDDRTypes();
-        String invalidNumber = "%2b3161234567";
+        String invalidNumber = "+3161234567";
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.REFERRAL.name());
         url = ServerUtils.getURLWithQueryParams(url, "address", invalidNumber); //invalid address
@@ -814,7 +814,7 @@ public class VoiceXMLServletIT extends TestFramework {
         int ddrInfoCount = 0;
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         for (String infoKey : ddrRecord.getAdditionalInfo().keySet()) {
-            if (URLDecoder.decode(invalidNumber, "UTF-8").equals(infoKey)) {
+            if (invalidNumber.equals(infoKey)) {
                 assertThat(ddrRecord.getAdditionalInfo().get(infoKey).toString(), Matchers.is("Invalid address"));
                 ddrInfoCount++;
             }

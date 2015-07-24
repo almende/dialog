@@ -1,15 +1,19 @@
 package com.almende.dialog.util;
 
 import java.io.IOException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import org.hamcrest.Matchers;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
+
 import com.almende.dialog.TestFramework;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.ResponseLog;
@@ -22,6 +26,24 @@ public class UtilTest extends TestFramework {
 
         String formattedNumber = PhoneNumberUtils.formatNumber("0614765852", null);
         Assert.assertEquals("+31614765852", formattedNumber);
+    }
+    
+    @Test
+    public void testIfValidGermanLandlinePhoneNumberTest() throws Exception {
+        
+        String address = "tel:+491739230752";
+        String formattedAddress = address.replaceFirst("tel:", "").trim();
+        Boolean valid = PhoneNumberUtils.isValidPhoneNumber( formattedAddress );
+        Assert.assertTrue( valid );
+    }
+    
+    @Test
+    public void testIfValidDutchLandlinePhoneNumberTest() throws Exception {
+        
+        String address = "tel:+31851234567";
+        String formattedAddress = URLDecoder.decode(address.replaceFirst("tel:", "").trim(), "UTF-8");
+        Boolean valid = PhoneNumberUtils.isValidPhoneNumber( formattedAddress );
+        Assert.assertTrue( valid );
     }
 
     /**

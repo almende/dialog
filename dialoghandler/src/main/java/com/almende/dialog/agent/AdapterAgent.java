@@ -243,6 +243,46 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
             }
         }
     }
+    
+    /**
+     * Adds a new comsys adapter
+     * 
+     * @param address
+     * @param username
+     * @param password
+     * @param preferredLanguage
+     * @param accountId
+     * @param anonymous
+     * @return AdapterId
+     * @throws Exception
+     */
+    public RestResponse createComsysAdapter(@Name("username") @Optional String username,
+        @Name("password") @Optional String password, @Name("preferredLanguage") @Optional String preferredLanguage,
+        @Name("accountId") @Optional String accountId, @Name("anonymous") boolean anonymous,
+        @Name("accountType") @Optional String accountType, @Name("isPrivate") @Optional Boolean isPrivate)
+        throws Exception {
+
+        preferredLanguage = Language.getByValue(preferredLanguage).getCode();
+        AdapterConfig config = new AdapterConfig();
+        config.setAdapterType(AdapterType.CALL.toString());
+        config.setPreferred_language(preferredLanguage);
+        config.setPublicKey(accountId);
+        config.setXsiUser(username);
+        config.setXsiPasswd(password);
+        config.setOwner(accountId);
+        config.addAccount(accountId);
+        config.setAnonymous(anonymous);
+        config.setAccountType(AccountType.fromJson(accountType));
+        config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.COMSYS);
+        try {
+            AdapterConfig newConfig = createAdapter(config, isPrivate);
+            return RestResponse.ok(getVersion(), newConfig.getConfigId());
+        }
+        catch (Exception e) {
+            return new RestResponse(getVersion(), null, Response.Status.BAD_REQUEST.getStatusCode(),
+                                    e.getLocalizedMessage());
+        }
+    }
 	
     /**
      * Adds a new broadsoft adapter

@@ -58,11 +58,15 @@ public class ComsysVoiceXMLRESTProxy extends VoiceXMLRESTProxy {
     public Response getNewDialog(@QueryParam("callId") String callId, @QueryParam("remoteID") String remoteID,
         @QueryParam("localID") String localID, @QueryParam("direction") String direction, @QueryParam("isTest") Boolean isTest, @Context UriInfo ui) {
 
-        
         this.host = ui.getBaseUri().toString().replace(":80/", "/");
+        
+        localID = formatComsysAddress( localID );
+        remoteID = formatComsysAddress( remoteID );
+        
+        String formatedLocalID = PhoneNumberUtils.formatNumber(localID, PhoneNumberFormat.E164);
+        
         Map<String, String> extraParams = new HashMap<String, String>();
-
-        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
+        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, formatedLocalID);
         //format the remote number
         String formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, PhoneNumberFormat.E164);
 
@@ -170,5 +174,10 @@ public class ComsysVoiceXMLRESTProxy extends VoiceXMLRESTProxy {
         else {
             return Response.ok().build();
         }
+    }
+    
+    private String formatComsysAddress(String address) {
+        String[] parts = address.split( "\\?" );
+        return parts[0];
     }
 }

@@ -29,9 +29,9 @@
       <log expr="'*** The calledID is ' + event$.connection.local"/>
       <log expr="'*** The calleeID is ' + event$.connection.remote"/>
       <script>
-          var remote = event$.connection.remote;
+          var remote = event$.connection.remote.uri;
 
-          localID = event$.connection.local;
+          localID = event$.connection.local.uri;
           remoteID = remote;
           externalRemoteID = remoteID;
         </script>

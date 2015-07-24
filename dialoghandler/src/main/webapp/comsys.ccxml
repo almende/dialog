@@ -64,11 +64,6 @@
         <script>
           var remote = event$.URI;
           dialURL = remote;
-          var strings = remote.split(':');
-          if(strings[0] == "tel") {
-            redirectID = strings[1];
-            dialURL = "sip:"+redirectID+"@asb-02.voipit.nl";
-          }
         </script>
         <assign name="currentState" expr="'originatingcall'" />
         <unjoin id1="inConn" id2="dialogID" />

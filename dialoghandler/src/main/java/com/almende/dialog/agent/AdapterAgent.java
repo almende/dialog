@@ -256,8 +256,9 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
      * @return AdapterId
      * @throws Exception
      */
-    public RestResponse createComsysAdapter(@Name("username") @Optional String username,
-        @Name("password") @Optional String password, @Name("preferredLanguage") @Optional String preferredLanguage,
+    public RestResponse createComsysAdapter(@Name("address") String address,
+        @Name("username") @Optional String username,@Name("password") @Optional String password, 
+        @Name("preferredLanguage") @Optional String preferredLanguage,
         @Name("accountId") @Optional String accountId, @Name("anonymous") boolean anonymous,
         @Name("accountType") @Optional String accountType, @Name("isPrivate") @Optional Boolean isPrivate)
         throws Exception {
@@ -265,6 +266,8 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         preferredLanguage = Language.getByValue(preferredLanguage).getCode();
         AdapterConfig config = new AdapterConfig();
         config.setAdapterType(AdapterType.CALL.toString());
+        config.setMyAddress( address );
+        config.setAddress( address );
         config.setPreferred_language(preferredLanguage);
         config.setPublicKey(accountId);
         config.setXsiUser(username);

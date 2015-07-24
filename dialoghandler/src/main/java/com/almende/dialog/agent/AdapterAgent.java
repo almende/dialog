@@ -418,15 +418,42 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         return null;
     }
     
+    public ArrayNode moveTwilioAdaptersToSubAccount(@Name("accountId") String accountId, @Name("accountSid") String accountSid,
+                                                   @Name("authToken") String authToken) {
+        
+        ArrayNode result = JOM.createArrayNode();
+        
+        List<AdapterConfig> adapters = AdapterConfig.findAdapterByOwner(accountId, ADAPTER_TYPE_CALL, null);
+        for(AdapterConfig adapter : adapters) {
+            Map<String, Object> props = adapter.getProperties();
+            if(props.containsKey( "PROVIDER" ) && props.get( "PROVIDER" ).equals( "TWILIO" )) {
+             
+                try {
+                    result.add( moveTwilioAdapterToSubAccount( adapter.getConfigId(), accountSid, authToken ) );
+                } catch (TwilioRestException e) {
+                    log.warning( "Failed to move adapter: " + adapter.getConfigId() + " e: " + e.getMessage());
+                }
+            }            
+        }
+        
+        return result;
+    }
+    
     public String moveTwilioAdapterToSubAccount(@Name("adapterId") String adapterId, @Name("accountSid") String accountSid,
         @Name("authToken") String authToken) throws TwilioRestException {
         
         AdapterConfig adapter = AdapterConfig.getAdapterConfig( adapterId );
         
+        if(adapter.getAccessToken().equals( accountSid )) {
+            log.warning( "This adapter is already linked to subaccount" );
+            return null;
+        }
+        
         TwilioRestClient client = new TwilioRestClient( adapter.getAccessToken(), adapter.getAccessTokenSecret() );
         TwilioRestClient subAccountClient = new TwilioRestClient( accountSid, authToken );
         Account account = subAccountClient.getAccount();
         if(account==null) {
+            log.warning( "Invalid subaccount credentials" );
             return null;
         }
         
@@ -444,17 +471,21 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
             number.update( params );
         }
         
-        IncomingPhoneNumber number = subAccountClient.getAccount().getIncomingPhoneNumber( numberSid );
+        if(numberSid != null) {
+            IncomingPhoneNumber number = subAccountClient.getAccount().getIncomingPhoneNumber( numberSid );
+            
+            params = new HashMap<String, String>();
+            params.put( "VoiceApplicationSid", getApplicationId( accountSid, authToken ) );
+            number.update( params );
+            
+            adapter.setAccessToken( accountSid );
+            adapter.setAccessTokenSecret( authToken );
+            adapter.update();
+            
+            return adapter.getConfigId();
+        }
         
-        params = new HashMap<String, String>();
-        params.put( "VoiceApplicationSid", getApplicationId( accountSid, authToken ) );
-        number.update( params );
-        
-        adapter.setAccessToken( accountSid );
-        adapter.setAccessTokenSecret( authToken );
-        adapter.update();
-        
-        return adapter.getConfigId();
+        return null;
     }
     
     public String moveTwilioAdapterToMainAccount(@Name("adapterId") String adapterId, @Name("accountSid") String accountSid,
@@ -462,9 +493,15 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
                                                 
         AdapterConfig adapter = AdapterConfig.getAdapterConfig( adapterId );
         
+        if(adapter.getAccessToken().equals( accountSid )) {
+            log.warning( "This adapter is already linked to master account" );
+            return null;
+        }
+        
         TwilioRestClient client = new TwilioRestClient( accountSid, authToken );
         Account account = client.getAccount();
         if(account==null) {
+            log.warning( "Invalid master account credentials" );
             return null;
         }
         

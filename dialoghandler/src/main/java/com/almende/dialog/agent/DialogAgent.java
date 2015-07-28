@@ -284,15 +284,10 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         else {
             // If no adapterId is given. Load the first one of the type.
             // TODO: Add default field to adapter (to be able to load default adapter)
-            adapterType = adapterType != null && AdapterType.getByValue(adapterType) != null ? AdapterType.getByValue(adapterType)
-                                                                                                          .getName()
-                : adapterType;
-            final List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapters(adapterType, null, null);
-            for (AdapterConfig cfg : adapterConfigs) {
-                if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), cfg, false) != null) {
-                    config = cfg;
-                    break;
-                }
+            adapterType = adapterType != null && AdapterType.getByValue(adapterType) != null ? AdapterType.getByValue(adapterType).getName() : adapterType;
+            final List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount( accountId, adapterType, null );
+            if(adapterConfigs.size() > 0) {
+                config = adapterConfigs.get( 0 );
             }
         }
         if (config != null) {

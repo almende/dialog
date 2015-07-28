@@ -322,6 +322,37 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
     }
     
     /**
+     * get DDRPrices based on the the supplied params. Adds the ddr category
+     * Type to the entity along with id
+     * 
+     * @param ddrTypeId
+     * @param units
+     * @param unitType
+     */
+    public Object getDDRPricesWithCategory(@Name("ddrTypeId") @Optional String ddrTypeId,
+        @Name("adapterType") @Optional String adapterTypeString, @Name("adapterId") @Optional String adapterId,
+        @Name("unitType") @Optional String unitTypeString, @Name("keyword") @Optional String keyword) {
+
+        AdapterType adapterType = adapterTypeString != null && !adapterTypeString.isEmpty() ? AdapterType.getByValue(adapterTypeString)
+            : null;
+        UnitType unitType = unitTypeString != null && !unitTypeString.isEmpty() ? UnitType.fromJson(unitTypeString)
+            : null;
+        List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrTypeId, adapterType, adapterId, unitType, keyword);
+        ArrayList<Object> result = new ArrayList<Object>();
+        for (DDRPrice ddrPrice : ddrPrices) {
+
+            ObjectNode ddrPriceNode = JOM.getInstance().valueToTree(ddrPrice);
+            DDRType ddrType = DDRType.getDDRType(ddrPrice.getDdrTypeId());
+            if (ddrType != null) {
+                ddrPriceNode.put("ddrTypeName", ddrType.getName());
+                ddrPriceNode.put("ddrTypeCategory", ddrType.getCategory().toString());
+            }
+            result.add(ddrPriceNode);
+        }
+        return result;
+    }
+    
+    /**
      * creates a scheduler for all ddr prices of {@link DDRTypeCategory}
      * {@link DDRTypeCategory#SUBSCRIPTION_COST}
      * 

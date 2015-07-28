@@ -7,7 +7,7 @@ import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
-import com.fasterxml.jackson.annotation.JsonCreator;
+import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 
 /**
  * This is the Type/category for the price charged.
@@ -17,62 +17,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 public class DDRType
 {
     public static final String DDR_CATEGORY_KEY = "DDR_TYPE_CATEGORY_KEY";
-    
-    /**
-     * category of this type
-     */
-    public enum DDRTypeCategory
-    {
-        /**
-         * used when an adapter is purchased
-         */
-        ADAPTER_PURCHASE,
-        /**
-         * incoming communication cost applied
-         */
-        INCOMING_COMMUNICATION_COST,
-        /**
-         * outgoing communication cost applied
-         */
-        OUTGOING_COMMUNICATION_COST,
-        /**
-         * usually used only with costs attached to calling when a call is setup.
-         */
-        START_UP_COST,
-        /**
-         * service cost applied for performing/completing one dialog scenario
-         */
-        SERVICE_COST,
-        /**
-         * cost applied for an adapter on a repeating basis. E.g. monthly basis
-         */
-        SUBSCRIPTION_COST,
-        /**
-         * cost applied for every time a TTS is being processed
-         */
-        TTS_COST,
-        /**
-         * cost applied for every time a TTS account of customer is used for tts
-         * processing
-         */
-        TTS_SERVICE_COST,
-        /**
-         * any other subsription cost
-         */
-        OTHER;
-
-        @JsonCreator
-        public static DDRTypeCategory fromJson(String name) {
-
-            for (DDRTypeCategory type : values()) {
-                if (type.toString().equalsIgnoreCase(name)) {
-                    return type;
-                }
-            }
-            return null;
-        }
-    }
-    
     public DDRType() {}
     
     @Id

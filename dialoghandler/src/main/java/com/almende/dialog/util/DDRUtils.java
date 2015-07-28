@@ -18,13 +18,13 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
-import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.agent.AgentHost;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
@@ -280,9 +280,10 @@ public class DDRUtils
                                                              AdapterType.getByValue(adapterConfig.getAdapterType()),
                                                              adapterConfig.getConfigId(), null, null);
             //fetch the ddr based on the details
-            List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterConfig.getConfigId(), adapterConfig.getOwner(),
-                                                                 null, Arrays.asList(subscriptionDDRType.getTypeId()),
-                                                                 null, null, null, null, null, null);
+            List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterConfig.getOwner(), null,
+                                                                 Arrays.asList(adapterConfig.getConfigId()), null,
+                                                                 Arrays.asList(subscriptionDDRType.getTypeId()), null,
+                                                                 null, null, null, null, null);
             DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
             newestDDRRecord = fetchNewestDdrRecord(ddrRecords);
             //flag for creating new ddrRecord

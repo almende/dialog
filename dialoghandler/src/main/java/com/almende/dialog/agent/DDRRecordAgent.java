@@ -10,7 +10,6 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
-import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.dialog.util.TimeUtils;
@@ -24,6 +23,7 @@ import com.almende.util.jackson.JOM;
 import com.askfast.commons.agent.ScheduleAgent;
 import com.askfast.commons.agent.intf.DDRRecordAgentInterface;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.ScheduledTask;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -97,26 +97,19 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         return ddrRecord;
     }
     
-    /**
-     * get a specific DDR record if it is owned by the account
-     * 
-     * @param id
-     * @param accountId
-     * @return
-     * @throws Exception
-     */
     @Override
-    public Object getDDRRecords(@Name("adapterId") @Optional String adapterId, @Name("accountId") String accountId,
-        @Name("fromAddress") @Optional String fromAddress, @Name("typeId") @Optional Collection<String> typeIds,
-        @Name("communicationStatus") @Optional String status, @Name("startTime") @Optional Long startTime,
-        @Name("endTime") @Optional Long endTime, @Name("sessionKeys") @Optional Collection<String> sessionKeys,
-        @Name("offset") @Optional Integer offset, @Name("limit") @Optional Integer limit,
-        @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
+    public Object getDDRRecords(@Name("accountId") String accountId,
+        @Name("adapterTypes") @Optional Collection<AdapterType> adapterTypes,
+        @Name("adapterIds") @Optional Collection<String> adapterIds, @Name("fromAddress") @Optional String fromAddress,
+        @Name("typeId") @Optional Collection<String> typeIds, @Name("communicationStatus") @Optional String status,
+        @Name("startTime") @Optional Long startTime, @Name("endTime") @Optional Long endTime,
+        @Name("sessionKeys") @Optional Collection<String> sessionKeys, @Name("offset") @Optional Integer offset,
+        @Name("limit") @Optional Integer limit, @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
         @Name("shouldIncludeServiceCosts") @Optional Boolean shouldIncludeServiceCosts) throws Exception {
 
         CommunicationStatus communicationStatus = status != null && !status.isEmpty() ? CommunicationStatus.fromJson(status)
             : null;
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterId, accountId, fromAddress, typeIds,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(accountId, adapterTypes, adapterIds, fromAddress, typeIds,
                                                              communicationStatus, startTime, endTime, sessionKeys,
                                                              offset, limit);
         if (shouldGenerateCosts != null && shouldGenerateCosts) {
@@ -154,13 +147,12 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * @throws Exception
      */
     @Override
-    public Object getAllDDRTypes(@Name("name") @Optional String name, @Name("category") @Optional String category)
+    public Object getAllDDRTypes(@Name("name") @Optional String name, @Name("category") @Optional DDRTypeCategory category)
         throws Exception {
 
         ArrayList<DDRType> result = new ArrayList<DDRType>();
         if (category != null) {
-            DDRTypeCategory ddrTypeCategory = DDRTypeCategory.fromJson(category);
-            DDRType ddrType = DDRType.getDDRType(ddrTypeCategory);
+            DDRType ddrType = DDRType.getDDRType(category);
             result.addAll(addDDRTypeIfNameMatches(name, ddrType));
         }
         else {
@@ -170,6 +162,25 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
             }
         }
         return result;
+    }
+    
+    /**
+     * Update a particular name for a ddrType
+     *
+     * @param typeId
+     * @param name
+     * @return Returns the updated DDRTYpe
+     * @throws Exception
+     */
+    public Object updateDDRType(@Name("id") String id, @Name("name") String name) throws Exception {
+
+        DDRType ddrType = DDRType.getDDRType(id);
+        if (ddrType != null) {
+            ddrType.setName(name);
+            ddrType.createOrUpdate();
+            return ddrType;
+        }
+        return null;
     }
     
     @Override

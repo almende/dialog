@@ -312,7 +312,7 @@ public class AdapterConfigTest extends TestFramework
         AdapterConfig adapter = createAdapterConfig(AdapterType.CALL.getName(), AdapterProviders.BROADSOFT,
                                                     TEST_PUBLIC_KEY, localAddressBroadsoft, localFullAddressBroadsoft,
                                                     "");
-        assertTrue(AdapterProviders.isCallAdapter(adapter.getAdapterType()));
+        assertTrue(AdapterProviders.isCallAdapter(adapter.getProvider().toString()));
         adapter.setAdapterType(AdapterType.CALL.toString());
         adapter.update();
         assertTrue(adapter.isCallAdapter());

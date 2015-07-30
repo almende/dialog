@@ -2,18 +2,18 @@ package com.almende.dialog.util;
 
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import org.hamcrest.Matchers;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
-
 import com.almende.dialog.TestFramework;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.ResponseLog;
@@ -89,5 +89,24 @@ public class UtilTest extends TestFramework {
             result.add(matcher.group().replace("[[", "").replace("]]", ""));
         }
         Assert.assertArrayEquals(result.toArray(), keys.toArray());
+    }
+    
+    /**
+     * Test to check the utils method that was updated to format the given date
+     * in millis directly rather than new Date(millis), this fails in a server
+     * environment which doesnt have proper configured date.
+     */
+    @Test
+    public void timeFormatTest() {
+
+        long currentTime = TimeUtils.getServerCurrentTimeInMillis();
+        String timeFormat1 = TimeUtils.getStringFormatFromDateTime(currentTime, null);
+        String timeformat2 = TimeUtils.getStringFormatFromDateTime(new Date(currentTime).getTime(), null);
+        Assert.assertThat(timeFormat1, Matchers.is(timeformat2));
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss Z", Locale.ENGLISH);
+        dateFormat.setTimeZone(TimeUtils.getServerTimeZone());
+        String timeFormat3 = dateFormat.format(new Date(currentTime));
+        Assert.assertThat(timeFormat3, Matchers.is(timeformat2));
     }
 }

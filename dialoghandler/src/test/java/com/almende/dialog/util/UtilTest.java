@@ -110,4 +110,19 @@ public class UtilTest extends TestFramework {
         String timeFormat3 = dateFormat.format(new Date(currentTime));
         Assert.assertThat(timeFormat3, Matchers.is(timeformat2));
     }
+    
+    /**
+     * Test to check the utils method that the previous month start timestamp is
+     * set properly with timezone
+     */
+    @Test
+    public void timeForLastMonthTest() {
+
+        String previousMonthStartTimestamp = TimeUtils.getStringFormatFromDateTime(TimeUtils.getPreviousMonthStartTimestamp(),
+                                                                                   null);
+        Assert.assertThat(previousMonthStartTimestamp, Matchers.containsString("00:00:00"));
+        String previousMonthEndTimestamp = TimeUtils.getStringFormatFromDateTime(TimeUtils.getPreviousMonthEndTimestamp(),
+                                                                                 null);
+        Assert.assertThat(previousMonthEndTimestamp, Matchers.containsString("23:59:59"));
+    }
 }

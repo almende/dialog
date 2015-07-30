@@ -3,6 +3,7 @@ package com.almende.dialog.agent;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.ddr.DDRPrice;
@@ -24,6 +25,7 @@ import com.askfast.commons.agent.intf.DDRRecordAgentInterface;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.ScheduledTask;
+import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -352,17 +354,11 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         return DDRPrice.getDDRPrices( ddrTypeId, adapterType, adapterId, unitType, keyword );
     }
     
-    /**
-     * get DDRPrices based on the the supplied params. Adds the ddr category
-     * Type to the entity along with id
-     * 
-     * @param ddrTypeId
-     * @param units
-     * @param unitType
-     */
+    @Override
     public Object getDDRPricesWithCategory(@Name("ddrTypeId") @Optional String ddrTypeId,
         @Name("adapterType") @Optional String adapterTypeString, @Name("adapterId") @Optional String adapterId,
-        @Name("unitType") @Optional String unitTypeString, @Name("keyword") @Optional String keyword) {
+        @Name("unitType") @Optional String unitTypeString, @Name("keyword") @Optional String keyword,
+        @Name("searchCode") @Optional String code) {
 
         AdapterType adapterType = adapterTypeString != null && !adapterTypeString.isEmpty() ? AdapterType.getByValue(adapterTypeString)
             : null;
@@ -376,13 +372,53 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
             DDRType ddrType = DDRType.getDDRType(ddrPrice.getDdrTypeId());
             if (ddrType != null) {
                 ddrPriceNode.put("ddrTypeName", ddrType.getName());
-                ddrPriceNode.put("ddrTypeCategory", ddrType.getCategory().toString());
+                ddrPriceNode.put("category", ddrType.getCategory().toString());
+                try {
+                    if (ddrPrice.getKeyword() != null && ddrPrice.getKeyword().split("\\|").length == 2) {
+
+                        String ddrPriceCountryCode = ddrPrice.getKeyword().split("\\|")[0];
+                        String phoneNumberType = ddrPrice.getKeyword().split("\\|")[1];
+                        String priceRegionCode = PhoneNumberUtils.getRegionCode(Integer.parseInt(ddrPriceCountryCode));
+                        //if the code if given fetch the ones matching else continue
+                        if (code != null) {
+
+                            String displayCountry = new Locale("", priceRegionCode).getDisplayCountry();
+                            
+                            /**
+                             * 1. CountryCode (e.g. 31) First in the order of
+                             * precedence 2. RegionCode (e.g. NL) Second in the
+                             * order of precedence 3. CountryName (E.g.
+                             * Netherlands)Third in the order of precedence. A
+                             * contains match is done on this query. So that et
+                             * must match both nETherlands, EThiopia etc
+                             */
+                            if (code.equals(ddrPriceCountryCode) || code.equalsIgnoreCase(priceRegionCode) ||
+                                (displayCountry != null && displayCountry.toLowerCase().contains(code.toLowerCase()))) {
+
+                                ddrPriceNode.put("country", new Locale("", priceRegionCode).getDisplayCountry());
+                                ddrPriceNode.put("phoneNumberType", phoneNumberType);
+                            }
+                            else {
+                                continue;
+                            }
+                        }
+                        else {
+                            ddrPriceNode.put("country", new Locale("", priceRegionCode).getDisplayCountry());
+                            ddrPriceNode.put("phoneNumberType", phoneNumberType);
+                        }
+                    }
+                }
+                catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    log.severe(String.format("Country code is not parsed to Integer with Keyword: %s",
+                                             ddrPrice.getKeyword()));
+                }
             }
             result.add(ddrPriceNode);
         }
         return result;
     }
-    
+
     /**
      * creates a scheduler for all ddr prices of {@link DDRTypeCategory}
      * {@link DDRTypeCategory#SUBSCRIPTION_COST}

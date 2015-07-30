@@ -19,10 +19,10 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.util.DDRUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
+import com.askfast.commons.utils.TimeUtils;
 
 public class DDRRecordAgentTest extends TestFramework
 {

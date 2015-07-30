@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -36,7 +35,6 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -44,7 +42,6 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -64,7 +61,6 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
@@ -72,6 +68,7 @@ import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.askfast.commons.utils.TimeUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 

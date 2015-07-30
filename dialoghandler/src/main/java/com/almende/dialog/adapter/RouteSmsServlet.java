@@ -27,10 +27,10 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.askfast.commons.utils.TimeUtils;
 import com.thetransactioncompany.cors.HTTPMethod;
 
 public class RouteSmsServlet extends TextServlet {

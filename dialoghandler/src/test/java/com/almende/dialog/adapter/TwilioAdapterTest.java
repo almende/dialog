@@ -24,8 +24,8 @@ import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.util.TimeUtils;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.askfast.commons.utils.TimeUtils;
 import com.twilio.sdk.resource.instance.Call;
 
 

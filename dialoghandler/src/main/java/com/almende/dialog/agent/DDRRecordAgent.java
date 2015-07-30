@@ -12,7 +12,6 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.protocol.jsonrpc.annotation.Access;
 import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
 import com.almende.eve.protocol.jsonrpc.annotation.Name;
@@ -25,6 +24,7 @@ import com.askfast.commons.agent.intf.DDRRecordAgentInterface;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.ScheduledTask;
+import com.askfast.commons.utils.TimeUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 

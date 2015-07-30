@@ -18,6 +18,7 @@ import com.almende.dialog.TestFramework;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.ResponseLog;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.askfast.commons.utils.TimeUtils;
 
 public class UtilTest extends TestFramework {
 

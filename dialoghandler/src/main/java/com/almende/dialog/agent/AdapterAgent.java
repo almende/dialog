@@ -6,11 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.ws.rs.core.Response;
-
 import org.jivesoftware.smack.XMPPException;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -26,7 +23,6 @@ import com.almende.dialog.exception.ConflictException;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.protocol.jsonrpc.annotation.Access;
 import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
 import com.almende.eve.protocol.jsonrpc.annotation.Name;
@@ -47,6 +43,7 @@ import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.ScheduledTask;
+import com.askfast.commons.utils.TimeUtils;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.TwilioRestException;

@@ -25,11 +25,11 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.askfast.commons.utils.TimeUtils;
 
 @Category(IntegrationTest.class)
 public class RouteSMSIT extends TestFramework {

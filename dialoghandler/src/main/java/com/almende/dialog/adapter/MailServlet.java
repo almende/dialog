@@ -42,8 +42,8 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
+import com.askfast.commons.utils.TimeUtils;
 
 
 public class MailServlet extends TextServlet implements Runnable, MessageChangedListener, MessageCountListener, ConnectionListener, StoreListener {

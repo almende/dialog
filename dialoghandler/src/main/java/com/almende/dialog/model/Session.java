@@ -15,7 +15,6 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.util.jackson.JOM;
 import com.almende.util.twigmongo.FilterOperator;
 import com.almende.util.twigmongo.QueryResultIterator;
@@ -23,6 +22,7 @@ import com.almende.util.twigmongo.SortDirection;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
+import com.askfast.commons.utils.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 

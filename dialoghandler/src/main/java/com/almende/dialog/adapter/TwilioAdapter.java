@@ -14,7 +14,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -24,9 +23,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-
 import org.apache.commons.lang.StringUtils;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -44,12 +41,12 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.askfast.commons.utils.TimeUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.resource.factory.CallFactory;

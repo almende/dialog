@@ -8,7 +8,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,7 +47,6 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.util.jackson.JOM;
 import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterProviders;
@@ -58,6 +56,7 @@ import com.askfast.commons.entity.DialogRequestDetails;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.askfast.commons.utils.TimeUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 @Category(IntegrationTest.class)

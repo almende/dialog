@@ -968,27 +968,19 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         List<AdapterConfig> adapters = AdapterConfig.findAdapterByAccount(accountId, adapterType, address);
         return JOM.getInstance().convertValue(adapters, ArrayNode.class);
     }
+    
+    public ArrayNode getOwnedAdapters( @Name( "accoutId" ) String accountId, @Name( "adapterType" ) @Optional String adapterType, 
+                                       @Name( "address" ) @Optional String address ) {
+
+        List<AdapterConfig> adapters = AdapterConfig.findAdapterByOwner( accountId, adapterType, address );
+        return JOM.getInstance().convertValue( adapters, ArrayNode.class );
+    }
 
     public ArrayNode findAdapters(@Name("adapterType") @Optional String type,
         @Name("address") @Optional String address, @Name("keyword") @Optional String keyword) {
 
         ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters(type, address, keyword);
         return JOM.getInstance().convertValue(adapters, ArrayNode.class);
-    }
-
-    /**
-     * Gets all the adapters owned by the given accountId
-     * 
-     * @param type
-     * @param address
-     * @param keyword
-     * @return
-     */
-    public ArrayNode findOwnedAdapters(@Name("ownerId") String ownerId, @Name("adapterType") @Optional String type,
-        @Name("address") @Optional String address) {
-
-        ArrayList<AdapterConfig> ownedAdapters = AdapterConfig.findAdapterByOwner(ownerId, type, address);
-        return JOM.getInstance().convertValue(ownedAdapters, ArrayNode.class);
     }
     
     /**

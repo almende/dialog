@@ -18,11 +18,11 @@ import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType;
-import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRType.DDRTypeCategory;
+import com.askfast.commons.utils.TimeUtils;
 
 public class DDRRecordAgentTest extends TestFramework
 {
@@ -73,8 +73,8 @@ public class DDRRecordAgentTest extends TestFramework
         String createAdapter = adapterAgent.createEmailAdapter("test@test.com", "test", null, null, null, null, null,
                                                                null, null, TEST_ACCOUNTID, null, null, null);
         //check if a ddr record is created
-        Object ddrRecords = ddrRecordAgent.getDDRRecords(null, TEST_ACCOUNTID, null, null, null, null, null, null,
-                                                         null, null, null, null);
+        Object ddrRecords = ddrRecordAgent.getDDRRecords(TEST_ACCOUNTID, null, null, null, null, null, null, null,
+                                                         null, null, null, null, null);
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };
@@ -102,7 +102,7 @@ public class DDRRecordAgentTest extends TestFramework
                                         null, null);
         //check if a ddr record is created
         Object ddrRecords = ddrRecordAgent.getDDRRecords(null, null, null, null, null, null, null, null, null, null,
-                                                         null, null);
+                                                         null, null, null);
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
         };
@@ -181,8 +181,8 @@ public class DDRRecordAgentTest extends TestFramework
         DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, TEST_PUBLIC_KEY, remoteAddressVoice, 1,
                                                         "some test message", session);
         //fetch the ddrRecord
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null,
-                                                             null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+                                                             null, null, null);
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         //toaddress check
         Map<String, String> toAddress = new HashMap<String, String>(1);
@@ -196,7 +196,8 @@ public class DDRRecordAgentTest extends TestFramework
         ddrRecord.addToAddress(secondRemoteAddress);
         ddrRecord.createOrUpdate();
         
-        ddrRecords = DDRRecord.getDDRRecords(null, TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null);
+        ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null, null,
+                                             null);
         ddrRecord = ddrRecords.iterator().next();
         assertThat(ddrRecord.getToAddress(), Matchers.is(toAddress));
     }
@@ -229,8 +230,8 @@ public class DDRRecordAgentTest extends TestFramework
      */
     private static Collection<DDRRecord> getDDRRecordsByAccountId(String accountId) throws Exception {
 
-        Object ddrRecords = new DDRRecordAgent().getDDRRecords(null, accountId, null, null, null, null, null, null,
-                                                               null, null, null, null);
+        Object ddrRecords = new DDRRecordAgent().getDDRRecords(accountId, null, null, null, null, null, null, null,
+                                                               null, null, null, null, null);
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>() {
         };
         Collection<DDRRecord> allDdrRecords = typesInjector.inject(ddrRecords);

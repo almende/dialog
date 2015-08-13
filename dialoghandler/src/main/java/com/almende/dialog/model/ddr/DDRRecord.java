@@ -17,14 +17,15 @@ import org.mongojack.JacksonDBCollection;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.Session;
-import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.almende.util.jackson.JOM;
 import com.askfast.commons.entity.AccountType;
+import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.askfast.commons.utils.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -226,9 +227,9 @@ public class DDRRecord
      *            fetchs 1000 records if limit is null or greater than 1000.
      * @return
      */
-    public static List<DDRRecord> getDDRRecords(String adapterId, String accountId, String fromAddress,
-        Collection<String> ddrTypeIds, CommunicationStatus status, Long startTime, Long endTime,
-        Collection<String> sessionKeys, Integer offset, Integer limit) {
+    public static List<DDRRecord> getDDRRecords(String accountId, Collection<AdapterType> adapterTypes,
+        Collection<String> adapterIds, String fromAddress, Collection<String> ddrTypeIds, CommunicationStatus status,
+        Long startTime, Long endTime, Collection<String> sessionKeys, Integer offset, Integer limit) {
 
         limit = limit != null && limit <= 1000 ? limit : 1000;
         offset = offset != null ? offset : 0;
@@ -236,8 +237,27 @@ public class DDRRecord
         ArrayList<Query> queryList = new ArrayList<Query>();
         //fetch accounts that match
         queryList.add(DBQuery.is("accountId", accountId));
-        if (adapterId != null) {
-            queryList.add(DBQuery.is("adapterId", adapterId));
+        //pick all adapterIds belong to the adapterType if its given. If AdapterIds are given choose that instead
+        if ((adapterTypes != null && !adapterTypes.isEmpty()) && (adapterIds == null || adapterIds.isEmpty())) {
+
+            for (AdapterType adapterType : adapterTypes) {
+                ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(accountId,
+                                                                                             adapterType.name(), null);
+                if (adapterConfigs != null) {
+                    adapterIds = new HashSet<String>();
+                    for (AdapterConfig adapterConfig : adapterConfigs) {
+                        adapterIds.add(adapterConfig.getConfigId());
+                    }
+                }
+            }
+        }
+        if (adapterIds != null) {
+            if (adapterIds.size() == 1) {
+                queryList.add(DBQuery.is("adapterId", adapterIds.iterator().next()));
+            }
+            else {
+                queryList.add(DBQuery.in("adapterId", adapterIds));
+            }
         }
         if (fromAddress != null) {
             queryList.add(DBQuery.is("fromAddress", fromAddress));
@@ -914,4 +934,40 @@ public class DDRRecord
             }
         }
     }
+
+    /**
+     * Eclipse auto generated method
+     */
+    @Override
+    public int hashCode() {
+
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((_id == null) ? 0 : _id.hashCode());
+        return result;
+    }
+
+    /**
+     * Eclipse auto generated method
+     */
+    @Override
+    public boolean equals(Object obj) {
+
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        DDRRecord other = (DDRRecord) obj;
+        if (_id == null) {
+            if (other._id != null)
+                return false;
+        }
+        else if (!_id.equals(other._id))
+            return false;
+        return true;
+    }
+    
+    
 }

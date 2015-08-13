@@ -3,6 +3,7 @@ package com.almende.dialog.agent;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Logger;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.ddr.DDRPrice;
@@ -10,10 +11,8 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
-import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.protocol.jsonrpc.annotation.Access;
 import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
 import com.almende.eve.protocol.jsonrpc.annotation.Name;
@@ -24,7 +23,11 @@ import com.almende.util.jackson.JOM;
 import com.askfast.commons.agent.ScheduleAgent;
 import com.askfast.commons.agent.intf.DDRRecordAgentInterface;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.ScheduledTask;
+import com.askfast.commons.utils.PhoneNumberUtils;
+import com.askfast.commons.utils.TimeUtils;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Access(AccessType.PUBLIC)
@@ -97,26 +100,19 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         return ddrRecord;
     }
     
-    /**
-     * get a specific DDR record if it is owned by the account
-     * 
-     * @param id
-     * @param accountId
-     * @return
-     * @throws Exception
-     */
     @Override
-    public Object getDDRRecords(@Name("adapterId") @Optional String adapterId, @Name("accountId") String accountId,
-        @Name("fromAddress") @Optional String fromAddress, @Name("typeId") @Optional Collection<String> typeIds,
-        @Name("communicationStatus") @Optional String status, @Name("startTime") @Optional Long startTime,
-        @Name("endTime") @Optional Long endTime, @Name("sessionKeys") @Optional Collection<String> sessionKeys,
-        @Name("offset") @Optional Integer offset, @Name("limit") @Optional Integer limit,
-        @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
+    public Object getDDRRecords(@Name("accountId") String accountId,
+        @Name("adapterTypes") @Optional Collection<AdapterType> adapterTypes,
+        @Name("adapterIds") @Optional Collection<String> adapterIds, @Name("fromAddress") @Optional String fromAddress,
+        @Name("typeId") @Optional Collection<String> typeIds, @Name("communicationStatus") @Optional String status,
+        @Name("startTime") @Optional Long startTime, @Name("endTime") @Optional Long endTime,
+        @Name("sessionKeys") @Optional Collection<String> sessionKeys, @Name("offset") @Optional Integer offset,
+        @Name("limit") @Optional Integer limit, @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
         @Name("shouldIncludeServiceCosts") @Optional Boolean shouldIncludeServiceCosts) throws Exception {
 
         CommunicationStatus communicationStatus = status != null && !status.isEmpty() ? CommunicationStatus.fromJson(status)
             : null;
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterId, accountId, fromAddress, typeIds,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(accountId, adapterTypes, adapterIds, fromAddress, typeIds,
                                                              communicationStatus, startTime, endTime, sessionKeys,
                                                              offset, limit);
         if (shouldGenerateCosts != null && shouldGenerateCosts) {
@@ -126,6 +122,36 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
             }
         }
         return ddrRecords;
+    }
+    
+    /**
+     * Recursively fetch all the ddrRecords for the given timeframe
+     * 
+     * @param accountId
+     * @param adapterType
+     * @param adapterIds
+     * @param status
+     * @param startTime
+     *            cannot be null
+     * @param endTime
+     *            cannot be null
+     * @param sessionKeys
+     * @return
+     * @throws Exception
+     */
+    @Override
+    public Object getDDRRecordsRecursively(@Name("accountId") String accountId,
+        @Name("adapterTypes") @Optional Collection<AdapterType> adapterTypes,
+        @Name("adapterIds") @Optional Collection<String> adapterIds, @Name("fromAddress") @Optional String fromAddress,
+        @Name("typeId") @Optional Collection<String> typeIds, @Name("communicationStatus") @Optional String status,
+        @Name("startTime") long startTime, @Name("endTime") long endTime,
+        @Name("sessionKeys") @Optional Collection<String> sessionKeys, @Name("offset") @Optional Integer offset,
+        @Name("limit") @Optional Integer limit, @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
+        @Name("shouldIncludeServiceCosts") @Optional Boolean shouldIncludeServiceCosts) throws Exception {
+
+        return getAllDDRRecordsRecursively(accountId, adapterTypes, adapterIds, fromAddress, typeIds, status,
+                                           startTime, endTime, sessionKeys, offset, limit, shouldGenerateCosts,
+                                           shouldIncludeServiceCosts, null);
     }
     
     /**
@@ -154,13 +180,12 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * @throws Exception
      */
     @Override
-    public Object getAllDDRTypes(@Name("name") @Optional String name, @Name("category") @Optional String category)
+    public Object getAllDDRTypes(@Name("name") @Optional String name, @Name("category") @Optional DDRTypeCategory category)
         throws Exception {
 
         ArrayList<DDRType> result = new ArrayList<DDRType>();
         if (category != null) {
-            DDRTypeCategory ddrTypeCategory = DDRTypeCategory.fromJson(category);
-            DDRType ddrType = DDRType.getDDRType(ddrTypeCategory);
+            DDRType ddrType = DDRType.getDDRType(category);
             result.addAll(addDDRTypeIfNameMatches(name, ddrType));
         }
         else {
@@ -170,6 +195,25 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
             }
         }
         return result;
+    }
+    
+    /**
+     * Update a particular name for a ddrType
+     *
+     * @param typeId
+     * @param name
+     * @return Returns the updated DDRTYpe
+     * @throws Exception
+     */
+    public Object updateDDRType(@Name("id") String id, @Name("name") String name) throws Exception {
+
+        DDRType ddrType = DDRType.getDDRType(id);
+        if (ddrType != null) {
+            ddrType.setName(name);
+            ddrType.createOrUpdate();
+            return ddrType;
+        }
+        return null;
     }
     
     @Override
@@ -310,6 +354,71 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         return DDRPrice.getDDRPrices( ddrTypeId, adapterType, adapterId, unitType, keyword );
     }
     
+    @Override
+    public Object getDDRPricesWithCategory(@Name("ddrTypeId") @Optional String ddrTypeId,
+        @Name("adapterType") @Optional String adapterTypeString, @Name("adapterId") @Optional String adapterId,
+        @Name("unitType") @Optional String unitTypeString, @Name("keyword") @Optional String keyword,
+        @Name("searchCode") @Optional String code) {
+
+        AdapterType adapterType = adapterTypeString != null && !adapterTypeString.isEmpty() ? AdapterType.getByValue(adapterTypeString)
+            : null;
+        UnitType unitType = unitTypeString != null && !unitTypeString.isEmpty() ? UnitType.fromJson(unitTypeString)
+            : null;
+        List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrTypeId, adapterType, adapterId, unitType, keyword);
+        ArrayList<Object> result = new ArrayList<Object>();
+        for (DDRPrice ddrPrice : ddrPrices) {
+
+            ObjectNode ddrPriceNode = JOM.getInstance().valueToTree(ddrPrice);
+            DDRType ddrType = DDRType.getDDRType(ddrPrice.getDdrTypeId());
+            if (ddrType != null) {
+                ddrPriceNode.put("ddrTypeName", ddrType.getName());
+                ddrPriceNode.put("category", ddrType.getCategory().toString());
+                try {
+                    if (ddrPrice.getKeyword() != null && ddrPrice.getKeyword().split("\\|").length == 2) {
+
+                        String ddrPriceCountryCode = ddrPrice.getKeyword().split("\\|")[0];
+                        String phoneNumberType = ddrPrice.getKeyword().split("\\|")[1];
+                        String priceRegionCode = PhoneNumberUtils.getRegionCode(Integer.parseInt(ddrPriceCountryCode));
+                        //if the code if given fetch the ones matching else continue
+                        if (code != null) {
+
+                            String displayCountry = new Locale("", priceRegionCode).getDisplayCountry();
+                            
+                            /**
+                             * 1. CountryCode (e.g. 31) First in the order of
+                             * precedence 2. RegionCode (e.g. NL) Second in the
+                             * order of precedence 3. CountryName (E.g.
+                             * Netherlands)Third in the order of precedence. A
+                             * contains match is done on this query. So that et
+                             * must match both nETherlands, EThiopia etc
+                             */
+                            if (code.equals(ddrPriceCountryCode) || code.equalsIgnoreCase(priceRegionCode) ||
+                                (displayCountry != null && displayCountry.toLowerCase().contains(code.toLowerCase()))) {
+
+                                ddrPriceNode.put("country", new Locale("", priceRegionCode).getDisplayCountry());
+                                ddrPriceNode.put("phoneNumberType", phoneNumberType);
+                            }
+                            else {
+                                continue;
+                            }
+                        }
+                        else {
+                            ddrPriceNode.put("country", new Locale("", priceRegionCode).getDisplayCountry());
+                            ddrPriceNode.put("phoneNumberType", phoneNumberType);
+                        }
+                    }
+                }
+                catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    log.severe(String.format("Country code is not parsed to Integer with Keyword: %s",
+                                             ddrPrice.getKeyword()));
+                }
+            }
+            result.add(ddrPriceNode);
+        }
+        return result;
+    }
+
     /**
      * creates a scheduler for all ddr prices of {@link DDRTypeCategory}
      * {@link DDRTypeCategory#SUBSCRIPTION_COST}
@@ -468,4 +577,42 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         return result;
     }
 
+    /**
+     * Recursively fetch all the ddrRecords for the given timeframe
+     * @param accountId
+     * @param adapterType
+     * @param adapterIds
+     * @param status
+     * @param startTime
+     *            cannot be null
+     * @param endTime
+     *            cannot be null
+     * @param sessionKeys
+     * @return
+     * @throws Exception
+     */
+    private Object getAllDDRRecordsRecursively(String accountId, Collection<AdapterType> adapterTypes,
+        Collection<String> adapterIds, @Name("fromAddress") @Optional String fromAddress, Collection<String> typeIds,
+        String status, long startTime, long endTime, Collection<String> sessionKeys, Integer offset, Integer limit,
+        Boolean shouldGenerateCosts, Boolean shouldIncludeServiceCosts, ArrayList<DDRRecord> allDdrRecords)
+        throws Exception {
+
+        Object ddrRecordObjects = getDDRRecords(accountId, adapterTypes, adapterIds, null, null, status, startTime,
+                                                endTime, sessionKeys, offset, limit, shouldGenerateCosts,
+                                                shouldIncludeServiceCosts);
+        ArrayList<DDRRecord> ddrRecords = JOM.getInstance().convertValue(ddrRecordObjects,
+                                                                         new TypeReference<ArrayList<DDRRecord>>() {});
+        allDdrRecords = allDdrRecords != null ? allDdrRecords : new ArrayList<DDRRecord>();
+        allDdrRecords.addAll(ddrRecords);
+        if (!ddrRecords.isEmpty() && ddrRecords.get(ddrRecords.size() - 1).getStart() > startTime) {
+
+            return getAllDDRRecordsRecursively(accountId, adapterTypes, adapterIds, fromAddress, typeIds, status,
+                                               startTime, ddrRecords.get(ddrRecords.size() - 1).getStart() - 1,
+                                               sessionKeys, offset, limit, shouldGenerateCosts,
+                                               shouldIncludeServiceCosts, allDdrRecords);
+        }
+        else {
+            return allDdrRecords;
+        }
+    }
 }

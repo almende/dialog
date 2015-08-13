@@ -22,46 +22,35 @@
   <var name="preconVxmlScript" expr="'rest/comsys/vxml/preconnect'" />
   <var name="connectedVxmlScript" expr="'rest/comsys/vxml/connected'" />
   <var name="currentState" expr="'initial'" />
+  <var name="callId" expr="session.values.callId" />
   
   <eventprocessor statevariable="currentState" >
     <transition state="initial" event="connection.alerting">
-      <log expr="'*** Caller ID via SIP header = ' + event$.connection.protocol.sip.headers.From"/>
-      <log expr="'*** Callee ID via SIP header = ' + event$.connection.protocol.sip.headers.To"/>
       <log expr="'*** The calledID is ' + event$.connection.local"/>
       <log expr="'*** The calleeID is ' + event$.connection.remote"/>
       <script>
-          var remote = event$.connection.remote;
-          var strings = remote.split('@');
+          var remote = event$.connection.remote.uri;
 
-          var from = event$.info.sip.headers['from'];
-
-          localID = event$.connection.local;
-          remoteID = strings[0];
+          localID = event$.connection.local.uri;
+          remoteID = remote;
           externalRemoteID = remoteID;
-          if(from.indexOf('Anonymous')!=-1) {
-            externalRemoteID = '';
-          }
-          
-          var domain   = strings[1];
-          if (domain.substring(0,8) == "outbound") {
-            direction = "outbound";
-            dialURL = "sip:"+remoteID+"@asb-02.voipit.nl";
-          }
         </script>
         <!-- When outbound ctd:ctdConn and requester is being called with: inConn -->
         <if cond="direction == 'outbound'">
             <assign name="ctdConn" expr="event$.connectionid"/>
             <accept connectionid="ctdConn"/>
+            <connect connectionid="ctdConn"/>
             <createcall dest="dialURL" connectionid="inConn" timeout="timeout" />
         <else />
             <assign name="inConn" expr="event$.connectionid"/>
             <accept connectionid="inConn"/>
+            <connect connectionid="inConn"/>
         </if>
     </transition>
 
     <transition state="initial" event="connection.connected">
       <if cond="inConn == event$.connectionid">
-	    <dialogstart src="vxmlScript" connectionid="inConn" dialogid="dialogID" namelist="direction localID remoteID externalRemoteID"/>
+	    <dialogstart src="vxmlScript" connectionid="inConn" dialogid="dialogID" namelist="direction localID remoteID externalRemoteID callId"/>
 	    <if cond="ctdConn != ''">
 	        <disconnect connectionid="ctdConn"/>
 	    </if>
@@ -77,11 +66,6 @@
         <script>
           var remote = event$.URI;
           dialURL = remote;
-          var strings = remote.split(':');
-          if(strings[0] == "tel") {
-            redirectID = strings[1];
-            dialURL = "sip:"+redirectID+"@asb-02.voipit.nl";
-          }
         </script>
         <assign name="currentState" expr="'originatingcall'" />
         <unjoin id1="inConn" id2="dialogID" />

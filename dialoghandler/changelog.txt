@@ -1,11 +1,15 @@
 DialogHandler
 https://github.com/almende/dialog/
 
-24-1-2015, version 1.11.1
+31-7-2015, version 1.12.0
+- fix: outbound call only with adapterType (select default of the type)
+- feature: query ddr price by CountryCode, RegionCode, CountryName
+
+24-7-2015, version 1.11.1
 - fix: the ability for redirect to international numbers
 - fix: buy international numbers from twilio
 
-21-1-2015, version 1.11.0
+21-7-2015, version 1.11.0
 - feature: added parent and child linked ddrRecordIds
 - feature: create twilio adapter with subaccounts
 - fix: add all toAddresses in ddr

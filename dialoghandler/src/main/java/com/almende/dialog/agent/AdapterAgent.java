@@ -6,11 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
 import javax.ws.rs.core.Response;
-
 import org.jivesoftware.smack.XMPPException;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -26,7 +23,6 @@ import com.almende.dialog.exception.ConflictException;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.eve.protocol.jsonrpc.annotation.Access;
 import com.almende.eve.protocol.jsonrpc.annotation.AccessType;
 import com.almende.eve.protocol.jsonrpc.annotation.Name;
@@ -47,11 +43,15 @@ import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.ScheduledTask;
+import com.askfast.commons.utils.TimeUtils;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.TwilioRestException;
+import com.twilio.sdk.resource.instance.Account;
 import com.twilio.sdk.resource.instance.Application;
+import com.twilio.sdk.resource.instance.IncomingPhoneNumber;
 import com.twilio.sdk.resource.list.ApplicationList;
+import com.twilio.sdk.resource.list.IncomingPhoneNumberList;
 
 @Access(AccessType.PUBLIC)
 public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface {
@@ -240,6 +240,49 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
             }
         }
     }
+    
+    /**
+     * Adds a new comsys adapter
+     * 
+     * @param address
+     * @param username
+     * @param password
+     * @param preferredLanguage
+     * @param accountId
+     * @param anonymous
+     * @return AdapterId
+     * @throws Exception
+     */
+    public RestResponse createComsysAdapter(@Name("address") String address,
+        @Name("username") @Optional String username,@Name("password") @Optional String password, 
+        @Name("preferredLanguage") @Optional String preferredLanguage,
+        @Name("accountId") @Optional String accountId, @Name("anonymous") boolean anonymous,
+        @Name("accountType") @Optional String accountType, @Name("isPrivate") @Optional Boolean isPrivate)
+        throws Exception {
+
+        preferredLanguage = Language.getByValue(preferredLanguage).getCode();
+        AdapterConfig config = new AdapterConfig();
+        config.setAdapterType(AdapterType.CALL.toString());
+        config.setMyAddress( address );
+        config.setAddress( address );
+        config.setPreferred_language(preferredLanguage);
+        config.setPublicKey(accountId);
+        config.setXsiUser(username);
+        config.setXsiPasswd(password);
+        config.setOwner(accountId);
+        config.addAccount(accountId);
+        config.setAnonymous(anonymous);
+        config.setAccountType(AccountType.fromJson(accountType));
+        config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.COMSYS);
+        try {
+            AdapterConfig newConfig = createAdapter(config, isPrivate);
+            return RestResponse.ok(getVersion(), newConfig.getConfigId());
+        }
+        catch (Exception e) {
+            return new RestResponse(getVersion(), null, Response.Status.BAD_REQUEST.getStatusCode(),
+                                    e.getLocalizedMessage());
+        }
+    }
 	
     /**
      * Adds a new broadsoft adapter
@@ -378,6 +421,122 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
             return newConfig.getConfigId();
         }
         return null;
+    }
+    
+    public ArrayNode moveTwilioAdaptersToSubAccount(@Name("accountId") String accountId, @Name("accountSid") String accountSid,
+                                                   @Name("authToken") String authToken) {
+        
+        ArrayNode result = JOM.createArrayNode();
+        
+        List<AdapterConfig> adapters = AdapterConfig.findAdapterByOwner(accountId, ADAPTER_TYPE_CALL, null);
+        for(AdapterConfig adapter : adapters) {
+            Map<String, Object> props = adapter.getProperties();
+            if(props.containsKey( "PROVIDER" ) && props.get( "PROVIDER" ).equals( "TWILIO" )) {
+             
+                try {
+                    result.add( moveTwilioAdapterToSubAccount( adapter.getConfigId(), accountSid, authToken ) );
+                } catch (TwilioRestException e) {
+                    log.warning( "Failed to move adapter: " + adapter.getConfigId() + " e: " + e.getMessage());
+                }
+            }            
+        }
+        
+        return result;
+    }
+    
+    public String moveTwilioAdapterToSubAccount(@Name("adapterId") String adapterId, @Name("accountSid") String accountSid,
+        @Name("authToken") String authToken) throws TwilioRestException {
+        
+        AdapterConfig adapter = AdapterConfig.getAdapterConfig( adapterId );
+        
+        if(adapter.getAccessToken().equals( accountSid )) {
+            log.warning( "This adapter is already linked to subaccount" );
+            return null;
+        }
+        
+        TwilioRestClient client = new TwilioRestClient( adapter.getAccessToken(), adapter.getAccessTokenSecret() );
+        TwilioRestClient subAccountClient = new TwilioRestClient( accountSid, authToken );
+        Account account = subAccountClient.getAccount();
+        if(account==null) {
+            log.warning( "Invalid subaccount credentials" );
+            return null;
+        }
+        
+        Map<String, String> params = new HashMap<String, String>();
+        params.put("PhoneNumber", adapter.getAddress());
+        
+        String numberSid = null;
+        IncomingPhoneNumberList numbers = client.getAccount().getIncomingPhoneNumbers( params );
+        for(IncomingPhoneNumber number : numbers) {
+            
+            numberSid = number.getSid();
+            
+            params = new HashMap<String, String>();
+            params.put("AccountSid", accountSid);
+            number.update( params );
+        }
+        
+        if(numberSid != null) {
+            IncomingPhoneNumber number = subAccountClient.getAccount().getIncomingPhoneNumber( numberSid );
+            
+            params = new HashMap<String, String>();
+            params.put( "VoiceApplicationSid", getApplicationId( accountSid, authToken ) );
+            number.update( params );
+            
+            adapter.setAccessToken( accountSid );
+            adapter.setAccessTokenSecret( authToken );
+            adapter.update();
+            
+            return adapter.getConfigId();
+        }
+        
+        return null;
+    }
+    
+    public String moveTwilioAdapterToMainAccount(@Name("adapterId") String adapterId, @Name("accountSid") String accountSid,
+                                                @Name("authToken") String authToken) throws TwilioRestException {
+                                                
+        AdapterConfig adapter = AdapterConfig.getAdapterConfig( adapterId );
+        
+        if(adapter.getAccessToken().equals( accountSid )) {
+            log.warning( "This adapter is already linked to master account" );
+            return null;
+        }
+        
+        TwilioRestClient client = new TwilioRestClient( accountSid, authToken );
+        Account account = client.getAccount();
+        if(account==null) {
+            log.warning( "Invalid master account credentials" );
+            return null;
+        }
+        
+        Map<String, String> params = new HashMap<String, String>();
+        params.put("PhoneNumber", adapter.getAddress());
+        
+        String numberSid = null;
+        IncomingPhoneNumberList numbers = client.getAccount(adapter.getAccessToken()).getIncomingPhoneNumbers( params );
+        for(IncomingPhoneNumber number : numbers) {
+            
+            numberSid = number.getSid();
+            
+            params = new HashMap<String, String>();
+            params.put("AccountSid", accountSid);
+            number.update( params );
+            
+            break;
+        }
+        
+        IncomingPhoneNumber number = client.getAccount().getIncomingPhoneNumber( numberSid );
+        
+        params = new HashMap<String, String>();
+        params.put( "VoiceApplicationSid", getApplicationId( accountSid, authToken ) );
+        number.update( params );
+        
+        adapter.setAccessToken( accountSid );
+        adapter.setAccessTokenSecret( authToken );
+        adapter.update();
+        
+        return adapter.getConfigId();
     }
 	
     public String createEmailAdapter(@Name("emailAddress") String emailAddress, @Name("password") String password,
@@ -809,27 +968,19 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         List<AdapterConfig> adapters = AdapterConfig.findAdapterByAccount(accountId, adapterType, address);
         return JOM.getInstance().convertValue(adapters, ArrayNode.class);
     }
+    
+    public ArrayNode getOwnedAdapters( @Name( "accoutId" ) String accountId, @Name( "adapterType" ) @Optional String adapterType, 
+                                       @Name( "address" ) @Optional String address ) {
+
+        List<AdapterConfig> adapters = AdapterConfig.findAdapterByOwner( accountId, adapterType, address );
+        return JOM.getInstance().convertValue( adapters, ArrayNode.class );
+    }
 
     public ArrayNode findAdapters(@Name("adapterType") @Optional String type,
         @Name("address") @Optional String address, @Name("keyword") @Optional String keyword) {
 
         ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters(type, address, keyword);
         return JOM.getInstance().convertValue(adapters, ArrayNode.class);
-    }
-
-    /**
-     * Gets all the adapters owned by the given accountId
-     * 
-     * @param type
-     * @param address
-     * @param keyword
-     * @return
-     */
-    public ArrayNode findOwnedAdapters(@Name("ownerId") String ownerId, @Name("adapterType") @Optional String type,
-        @Name("address") @Optional String address) {
-
-        ArrayList<AdapterConfig> ownedAdapters = AdapterConfig.findAdapterByOwner(ownerId, type, address);
-        return JOM.getInstance().convertValue(ownedAdapters, ArrayNode.class);
     }
     
     /**

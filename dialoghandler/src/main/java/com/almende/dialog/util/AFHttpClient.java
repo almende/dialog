@@ -9,6 +9,7 @@ import com.almende.dialog.util.http.UserAgentInterceptor;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.RequestLog;
 import com.askfast.commons.entity.ResponseLog;
+import com.askfast.commons.utils.TimeUtils;
 import com.squareup.okhttp.Credentials;
 import com.squareup.okhttp.MediaType;
 import com.squareup.okhttp.OkHttpClient;

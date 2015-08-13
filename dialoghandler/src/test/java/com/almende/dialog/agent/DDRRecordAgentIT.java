@@ -28,15 +28,15 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
-import com.almende.dialog.model.ddr.DDRType.DDRTypeCategory;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.util.TypeUtil;
 import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.askfast.commons.utils.TimeUtils;
 
 /**
  * Has all the integration tests (might be unit tests too, but they need a
@@ -556,8 +556,8 @@ public class DDRRecordAgentIT extends TestFramework {
         assertThat(sessions, Matchers.emptyCollectionOf(Session.class));
 
         //check that all ddrs are processed
-        Collection<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(null, resultMap.get(ACCOUNT_ID_KEY), null, null,
-                                                                   null, null, null, null, null, null);
+        Collection<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(resultMap.get(ACCOUNT_ID_KEY), null, null, null,
+                                                                   null, null, null, null, null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(2));
         for (DDRRecord ddrRecord : ddrRecords) {
 
@@ -683,8 +683,8 @@ public class DDRRecordAgentIT extends TestFramework {
      */
     private static Collection<DDRRecord> getDDRRecordsByAccountId(String accountId) throws Exception {
 
-        Object ddrRecords = new DDRRecordAgent().getDDRRecords(null, accountId, null, null, null, null, null, null,
-                                                               null, null, null, null);
+        Object ddrRecords = new DDRRecordAgent().getDDRRecords(accountId, null, null, null, null, null, null, null,
+                                                               null, null, null, null, null);
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>() {
         };
         Collection<DDRRecord> allDdrRecords = typesInjector.inject(ddrRecords);

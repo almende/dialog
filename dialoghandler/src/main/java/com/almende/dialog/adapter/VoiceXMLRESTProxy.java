@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -36,7 +35,6 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
 import org.apache.commons.fileupload.disk.DiskFileItemFactory;
@@ -44,7 +42,6 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.znerd.xmlenc.XMLOutputter;
-
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -64,7 +61,6 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
-import com.almende.dialog.util.TimeUtils;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
@@ -72,6 +68,7 @@ import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
+import com.askfast.commons.utils.TimeUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 
@@ -80,15 +77,15 @@ public class VoiceXMLRESTProxy {
 
     protected static final Logger log = Logger.getLogger(VoiceXMLRESTProxy.class.getName());
     protected static final com.almende.dialog.Logger dialogLog = new com.almende.dialog.Logger();
-    private static final int LOOP_DETECTION = 10;
-    private static final String DTMFGRAMMAR = "dtmf2hash";
-    private static final String PLAY_TRIAL_AUDIO_KEY = "playTrialAccountAudio";
-    private static final int MAX_RETRIES = 1;
+    protected static final int LOOP_DETECTION = 10;
+    protected static final String DTMFGRAMMAR = "dtmf2hash";
+    protected static final String PLAY_TRIAL_AUDIO_KEY = "playTrialAccountAudio";
+    protected static final int MAX_RETRIES = 1;
     protected String TIMEOUT_URL = "timeout";
     protected String UPLOAD_URL = "upload";
     protected String EXCEPTION_URL = "exception";
     @SuppressWarnings( "unused" )
-    private String host = "";
+    protected String host = "";
 
     public static void killSession(Session session) {
 
@@ -1706,7 +1703,7 @@ public class VoiceXMLRESTProxy {
         return sw.toString();
     }
     
-    private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, Session session) {
+    protected Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, Session session) {
 
         String result = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>";
         Return res = formQuestion(question, adapterConfig.getConfigId(), remoteID, null, session);
@@ -1982,7 +1979,7 @@ public class VoiceXMLRESTProxy {
      * @param session
      * @return error message is the call is already in place. else returns null
      */
-    private static String checkIfCallAlreadyInSession(String address, AdapterConfig config, Session session) {
+    protected static String checkIfCallAlreadyInSession(String address, AdapterConfig config, Session session) {
 
         log.warning(String.format("Existing session %s. Will check with provider if its actually true",
                                   session.getKey()));
@@ -2016,7 +2013,7 @@ public class VoiceXMLRESTProxy {
      * @param session
      * @return
      */
-    private static boolean isEventTriggered(String eventName, Session session, boolean updateSession) {
+    protected static boolean isEventTriggered(String eventName, Session session, boolean updateSession) {
 
         if (session != null) {
             if (session.getAllExtras().get("event_" + eventName) != null) {

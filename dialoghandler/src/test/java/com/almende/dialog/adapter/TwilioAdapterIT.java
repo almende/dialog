@@ -368,7 +368,77 @@ public class TwilioAdapterIT extends TestFramework {
         expected.append(redirect);
 
         assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+          
+        resp = simulator.nextQuestion("1");
 
+        expected = new TwiMLResponse();
+        say = new Say("You chose 1");
+        say.setLanguage(lang);
+        expected.append(say);
+
+        assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+    }
+    
+    @Test
+    public void inboundPhoneCall_ClosedTest_WithTimeout() throws Exception {
+
+        String accountSid = UUID.randomUUID().toString();
+        String callSid = UUID.randomUUID().toString();
+        TwilioSimulator simulator = new TwilioSimulator(TestFramework.host, accountSid);
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                                                       QuestionInRequest.CLOSED_YES_NO.name());
+        url = ServerUtils.getURLWithQueryParams(url, "preMessage", "Hi there");
+        url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
+        url = ServerUtils.getURLWithQueryParams(url, "lang", Language.ENGLISH_UNITEDSTATES.getCode());
+
+        //create a dialog
+        Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+
+        //create Twilio adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
+                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          localAddressBroadsoft, url);
+        adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());
+        adapterConfig.setDialogId(createDialog.getId());
+        adapterConfig.update();
+
+        String resp = simulator.initiateInboundCall(callSid, remoteAddressVoice, localAddressBroadsoft);
+        
+        // Load the premessage
+        resp = simulator.nextQuestion(null);
+
+        String lang = Language.ENGLISH_UNITEDSTATES.getCode();
+        TwiMLResponse expected = new TwiMLResponse();
+        Gather gather = new Gather();
+        gather.getAttributes().put("action", TestFramework.host + "/rest/twilio/answer");
+        gather.getAttributes().put("numDigits", "1");
+        gather.getAttributes().put("finishOnKey", "");
+        gather.getAttributes().put("method", "GET");
+        gather.getAttributes().put("timeout", "5");
+        Say say = new Say(TEST_MESSAGE);
+        say.setLanguage(lang);
+        gather.append(say);
+        say = new Say("1");
+        say.setLanguage(lang);
+        gather.append(say);
+        say = new Say("2");
+        say.setLanguage(lang);
+        gather.append(say);
+        expected.append(gather);
+        Redirect redirect = new Redirect(TestFramework.host + "/rest/twilio/timeout");
+        redirect.getAttributes().put("method", "GET");
+        expected.append(redirect);
+
+        assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+     
+        // trigger the timeout
+        resp = simulator.timeout();
+        
+        // expect the last message
+        assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
+
+        // send the actual result
         resp = simulator.nextQuestion("1");
 
         expected = new TwiMLResponse();

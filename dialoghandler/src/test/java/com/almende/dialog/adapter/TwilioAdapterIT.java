@@ -46,7 +46,7 @@ import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
-import com.askfast.commons.entity.DialogRequestDetails;
+import com.askfast.commons.entity.DialogRequest;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
@@ -937,7 +937,7 @@ public class TwilioAdapterIT extends TestFramework {
     
     /**
      * Test if the
-     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequestDetails)}
+     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequest)}
      * gives an error code if the question is not fetched by the dialog agent
      * @throws UnsupportedEncodingException 
      */
@@ -959,7 +959,7 @@ public class TwilioAdapterIT extends TestFramework {
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
                            null);
         
-        DialogRequestDetails details = new DialogRequestDetails();
+        DialogRequest details = new DialogRequest();
         details.setAccountID(adapterConfig.getOwner());
         details.setAdapterID(adapterConfig.getConfigId());
         details.setAddress(remoteAddressVoice);
@@ -982,7 +982,7 @@ public class TwilioAdapterIT extends TestFramework {
     
     /**
      * Test if the
-     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequestDetails)}
+     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequest)}
      * gives an error code if the question is fetched by the dialog agent but
      * the telephone number is invalid
      * 
@@ -1005,7 +1005,7 @@ public class TwilioAdapterIT extends TestFramework {
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
                            null);
 
-        DialogRequestDetails details = new DialogRequestDetails();
+        DialogRequest details = new DialogRequest();
         details.setAccountID(adapterConfig.getOwner());
         details.setAdapterID(adapterConfig.getConfigId());
         details.setAddress("0611223"); //invalid address
@@ -1027,7 +1027,7 @@ public class TwilioAdapterIT extends TestFramework {
     
     /**
      * Test if the
-     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequestDetails)}
+     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequest)}
      * gives an error code if the question is fetched by the dialog agent but
      * the telephone numbers are a mix of valid and invalid numbers
      * 
@@ -1050,7 +1050,7 @@ public class TwilioAdapterIT extends TestFramework {
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
                            null);
 
-        DialogRequestDetails details = new DialogRequestDetails();
+        DialogRequest details = new DialogRequest();
         details.setAccountID(adapterConfig.getOwner());
         details.setAdapterID(adapterConfig.getConfigId());
         details.setAddressList(new LinkedHashSet<String>(Arrays.asList("0611223", remoteAddressVoice)));

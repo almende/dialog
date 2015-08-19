@@ -53,7 +53,7 @@ import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
-import com.askfast.commons.entity.DialogRequestDetails;
+import com.askfast.commons.entity.DialogRequest;
 import com.askfast.commons.utils.PhoneNumberUtils;
 
 @SuppressWarnings("deprecation")
@@ -737,7 +737,7 @@ public class CMServletIT extends TestFramework {
         AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
                                                        TEST_PUBLIC_KEY, "0642500086", "0642500086", null);
         //send email
-        DialogRequestDetails dialogRequestDetails = new DialogRequestDetails();
+        DialogRequest dialogRequestDetails = new DialogRequest();
         dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
         dialogRequestDetails.setAdapterID(smsAdapter.getConfigId());
         dialogRequestDetails.setAddressList(Arrays.asList(invalidAddres, remoteAddressVoice));
@@ -783,7 +783,7 @@ public class CMServletIT extends TestFramework {
         AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
                                                        TEST_PUBLIC_KEY, "0642500086", "0642500086", null);
         //send email
-        DialogRequestDetails dialogRequestDetails = new DialogRequestDetails();
+        DialogRequest dialogRequestDetails = new DialogRequest();
         dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
         dialogRequestDetails.setAdapterID(smsAdapter.getConfigId());
         dialogRequestDetails.setUrl(url);
@@ -824,7 +824,7 @@ public class CMServletIT extends TestFramework {
         AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
                                                        TEST_PUBLIC_KEY, "0642500086", "0642500086", null);
         //send email
-        DialogRequestDetails dialogRequestDetails = new DialogRequestDetails();
+        DialogRequest dialogRequestDetails = new DialogRequest();
         dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
         dialogRequestDetails.setAdapterID(smsAdapter.getConfigId());
         dialogRequestDetails.setAddress(remoteAddressVoice);

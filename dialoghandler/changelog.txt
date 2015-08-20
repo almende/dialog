@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+20-8-2015, version 1.12.1
+- fix: the startDialog rest call
+
 31-7-2015, version 1.12.0
 - fix: outbound call only with adapterType (select default of the type)
 - feature: query ddr price by CountryCode, RegionCode, CountryName

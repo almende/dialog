@@ -575,6 +575,9 @@ public class TwilioAdapter {
             HashMap<String, Object> extras = new HashMap<String, Object>();
             extras.put("sessionKey", session.getKey());
             extras.put("requester", session.getLocalAddress());
+            if(session.getCallStatus()!=null) {
+                extras.put( "callStatus", session.getCallStatus() );
+            }
             question = question.event("timeout", "No answer received", extras, responder, session);
             session.setQuestion(question);
             if (question != null) {

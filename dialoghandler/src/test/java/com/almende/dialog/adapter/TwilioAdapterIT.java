@@ -1209,9 +1209,8 @@ public class TwilioAdapterIT extends TestFramework {
         String callSid = UUID.randomUUID().toString();
         if (direction.equals("outbound")) {
             HashMap<String, String> outboundCall = dialogAgent.outboundCall(remoteAddressVoice, "test", null,
-                                                                            createDialog.getId(), null,
-                                                                            adapterConfig.getConfigId(),
-                                                                            TEST_PUBLIC_KEY, null);
+                createDialog.getId(), null, adapterConfig.getConfigId(), TEST_PUBLIC_KEY, null,
+                adapterConfig.getAccountType());
             String sessionKey = outboundCall.values().iterator().next();
             Session session = Session.getSession(sessionKey);
             callSid = session.getExternalSession();

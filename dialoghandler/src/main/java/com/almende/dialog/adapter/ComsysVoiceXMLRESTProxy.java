@@ -4,7 +4,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -12,7 +11,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.adapter.tools.Broadsoft;
@@ -166,7 +164,7 @@ public class ComsysVoiceXMLRESTProxy extends VoiceXMLRESTProxy {
 
         if (session.getQuestion() != null) {
             //play trial account audio if the account is trial
-            if (config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)) {
+            if (AccountType.TRIAL.equals(session.getAccountType())) {
                 session.addExtras(PLAY_TRIAL_AUDIO_KEY, "true");
             }
             return handleQuestion(question, config, formattedRemoteId, session);

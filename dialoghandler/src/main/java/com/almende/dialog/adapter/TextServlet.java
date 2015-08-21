@@ -192,16 +192,19 @@ abstract public class TextServlet extends HttpServlet {
      *            AdapterConfig linked to this outbound call
      * @param accountId
      *            AccountId initiating this call
+     * @param accountType
+     *            Used to add any appropreiate information about the request
+     *            (Trial account message etc)
      * @return
      * @throws Exception
      */
-    public String startDialog(String address, String dialogIdOrUrl, AdapterConfig config, String accountId)
-        throws Exception {
+    public String startDialog(String address, String dialogIdOrUrl, AdapterConfig config, String accountId,
+        AccountType accountType) throws Exception {
 
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(address, "");
         HashMap<String, String> result = startDialog(addressNameMap, null, null, dialogIdOrUrl, null, null, config,
-                                                     accountId);
+            accountId, accountType);
         if (result != null && !result.isEmpty()) {
             return result.keySet().iterator().next();
         }
@@ -235,12 +238,16 @@ abstract public class TextServlet extends HttpServlet {
      * @param accountId
      *            AccoundId initiating this broadcast. All costs are applied to
      *            this accountId
+     * @param accountType
+     *            Indicates if the account triggering the call is E.g. trial or
+     *            not. Used to add trial messages etc
      * @return
      * @throws Exception
      */
     public HashMap<String, String> startDialog(Map<String, String> addressNameMap,
         Map<String, String> addressCcNameMap, Map<String, String> addressBccNameMap, String dialogIdOrUrl,
-        String senderName, String subject, AdapterConfig config, String accountId) throws Exception {
+        String senderName, String subject, AdapterConfig config, String accountId, AccountType accountType)
+        throws Exception {
 
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
         addressCcNameMap = addressCcNameMap != null ? addressCcNameMap : new HashMap<String, String>();
@@ -281,6 +288,7 @@ abstract public class TextServlet extends HttpServlet {
         if (provider != null) {
             session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, provider.toString());
         }
+        session.setAccountType(accountType);
         session.storeSession();
 
         dialogIdOrUrl = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
@@ -401,7 +409,7 @@ abstract public class TextServlet extends HttpServlet {
 
             subject = subject != null && !subject.isEmpty() ? subject : "Message from Ask-Fast";
             //play trial account audio if the account is trial
-            if (config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)) {
+            if (AccountType.TRIAL.equals(session.getAccountType())) {
                 if (Language.DUTCH.equals(Language.getByValue(question.getPreferred_language()))) {
                     res.reply = "Dit is een proefaccount. Overweeg alstublieft om uw account te upgraden. \n" +
                         res.reply;
@@ -412,6 +420,8 @@ abstract public class TextServlet extends HttpServlet {
             }
             // fix for bug: #15 https://github.com/almende/dialog/issues/15
             res.reply = URLDecoder.decode(res.reply, "UTF-8");
+            //add the text sent to the ddrRecord
+            ddrRecord.addAdditionalInfo("text", res.reply);
             //update formatted address list in ddrRecord
             if (!sessionKeyMap.isEmpty()) {
                 int count = broadcastMessageAndAttachCharge(res.reply, subject, localaddress, senderName,

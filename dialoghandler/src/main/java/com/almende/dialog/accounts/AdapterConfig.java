@@ -80,7 +80,10 @@ public class AdapterConfig {
 	Boolean anonymous=false;
 	
 	String owner=null;
-	//reducdant information to avoid linking to the accountServer to fetch the Account again
+	/**
+	 * reducdant information to avoid linking to the accountServer to fetch the Account again. 
+	 * This is the account type of the owner of the Adapter.
+	 */
 	AccountType accountType = null;
 	Collection<String> accounts=null;
 	//store adapter specific data
@@ -816,13 +819,27 @@ public class AdapterConfig {
         }
     }
     
+    /**
+     * reducdant information to avoid linking to the accountServer to fetch the
+     * Account again. <br>
+     * This is the account type of the owner of the Adapter.
+     * 
+     * @return
+     */
     public AccountType getAccountType() {
-    
+
         return accountType;
     }
-    
+
+    /**
+     * reducdant information to avoid linking to the accountServer to fetch the
+     * Account again. <br>
+     * This is the account type of the owner of the Adapter.
+     * 
+     * @param accountType
+     */
     public void setAccountType(AccountType accountType) {
-    
+
         this.accountType = accountType;
     }
     

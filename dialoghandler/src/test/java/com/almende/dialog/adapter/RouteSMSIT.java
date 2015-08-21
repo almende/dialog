@@ -222,11 +222,11 @@ public class RouteSMSIT extends TestFramework {
         DialogAgent dialogAgent = new DialogAgent();
         if (addressNameMap.size() > 1) {
             dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                                            adapterConfig.getConfigId(), accountId, "");
+                                            adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
         }
         else {
             dialogAgent.outboundCall(addressNameMap.keySet().iterator().next(), senderName, subject, url, null,
-                                     adapterConfig.getConfigId(), accountId, "");
+                                     adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
         }
     }
 

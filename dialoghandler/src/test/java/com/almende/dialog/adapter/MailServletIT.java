@@ -137,7 +137,7 @@ public class MailServletIT extends TestFramework
                                                           localAddressMail, localAddressMail, null);
         //send email
         new DialogAgent().outboundCall(remoteAddressEmail, "TEST", "TEST SUBJECT", url, null,
-                                       adapterConfig.getConfigId(), TEST_PUBLIC_KEY, null);
+            adapterConfig.getConfigId(), TEST_PUBLIC_KEY, null, adapterConfig.getAccountType());
         
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(1));
@@ -316,7 +316,7 @@ public class MailServletIT extends TestFramework
         
         MailServlet mailServlet = new MailServlet();
         mailServlet.startDialog(addressNameMap, null, null, url, "test", "sendDummyMessageTest", adapterConfig,
-                                adapterConfig.getOwner());
+                                adapterConfig.getOwner(), adapterConfig.getAccountType());
         
         //assert that one session is created
         List<Session> allSessions = Session.getAllSessions();

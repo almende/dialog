@@ -887,7 +887,6 @@ public class DDRUtils
                     }
                     ddrRecord.addStatusForAddress(address, status);
                 }
-                ddrRecord.setAccountType(config.getAccountType());
                 ddrRecord.addAdditionalInfo(DDR_MESSAGE_KEY, message);
                 ddrRecord.setSessionKeysFromMap(sessionKeyMap);
                 ddrRecord.addAdditionalInfo(DDRType.DDR_CATEGORY_KEY, category);

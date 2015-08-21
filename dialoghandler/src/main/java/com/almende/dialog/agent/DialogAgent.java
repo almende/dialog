@@ -45,7 +45,7 @@ import com.askfast.commons.RestResponse;
 import com.askfast.commons.agent.intf.DialogAgentInterface;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
-import com.askfast.commons.entity.DialogRequestDetails;
+import com.askfast.commons.entity.DialogRequest;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -805,14 +805,14 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     
     /**
      * Triggers an outbound call by calling the appropriate call based on the
-     * {@link DialogRequestDetails#getMethod()}
+     * {@link DialogRequest#getMethod()}
      * 
      * @param dialogDetails
      * @return
      * @throws Exception
      */
     @Override
-    public RestResponse outboundCallWithDialogRequest(DialogRequestDetails dialogDetails) {
+    public RestResponse outboundCallWithDialogRequest(DialogRequest dialogDetails) {
 
         HashMap<String, String> result = new HashMap<String, String>();
         try {

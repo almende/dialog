@@ -39,7 +39,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
-import com.askfast.commons.entity.DialogRequestDetails;
+import com.askfast.commons.entity.DialogRequest;
 import com.askfast.commons.entity.Language;
 
 @Category(IntegrationTest.class)
@@ -350,7 +350,7 @@ public class MailServletIT extends TestFramework
     
     /**
      * Test if the
-     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequestDetails)}
+     * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequest)}
      * gives an error code if the question is not fetched by the dialog agent
      * @throws UnsupportedEncodingException 
      */
@@ -371,7 +371,7 @@ public class MailServletIT extends TestFramework
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.PART,
                            AdapterType.EMAIL, null);
         
-        DialogRequestDetails details = new DialogRequestDetails();
+        DialogRequest details = new DialogRequest();
         details.setAccountID(adapterConfig.getOwner());
         details.setAdapterID(adapterConfig.getConfigId());
         details.setAddress(remoteAddressEmail);
@@ -432,7 +432,7 @@ public class MailServletIT extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
                                                           localAddressMail, localAddressMail, null);
         //send email
-        DialogRequestDetails dialogRequestDetails = new DialogRequestDetails();
+        DialogRequest dialogRequestDetails = new DialogRequest();
         dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
         dialogRequestDetails.setAdapterID(adapterConfig.getConfigId());
         dialogRequestDetails.setAddress(invalidAddres);
@@ -477,7 +477,7 @@ public class MailServletIT extends TestFramework
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
                                                           localAddressMail, localAddressMail, null);
         //send email
-        DialogRequestDetails dialogRequestDetails = new DialogRequestDetails();
+        DialogRequest dialogRequestDetails = new DialogRequest();
         dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
         dialogRequestDetails.setAdapterID(adapterConfig.getConfigId());
         dialogRequestDetails.setAddressList(Arrays.asList(invalidAddres, remoteAddressEmail));

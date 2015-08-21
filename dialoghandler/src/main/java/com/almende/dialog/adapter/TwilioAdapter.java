@@ -483,13 +483,18 @@ public class TwilioAdapter {
 
                 //if the linked child session is found and not pickedup. trigger the next question
                 if (callIgnored.contains(dialCallStatus) && session.getQuestion() != null) {
+                    
+                    Map<String, String> extras = session.getPublicExtras();
+                    if(session.getCallStatus() != null) {
+                        extras.put( "callStatus", session.getCallStatus() );
+                    }
 
                     session.addExtras("requester", session.getLocalAddress());
                     Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected",
-                                                                            session.getPublicExtras(), remoteID,
+                                                                            extras, remoteID,
                                                                             session);
                     return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session,
-                                          session.getPublicExtras());
+                                          extras);
                 }
             }
 
@@ -830,6 +835,9 @@ public class TwilioAdapter {
                 timeMap.put("sessionKey", session.getKey());
                 if(session.getAllExtras() != null && !session.getAllExtras().isEmpty()) {
                     timeMap.putAll(session.getPublicExtras());
+                }
+                if(session.getCallStatus() != null) {
+                    timeMap.put( "callStatus", session.getCallStatus() );
                 }
                 Response hangupResponse = handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(),
                                                          session, null);

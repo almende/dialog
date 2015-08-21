@@ -83,6 +83,8 @@ public class Session{
     AdapterConfig adapterConfig = null;
     @JsonIgnore
     DDRRecord ddrRecord = null;
+    
+    String callStatus = null;
 	
     @JsonIgnore
     public void kill() {
@@ -763,6 +765,22 @@ public class Session{
     public void setCallPickedUpStatus(boolean isCallPickedUp) {
 
         addExtras(IS_CALL_PICKED_UP, String.valueOf(isCallPickedUp));
+    }
+    
+    /**
+     * Returns the call status of the ongoing call
+     * @return 
+     */
+    public String getCallStatus() {
+        return callStatus;
+    }
+    
+    /**
+     * Stores the call status of the ongoing call
+     * @param callStatus
+     */
+    public void setCallStatus(String callStatus) {
+        this.callStatus = callStatus;
     }
     
     /**

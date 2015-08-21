@@ -335,6 +335,9 @@ public class Question implements QuestionIntf {
         if (requester != null) {
             ans.getExtras().put("requester", requester);
         }
+        if(session.getCallStatus()!=null) {
+            ans.getExtras().put( "callStatus", session.getCallStatus() );
+        }
         String url = answer.getCallback();
         // Check if answer.callback gives new question for this dialog
         if (url != null) {

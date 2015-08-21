@@ -264,34 +264,42 @@ public class TwilioAdapter {
         Session session = Session.getSessionByExternalKey(CallSid);
         AdapterConfig config = null;
         String formattedRemoteId = null;
-        //swap the remote and the local numbers if its inbound
+        
         DDRRecord ddrRecord = null;
         
         if (direction.equals("inbound")) {
+            //swap the remote and the local numbers if its inbound
             String tmpLocalId = new String(localID);
             localID = new String(remoteID);
             remoteID = tmpLocalId;
+            
             config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
-            //create a session for incoming only. Flush any existing one
-            if (session != null) {
-                session.drop();
-            }
+            
             formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
-            session = Session.createSession(config, formattedRemoteId);
-            session.setAccountId(config.getOwner());
-            session.setExternalSession(CallSid);
-            if (isTest != null && Boolean.TRUE.equals(isTest)) {
-                session.setAsTestSession();
-            }
-            session.storeSession();
-            url = config.getURLForInboundScenario(session);
-            try {
-                ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, config.getOwner(),
-                                                                            formattedRemoteId, url, session);
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-            }
+            
+            //create a session for incoming only. If the session already exists it is a failover call by twilio.
+            if (session == null) {
+                session = Session.createSession(config, formattedRemoteId);
+                
+                session.setAccountId(config.getOwner());
+                session.setExternalSession(CallSid);
+                if (isTest != null && Boolean.TRUE.equals(isTest)) {
+                    session.setAsTestSession();
+                }
+                session.storeSession();
+                url = config.getURLForInboundScenario(session);
+                try {
+                    ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, config.getOwner(),
+                                                                                formattedRemoteId, url, session);
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                
+                // when it's a failover call also reuse the ddr record.
+                ddrRecord = session.getDDRRecord();
+            } 
         }
         else {
             direction = "outbound";

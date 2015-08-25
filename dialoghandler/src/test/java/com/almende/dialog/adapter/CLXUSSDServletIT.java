@@ -104,11 +104,11 @@ public class CLXUSSDServletIT extends TestFramework{
         DialogAgent dialogAgent = new DialogAgent();
         if (addressNameMap.size() > 1) {
             dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                                            adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "");
+                adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "", adapterConfig.getAccountType());
         }
         else {
             dialogAgent.outboundCall(addressNameMap.keySet().iterator().next(), senderName, subject, url, null,
-                                     adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "");
+                adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "", adapterConfig.getAccountType());
         }
     }
 

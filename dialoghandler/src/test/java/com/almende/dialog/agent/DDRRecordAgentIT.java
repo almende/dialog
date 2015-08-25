@@ -154,7 +154,7 @@ public class DDRRecordAgentIT extends TestFramework {
         }
         assertThat(assertCount, Matchers.is(2));
     }
-
+    
     /**
      * check if a ddr is created but only service costs are attached for a
      * PRIVATE trial account adapter.
@@ -605,41 +605,38 @@ public class DDRRecordAgentIT extends TestFramework {
                 updateAdapterAsPrivate(isPrivate, adapterConfig);
                 //check if a ddr record is created by sending an outbound email
                 new MBSmsServlet().startDialog(addressNameMap, null, null, message, "Test Customer", "Test subject",
-                                               adapterConfig, adapterConfig.getOwner());
+                    adapterConfig, adapterConfig.getOwner(), type);
                 break;
             case EMAIL:
                 adapterId = adapterAgent.createEmailAdapter(MailServlet.DEFAULT_SENDER_EMAIL,
-                                                            MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "Test", null,
-                                                            null, null, null, null, null, TEST_ACCOUNTID, null, null,
-                                                            null);
+                    MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "Test", null, null, null, null, null, null,
+                    TEST_ACCOUNTID, null, type.toString(), null);
                 adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
                 adapterConfig.setAccountType(type);
                 updateAdapterAsPrivate(isPrivate, adapterConfig);
                 new MailServlet().startDialog(addressNameMap, null, null, message, "Test Customer", "Test subject",
-                                              adapterConfig, adapterConfig.getOwner());
+                    adapterConfig, adapterConfig.getOwner(), type);
                 break;
             case XMPP:
                 adapterId = adapterAgent.createXMPPAdapter(MailServlet.DEFAULT_SENDER_EMAIL,
-                                                           MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "test", null,
-                                                           null, null, null, TEST_ACCOUNTID, null, null, null);
+                    MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "test", null, null, null, null, TEST_ACCOUNTID, null,
+                    type.toString(), null);
                 adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
                 adapterConfig.setAccountType(type);
                 updateAdapterAsPrivate(isPrivate, adapterConfig);
                 new XMPPServlet().startDialog(addressNameMap, null, null, message, "Test Customer", "Test subject",
-                                              adapterConfig, adapterConfig.getOwner());
+                    adapterConfig, adapterConfig.getOwner(), type);
                 break;
             case CALL:
                 RestResponse createBroadSoftAdapter = adapterAgent.createBroadSoftAdapter(localFullAddressBroadsoft,
-                                                                                          "askask", null,
-                                                                                          TEST_ACCOUNTID, false, null,
-                                                                                          null);
+                    "askask", null, TEST_ACCOUNTID, false, null, null);
                 adapterId = createBroadSoftAdapter.getResult().toString();
                 adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
                 adapterConfig.setAccountType(type);
                 adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
                 updateAdapterAsPrivate(isPrivate, adapterConfig);
                 adapterConfig.update();
-                VoiceXMLRESTProxy.dial(addressNameMap, message, adapterConfig, adapterConfig.getOwner(), null);
+                VoiceXMLRESTProxy.dial(addressNameMap, message, adapterConfig, adapterConfig.getOwner(), null, type);
                 break;
             default:
                 break;

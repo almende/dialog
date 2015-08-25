@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response.Status;
@@ -50,10 +51,12 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.RestResponse;
+import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.DialogRequest;
+import com.askfast.commons.entity.Language;
 import com.askfast.commons.utils.PhoneNumberUtils;
 
 @SuppressWarnings("deprecation")
@@ -843,6 +846,56 @@ public class CMServletIT extends TestFramework {
                                                              null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(0));
     }
+    
+    /**
+     * check if a trial message is played when an outbound call is initiated
+     * from a trial account sharing an adapter with POST PAID type owner
+     * account.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void trialMessagePlayedWithSharingPostPaidAccountOutBoundTest() throws Exception {
+
+        //setup actions to generate ddr records when the email is sent or received
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "outgoing", UnitType.PART,
+            AdapterType.SMS, null);
+        
+        String sharedAccountId = UUID.randomUUID().toString();
+
+        Map<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put(remoteAddressVoice, "Test");
+        //create POST PAID CALL adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
+            TEST_PUBLIC_KEY, localAddressBroadsoft, localAddressBroadsoft, null);
+        adapterConfig.setPreferred_language(Language.DUTCH.getCode());
+        adapterConfig.setAccountType(AccountType.POST_PAID);
+        adapterConfig.addAccount(sharedAccountId);
+        adapterConfig.update();
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+            QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "Some random text, no one bothers!");
+
+        //trigger an outbound call
+        dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
+        HashMap<String, String> outboundCallWithMap = dialogAgent.outboundCallWithMap(addressNameMap, null, null,
+            "Test", null, url, null, adapterConfig.getConfigId(), sharedAccountId, "", AccountType.TRIAL);
+        
+        //check the message sent
+        DDRRecord ddrRecord = getAllDdrRecords(sharedAccountId).iterator().next();
+        Assert.assertThat(ddrRecord.getAccountType(), Matchers.is(AccountType.TRIAL));
+        
+        //fetch the contents of the sms sent
+        String message = ddrRecord.getAdditionalInfo().get("text").toString();
+        Assert.assertThat(message,
+            Matchers.containsString("Dit is een proefaccount. Overweeg alstublieft om uw account te upgraden. "));
+        
+        //check the session and validate the question for the trial audio
+        Session session = Session.getSession(outboundCallWithMap.values().iterator().next());
+        Assert.assertThat(session.getAccountType(), Matchers.is(AccountType.TRIAL));
+    }
 
     private HashMap<String, String> outBoundSMSCallXMLTest(Map<String, String> addressNameMap,
         AdapterConfig adapterConfig, String simpleQuestion, QuestionInRequest questionInRequest, String senderName,
@@ -855,12 +908,13 @@ public class CMServletIT extends TestFramework {
         dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
 
         if (new MockUtil().isMock(dialogAgent)) {
-            Mockito.when(dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                                                         adapterConfig.getConfigId(), accountId, ""))
+            Mockito.when(
+                dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
+                    adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType()))
                                             .thenCallRealMethod();
         }
         result = dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                                                 adapterConfig.getConfigId(), accountId, "");
+            adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
         return result;
     }
 

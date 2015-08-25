@@ -420,8 +420,10 @@ abstract public class TextServlet extends HttpServlet {
             }
             // fix for bug: #15 https://github.com/almende/dialog/issues/15
             res.reply = URLDecoder.decode(res.reply, "UTF-8");
-            //add the text sent to the ddrRecord
-            ddrRecord.addAdditionalInfo("text", res.reply);
+            if (ddrRecord != null) {
+                //add the text sent to the ddrRecord
+                ddrRecord.addAdditionalInfo("text", res.reply);
+            }
             //update formatted address list in ddrRecord
             if (!sessionKeyMap.isEmpty()) {
                 int count = broadcastMessageAndAttachCharge(res.reply, subject, localaddress, senderName,

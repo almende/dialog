@@ -113,7 +113,7 @@ public class TwilioAdapterIT extends TestFramework {
         //trigger an incoming call        
         Response newInboundResponse = twilioAdapter.getNewDialogPost(testCallId, TEST_PUBLIC_KEY, inboundAddress,
                                                                      adapterConfig.getMyAddress(), "inbound", null,
-                                                                     null);
+                                                                     "ringing", null);
         //validate that a session is created with a ddr record
         List<Session> allSessions = Session.getAllSessions();
         Assert.assertThat(allSessions.size(), Matchers.is(2));
@@ -161,7 +161,7 @@ public class TwilioAdapterIT extends TestFramework {
 
         //answer the preconnect with the ignore reply
         Response answer = twilioAdapter.answer(null, "2", adapterConfig.getMyAddress(), remoteAddressVoice,
-                                               "outbound-api", null, null, null, testCallId1, null);
+                                               "outbound-api", null, null, null, testCallId1, "in-progress", null);
         assertEquals("<Response><Say language=\"nl-nl\">You chose 2</Say><Hangup></Hangup></Response>".toLowerCase(),
                      answer.getEntity().toString().toLowerCase());
         twilioAdapter.receiveCCMessage(testCallId1, adapterConfig.getMyAddress(), remoteAddressVoice, "outbound-api",
@@ -169,7 +169,7 @@ public class TwilioAdapterIT extends TestFramework {
         
         //mock new redirect call to the second number
         answer = twilioAdapter.answer(null, null, adapterConfig.getMyAddress(), inboundAddress, "inbound", null, null,
-                                      null, testCallId, null);
+                                      null, testCallId, "in-progress", null);
 
         //a new referral session must have been created from testCallId as the parent external sessionId
         Session sessionFromParentExternalId = Session.getSessionFromParentExternalId(testCallId2,
@@ -195,7 +195,7 @@ public class TwilioAdapterIT extends TestFramework {
                                           preconnect.getEntity().toString());
 
         answer = twilioAdapter.answer(null, "1", adapterConfig.getMyAddress(), inboundAddress, "inbound", null, null,
-                                      null, testCallId2, null);
+                                      null, testCallId2, "in-progress", null);
         assertXMLGeneratedByTwilioLibrary("<Response><Say language=\"nl-nl\">You chose 1</Say></Response>",
                                           answer.getEntity().toString());
         ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null, null,
@@ -537,7 +537,7 @@ public class TwilioAdapterIT extends TestFramework {
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
-        Response securedDialogResponse = performSecuredCall("inbound", "testuserName", "testpassword", ttsInfo, url,
+        Response securedDialogResponse = performSecuredCall("inbound", "testuserName", "testpassword", ttsInfo, url, "in-progress", 
                                                             null);
         assertTrue(securedDialogResponse != null);
         //make sure that the tts source generated has a service and voice
@@ -624,7 +624,7 @@ public class TwilioAdapterIT extends TestFramework {
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
-        performSecuredCall("inbound", "testuserName", "testpassword", ttsInfo, url, true);
+        performSecuredCall("inbound", "testuserName", "testpassword", ttsInfo, url, "in-progress", true);
 
         //validate that ddr records are created when isTest is set to false
         ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null, null,
@@ -654,7 +654,7 @@ public class TwilioAdapterIT extends TestFramework {
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
-        Response securedDialogResponse = performSecuredCall("outbound", "testuserName", "testpassword", ttsInfo, url,
+        Response securedDialogResponse = performSecuredCall("outbound", "testuserName", "testpassword", ttsInfo, url, "in-progress",
                                                             null);
         assertNotNull(securedDialogResponse);
         //make sure that the tts source generated has a service and voice
@@ -740,7 +740,7 @@ public class TwilioAdapterIT extends TestFramework {
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         String message = "How are you doing? today";
         url = ServerUtils.getURLWithQueryParams(url, "question", message);
-        Response securedDialogResponse = performSecuredCall(direction, "testuserName", "testpassword", ttsInfo, url,
+        Response securedDialogResponse = performSecuredCall(direction, "testuserName", "testpassword", ttsInfo, url, "in-progress", 
                                                             null);
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
@@ -790,7 +790,7 @@ public class TwilioAdapterIT extends TestFramework {
         String message = "How are you doing? today";
         url = ServerUtils.getURLWithQueryParams(url, "question", message);
         Response securedDialogResponse = performSecuredCall("inbound", "testuserName", "testpassword", ttsInfo,
-                                                                   url, null);
+                                                                   url, "in-progress", null);
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
@@ -829,7 +829,7 @@ public class TwilioAdapterIT extends TestFramework {
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
         Response securedDialogResponse = performSecuredCall("outbound", "testuserName", "testpassword", ttsInfo,
-                                                                   url, null);
+                                                                   url, "in-progress", null);
         assertTrue(securedDialogResponse != null);
         //make sure that the tts source generated has a service and voice
         Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
@@ -905,7 +905,7 @@ public class TwilioAdapterIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "lang", Language.FRENCH_FRANCE.getCode());
         url = ServerUtils.getURLWithQueryParams(url, "question", TEST_MESSAGE);
         Response securedDialogResponse = performSecuredCall("outbound", "testuserName", "testpassword", ttsInfo,
-                                                                   url, null);
+                                                                   url, "in-progress", null);
         assertTrue(securedDialogResponse != null);
         //make sure that the tts source generated has a service and voice
         Document doc = getXMLDocumentBuilder(securedDialogResponse.getEntity().toString());
@@ -1174,7 +1174,7 @@ public class TwilioAdapterIT extends TestFramework {
      * @throws URISyntaxException
      */
     private Response performSecuredCall(String direction, String username, String password, TTSInfo ttsInfo,
-        String url, Boolean isTest) throws Exception {
+        String url, String callStatus, Boolean isTest) throws Exception {
 
         if (url == null) {
             url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
@@ -1221,6 +1221,6 @@ public class TwilioAdapterIT extends TestFramework {
             remoteAddress = tmpLocalId;
         }
         return new TwilioAdapter().getNewDialog(callSid, UUID.randomUUID().toString(), localAddress, remoteAddress,
-                                                direction, null, isTest);
+                                                direction, null, callStatus, isTest);
     }
 }

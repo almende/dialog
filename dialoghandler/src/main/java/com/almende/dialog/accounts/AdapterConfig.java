@@ -50,6 +50,7 @@ public class AdapterConfig {
 	public static final String ADAPTER_CREATION_TIME_KEY = "ADAPTER_CREATION_TIME";
 	public static final String ADAPTER_PROVIDER_KEY = "PROVIDER";
 	public static final String ADAPTER_ATTACH_TIME_KEY = "ATTACH_TIME_";
+	public static final String ADAPTER_DETACH_TIME_KEY = "DETACH_TIME_";
 	public static final String ACCESS_TOKEN_KEY = "ACCESS_TOKEN";
 	public static final String ACCESS_TOKEN_SECRET_KEY = "ACCESS_SECRET_TOKEN";
 	public static final String XSI_USER_KEY = "XSI_USER";
@@ -754,6 +755,9 @@ public class AdapterConfig {
                 owner = null;
                 accounts = null;
             }
+            // add detach timestmap
+            getProperties().put(ADAPTER_DETACH_TIME_KEY + accountId, TimeUtils.getServerCurrentTimeInMillis());
+            log.info( "Added detach time" );
         }
     }
 	
@@ -1012,6 +1016,24 @@ public class AdapterConfig {
     }
     
     /**
+     * Gets the timestamp when this adapter was created. If no
+     * timestamp is found, it returns null.
+     * 
+     *            If null, this gets the timestamp when the adapter was created.
+     * @return
+     */
+    @JsonIgnore
+    public Long getCreationTimestamp() {
+
+        if (getProperties().get(ADAPTER_CREATION_TIME_KEY) != null) {
+            
+            return Long.parseLong(getProperties().get(ADAPTER_CREATION_TIME_KEY).toString());
+        }
+        return null;
+    }
+    
+    
+    /**
      * Gets the timestamp when this adapter was attached to some account. If no
      * timestamp is found, returns the adapter creation timestamp. If that is
      * also missing, returns null.
@@ -1031,6 +1053,30 @@ public class AdapterConfig {
         }
         else if(attachTimestamp != null){
             return Long.parseLong(attachTimestamp.toString());
+        }
+        return null;
+    }
+    
+    /**
+     * Gets the timestamp when this adapter was attached to some account. If no
+     * timestamp is found, returns the adapter creation timestamp. If that is
+     * also missing, returns null.
+     * 
+     * @param accountId
+     *            If null, this gets the timestamp the owner of this adapter was
+     *            attached.
+     * @return
+     */
+    public Long getDetachTimestamp(String accountId) {
+
+        accountId = accountId != null ? accountId : getOwner();
+        Object detachTimestamp = getProperties().get(ADAPTER_DETACH_TIME_KEY + accountId);
+        if (detachTimestamp == null && getProperties().get(ADAPTER_DETACH_TIME_KEY) != null) {
+            
+            return Long.parseLong(getProperties().get(ADAPTER_DETACH_TIME_KEY).toString());
+        }
+        else if(detachTimestamp != null){
+            return Long.parseLong(detachTimestamp.toString());
         }
         return null;
     }

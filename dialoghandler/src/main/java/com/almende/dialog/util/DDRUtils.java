@@ -270,19 +270,18 @@ public class DDRUtils
      * @return
      * @throws Exception
      */
-    public static DDRRecord createDDRForSubscription(AdapterConfig adapterConfig, boolean publishCharges) throws Exception {
+    public static DDRRecord createDDRForSubscription(AdapterConfig adapterConfig, boolean publishCharges)
+        throws Exception {
 
         DDRType subscriptionDDRType = DDRType.getDDRType(DDRTypeCategory.SUBSCRIPTION_COST);
         DDRRecord newestDDRRecord = null;
         if (subscriptionDDRType != null) {
             List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(subscriptionDDRType.getTypeId(),
-                                                             AdapterType.getByValue(adapterConfig.getAdapterType()),
-                                                             adapterConfig.getConfigId(), null, null);
+                AdapterType.getByValue(adapterConfig.getAdapterType()), adapterConfig.getConfigId(), null, null);
             //fetch the ddr based on the details
             List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(adapterConfig.getOwner(), null,
-                                                                 Arrays.asList(adapterConfig.getConfigId()), null,
-                                                                 Arrays.asList(subscriptionDDRType.getTypeId()), null,
-                                                                 null, null, null, null, null);
+                Arrays.asList(adapterConfig.getConfigId()), null, Arrays.asList(subscriptionDDRType.getTypeId()), null,
+                null, null, null, null, null);
             DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
             newestDDRRecord = fetchNewestDdrRecord(ddrRecords);
             //flag for creating new ddrRecord
@@ -328,7 +327,7 @@ public class DDRUtils
                                 break;
                             default:
                                 throw new Exception("DDR cannot be created for Subsciption for UnitType: " +
-                                                    ddrPrice.getUnitType().name());
+                                    ddrPrice.getUnitType().name());
                         }
                         //create a new ddrRecord if not record found for the time
                         if (createNewDDRRecord) {
@@ -340,15 +339,17 @@ public class DDRUtils
             //create new ddrRecord
             if (createNewDDRRecord) {
                 newestDDRRecord = new DDRRecord(subscriptionDDRType.getTypeId(), adapterConfig.getConfigId(),
-                                                adapterConfig.getOwner(), 1);
+                    adapterConfig.getOwner(), 1);
                 newestDDRRecord.setAccountType(adapterConfig.getAccountType());
                 newestDDRRecord.setStart(serverCurrentTime.getMillis());
                 //publish charges if needed
-                if(publishCharges) {
+                if (publishCharges) {
                     Double ddrCost = calculateDDRCost(newestDDRRecord, false);
                     publishDDREntryToQueue(newestDDRRecord.getAccountId(), ddrCost);
                 }
                 newestDDRRecord.createOrUpdate();
+                log.info(String.format("Added subscription fees to adapterId: %s of accountId: %s",
+                    adapterConfig.getConfigId(), adapterConfig.getOwner()));
             }
             return newestDDRRecord;
         }

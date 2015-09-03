@@ -180,8 +180,8 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * @throws Exception
      */
     @Override
-    public Object getAllDDRTypes(@Name("name") @Optional String name, @Name("category") @Optional DDRTypeCategory category)
-        throws Exception {
+    public Object getAllDDRTypes(@Name("name") @Optional String name,
+        @Name("category") @Optional DDRTypeCategory category) throws Exception {
 
         ArrayList<DDRType> result = new ArrayList<DDRType>();
         if (category != null) {
@@ -445,9 +445,9 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * @return
      * @throws Exception
      */
-    public ArrayList<String> stopSchedulerForSubscriptions(@Name("adapterId") String adapterId,
-                                                @Name("ddrPriceId") @Optional String ddrPriceId,
-                                                @Name("deleteDDRPrice") @Optional Boolean deleteDDRPrice) throws Exception {
+    public ArrayList<String> stopSchedulerForSubscriptions(@Name("adapterId") @Optional String adapterId,
+        @Name("ddrPriceId") @Optional String ddrPriceId, @Name("deleteDDRPrice") @Optional Boolean deleteDDRPrice)
+        throws Exception {
 
         List<DDRPrice> ddrPrices = new ArrayList<DDRPrice>();
         ArrayList<String> result = new ArrayList<String>();
@@ -457,24 +457,23 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
                 ddrPrices.add(ddrPrice);
             }
         }
-        else {
+        else if (adapterId != null) {
             AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
             if (adapterConfig != null) {
                 DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.SUBSCRIPTION_COST);
                 ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(),
-                                                  AdapterType.getByValue(adapterConfig.getAdapterType()), adapterId,
-                                                  null, null);
+                    AdapterType.getByValue(adapterConfig.getAdapterType()), adapterId, null, null);
             }
         }
         for (DDRPrice ddrPrice : ddrPrices) {
             //if the ddr is processed succesfully then delete the scheduled task
             String schedulerId = getState().get(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId(),
-                                                String.class);
+                String.class);
             if (schedulerId != null) {
-                stopScheduledTask( schedulerId );
+                stopScheduledTask(schedulerId);
                 getState().remove(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId());
                 result.add(schedulerId);
-                if(deleteDDRPrice) {
+                if (Boolean.TRUE.equals(deleteDDRPrice)) {
                     DDRPrice.removeDDRPrice(ddrPrice.getId());
                 }
             }
@@ -482,11 +481,37 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         return result;
     }
     
-    public void applySubscriptionChargesForAdapters(@Name("adapterId") String adapterId) throws Exception {
+    /**
+     * Creates a ddr record for the adapters subscription
+     * 
+     * @param adapterId
+     *            If not null, it will apply costs for this adapter only.
+     * @param adapterType
+     *            If adapterId is null, it will apply subscription costs for all
+     *            the adapters of this type
+     * @throws Exception
+     */
+    public void applySubscriptionChargesForAdapters(@Name("adapterId") String adapterId,
+        @Name("adapterType") @Optional String adapterType) throws Exception {
 
-        AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
-        if (adapterConfig.getOwner() != null && !adapterConfig.getOwner().isEmpty()) {
-            DDRUtils.createDDRForSubscription(adapterConfig, true);
+        ArrayList<AdapterConfig> adapterConfigs = new ArrayList<AdapterConfig>(1);
+        if (adapterId != null) {
+            AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
+            if (adapterConfig != null) {
+                adapterConfigs.add(adapterConfig);
+            }
+        }
+        else if (adapterType != null) {
+
+            adapterConfigs = AdapterConfig.findAdapters(adapterType, null, null);
+        }
+
+        if (adapterConfigs != null) {
+            for (AdapterConfig adapterConfig : adapterConfigs) {
+                if (adapterConfig.getOwner() != null && !adapterConfig.getOwner().isEmpty()) {
+                    DDRUtils.createDDRForSubscription(adapterConfig, true);
+                }
+            }
         }
     }
     
@@ -494,11 +519,35 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * Get details about subscription tasks running
      * @return 
      * @return
+     * @throws Exception 
      */
-    public ScheduledTask getSubsriptionCostScedulerDetails(@Name("ddrPriceId") String ddrPriceId) {
+    public ArrayList<ScheduledTask> getSubsriptionCostScedulerDetails(@Name("ddrPriceId") @Optional String ddrPriceId)
+        throws Exception {
 
-        String id = getState().get(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPriceId, String.class);
-        return getScheduledTaskDetails(id);
+        ArrayList<String> ddrPriceIds = new ArrayList<String>(1);
+        ArrayList<ScheduledTask> result = new ArrayList<ScheduledTask>(1);
+        if (ddrPriceId != null) {
+            ddrPriceIds.add(ddrPriceId);
+        }
+        else {
+            DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.SUBSCRIPTION_COST);
+            if (ddrType != null) {
+                List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), null, null, null, null);
+                if (ddrPrices != null) {
+                    for (DDRPrice ddrPrice : ddrPrices) {
+                        ddrPriceIds.add(ddrPrice.getId());
+                    }
+                }
+            }
+        }
+        for (String priceId : ddrPriceIds) {
+            String id = getState().get(DDRTypeCategory.SUBSCRIPTION_COST + "_" + priceId, String.class);
+            ScheduledTask scheduledTaskDetails = getScheduledTaskDetails(id);
+            if (scheduledTaskDetails != null) {
+                result.add(scheduledTaskDetails);
+            }
+        }
+        return result;
     }
     
     /**
@@ -510,10 +559,12 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
     private String startSchedulerScedulerForDDRPrice(DDRPrice ddrPrice) {
 
         String id = getState().get(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId(), String.class);
-        if (id == null && ddrPrice.getAdapterId() != null && !ddrPrice.getAdapterId().isEmpty()) {
+        if (id == null) {
             try {
                 ObjectNode params = JOM.createObjectNode();
                 params.put("adapterId", ddrPrice.getAdapterId());
+                params.put("adapterType", ddrPrice.getAdapterType() != null ? ddrPrice.getAdapterType().getName()
+                    : null);
                 JSONRequest req = new JSONRequest("applySubscriptionChargesForAdapters", params);
                 ScheduleFrequency frequency = null;
                 switch (ddrPrice.getUnitType()) {
@@ -534,10 +585,11 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
                         break;
                     default:
                         throw new Exception("DDR cannot be created for Subsciption for UnitType: " +
-                                            ddrPrice.getUnitType().name());
+                            ddrPrice.getUnitType().name());
                 }
-                log.info(String.format("-------Starting scheduler for processing adapter subscriptions. DDRPrice: %s -------",
-                                       ddrPrice.getId()));
+                log.info(String.format(
+                    "-------Starting scheduler for processing adapter subscriptions. DDRPrice: %s -------",
+                    ddrPrice.getId()));
                 id = schedule(req, TimeUtils.getServerCurrentTimeInMillis(), frequency);
                 getState().put(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId(), id);
             }

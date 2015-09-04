@@ -276,7 +276,7 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
             //start subscription scheduler if its of that type
             if (ddrType.getCategory().equals(DDRTypeCategory.SUBSCRIPTION_COST) &&
                 !ServerUtils.isInUnitTestingEnvironment()) {
-                startSchedulerScedulerForDDRPrice(ddrPrice);
+                startSchedulerForDDRPrice(ddrPrice);
             }
             return ddrPrice;
         }
@@ -432,7 +432,7 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.SUBSCRIPTION_COST);
         List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), null, null, null, null);
         for (DDRPrice ddrPrice : ddrPrices) {
-            String id = startSchedulerScedulerForDDRPrice(ddrPrice);
+            String id = startSchedulerForDDRPrice(ddrPrice);
             if (id != null) {
                 result.add(id);
             }
@@ -556,7 +556,7 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * @param ddrPrice
      * @return
      */
-    private String startSchedulerScedulerForDDRPrice(DDRPrice ddrPrice) {
+    private String startSchedulerForDDRPrice(DDRPrice ddrPrice) {
 
         String id = getState().get(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId(), String.class);
         if (id == null) {

@@ -18,7 +18,6 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.agent.AgentHost;
-import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.Adapter;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
@@ -508,31 +507,37 @@ public class DDRUtils
         }
     }
     
-    public static void publishDDREntryToQueue( String accountId, Double totalCost ) throws Exception
-    {
-        if ( totalCost != null && totalCost > 0.0 )
-        {
-            try
-            {
-                log.info( String.format( "Publishing costs: %s for account: %s", totalCost , accountId ) );
+    /**
+     * Pushes the given cost if its more than 0 for the given account to the
+     * RabbitMQ queue. its expected to be picked up by the ddr processor agent.
+     * 
+     * @param accountId
+     * @param totalCost
+     * @throws Exception
+     */
+    public static void publishDDREntryToQueue(String accountId, Double totalCost) throws Exception {
+
+        if (totalCost != null && totalCost > 0.0 && !ServerUtils.isInUnitTestingEnvironment()) {
+            try {
+                log.info(String.format("Publishing costs: %s for account: %s", totalCost, accountId));
                 rabbitMQConnectionFactory = rabbitMQConnectionFactory != null ? rabbitMQConnectionFactory
-                                                                             : new ConnectionFactory();
-                String url = (System.getProperty( "AMQP_URL" ) != null ? System.getProperty( "AMQP_URL" ) : "amqp://localhost");
-                rabbitMQConnectionFactory.setUri( url );
+                    : new ConnectionFactory();
+                String url = (System.getProperty("AMQP_URL") != null ? System.getProperty("AMQP_URL")
+                    : "amqp://localhost");
+                rabbitMQConnectionFactory.setUri(url);
                 Connection connection = rabbitMQConnectionFactory.newConnection();
                 Channel channel = connection.createChannel();
                 //create a message
                 HashMap<String, String> message = new HashMap<String, String>();
-                message.put( "accountId", accountId );
-                message.put( "cost", String.valueOf( totalCost ) );
-                channel.queueDeclare( PUBLISH_QUEUE_NAME, false, false, false, null );
-                channel.basicPublish( "", PUBLISH_QUEUE_NAME, null, ServerUtils.serialize( message ).getBytes() );
+                message.put("accountId", accountId);
+                message.put("cost", String.valueOf(totalCost));
+                channel.queueDeclare(PUBLISH_QUEUE_NAME, false, false, false, null);
+                channel.basicPublish("", PUBLISH_QUEUE_NAME, null, ServerUtils.serialize(message).getBytes());
                 channel.close();
                 connection.close();
             }
-            catch ( Exception e )
-            {
-                log.severe( "Error seen: " + e.getLocalizedMessage() );
+            catch (Exception e) {
+                log.severe("Error seen: " + e.getLocalizedMessage());
             }
         }
     }
@@ -577,12 +582,13 @@ public class DDRUtils
     }
     
     /**
-     * calculates the cost associated with this DDRRecord bsaed on the linked DDRPrice. This does not 
-     * add the servicecosts. Use the {@link DDRUtils#calculateCommunicationDDRCost(DDRRecord, Boolean)} for it. <br>
+     * Calculates the cost associated with this DDRRecord bsaed on the linked
+     * DDRPrice. <br>
      * DDRPrice with the most recent {@link DDRPrice#getEndTime() endTime} is
      * chosen if the {@link DDRRecord#getStart() startTime} doesnt fall between
      * {@link DDRPrice#getStartTime() startTime} and
      * {@link DDRPrice#getEndTime() endTime}
+     * 
      * @param ddrRecord
      * @return cost incurred for this ddrRecord
      * @throws Exception
@@ -725,12 +731,10 @@ public class DDRUtils
                         }
                         //publish charges
                         Double totalCost = calculateCommunicationDDRCost(ddrRecord, true);
-                        //attach cost to ddr is prepaid type
+                        //attach cost to ddr in all cases. Change as on ddr processing taking time
                         if (ddrRecord != null) {
-                            if (!AccountType.POST_PAID.equals(ddrRecord.getAccountType())) {
-                                ddrRecord.setTotalCost(totalCost);
-                                ddrRecord.createOrUpdateWithLog(session);
-                            }
+                            ddrRecord.setTotalCost(totalCost);
+                            ddrRecord.createOrUpdateWithLog(session);
                             publishDDREntryToQueue(ddrRecord.getAccountId(), totalCost);
                         }
                         result = true;
@@ -1056,12 +1060,19 @@ public class DDRUtils
                     for (DDRPrice ddrPrice : communicationDDRPrices) {
                         //pick a price whose start and endTimestamp falls in that of the ddrRecords
                         if (ddrRecord.getStart() != null && ddrPrice.isValidForTimestamp(ddrRecord.getStart())) {
-                            selectedDDRPrice = ddrPrice;
                             isDDRPriceInTimerange = true;
-                            break;
                         }
                         //TODO: should check for other mechanisms that fetch the closet offer to the ddrRecord timestamp
-                        selectedDDRPrice = ddrPrice; //else pick the last ddrPrice in the list
+                        //1. Fetch the lastest ddr price by creation time 
+                        if (isDDRPriceInTimerange &&
+                            (selectedDDRPrice == null || (selectedDDRPrice != null && ddrPrice.getCreationTime() > selectedDDRPrice.getCreationTime()))) {
+
+                            selectedDDRPrice = ddrPrice;
+                        }
+                    }
+                    //else pick the last ddrPrice in the list
+                    if (selectedDDRPrice == null) {
+                        selectedDDRPrice = communicationDDRPrices.get(communicationDDRPrices.size() - 1);
                     }
                     if (!isDDRPriceInTimerange) {
                         log.warning(String.format("No DDRPrice date range match for DDRRecord: %s. In turn fetched: %s of type: %s with price: %s",

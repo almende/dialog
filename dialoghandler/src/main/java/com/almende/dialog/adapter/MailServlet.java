@@ -32,6 +32,7 @@ import javax.mail.search.ReceivedDateTerm;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.joda.time.DateTime;
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
@@ -63,8 +64,8 @@ public class MailServlet extends TextServlet implements Runnable, MessageChanged
     public static final String BCC_ADDRESS_LIST_KEY = "bcc_email";
     private static final long serialVersionUID = 6892283600126803780L;
     private static final String servletPath = "/dialoghandler/_ah/mail/";
-    public static final String DEFAULT_SENDER_EMAIL = "askfasttest@gmail.com";
-    public static final String DEFAULT_SENDER_EMAIL_PASSWORD = "askask2times";
+    public static final String DEFAULT_SENDER_EMAIL = Settings.DEFAULT_SENDER_EMAIL;
+    public static final String DEFAULT_SENDER_EMAIL_PASSWORD = Settings.DEFAULT_SENDER_EMAIL_PASSWORD;
 
     public void doErrorPost(HttpServletRequest req, HttpServletResponse res) {
 

@@ -1,7 +1,9 @@
 package com.almende.dialog.agent;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.logging.Logger;
@@ -34,7 +36,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInterface
 {
     private static final Logger log = Logger.getLogger( DDRRecordAgent.class.getName() );
-    
+    private static final String SUBSCRIPTION_EXCLUDED_ADAPTERS_KEY = "SUBSCRIPTION_EXCLUDED_ADAPTER";
     
     @Override
     protected void onInit() {
@@ -180,8 +182,8 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * @throws Exception
      */
     @Override
-    public Object getAllDDRTypes(@Name("name") @Optional String name, @Name("category") @Optional DDRTypeCategory category)
-        throws Exception {
+    public Object getAllDDRTypes(@Name("name") @Optional String name,
+        @Name("category") @Optional DDRTypeCategory category) throws Exception {
 
         ArrayList<DDRType> result = new ArrayList<DDRType>();
         if (category != null) {
@@ -276,7 +278,7 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
             //start subscription scheduler if its of that type
             if (ddrType.getCategory().equals(DDRTypeCategory.SUBSCRIPTION_COST) &&
                 !ServerUtils.isInUnitTestingEnvironment()) {
-                startSchedulerScedulerForDDRPrice(ddrPrice);
+                startSchedulerForDDRPrice(ddrPrice);
             }
             return ddrPrice;
         }
@@ -420,8 +422,9 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
     }
 
     /**
-     * creates a scheduler for all ddr prices of {@link DDRTypeCategory}
-     * {@link DDRTypeCategory#SUBSCRIPTION_COST}
+     * Creates a scheduler for all ddr prices of {@link DDRTypeCategory}
+     * {@link DDRTypeCategory#SUBSCRIPTION_COST} which has a distinct
+     * {@link UnitType}. So basically creates one scheduler per unit type.
      * 
      * @return all the scheduler ids. can be useful to stop them if needed
      * @throws Exception
@@ -432,7 +435,7 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.SUBSCRIPTION_COST);
         List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), null, null, null, null);
         for (DDRPrice ddrPrice : ddrPrices) {
-            String id = startSchedulerScedulerForDDRPrice(ddrPrice);
+            String id = startSchedulerForDDRPrice(ddrPrice);
             if (id != null) {
                 result.add(id);
             }
@@ -445,9 +448,9 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * @return
      * @throws Exception
      */
-    public ArrayList<String> stopSchedulerForSubscriptions(@Name("adapterId") String adapterId,
-                                                @Name("ddrPriceId") @Optional String ddrPriceId,
-                                                @Name("deleteDDRPrice") @Optional Boolean deleteDDRPrice) throws Exception {
+    public ArrayList<String> stopSchedulerForSubscriptions(@Name("adapterId") @Optional String adapterId,
+        @Name("ddrPriceId") @Optional String ddrPriceId, @Name("deleteDDRPrice") @Optional Boolean deleteDDRPrice)
+        throws Exception {
 
         List<DDRPrice> ddrPrices = new ArrayList<DDRPrice>();
         ArrayList<String> result = new ArrayList<String>();
@@ -457,24 +460,32 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
                 ddrPrices.add(ddrPrice);
             }
         }
-        else {
+        else if (adapterId != null) {
             AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
             if (adapterConfig != null) {
                 DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.SUBSCRIPTION_COST);
                 ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(),
-                                                  AdapterType.getByValue(adapterConfig.getAdapterType()), adapterId,
-                                                  null, null);
+                    AdapterType.getByValue(adapterConfig.getAdapterType()), adapterId, null, null);
             }
         }
         for (DDRPrice ddrPrice : ddrPrices) {
             //if the ddr is processed succesfully then delete the scheduled task
-            String schedulerId = getState().get(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId(),
-                                                String.class);
+            String schedulerId = getState().get(getSubscriptionTaskId(ddrPrice), String.class);
             if (schedulerId != null) {
-                stopScheduledTask( schedulerId );
-                getState().remove(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId());
+                stopScheduledTask(schedulerId);
+                getState().remove(getSubscriptionTaskId(ddrPrice));
+                //flush the exclusive adapter types and ids
+                deleteExcludedAdapterIdsFromSubscription(ddrPrice.getAdapterId());
+                if (ddrPrice.getAdapterType() != null) {
+                    deleteExcludedAdapterTypesFromSubscription(ddrPrice.getAdapterType().getName().toLowerCase());
+                }
+                if(ddrPrice.getKeyword() != null) {
+                    for (String adapterType : ddrPrice.getKeyword().split(",")) {
+                        deleteExcludedAdapterTypesFromSubscription(adapterType);
+                    }
+                }
                 result.add(schedulerId);
-                if(deleteDDRPrice) {
+                if (Boolean.TRUE.equals(deleteDDRPrice)) {
                     DDRPrice.removeDDRPrice(ddrPrice.getId());
                 }
             }
@@ -482,11 +493,55 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         return result;
     }
     
-    public void applySubscriptionChargesForAdapters(@Name("adapterId") String adapterId) throws Exception {
+    /**
+     * Creates a ddr record for the adapters subscription
+     * 
+     * @param adapterIds
+     *            If not null, it will apply costs for these adapters only.
+     * @param adapterTypes
+     *            If adapterIds is null, it will apply subscription costs for
+     *            all the adapters of these type
+     * @throws Exception
+     */
+    public void applySubscriptionChargesForAdapters(@Name("adapterIds") @Optional Collection<String> adapterIds,
+        @Name("adapterTypes") @Optional Collection<String> adapterTypes) throws Exception {
 
-        AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
-        if (adapterConfig.getOwner() != null && !adapterConfig.getOwner().isEmpty()) {
-            DDRUtils.createDDRForSubscription(adapterConfig, true);
+        ArrayList<AdapterConfig> adapterConfigs = new ArrayList<AdapterConfig>(1);
+        if (adapterIds != null && !adapterIds.isEmpty()) {
+            for (String adapterId : adapterIds) {
+                AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
+                if (adapterConfig != null) {
+                    adapterConfigs.add(adapterConfig);
+                }
+            }
+        }
+        else if (adapterTypes != null) {
+
+            for (String adapterType : adapterTypes) {
+                ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapters(adapterType, null, null);
+                if (adapters != null) {
+                    adapterConfigs.addAll(adapters);
+                }
+            }
+        }
+        if (adapterConfigs != null) {
+            //fetch the exclusion lists
+            HashSet<String> excludedAdapterIds = getExcludedAdapterIdsFromSubscription();
+            HashSet<String> excludedAdapterTypes = getExcludedAdapterTypesFromSubscription();
+            for (AdapterConfig adapterConfig : adapterConfigs) {
+                if (adapterConfig.getOwner() != null && !adapterConfig.getOwner().isEmpty()) {
+
+                    if (excludedAdapterIds != null && excludedAdapterIds.contains(adapterConfig.getConfigId())) {
+                        log.info("Excluded subsciption scheduler processing for: " + adapterConfig.getConfigId());
+                        continue;
+                    }
+                    if (excludedAdapterTypes != null && excludedAdapterTypes.contains(adapterConfig.getAdapterType().toLowerCase())) {
+                        log.info("Excluded subsciption scheduler processing for: " + adapterConfig.getAdapterType());
+                        continue;
+                    }
+                    DDRUtils.createDDRForSubscription(adapterConfig, true);
+                }
+            }
         }
     }
     
@@ -494,26 +549,86 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * Get details about subscription tasks running
      * @return 
      * @return
+     * @throws Exception 
      */
-    public ScheduledTask getSubsriptionCostScedulerDetails(@Name("ddrPriceId") String ddrPriceId) {
+    public ArrayList<ScheduledTask> getSubsriptionCostScedulerDetails(@Name("ddrPriceId") @Optional String ddrPriceId)
+        throws Exception {
 
-        String id = getState().get(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPriceId, String.class);
-        return getScheduledTaskDetails(id);
+        ArrayList<DDRPrice> ddrPriceIds = new ArrayList<DDRPrice>(1);
+        ArrayList<ScheduledTask> result = new ArrayList<ScheduledTask>(1);
+        if (ddrPriceId != null) {
+            DDRPrice ddrPrice = DDRPrice.getDDRPrice(ddrPriceId);
+            if (ddrPrice != null) {
+                ddrPriceIds.add(ddrPrice);
+            }
+        }
+        else {
+            DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.SUBSCRIPTION_COST);
+            if (ddrType != null) {
+                List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(ddrType.getTypeId(), null, null, null, null);
+                if (ddrPrices != null) {
+                    for (DDRPrice ddrPrice : ddrPrices) {
+                        ddrPriceIds.add(ddrPrice);
+                    }
+                }
+            }
+        }
+        for (DDRPrice ddrPrice : ddrPriceIds) {
+            String id = getState().get(getSubscriptionTaskId(ddrPrice), String.class);
+            ScheduledTask scheduledTaskDetails = getScheduledTaskDetails(id);
+            if (scheduledTaskDetails != null) {
+                result.add(scheduledTaskDetails);
+            }
+        }
+        return result;
     }
     
     /**
-     * returns the scheduler id initiated for this ddrPrice
+     * Returns the scheduler id initiated for this ddrPrice. The id is chosen
+     * based on the unit type (frequency) and the keyword in the subscription
+     * parameter. Valid values are "ALL" for all adapterTypes or SMS,Call etc
+     * for specific adapter types.
      * 
      * @param ddrPrice
      * @return
      */
-    private String startSchedulerScedulerForDDRPrice(DDRPrice ddrPrice) {
+    private String startSchedulerForDDRPrice(DDRPrice ddrPrice) {
 
-        String id = getState().get(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId(), String.class);
-        if (id == null && ddrPrice.getAdapterId() != null && !ddrPrice.getAdapterId().isEmpty()) {
+        String id = getState().get(getSubscriptionTaskId(ddrPrice), String.class);
+        if (id == null) {
             try {
                 ObjectNode params = JOM.createObjectNode();
-                params.put("adapterId", ddrPrice.getAdapterId());
+                if (ddrPrice.getAdapterId() != null) {
+                    params.putPOJO("adapterIds", Arrays.asList(ddrPrice.getAdapterId()));
+                    addExcludedAdapterIdsFromSubscription(ddrPrice.getAdapterId());
+                }
+                else if (ddrPrice.getAdapterType() != null) {
+                    params.putPOJO("adapterTypes", Arrays.asList(ddrPrice.getAdapterType().getName()));
+                    addExcludedAdapterTypesFromSubscription(ddrPrice.getAdapterType().getName().toLowerCase());
+                }
+                else if (ddrPrice.getKeyword() != null) {
+                    List<AdapterType> adapterTypes = new ArrayList<AdapterType>();
+                    switch (ddrPrice.getKeyword().toLowerCase()) {
+                        case "all":
+                            adapterTypes = Arrays.asList(AdapterType.values());
+                            break;
+                        default:
+                            Collection<String> excludedAdapterTypes = getExcludedAdapterTypesFromSubscription();
+                            excludedAdapterTypes = excludedAdapterTypes != null ? excludedAdapterTypes
+                                : new HashSet<String>();
+                            String[] adapterTypesString = ddrPrice.getKeyword().split(",");
+                            for (String adapterTypeString : adapterTypesString) {
+                                AdapterType type = AdapterType.getByValue(adapterTypeString);
+                                if (type != null) {
+                                    adapterTypes.add(type);
+                                    excludedAdapterTypes.add(type.getName().toLowerCase());
+                                    setExcludedAdapterTypesFromSubscription(excludedAdapterTypes);
+                                }
+                            }
+                            break;
+                    }
+                    params.putPOJO("adapterTypes", adapterTypes);
+                }
                 JSONRequest req = new JSONRequest("applySubscriptionChargesForAdapters", params);
                 ScheduleFrequency frequency = null;
                 switch (ddrPrice.getUnitType()) {
@@ -534,12 +649,14 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
                         break;
                     default:
                         throw new Exception("DDR cannot be created for Subsciption for UnitType: " +
-                                            ddrPrice.getUnitType().name());
+                            ddrPrice.getUnitType().name());
                 }
-                log.info(String.format("-------Starting scheduler for processing adapter subscriptions. DDRPrice: %s -------",
-                                       ddrPrice.getId()));
-                id = schedule(req, TimeUtils.getServerCurrentTimeInMillis(), frequency);
-                getState().put(DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getId(), id);
+                log.info(String.format(
+                    "-------Starting scheduler for processing adapter subscriptions. DDRPrice: %s -------",
+                    ddrPrice.getId()));
+                //create a scheduled job now, so -1 from current time. 
+                id = schedule(req, TimeUtils.getServerCurrentTimeInMillis() - 1, frequency);
+                getState().put(getSubscriptionTaskId(ddrPrice), id);
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -614,5 +731,146 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         else {
             return allDdrRecords;
         }
+    }
+    
+    /**
+     * Returns the subscription Id that is used to save the task details
+     * corresponding to the given ddrPrice
+     * 
+     * @param ddrPrice
+     * @param keyword
+     * @return
+     */
+    private String getSubscriptionTaskId(DDRPrice ddrPrice) {
+
+        String keyword = "";
+        if (ddrPrice.getKeyword() != null) {
+            keyword = "_" + ddrPrice.getKeyword().toLowerCase();
+        }
+        else if(ddrPrice.getAdapterType() != null) {
+            keyword = "_" + ddrPrice.getAdapterType().getName().toLowerCase();
+        }
+        else if(ddrPrice.getAdapterId() != null) {
+            keyword = "_" + ddrPrice.getAdapterId().toLowerCase();
+        }
+        return DDRTypeCategory.SUBSCRIPTION_COST + "_" + ddrPrice.getUnitType() + keyword;
+    }
+    
+    /**
+     * Gets the list of adapterTypes which are excluded from the "all" adapters
+     * subscription. a subscription can be started with adapterIds specific,
+     * adpaterTypes specific or all. 
+     * 
+     * @return
+     */
+    private HashSet<String> getExcludedAdapterTypesFromSubscription() {
+
+        return getState().get(SUBSCRIPTION_EXCLUDED_ADAPTERS_KEY + "_TYPES", new TypeUtil<HashSet<String>>() {
+        });
+    }
+    
+    /**
+     * Sets the list of adapterTypes which are excluded from the "all" adapters
+     * subscription. a subscription can be started with adapterIds specific,
+     * adpaterTypes specific or all. 
+     * 
+     * @return
+     */
+    private HashSet<String> setExcludedAdapterTypesFromSubscription(Collection<String> excludedAdapterType) {
+
+        getState().put(SUBSCRIPTION_EXCLUDED_ADAPTERS_KEY + "_TYPES" , excludedAdapterType);
+        return getExcludedAdapterTypesFromSubscription();
+    }
+    
+    /**
+     * Add an adapterType which is excluded from the "all" adapters
+     * subscription. a subscription can be started with adapterIds specific,
+     * adpaterTypes specific or all.
+     * 
+     * @return
+     */
+    private HashSet<String> addExcludedAdapterTypesFromSubscription(String excludedAdapterType) {
+
+        HashSet<String> excludedAdapterTypes = getExcludedAdapterTypesFromSubscription();
+        excludedAdapterTypes = excludedAdapterTypes != null ? excludedAdapterTypes : new HashSet<String>();
+        excludedAdapterTypes.add(excludedAdapterType);
+        return setExcludedAdapterTypesFromSubscription(excludedAdapterTypes);
+    }
+    
+    /**
+     * Deletes an adapterType which is excluded from the "all" adapters
+     * subscription. a subscription can be started with adapterIds specific,
+     * adpaterTypes specific or all.
+     * 
+     * @return
+     */
+    private HashSet<String> deleteExcludedAdapterTypesFromSubscription(String excludedAdapterType) {
+
+        if (excludedAdapterType != null) {
+            HashSet<String> excludedAdapterTypes = getExcludedAdapterTypesFromSubscription();
+            excludedAdapterTypes = excludedAdapterTypes != null ? excludedAdapterTypes : new HashSet<String>();
+            excludedAdapterTypes.remove(excludedAdapterType.toLowerCase());
+            return setExcludedAdapterTypesFromSubscription(excludedAdapterTypes);
+        }
+        return null;
+    }
+    
+    /**
+     * Gets the list of adapterIds which are excluded from the "all" adapters
+     * subscription. a subscription can be started with adapterIds specific,
+     * adpaterTypes specific or all. 
+     * 
+     * @return
+     */
+    private HashSet<String> getExcludedAdapterIdsFromSubscription() {
+
+        return getState().get(SUBSCRIPTION_EXCLUDED_ADAPTERS_KEY + "_IDs", new TypeUtil<HashSet<String>>() {
+        });
+    }
+    
+    /**
+     * Sets the list of adapterIds which are excluded from the "all" adapters
+     * subscription. a subscription can be started with adapterIds specific,
+     * adpaterTypes specific or all. 
+     * 
+     * @return
+     */
+    private HashSet<String> setExcludedAdapterIdsFromSubscription(Collection<String> excludedAdapterIds) {
+
+        getState().put(SUBSCRIPTION_EXCLUDED_ADAPTERS_KEY + "_IDs", excludedAdapterIds);
+        return getExcludedAdapterIdsFromSubscription();
+    }
+    
+    /**
+     * Sets the list of adapterIds which are excluded from the "all" adapters
+     * subscription. a subscription can be started with adapterIds specific,
+     * adpaterTypes specific or all. 
+     * 
+     * @return
+     */
+    private HashSet<String> addExcludedAdapterIdsFromSubscription(String excludedAdapterId) {
+
+        HashSet<String> excludedAdapterIds = getExcludedAdapterIdsFromSubscription();
+        excludedAdapterIds = excludedAdapterIds != null ? excludedAdapterIds : new HashSet<String>();
+        excludedAdapterIds.add(excludedAdapterId);
+        return setExcludedAdapterIdsFromSubscription(excludedAdapterIds);
+    }
+    
+    /**
+     * Deletes a adapterId which are excluded from the "all" adapters
+     * subscription. a subscription can be started with adapterIds specific,
+     * adpaterTypes specific or all.
+     * 
+     * @return
+     */
+    private HashSet<String> deleteExcludedAdapterIdsFromSubscription(String excludedAdapterId) {
+
+        if (excludedAdapterId != null) {
+            HashSet<String> excludedAdapterIds = getExcludedAdapterIdsFromSubscription();
+            excludedAdapterIds = excludedAdapterIds != null ? excludedAdapterIds : new HashSet<String>();
+            excludedAdapterIds.remove(excludedAdapterId);
+            return setExcludedAdapterIdsFromSubscription(excludedAdapterIds);
+        }
+        return null;
     }
 }

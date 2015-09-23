@@ -84,7 +84,7 @@ public class VoiceXMLServletIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-            TEST_PUBLIC_KEY, localAddressBroadsoft, localFullAddressBroadsoft, url);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, url);
 
         //create session
         Session session = Session.createSession(adapterConfig, remoteAddressVoice);
@@ -129,7 +129,7 @@ public class VoiceXMLServletIT extends TestFramework {
             assertEquals(new Integer(Question.DEFAULT_MAX_QUESTION_LOAD), retryCount);
         }
         //check all the ddrs created
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
             null, null, null);
         assertEquals(ddrRecords.size(), 1);
         for (DDRRecord ddrRecord : ddrRecords) {
@@ -160,7 +160,7 @@ public class VoiceXMLServletIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-            TEST_PUBLIC_KEY, localAddressBroadsoft, localFullAddressBroadsoft, url);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, url);
 
         //mock the Context
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
@@ -168,7 +168,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //used forcibly for Broadsoft.startCall() to throw an exception. 
         TestServlet.TEST_SERVLET_PATH += "test";
-        VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, TEST_PUBLIC_KEY, null,
+        VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, TEST_ACCOUNT_ID, null,
             adapterConfig.getAccountType());
         List<DDRRecord> allDdrRecords = DDRRecord.getDDRRecords(null, null, null, null, null, null, null, null, null,
             null, null);
@@ -193,7 +193,7 @@ public class VoiceXMLServletIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-            TEST_PUBLIC_KEY, localAddressBroadsoft, localFullAddressBroadsoft, url);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, url);
         adapterConfig.setXsiUser(localFullAddressBroadsoft);
         adapterConfig.setXsiSubscription(UUID.randomUUID().toString());
         adapterConfig.update();
@@ -288,14 +288,14 @@ public class VoiceXMLServletIT extends TestFramework {
         //trigger an outbound call
         outboundPhoneCallMissingDDRTest();
         //fetch all the ddrRecords
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
             null, null, null);
         //make sure that all the logs belong to atleast one ddrRecord
         //        int logsCount = 0;
         long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
         boolean isDDRLogFound = false;
         for (DDRRecord ddrRecord : ddrRecords) {
-            List<Log> logsForDDRRecord = Logger.find(TEST_PUBLIC_KEY, ddrRecord.getId(), null, null, null, null, null,
+            List<Log> logsForDDRRecord = Logger.find(TEST_ACCOUNT_ID, ddrRecord.getId(), null, null, null, null, null,
                 null);
             for (Log log : logsForDDRRecord) {
                 assertThat(log.getAccountId(), Matchers.is(ddrRecord.getAccountId()));
@@ -311,7 +311,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //test the difference in timings to fetch all
         startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
-        Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null, null);
+        Logger.find(TEST_ACCOUNT_ID, null, null, null, null, null, null, null);
         endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
         log.info(String.format("Fetch by accountId took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
     }
@@ -329,14 +329,14 @@ public class VoiceXMLServletIT extends TestFramework {
         //trigger an outbound call
         outboundPhoneCallMissingDDRTest();
         //fetch all the ddrRecords
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
             null, null, null);
         //make sure that all the logs belong to atleast one ddrRecord
         //        int logsCount = 0;
         long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
         boolean isDDRLogFound = false;
         for (DDRRecord ddrRecord : ddrRecords) {
-            List<Log> logsForDDRRecord = Logger.find(TEST_PUBLIC_KEY, ddrRecord.getId(), null, null, null, null, null,
+            List<Log> logsForDDRRecord = Logger.find(TEST_ACCOUNT_ID, ddrRecord.getId(), null, null, null, null, null,
                 null);
             for (Log log : logsForDDRRecord) {
                 assertThat(log.getAccountId(), Matchers.is(ddrRecord.getAccountId()));
@@ -352,7 +352,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //test the difference in timings to fetch all
         startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
-        Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null, null);
+        Logger.find(TEST_ACCOUNT_ID, null, null, null, null, null, null, null);
         endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
         log.info(String.format("Fetch by accountId took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
     }
@@ -373,7 +373,7 @@ public class VoiceXMLServletIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-            TEST_PUBLIC_KEY, localAddressBroadsoft, localFullAddressBroadsoft, url);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, url);
         adapterConfig.setXsiUser(localFullAddressBroadsoft);
         adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
         adapterConfig.update();
@@ -488,7 +488,7 @@ public class VoiceXMLServletIT extends TestFramework {
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-            TEST_PUBLIC_KEY, localAddressBroadsoft, localFullAddressBroadsoft, url);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, url);
         adapterConfig.setXsiUser(localFullAddressBroadsoft);
         adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
         adapterConfig.update();
@@ -557,7 +557,7 @@ public class VoiceXMLServletIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("askFastAccountId")) {
-                assertThat(queryParams.getValue(), Matchers.is(TEST_PUBLIC_KEY));
+                assertThat(queryParams.getValue(), Matchers.is(TEST_ACCOUNT_ID));
                 continue;
             }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
@@ -596,7 +596,7 @@ public class VoiceXMLServletIT extends TestFramework {
         assertOpenQuestionWithDTMFType(securedDialogResponse.getEntity().toString());
 
         //validate that ddr records are created when isTest is set to false
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
             null, null, null);
         Assert.assertThat(ddrRecords.size(), Matchers.equalTo(1));
 
@@ -704,7 +704,7 @@ public class VoiceXMLServletIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("askFastAccountId")) {
-                assertThat(queryParams.getValue(), Matchers.is(TEST_PUBLIC_KEY));
+                assertThat(queryParams.getValue(), Matchers.is(TEST_ACCOUNT_ID));
                 continue;
             }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
@@ -768,7 +768,7 @@ public class VoiceXMLServletIT extends TestFramework {
         }
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
             null, null, null);
         int ttsServiceChargesAttached = 0;
         for (DDRRecord ddrRecord : ddrRecords) {
@@ -803,7 +803,7 @@ public class VoiceXMLServletIT extends TestFramework {
         assertThat(newDialog.getEntity().toString(), Matchers.not(Matchers.containsString(invalidNumber)));
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(0));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
             null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
         int ddrInfoCount = 0;
@@ -883,7 +883,7 @@ public class VoiceXMLServletIT extends TestFramework {
         Response securedDialogResponse = performSecuredInboundCall("testuserName", "testpassword", ttsInfo, url, null);
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
             null, null, null);
         int ttsChargesAttached = 0;
         for (DDRRecord ddrRecord : ddrRecords) {
@@ -1063,7 +1063,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //verify that the session is not saved
         assertEquals(0, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
             null, null, null);
         assertEquals(1, ddrRecords.size());
         assertEquals(CommunicationStatus.ERROR,
@@ -1107,7 +1107,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //verify that the session is not saved
         assertEquals(1, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
             null, null, null);
         assertEquals(1, ddrRecords.size());
         DDRRecord ddrRecord = ddrRecords.iterator().next();
@@ -1155,7 +1155,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //verify that the session is not saved
         assertEquals(0, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
             null, null, null);
         assertEquals(1, ddrRecords.size());
         assertEquals(CommunicationStatus.ERROR,
@@ -1179,7 +1179,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //create POST PAID CALL adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-            TEST_PUBLIC_KEY, localAddressBroadsoft, localFullAddressBroadsoft, null);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, null);
         adapterConfig.setAccountType(AccountType.POST_PAID);
         adapterConfig.addAccount(sharedAccountId);
         adapterConfig.update();
@@ -1229,7 +1229,7 @@ public class VoiceXMLServletIT extends TestFramework {
         String sharedAccountId = UUID.randomUUID().toString();
         //create POST PAID CALL adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-            TEST_PUBLIC_KEY, localAddressBroadsoft, localFullAddressBroadsoft, null);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, null);
         adapterConfig.setAccountType(AccountType.POST_PAID);
         adapterConfig.addAccount(sharedAccountId);
         adapterConfig.setDialogId(dialog.getId());
@@ -1315,7 +1315,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-            TEST_PUBLIC_KEY, localAddressBroadsoft, localFullAddressBroadsoft, url);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, url);
         adapterConfig.setDialogId(createDialog.getId());
         adapterConfig.update();
 
@@ -1339,7 +1339,7 @@ public class VoiceXMLServletIT extends TestFramework {
         dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
         //create CALL adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-            TEST_PUBLIC_KEY, localAddressBroadsoft, localFullAddressBroadsoft, null);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, null);
         //trigger an outbound call
         return VoiceXMLRESTProxy.dial(remoteAddressVoice, dialog.getId(), adapterConfig, adapterConfig.getOwner(),
             null, adapterConfig.getAccountType());

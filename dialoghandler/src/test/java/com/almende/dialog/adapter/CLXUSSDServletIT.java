@@ -29,7 +29,7 @@ public class CLXUSSDServletIT extends TestFramework{
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(remoteAdressVoice2, senderName);
 
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), null, TEST_PUBLIC_KEY,
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), null, TEST_ACCOUNT_ID,
                                                           remoteAddressVoice, remoteAddressVoice, "");
         // for test ser real password and username
         adapterConfig.setAccessToken("ASKFastBV_h_ugw0");
@@ -52,7 +52,7 @@ public class CLXUSSDServletIT extends TestFramework{
 
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("questionType", "comment");
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), null, TEST_PUBLIC_KEY,
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), null, TEST_ACCOUNT_ID,
                                                           "31624107792", "", "");
         CLXUSSDServlet servlet = new CLXUSSDServlet();
         servlet.sendMessage("hallo", "hey", "me", "vincent", "31624107792", "vincent", map, adapterConfig,
@@ -68,7 +68,7 @@ public class CLXUSSDServletIT extends TestFramework{
         addressNameMap.put(remoteAdressVoice2, senderName);
 
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), AdapterProviders.CLX,
-                                                          TEST_PUBLIC_KEY, "", localAddressBroadsoft, "");
+                                                          TEST_ACCOUNT_ID, "", localAddressBroadsoft, "");
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
                                                        QuestionInRequest.SIMPLE_COMMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", message);
@@ -83,7 +83,7 @@ public class CLXUSSDServletIT extends TestFramework{
         addressNameMap.put(remoteAdressVoice2, senderName);
 
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), AdapterProviders.CLX,
-                                                          TEST_PUBLIC_KEY, remoteAddressVoice, remoteAddressVoice, "");
+                                                          TEST_ACCOUNT_ID, remoteAddressVoice, remoteAddressVoice, "");
 
         Session.createSession(adapterConfig, "31624107792");
 
@@ -104,11 +104,11 @@ public class CLXUSSDServletIT extends TestFramework{
         DialogAgent dialogAgent = new DialogAgent();
         if (addressNameMap.size() > 1) {
             dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "", adapterConfig.getAccountType());
+                adapterConfig.getConfigId(), TEST_ACCOUNT_ID, "", adapterConfig.getAccountType());
         }
         else {
             dialogAgent.outboundCall(addressNameMap.keySet().iterator().next(), senderName, subject, url, null,
-                adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "", adapterConfig.getAccountType());
+                adapterConfig.getConfigId(), TEST_ACCOUNT_ID, "", adapterConfig.getAccountType());
         }
     }
 

@@ -29,7 +29,7 @@ public class NotificareServeletTest extends TestFramework {
         addressNameMap.put(remoteAdressVoice2, senderName);
 
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.PUSH.toString(), AdapterProviders.NOTIFICARE,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft, "", "");
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, "", "");
         //set tokens beore testing
         adapterConfig.setAccessToken("");
         adapterConfig.setAccessTokenSecret("");
@@ -59,11 +59,11 @@ public class NotificareServeletTest extends TestFramework {
         DialogAgent dialogAgent = new DialogAgent();
         if (addressNameMap.size() > 1) {
             dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "", adapterConfig.getAccountType());
+                adapterConfig.getConfigId(), TEST_ACCOUNT_ID, "", adapterConfig.getAccountType());
         }
         else {
             dialogAgent.outboundCall(addressNameMap.keySet().iterator().next(), senderName, subject, url, null,
-                adapterConfig.getConfigId(), TEST_PUBLIC_KEY, "", adapterConfig.getAccountType());
+                adapterConfig.getConfigId(), TEST_ACCOUNT_ID, "", adapterConfig.getAccountType());
         }
     }
 }

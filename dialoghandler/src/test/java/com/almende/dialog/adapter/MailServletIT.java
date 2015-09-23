@@ -85,7 +85,7 @@ public class MailServletIT extends TestFramework
         initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "question", "start" );
         
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_ACCOUNT_ID,
                                                           localAddressMail, localAddressMail, initialAgentURL);
         //create session
         Session.createSession( adapterConfig, remoteAddressEmail );
@@ -133,16 +133,16 @@ public class MailServletIT extends TestFramework
         url = ServerUtils.getURLWithQueryParams( url, "question", "start" );
         
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_ACCOUNT_ID,
                                                           localAddressMail, localAddressMail, null);
         //send email
         new DialogAgent().outboundCall(remoteAddressEmail, "TEST", "TEST SUBJECT", url, null,
-            adapterConfig.getConfigId(), TEST_PUBLIC_KEY, null, adapterConfig.getAccountType());
+            adapterConfig.getConfigId(), TEST_ACCOUNT_ID, null, adapterConfig.getAccountType());
         
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(1));
         assertThat(allSessions.iterator().next().getDirection(), Matchers.is("outbound"));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
     }
@@ -169,7 +169,7 @@ public class MailServletIT extends TestFramework
         //make sure a new session is created and old one is discarded. 
         assertThat(allSessions.size(), Matchers.is(1));
         assertThat(allSessions.iterator().next().getKey(), Matchers.not(firstSession.getKey()));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(3));
         int inboundCount = 0;
@@ -204,7 +204,7 @@ public class MailServletIT extends TestFramework
         List<Session> allSessions = Session.getAllSessions();
         //as it is the end of the question sequence, all sessions must be flushed
         assertThat(allSessions.size(), Matchers.is(0));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(5));
         int inboundCount = 0;
@@ -233,7 +233,7 @@ public class MailServletIT extends TestFramework
             QuestionInRequest.APPOINTMENT.name() );
         initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "question", "start" );
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_ACCOUNT_ID,
                                                           localAddressMail, localAddressMail, initialAgentURL);
         //create session
         Session session = Session.createSession( adapterConfig, remoteAddressEmail );
@@ -305,7 +305,7 @@ public class MailServletIT extends TestFramework
     {
         String textMessage = "How are you doing?";
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_ACCOUNT_ID,
                                                           localAddressMail, localAddressMail, "");
         //fetch and invoke the receieveMessage method
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
@@ -365,7 +365,7 @@ public class MailServletIT extends TestFramework
         
         //create mail adapter
         AdapterConfig adapterConfig = createEmailAdapter("test@test.com", "testtest", null, null, null, null, null,
-                                                         null, null, TEST_PUBLIC_KEY, null, null);
+                                                         null, null, TEST_ACCOUNT_ID, null, null);
         //setup to generate ddrRecords
         new DDRRecordAgent().generateDefaultDDRTypes();
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.PART,
@@ -384,7 +384,7 @@ public class MailServletIT extends TestFramework
         
         //verify that the session is not saved
         assertEquals(0, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         assertEquals(1, ddrRecords.size());
         assertEquals(CommunicationStatus.ERROR, ddrRecords.iterator().next().getStatusForAddress(remoteAddressEmail));
@@ -429,11 +429,11 @@ public class MailServletIT extends TestFramework
         url = ServerUtils.getURLWithQueryParams( url, "question", "start" );
         
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_ACCOUNT_ID,
                                                           localAddressMail, localAddressMail, null);
         //send email
         DialogRequest dialogRequestDetails = new DialogRequest();
-        dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
+        dialogRequestDetails.setAccountID(TEST_ACCOUNT_ID);
         dialogRequestDetails.setAdapterID(adapterConfig.getConfigId());
         dialogRequestDetails.setAddress(invalidAddres);
         dialogRequestDetails.setSenderName("TestEmail");
@@ -448,7 +448,7 @@ public class MailServletIT extends TestFramework
         
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(0));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
     }
@@ -474,11 +474,11 @@ public class MailServletIT extends TestFramework
         url = ServerUtils.getURLWithQueryParams(url, "question", "start");
 
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_ACCOUNT_ID,
                                                           localAddressMail, localAddressMail, null);
         //send email
         DialogRequest dialogRequestDetails = new DialogRequest();
-        dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
+        dialogRequestDetails.setAccountID(TEST_ACCOUNT_ID);
         dialogRequestDetails.setAdapterID(adapterConfig.getConfigId());
         dialogRequestDetails.setAddressList(Arrays.asList(invalidAddres, remoteAddressEmail));
         dialogRequestDetails.setSenderName("TestEmail");
@@ -495,7 +495,7 @@ public class MailServletIT extends TestFramework
 
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(1));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
     }

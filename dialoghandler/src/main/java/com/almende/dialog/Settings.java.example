@@ -1,0 +1,39 @@
+package com.almende.dialog;
+
+import com.almende.dialog.util.ServerUtils;
+
+public class Settings {
+	public static final Object Test = new Object();
+	public static final Object Development = new Object();
+	public static final Object Production = new Object();
+	
+	public static Object environment(){
+		return Development;
+	}
+	
+	public static String	HOST		= "sandbox.ask-fast.com";
+	public static String		KEYSERVER	= "http://localhost:8080/keyserver/token";
+	public static String       DIALOG_HANDLER   = "http://localhost:8080/dialoghandler";
+        public static String ASK_FAST_MARKETPLACE_REGISTER_URL = "http://askfastmarket.appspot.com";
+        public static final String BUCKET_NAME = "";
+        public static final String AWS_ACCESS_KEY = "";
+        public static final String AWS_ACCESS_KEY_SECRET = "";
+        public static final String DIALOG_HANDLER_VERSION = "";
+        public static final String DEFAULT_SENDER_EMAIL = "";
+        public static final String DEFAULT_SENDER_EMAIL_PASSWORD = "";
+        
+        public static final String TTS_ENDPOINT = "http://tts.ask-fast.com/api/parse";
+        /**
+         * Identifier used to determine if the logger must be loaded or not. Useful
+         * for local development when logging is not intended
+         */
+        public static boolean ENABLE_LOGGER = true;
+	
+	static {
+		if (ServerUtils.isInUnitTestingEnvironment()) {
+			KEYSERVER = null;
+			HOST = "localhost:8078";
+			ENABLE_LOGGER = false;
+		}
+	}
+}

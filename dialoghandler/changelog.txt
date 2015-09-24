@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+24-9-2015, version 1.13.1
+- fix: unit tests to work with default settings
+
 23-9-2015, version 1.13.0
 - feature: add adapter attach timestamp
 - feature: send call status with each result

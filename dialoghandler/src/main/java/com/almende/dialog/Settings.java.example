@@ -15,9 +15,9 @@ public class Settings {
 	public static String		KEYSERVER	= "http://localhost:8080/keyserver/token";
 	public static String       DIALOG_HANDLER   = "http://localhost:8080/dialoghandler";
         public static String ASK_FAST_MARKETPLACE_REGISTER_URL = "http://askfastmarket.appspot.com";
-        public static final String BUCKET_NAME = "";
-        public static final String AWS_ACCESS_KEY = "";
-        public static final String AWS_ACCESS_KEY_SECRET = "";
+        public static final String BUCKET_NAME = null;
+        public static final String AWS_ACCESS_KEY = null;
+        public static final String AWS_ACCESS_KEY_SECRET = null;
         public static final String DIALOG_HANDLER_VERSION = "1.13.0";
         public static final String DEFAULT_SENDER_EMAIL = "";
         public static final String DEFAULT_SENDER_EMAIL_PASSWORD = "";

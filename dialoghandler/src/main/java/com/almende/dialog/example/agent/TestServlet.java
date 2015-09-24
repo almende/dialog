@@ -153,7 +153,7 @@ public class TestServlet extends HttpServlet
                     result = getTwelveAnswerQuestion(req.getParameter("question"));
                     break;
                 case SIMPLE_COMMENT:
-                    result = getJsonSimpleCommentQuestion(req.getParameter("question"), req.getParameter("lang"));
+                    result = getJsonSimpleCommentQuestion(req.getParameter("question"), req.getParameter("lang"), null);
                     break;
                 case OPEN_QUESTION:
                     result = getJsonSimpleOpenQuestion(req.getParameter("question"), req.getParameter("lang"));
@@ -173,18 +173,37 @@ public class TestServlet extends HttpServlet
                     result = getExitQuestion(req.getParameter("question"));
                     break;
                 case CLOSED_YES_NO:
-                    Map<String, String> answerAndCallback = new LinkedHashMap<String, String>();
-                    String prefix1 = req.getParameter("prefix1") != null ? req.getParameter("prefix1") : "text://";
-                    prefix1 = prefix1.equals("null") ? null : prefix1;
-                    String answerText1 = prefix1 != null ? prefix1 + "1" : null;
-                    String prefix2 = req.getParameter("prefix2") != null ? req.getParameter("prefix2") : "text://";
-                    prefix2 = prefix2.equals("null") ? null : prefix2;
-                    String answerText2 = prefix2 != null ? prefix2 + "2" : null;
-                    answerAndCallback.put(answerText1, TEST_SERVLET_PATH + "?questionType=" +
-                        QuestionInRequest.SIMPLE_COMMENT + "&question=" + "You chose 1");
-                    answerAndCallback.put(answerText2, TEST_SERVLET_PATH + "?questionType=" + QuestionInRequest.EXIT +
-                        "&question=You chose 2");
-                    result = getClosedQuestion(req.getParameter("question"), answerAndCallback);
+                    String preMessage = req.getParameter("preMessage");
+                    if(preMessage!=null) {
+                        String callback = TEST_SERVLET_PATH + "?questionType=" +
+                        QuestionInRequest.CLOSED_YES_NO + "&question=" + req.getParameter("question");
+                        
+                        if(req.getParameter("lang") != null) {
+                            callback += "&lang=" + req.getParameter("lang");
+                        }
+                        
+                        if(req.getParameter("prefix1") != null) {
+                            callback += "&prefix1=" + req.getParameter("prefix1");
+                        }
+                        
+                        if(req.getParameter("prefix2") != null) {
+                            callback += "&prefix2=" + req.getParameter("prefix2");
+                        }
+                        result = getJsonSimpleCommentQuestion( preMessage, req.getParameter("lang"), callback );
+                    } else {
+                        Map<String, String> answerAndCallback = new LinkedHashMap<String, String>();
+                        String prefix1 = req.getParameter("prefix1") != null ? req.getParameter("prefix1") : "text://";
+                        prefix1 = prefix1.equals("null") ? null : prefix1;
+                        String answerText1 = prefix1 != null ? prefix1 + "1" : null;
+                        String prefix2 = req.getParameter("prefix2") != null ? req.getParameter("prefix2") : "text://";
+                        prefix2 = prefix2.equals("null") ? null : prefix2;
+                        String answerText2 = prefix2 != null ? prefix2 + "2" : null;
+                        answerAndCallback.put(answerText1, TEST_SERVLET_PATH + "?questionType=" +
+                            QuestionInRequest.SIMPLE_COMMENT + "&question=" + "You chose 1");
+                        answerAndCallback.put(answerText2, TEST_SERVLET_PATH + "?questionType=" + QuestionInRequest.EXIT +
+                            "&question=You chose 2");
+                        result = getClosedQuestion(req.getParameter("question"), answerAndCallback);
+                    }
                 default:
                     break;
             }
@@ -244,7 +263,7 @@ public class TestServlet extends HttpServlet
         TestServlet.logForTest("url", req.getServletPath() + req.getPathInfo());
     }
     
-    public static String getJsonSimpleCommentQuestion(String questionText, String language) {
+    public static String getJsonSimpleCommentQuestion(String questionText, String language, String callback) {
 
         Question question = new Question();
         question.setQuestion_id("1");
@@ -258,6 +277,12 @@ public class TestServlet extends HttpServlet
         catch (UnsupportedEncodingException e) {
             Assert.fail(e.getLocalizedMessage());
         }
+        if(callback!=null) {
+            List<Answer> answers = Arrays.asList( new Answer( "", callback )  );
+            question.setAnswers( new ArrayList<Answer>(answers) );
+        }
+        question.generateIds();
+        
         return question.toJSON();
     }
     
@@ -549,7 +574,7 @@ public class TestServlet extends HttpServlet
                 result = question.toJSON();
                 break;
             default:
-                result = getJsonSimpleCommentQuestion("You pressed: " + key, null);
+                result = getJsonSimpleCommentQuestion("You pressed: " + key, null, null);
                 break;
         }
         return result;

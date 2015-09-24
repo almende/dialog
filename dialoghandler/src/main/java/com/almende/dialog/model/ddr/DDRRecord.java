@@ -793,6 +793,7 @@ public class DDRRecord
                     }
                     //attach the child and the parent ddrRecord Ids
                     updateParentAndChildDDRRecordIds(session);
+                    setAccountType(session.getAccountType());
                 }
             }
             addAdditionalInfo(Session.SESSION_KEY, sessionKeyMap);

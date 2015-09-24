@@ -1,6 +1,14 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+23-9-2015, version 1.13.0
+- feature: add adapter attach timestamp
+- feature: send call status with each result
+- feature: move the accountType into the session, instead of reading it from the adapter
+- fix: reuse twilio session when a call goes to the failover url
+- fix: move the e-mail credentials to settings
+- fix: remove Settings.java
+
 20-8-2015, version 1.12.1
 - fix: the startDialog rest call
 

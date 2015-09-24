@@ -811,15 +811,15 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         config.update();
     }
 
-	public void addAccount(@Name("adapterId") String adapterId, @Name("accountId") String accountId) throws Exception {
-		
-		AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
-		if(config==null)
-			throw new Exception("No adapter with this id");
-		config.setStatus(Status.ACTIVE);
-		config.addAccount(accountId);
-		config.update();
-	}
+    public void addAccount(@Name("adapterId") String adapterId, @Name("accountId") String accountId) throws Exception {
+
+        AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
+        if (config == null)
+            throw new Exception("No adapter with this id");
+        config.setStatus(Status.ACTIVE);
+        config.addAccount(accountId);
+        config.update();
+    }
 	
     public RestResponse getAdapter(@Name("accoutId") String accountId, @Name("adapterId") String adapterId) {
 

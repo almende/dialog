@@ -49,6 +49,8 @@ public class AdapterConfig {
 	static final ObjectMapper om = new ObjectMapper();
 	public static final String ADAPTER_CREATION_TIME_KEY = "ADAPTER_CREATION_TIME";
 	public static final String ADAPTER_PROVIDER_KEY = "PROVIDER";
+	public static final String ADAPTER_ATTACH_TIME_KEY = "ATTACH_TIME_";
+	public static final String ADAPTER_DETACH_TIME_KEY = "DETACH_TIME_";
 	public static final String ACCESS_TOKEN_KEY = "ACCESS_TOKEN";
 	public static final String ACCESS_TOKEN_SECRET_KEY = "ACCESS_SECRET_TOKEN";
 	public static final String XSI_USER_KEY = "XSI_USER";
@@ -80,7 +82,10 @@ public class AdapterConfig {
 	Boolean anonymous=false;
 	
 	String owner=null;
-	//reducdant information to avoid linking to the accountServer to fetch the Account again
+	/**
+	 * reducdant information to avoid linking to the accountServer to fetch the Account again. 
+	 * This is the account type of the owner of the Adapter.
+	 */
 	AccountType accountType = null;
 	Collection<String> accounts=null;
 	//store adapter specific data
@@ -716,17 +721,19 @@ public class AdapterConfig {
 		return accounts;
 	}
 	
-        public void addAccount(String accountId) {
-    
-            accounts = accounts != null ? accounts : new ArrayList<String>();
-            if (accountId != null && !accounts.contains(accountId)) {
-                accounts.add(accountId);
-            }
-            //make the first shared account as the owner (if its missing)
-            if (accounts != null && !accounts.isEmpty() && (owner == null || owner.trim().isEmpty())) {
-                owner = accounts.iterator().next();
-            }
+    public void addAccount(String accountId) {
+
+        accounts = accounts != null ? accounts : new ArrayList<String>();
+        if (accountId != null && !accounts.contains(accountId)) {
+            accounts.add(accountId);
         }
+        //make the first shared account as the owner (if its missing)
+        if (accounts != null && !accounts.isEmpty() && (owner == null || owner.trim().isEmpty())) {
+            owner = accounts.iterator().next();
+        }
+        //add the current timestamp of the account added
+        getProperties().put(ADAPTER_ATTACH_TIME_KEY + accountId, TimeUtils.getServerCurrentTimeInMillis());
+    }
 	
     /**
      * Removes the accountId from the shared accounts list. If the account Id
@@ -748,6 +755,9 @@ public class AdapterConfig {
                 owner = null;
                 accounts = null;
             }
+            // add detach timestmap
+            getProperties().put(ADAPTER_DETACH_TIME_KEY + accountId, TimeUtils.getServerCurrentTimeInMillis());
+            log.info( "Added detach time" );
         }
     }
 	
@@ -816,13 +826,27 @@ public class AdapterConfig {
         }
     }
     
+    /**
+     * reducdant information to avoid linking to the accountServer to fetch the
+     * Account again. <br>
+     * This is the account type of the owner of the Adapter.
+     * 
+     * @return
+     */
     public AccountType getAccountType() {
-    
+
         return accountType;
     }
-    
+
+    /**
+     * reducdant information to avoid linking to the accountServer to fetch the
+     * Account again. <br>
+     * This is the account type of the owner of the Adapter.
+     * 
+     * @param accountType
+     */
     public void setAccountType(AccountType accountType) {
-    
+
         this.accountType = accountType;
     }
     
@@ -989,5 +1013,71 @@ public class AdapterConfig {
             address = PhoneNumberUtils.formatNumber(address, null);
         }
         return address;
+    }
+    
+    /**
+     * Gets the timestamp when this adapter was created. If no
+     * timestamp is found, it returns null.
+     * 
+     *            If null, this gets the timestamp when the adapter was created.
+     * @return
+     */
+    @JsonIgnore
+    public Long getCreationTimestamp() {
+
+        if (getProperties().get(ADAPTER_CREATION_TIME_KEY) != null) {
+            
+            return Long.parseLong(getProperties().get(ADAPTER_CREATION_TIME_KEY).toString());
+        }
+        return null;
+    }
+    
+    
+    /**
+     * Gets the timestamp when this adapter was attached to some account. If no
+     * timestamp is found, returns the adapter creation timestamp. If that is
+     * also missing, returns null.
+     * 
+     * @param accountId
+     *            If null, this gets the timestamp the owner of this adapter was
+     *            attached.
+     * @return
+     */
+    public Long getAttachTimestamp(String accountId) {
+
+        accountId = accountId != null ? accountId : getOwner();
+        Object attachTimestamp = getProperties().get(ADAPTER_ATTACH_TIME_KEY + accountId);
+        if (attachTimestamp == null && getProperties().get(ADAPTER_CREATION_TIME_KEY) != null) {
+            
+            return Long.parseLong(getProperties().get(ADAPTER_CREATION_TIME_KEY).toString());
+        }
+        else if(attachTimestamp != null){
+            return Long.parseLong(attachTimestamp.toString());
+        }
+        return null;
+    }
+    
+    /**
+     * Gets the timestamp when this adapter was attached to some account. If no
+     * timestamp is found, returns the adapter creation timestamp. If that is
+     * also missing, returns null.
+     * 
+     * @param accountId
+     *            If null, this gets the timestamp the owner of this adapter was
+     *            attached.
+     * @return
+     */
+    public Long getDetachTimestamp(String accountId) {
+
+        accountId = accountId != null ? accountId : getOwner();
+        Object detachTimestamp = getProperties().get(ADAPTER_DETACH_TIME_KEY + accountId);
+        if (detachTimestamp == null && getProperties().get(ADAPTER_DETACH_TIME_KEY) != null) {
+            
+            return Long.parseLong(getProperties().get(ADAPTER_DETACH_TIME_KEY).toString());
+        }
+        else if(detachTimestamp != null){
+            return Long.parseLong(detachTimestamp.toString());
+        }
+        return null;
     }
 }

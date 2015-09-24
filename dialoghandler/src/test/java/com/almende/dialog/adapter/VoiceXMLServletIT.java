@@ -49,6 +49,7 @@ import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.jackson.JOM;
 import com.askfast.commons.RestResponse;
+import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
@@ -79,12 +80,11 @@ public class VoiceXMLServletIT extends TestFramework {
         new DDRRecordAgent().generateDefaultDDRTypes();
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+            QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
-                                                          localFullAddressBroadsoft, url);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, url);
 
         //create session
         Session session = Session.createSession(adapterConfig, remoteAddressVoice);
@@ -94,26 +94,26 @@ public class VoiceXMLServletIT extends TestFramework {
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         Response newDialog = voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice,
-                                                            localFullAddressBroadsoft, null, uriInfo);
+            localFullAddressBroadsoft, null, uriInfo);
         HashMap<String, String> answerVariables = assertOpenQuestionWithDTMFType(newDialog.getEntity().toString());
 
         //answer the dialog
         Question retrivedQuestion = Question.fromURL(url, remoteAddressVoice, session);
         String mediaPropertyValue = retrivedQuestion.getMediaPropertyValue(MediumType.BROADSOFT,
-                                                                           MediaPropertyKey.RETRY_LIMIT);
+            MediaPropertyKey.RETRY_LIMIT);
 
         Integer retryCount = Question.getRetryCount(answerVariables.get("sessionKey"));
         int i = 0;
         while (i++ < 10) {
             Response answerResponse = voiceXMLRESTProxy.answer(answerVariables.get("questionId"), null,
-                                                               answerVariables.get("answerInput"),
-                                                               answerVariables.get("sessionKey"), null, uriInfo);
+                answerVariables.get("answerInput"), answerVariables.get("sessionKey"), null, uriInfo);
             if (answerResponse.getEntity() != null) {
                 if (answerResponse.getEntity()
                                   .toString()
-                                  .equals("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-                                              + "<vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\">"
-                                              + "<form><block><exit/></block></form></vxml>")) {
+                                  .equals(
+                                      "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+                                          + "<vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\">"
+                                          + "<form><block><exit/></block></form></vxml>")) {
                     break;
                 }
             }
@@ -129,22 +129,21 @@ public class VoiceXMLServletIT extends TestFramework {
             assertEquals(new Integer(Question.DEFAULT_MAX_QUESTION_LOAD), retryCount);
         }
         //check all the ddrs created
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
+            null, null, null);
         assertEquals(ddrRecords.size(), 1);
         for (DDRRecord ddrRecord : ddrRecords) {
             assertEquals("inbound", ddrRecord.getDirection());
             assertEquals(adapterConfig.getFormattedMyAddress(), ddrRecord.getToAddress().keySet().iterator().next());
             assertEquals(PhoneNumberUtils.formatNumber(remoteAddressVoice, null), ddrRecord.getFromAddress());
             Object addressSessionKeyObject = ddrRecord.getAdditionalInfo().get(Session.SESSION_KEY);
-            Map<String, String> addressSessionKey = JOM.getInstance()
-                                                       .convertValue(addressSessionKeyObject,
-                                                                     new TypeReference<Map<String, String>>() {
-                                                                     });
+            Map<String, String> addressSessionKey = JOM.getInstance().convertValue(addressSessionKeyObject,
+                new TypeReference<Map<String, String>>() {
+                });
             assertEquals(PhoneNumberUtils.formatNumber(remoteAddressVoice, null), addressSessionKey.keySet().iterator()
                                                                                                    .next());
             assertEquals(ddrRecord.getSessionKeys().iterator().next(),
-                         addressSessionKey.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+                addressSessionKey.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
         }
     }
 
@@ -157,12 +156,11 @@ public class VoiceXMLServletIT extends TestFramework {
     public void outboundPhoneCall_RepeatedBroadsoftSubsciptionFailTest() throws Exception {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+            QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
-                                                          localFullAddressBroadsoft, url);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, url);
 
         //mock the Context
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
@@ -170,12 +168,13 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //used forcibly for Broadsoft.startCall() to throw an exception. 
         TestServlet.TEST_SERVLET_PATH += "test";
-        VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, TEST_PUBLIC_KEY, null);
+        VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, TEST_ACCOUNT_ID, null,
+            adapterConfig.getAccountType());
         List<DDRRecord> allDdrRecords = DDRRecord.getDDRRecords(null, null, null, null, null, null, null, null, null,
-                                                                null, null);
+            null, null);
         assertThat(allDdrRecords.isEmpty(), Matchers.is(true));
         Session session = Session.getSessionByInternalKey(adapterConfig.getAdapterType(), adapterConfig.getMyAddress(),
-                                                          PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         assertThat(session, Matchers.nullValue());
     }
 
@@ -189,26 +188,26 @@ public class VoiceXMLServletIT extends TestFramework {
     public void outboundPhoneCallMissingDDRTest() throws Exception {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.OPEN_QUESTION.name());
+            QuestionInRequest.OPEN_QUESTION.name());
 
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
-                                                          localFullAddressBroadsoft, url);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, url);
         adapterConfig.setXsiUser(localFullAddressBroadsoft);
         adapterConfig.setXsiSubscription(UUID.randomUUID().toString());
         adapterConfig.update();
 
         //setup some ddrPrices
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.8, "Test outgoing", UnitType.SECOND, null,
-                           null);
+            null);
 
         //trigger an outbound call
-        VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner(), null);
+        VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner(), null,
+            adapterConfig.getAccountType());
         //fetch the session, assert that a ddrRecord is not attached still
         Session session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localFullAddressBroadsoft,
-                                                          PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         assertThat(session, notNullValue());
         assertThat(session.getDdrRecordId(), Matchers.notNullValue());
 
@@ -218,7 +217,7 @@ public class VoiceXMLServletIT extends TestFramework {
         //mimick a fetch new dialog/ phone pickup
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         Response newDialog = voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice,
-                                                            localFullAddressBroadsoft, null, uriInfo);
+            localFullAddressBroadsoft, null, uriInfo);
         assertOpenQuestionWithDTMFType(newDialog.getEntity().toString());
         //a ddr must be attached to hte session
         session = Session.getSession(session.getKey());
@@ -247,8 +246,8 @@ public class VoiceXMLServletIT extends TestFramework {
         //check that the ddr addres status is switched to RECEIVED
         DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), session.getAccountId());
         assertEquals(CommunicationStatus.RECEIVED,
-                     ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
-        
+            ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+
         String hangupXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Event xmlns=\"http://schema.broadsoft.com/xsi-events\" " +
             "xmlns:xsi1=\"http://www.w3.org/2001/XMLSchema-instance\"><sequenceNumber>257</sequenceNumber><subscriberId>" +
             localFullAddressBroadsoft +
@@ -273,7 +272,7 @@ public class VoiceXMLServletIT extends TestFramework {
         assertThat(ddrRecord.getStart(), Matchers.is(1401809070192L));
         //check that the ddr addres status is switched to FINISHED
         assertEquals(CommunicationStatus.FINISHED,
-                     ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+            ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
     }
 
     /**
@@ -289,15 +288,15 @@ public class VoiceXMLServletIT extends TestFramework {
         //trigger an outbound call
         outboundPhoneCallMissingDDRTest();
         //fetch all the ddrRecords
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
+            null, null, null);
         //make sure that all the logs belong to atleast one ddrRecord
         //        int logsCount = 0;
         long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
         boolean isDDRLogFound = false;
         for (DDRRecord ddrRecord : ddrRecords) {
-            List<Log> logsForDDRRecord = Logger.find(TEST_PUBLIC_KEY, ddrRecord.getId(), null, null, null, null, null,
-                                                     null);
+            List<Log> logsForDDRRecord = Logger.find(TEST_ACCOUNT_ID, ddrRecord.getId(), null, null, null, null, null,
+                null);
             for (Log log : logsForDDRRecord) {
                 assertThat(log.getAccountId(), Matchers.is(ddrRecord.getAccountId()));
                 assertThat(log.getAccountId(), Matchers.notNullValue());
@@ -312,7 +311,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //test the difference in timings to fetch all
         startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
-        Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null, null);
+        Logger.find(TEST_ACCOUNT_ID, null, null, null, null, null, null, null);
         endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
         log.info(String.format("Fetch by accountId took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
     }
@@ -330,15 +329,15 @@ public class VoiceXMLServletIT extends TestFramework {
         //trigger an outbound call
         outboundPhoneCallMissingDDRTest();
         //fetch all the ddrRecords
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
+            null, null, null);
         //make sure that all the logs belong to atleast one ddrRecord
         //        int logsCount = 0;
         long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
         boolean isDDRLogFound = false;
         for (DDRRecord ddrRecord : ddrRecords) {
-            List<Log> logsForDDRRecord = Logger.find(TEST_PUBLIC_KEY, ddrRecord.getId(), null, null, null, null, null,
-                                                     null);
+            List<Log> logsForDDRRecord = Logger.find(TEST_ACCOUNT_ID, ddrRecord.getId(), null, null, null, null, null,
+                null);
             for (Log log : logsForDDRRecord) {
                 assertThat(log.getAccountId(), Matchers.is(ddrRecord.getAccountId()));
                 assertThat(log.getAccountId(), Matchers.notNullValue());
@@ -353,7 +352,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //test the difference in timings to fetch all
         startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
-        Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null, null);
+        Logger.find(TEST_ACCOUNT_ID, null, null, null, null, null, null, null);
         endTimestamp = TimeUtils.getServerCurrentTimeInMillis();
         log.info(String.format("Fetch by accountId took: %s secs", (endTimestamp - startTimestamp) / 1000.0));
     }
@@ -369,13 +368,12 @@ public class VoiceXMLServletIT extends TestFramework {
         Mockito.when(dialogAgent.getGlobalProviderCredentials()).thenReturn(null);
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.OPEN_QUESTION.name());
+            QuestionInRequest.OPEN_QUESTION.name());
 
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
-                                                          localFullAddressBroadsoft, url);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, url);
         adapterConfig.setXsiUser(localFullAddressBroadsoft);
         adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
         adapterConfig.update();
@@ -383,12 +381,11 @@ public class VoiceXMLServletIT extends TestFramework {
         //perform an outbound call
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put(remoteAddressVoice, "");
-        Mockito.when(dialogAgent.outboundCallWithMap(addressMap, null, null, null, null, url, null,
-                                                     adapterConfig.getConfigId(), adapterConfig.getOwner(), ""))
-               .thenCallRealMethod();
+        Mockito.when(
+            dialogAgent.outboundCallWithMap(addressMap, null, null, null, null, url, null, adapterConfig.getConfigId(),
+                adapterConfig.getOwner(), "", adapterConfig.getAccountType())).thenCallRealMethod();
         HashMap<String, String> result = dialogAgent.outboundCallWithMap(addressMap, null, null, null, null, url, null,
-                                                                         adapterConfig.getConfigId(),
-                                                                         adapterConfig.getOwner(), "");
+            adapterConfig.getConfigId(), adapterConfig.getOwner(), "", adapterConfig.getAccountType());
         assertTrue(result != null);
         assertTrue(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)) != null);
         Session.drop(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
@@ -410,14 +407,14 @@ public class VoiceXMLServletIT extends TestFramework {
         //mock the Context
         Mockito.when(dialogAgent.getGlobalProviderCredentials()).thenReturn(globalAdapterCredentials);
         //switch calling adapter globally
-        Mockito.when(dialogAgent.getGlobalAdapterSwitchSettingsForType(AdapterType.CALL))
-               .thenReturn(AdapterProviders.TWILIO);
+        Mockito.when(dialogAgent.getGlobalAdapterSwitchSettingsForType(AdapterType.CALL)).thenReturn(
+            AdapterProviders.TWILIO);
         Mockito.when(dialogAgent.getApplicationId()).thenReturn(UUID.randomUUID().toString());
 
         //initiate outbound request again
 
         result = dialogAgent.outboundCallWithMap(addressMap, null, null, null, null, url, null,
-                                                 adapterConfig.getConfigId(), adapterConfig.getOwner(), "");
+            adapterConfig.getConfigId(), adapterConfig.getOwner(), "", adapterConfig.getAccountType());
         assertTrue(result != null);
         assertTrue(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)) != null);
         Session session = Session.getSession(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
@@ -441,7 +438,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //fetch the session
         Session session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localFullAddressBroadsoft,
-                                                          PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         //add a specific adapter switch
         String testMyAddress = "0854881002";
         Map<AdapterProviders, Map<String, AdapterConfig>> globalSwitchProviderCredentials = dialogAgent.getGlobalProviderCredentials();
@@ -460,14 +457,13 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //initiate outbound request again
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.OPEN_QUESTION.name());
+            QuestionInRequest.OPEN_QUESTION.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put(remoteAddressVoice, "");
         HashMap<String, String> result = dialogAgent.outboundCallWithMap(addressMap, null, null, null, null, url, null,
-                                                                         session.getAdapterID(),
-                                                                         session.getAdapterConfig().getOwner(), "");
+            session.getAdapterID(), session.getAdapterConfig().getOwner(), "", session.getAccountType());
         assertTrue(result != null);
         assertTrue(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)) != null);
         session = Session.getSession(result.get(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
@@ -476,7 +472,7 @@ public class VoiceXMLServletIT extends TestFramework {
         assertThat(session.getLocalAddress(), Matchers.is(localFullAddressBroadsoft));
         assertEquals(AdapterType.CALL.toString().toLowerCase(), session.getType().toLowerCase());
         assertEquals(AdapterProviders.TWILIO.toString().toLowerCase(),
-                     session.getAllExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY).toString().toLowerCase());
+            session.getAllExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY).toString().toLowerCase());
     }
 
     /**
@@ -487,40 +483,39 @@ public class VoiceXMLServletIT extends TestFramework {
     public void eventCallBackPayloadTest() throws Exception {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.OPEN_QUESTION.name());
+            QuestionInRequest.OPEN_QUESTION.name());
 
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
-                                                          localFullAddressBroadsoft, url);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, url);
         adapterConfig.setXsiUser(localFullAddressBroadsoft);
         adapterConfig.setXsiSubscription(TEST_PUBLIC_KEY);
         adapterConfig.update();
 
         //trigger an outbound call
         String sessionKey1 = VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner(),
-                                                    null);
+            null, adapterConfig.getAccountType());
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         voiceXMLRESTProxy.timeout(UUID.randomUUID().toString(), sessionKey1, null);
 
         //validate that the session has it
         Session session = Session.getSession(sessionKey1);
         assertThat(session.getAllExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY),
-                   Matchers.is(AdapterProviders.BROADSOFT.toString()));
+            Matchers.is(AdapterProviders.BROADSOFT.toString()));
 
         //mock the Context
         UriInfo uriInfo = Mockito.mock(UriInfo.class);
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         //mimick a fetch new dialog/ phone pickup
         String sessionKey2 = VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, adapterConfig.getOwner(),
-                                                    null);
+            null, adapterConfig.getAccountType());
         voiceXMLRESTProxy.answer(UUID.randomUUID().toString(), null, "1", sessionKey2, null, uriInfo);
 
         //validate that the session has it
         session = Session.getSession(sessionKey2);
         assertThat(session.getAllExtras().get(AdapterConfig.ADAPTER_PROVIDER_KEY),
-                   Matchers.is(AdapterProviders.BROADSOFT.toString()));
+            Matchers.is(AdapterProviders.BROADSOFT.toString()));
     }
 
     /**
@@ -562,7 +557,7 @@ public class VoiceXMLServletIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("askFastAccountId")) {
-                assertThat(queryParams.getValue(), Matchers.is(TEST_PUBLIC_KEY));
+                assertThat(queryParams.getValue(), Matchers.is(TEST_ACCOUNT_ID));
                 continue;
             }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
@@ -582,7 +577,7 @@ public class VoiceXMLServletIT extends TestFramework {
         assertTrue(securedDialogResponse != null);
         assertOpenQuestionWithDTMFType(securedDialogResponse.getEntity().toString());
     }
-    
+
     /**
      * This test is to check if the inbound functionality works for a dialog
      * with the right credentials for the secured url access, but no ddr records
@@ -595,29 +590,29 @@ public class VoiceXMLServletIT extends TestFramework {
 
         new DDRRecordAgent().generateDefaultDDRTypes();
         createTestDDRPrice(DDRTypeCategory.INCOMING_COMMUNICATION_COST, 0.1, "Test incoming costs", UnitType.MINUTE,
-                           null, null);
+            null, null);
         Response securedDialogResponse = performSecuredInboundCall("testuserName", "testpassword", null, null, false);
         assertTrue(securedDialogResponse != null);
         assertOpenQuestionWithDTMFType(securedDialogResponse.getEntity().toString());
 
         //validate that ddr records are created when isTest is set to false
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
+            null, null, null);
         Assert.assertThat(ddrRecords.size(), Matchers.equalTo(1));
-        
+
         //trigger a second incoming call with test flag to be true. flush all sessions, adapters and ddrRecords
         setup();
-        
+
         new DDRRecordAgent().generateDefaultDDRTypes();
         createTestDDRPrice(DDRTypeCategory.INCOMING_COMMUNICATION_COST, 0.1, "Test incoming costs", UnitType.MINUTE,
-                           null, null);
+            null, null);
         securedDialogResponse = performSecuredInboundCall("testuserName", "testpassword", null, null, true);
         assertTrue(securedDialogResponse != null);
         assertOpenQuestionWithDTMFType(securedDialogResponse.getEntity().toString());
 
         //validate that ddr records are created when isTest is set to false
         ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null, null,
-                                             null);
+            null);
         Assert.assertThat(ddrRecords.size(), Matchers.equalTo(0));
     }
 
@@ -631,7 +626,7 @@ public class VoiceXMLServletIT extends TestFramework {
     public void outboundPhoneCall_WithSecuredDialogAccessFailTest() throws Exception {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+            QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         url = ServerUtils.getURLWithQueryParams(url, "secured", "true");
         Dialog dialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
@@ -666,7 +661,7 @@ public class VoiceXMLServletIT extends TestFramework {
         ttsInfo.setVoiceUsed("testtest");
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+            QuestionInRequest.SIMPLE_COMMENT.name());
         String message = "How are you doing? today";
         url = ServerUtils.getURLWithQueryParams(url, "question", message);
         Response securedDialogResponse = performSecuredInboundCall("testuserName", "testpassword", ttsInfo, url, null);
@@ -709,7 +704,7 @@ public class VoiceXMLServletIT extends TestFramework {
                 continue;
             }
             else if (queryParams.getName().equals("askFastAccountId")) {
-                assertThat(queryParams.getValue(), Matchers.is(TEST_PUBLIC_KEY));
+                assertThat(queryParams.getValue(), Matchers.is(TEST_ACCOUNT_ID));
                 continue;
             }
             assertTrue(String.format("query not found: %s=%s", queryParams.getName(), queryParams.getValue()), false);
@@ -738,9 +733,9 @@ public class VoiceXMLServletIT extends TestFramework {
 
         DDRRecordAgent ddrRecordAgent = new DDRRecordAgent();
         ddrRecordAgent.createDDRPriceWithNewDDRType("TTS service costs", DDRTypeCategory.TTS_SERVICE_COST.name(), null,
-                                                    null, 0.01, null, null, null, null, null, null, null);
+            null, 0.01, null, null, null, null, null, null, null);
         ddrRecordAgent.createDDRPriceWithNewDDRType("TTS service costs", DDRTypeCategory.TTS_COST.name(), null, null,
-                                                    0.01, null, null, null, null, null, null, null);
+            0.01, null, null, null, null, null, null, null);
 
         String ttsAccountId = UUID.randomUUID().toString();
         TTSInfo ttsInfo = new TTSInfo();
@@ -749,7 +744,7 @@ public class VoiceXMLServletIT extends TestFramework {
         ttsInfo.setTtsAccountId(ttsAccountId);
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+            QuestionInRequest.SIMPLE_COMMENT.name());
         String message = "How are you doing? today";
         url = ServerUtils.getURLWithQueryParams(url, "question", message);
         String securedDialogResponse = null;
@@ -769,12 +764,12 @@ public class VoiceXMLServletIT extends TestFramework {
             UriInfo uriInfo = Mockito.mock(UriInfo.class);
             Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
             new VoiceXMLRESTProxy().getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice,
-                                                 localFullAddressBroadsoft, null, uriInfo);
+                localFullAddressBroadsoft, null, uriInfo);
         }
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
+            null, null, null);
         int ttsServiceChargesAttached = 0;
         for (DDRRecord ddrRecord : ddrRecords) {
             Assert.assertFalse(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_COST));
@@ -791,7 +786,7 @@ public class VoiceXMLServletIT extends TestFramework {
         new DDRRecordAgent().generateDefaultDDRTypes();
         String invalidNumber = "+3161234567";
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.REFERRAL.name());
+            QuestionInRequest.REFERRAL.name());
         url = ServerUtils.getURLWithQueryParams(url, "address", invalidNumber); //invalid address
         url = ServerUtils.getURLWithQueryParams(url, "question", "Hello...");
 
@@ -804,12 +799,12 @@ public class VoiceXMLServletIT extends TestFramework {
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         Response newDialog = voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice,
-                                                            localFullAddressBroadsoft, null, uriInfo);
+            localFullAddressBroadsoft, null, uriInfo);
         assertThat(newDialog.getEntity().toString(), Matchers.not(Matchers.containsString(invalidNumber)));
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(0));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
+            null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
         int ddrInfoCount = 0;
         DDRRecord ddrRecord = ddrRecords.iterator().next();
@@ -821,7 +816,7 @@ public class VoiceXMLServletIT extends TestFramework {
         }
         assertThat(ddrInfoCount, Matchers.is(1));
     }
-    
+
     /**
      * Test to check if the ddr records are linked when a referral is triggered
      * 
@@ -833,7 +828,7 @@ public class VoiceXMLServletIT extends TestFramework {
         String referralNumber = "0611111111";
         new DDRRecordAgent().generateDefaultDDRTypes();
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.REFERRAL.name());
+            QuestionInRequest.REFERRAL.name());
         url = ServerUtils.getURLWithQueryParams(url, "address", referralNumber);
         url = ServerUtils.getURLWithQueryParams(url, "question", "Hello...");
 
@@ -873,23 +868,23 @@ public class VoiceXMLServletIT extends TestFramework {
 
         DDRRecordAgent ddrRecordAgent = new DDRRecordAgent();
         ddrRecordAgent.createDDRPriceWithNewDDRType("TTS service costs", DDRTypeCategory.TTS_SERVICE_COST.name(), null,
-                                                    null, 0.01, null, null, null, null, null, null, null);
+            null, 0.01, null, null, null, null, null, null, null);
         ddrRecordAgent.createDDRPriceWithNewDDRType("TTS service costs", DDRTypeCategory.TTS_COST.name(), null, null,
-                                                    0.01, null, null, null, null, null, null, null);
+            0.01, null, null, null, null, null, null, null);
 
         TTSInfo ttsInfo = new TTSInfo();
         ttsInfo.setProvider(TTSProvider.ACAPELA);
         ttsInfo.setVoiceUsed("testtest");
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.SIMPLE_COMMENT.name());
+            QuestionInRequest.SIMPLE_COMMENT.name());
         String message = "How are you doing? today";
         url = ServerUtils.getURLWithQueryParams(url, "question", message);
         Response securedDialogResponse = performSecuredInboundCall("testuserName", "testpassword", ttsInfo, url, null);
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
+            null, null, null);
         int ttsChargesAttached = 0;
         for (DDRRecord ddrRecord : ddrRecords) {
             Assert.assertFalse(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_SERVICE_COST));
@@ -923,7 +918,7 @@ public class VoiceXMLServletIT extends TestFramework {
     public void outboundPhoneCall_WithSecuredDialogAccessSuccessTest() throws Exception {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+            QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
         url = ServerUtils.getURLWithQueryParams(url, "secured", "true");
         Dialog dialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
@@ -946,7 +941,7 @@ public class VoiceXMLServletIT extends TestFramework {
     public void inboundCallWithWrongOrderDtmfTest() throws Exception {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.APPOINTMENT.name());
+            QuestionInRequest.APPOINTMENT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", "start");
         url = ServerUtils.getURLWithQueryParams(url, "byDtmf", "true");
         url = ServerUtils.getURLWithQueryParams(url, "yesDtmf", "3");
@@ -963,18 +958,17 @@ public class VoiceXMLServletIT extends TestFramework {
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localFullAddressBroadsoft,
-                                       null, uriInfo);
+            null, uriInfo);
 
         //fetch current sesison
         Session session = Session.getSessionByInternalKey(adapterConfig.getAdapterType(), adapterConfig.getMyAddress(),
-                                                          PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         assertNotNull(session);
         //trigger answer 
         Response answer = voiceXMLRESTProxy.answer("1", null, "1", session.getKey(), null, uriInfo);
-        assertTrue(String.format("%s doesnt contain %s", answer.getEntity().toString(),
-                                 TestServlet.APPOINTMENT_MAIN_QUESTION),
-                   answer.getEntity().toString()
-                         .contains(URLEncoder.encode(TestServlet.APPOINTMENT_MAIN_QUESTION, "UTF-8")));
+        assertTrue(
+            String.format("%s doesnt contain %s", answer.getEntity().toString(), TestServlet.APPOINTMENT_MAIN_QUESTION),
+            answer.getEntity().toString().contains(URLEncoder.encode(TestServlet.APPOINTMENT_MAIN_QUESTION, "UTF-8")));
     }
 
     /**
@@ -1036,25 +1030,26 @@ public class VoiceXMLServletIT extends TestFramework {
      * Test if the
      * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequest)}
      * gives an error code if the question is not fetched by the dialog agent
-     * @throws UnsupportedEncodingException 
+     * 
+     * @throws UnsupportedEncodingException
      */
     @Test
     public void outboundCallWithoutQuestionTest() throws Exception {
-        
+
         dialogAgent = new DialogAgent();
         //setup bad question url
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH + "wrongURL", "questionType",
-                                                       QuestionInRequest.TWELVE_INPUT.name());
+            QuestionInRequest.TWELVE_INPUT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", "start");
-        
+
         //create mail adapter
         AdapterConfig adapterConfig = createBroadsoftAdapter();
-        
+
         //setup to generate ddrRecords
         new DDRRecordAgent().generateDefaultDDRTypes();
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
-                           null);
-        
+            null);
+
         DialogRequest details = new DialogRequest();
         details.setAccountID(adapterConfig.getOwner());
         details.setAdapterID(adapterConfig.getConfigId());
@@ -1065,18 +1060,17 @@ public class VoiceXMLServletIT extends TestFramework {
         RestResponse outboundCallResponse = dialogAgent.outboundCallWithDialogRequest(details);
         assertEquals(Status.BAD_REQUEST.getStatusCode(), outboundCallResponse.getCode());
         assertThat(outboundCallResponse.getMessage(), Matchers.is(DialogAgent.getQuestionNotFetchedMessage(url)));
-        
+
         //verify that the session is not saved
         assertEquals(0, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
+            null, null, null);
         assertEquals(1, ddrRecords.size());
         assertEquals(CommunicationStatus.ERROR,
-                     ddrRecords.iterator().next()
-                               .getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+            ddrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
         assertEquals(1, ddrRecords.iterator().next().getStatusPerAddress().size());
     }
-    
+
     /**
      * Test if the
      * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequest)}
@@ -1091,7 +1085,7 @@ public class VoiceXMLServletIT extends TestFramework {
         dialogAgent = new DialogAgent();
         //setup bad question url
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.TWELVE_INPUT.name());
+            QuestionInRequest.TWELVE_INPUT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", "start");
 
         //create mail adapter
@@ -1100,7 +1094,7 @@ public class VoiceXMLServletIT extends TestFramework {
         //setup to generate ddrRecords
         new DDRRecordAgent().generateDefaultDDRTypes();
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
-                           null);
+            null);
 
         DialogRequest details = new DialogRequest();
         details.setAccountID(adapterConfig.getOwner());
@@ -1113,18 +1107,18 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //verify that the session is not saved
         assertEquals(1, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
+            null, null, null);
         assertEquals(1, ddrRecords.size());
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         assertEquals(CommunicationStatus.ERROR,
-                     ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber("0611223", null)));
+            ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber("0611223", null)));
         assertEquals(CommunicationStatus.SENT,
-                     ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+            ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
         assertEquals(2, ddrRecords.iterator().next().getStatusPerAddress().size());
-        
+
     }
-    
+
     /**
      * Test if the
      * {@link DialogAgent#outboundCallWithDialogRequest(com.askfast.commons.entity.DialogRequest)}
@@ -1139,7 +1133,7 @@ public class VoiceXMLServletIT extends TestFramework {
         dialogAgent = new DialogAgent();
         //setup bad question url
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.TWELVE_INPUT.name());
+            QuestionInRequest.TWELVE_INPUT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", "start");
 
         //create mail adapter
@@ -1148,7 +1142,7 @@ public class VoiceXMLServletIT extends TestFramework {
         //setup to generate ddrRecords
         new DDRRecordAgent().generateDefaultDDRTypes();
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
-                           null);
+            null);
 
         DialogRequest details = new DialogRequest();
         details.setAccountID(adapterConfig.getOwner());
@@ -1161,14 +1155,101 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //verify that the session is not saved
         assertEquals(0, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
+            null, null, null);
         assertEquals(1, ddrRecords.size());
         assertEquals(CommunicationStatus.ERROR,
-                     ddrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber("0611223", null)));
+            ddrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber("0611223", null)));
         assertEquals(1, ddrRecords.iterator().next().getStatusPerAddress().size());
         //no session must be created
         assertEquals(0, Session.getAllSessions().size());
+    }
+
+    /**
+     * check if a trial message is played when an outbound call is initiated
+     * from a trial account sharing an adapter with POST PAID type owner
+     * account.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void trialMessagePlayedWithSharingPostPaidAccountOutBoundTest() throws Exception {
+
+        String sharedAccountId = UUID.randomUUID().toString();
+
+        //create POST PAID CALL adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, null);
+        adapterConfig.setAccountType(AccountType.POST_PAID);
+        adapterConfig.addAccount(sharedAccountId);
+        adapterConfig.update();
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+            QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
+
+        //trigger an outbound call
+        String sessionKey = VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, sharedAccountId, null,
+            AccountType.TRIAL);
+        //process the call
+        UriInfo uriInfo = Mockito.mock(UriInfo.class);
+        Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
+        VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
+        Response dialogResponse = voiceXMLRESTProxy.getNewDialog("outbound", remoteAddressVoice, remoteAddressVoice,
+            localFullAddressBroadsoft, null, uriInfo);
+
+        //check the dialogResponse. This must have a link to the trial audio
+        Assert.assertThat(dialogResponse.getEntity().toString(), Matchers.containsString(String.format(
+            "<audio src=\"http://localhost:%s/dialoghandler/en_trial_message.wav\"/>", jettyPort)));
+
+        //check the session and validate the question for the trial audio
+        Session session = Session.getSession(sessionKey);
+        Assert.assertThat(session.getAccountType(), Matchers.is(AccountType.TRIAL));
+    }
+
+    /**
+     * check if a trial message is not played when an inbound call is initiated from
+     * a trial account sharing an adapter with POST PAID type owner account.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void trialMessageNotPlayedWithSharingPostPaidAccountInboundTest() throws Exception {
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+            QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
+        
+        //create a dialog
+        dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
+        dialogAgent.createDialog(TEST_PUBLIC_KEY, "Test secured dialog", url);
+        Dialog dialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
+        dialog.storeOrUpdate();
+        
+        String sharedAccountId = UUID.randomUUID().toString();
+        //create POST PAID CALL adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, null);
+        adapterConfig.setAccountType(AccountType.POST_PAID);
+        adapterConfig.addAccount(sharedAccountId);
+        adapterConfig.setDialogId(dialog.getId());
+        adapterConfig.update();
+
+        //trigger inbound call
+        UriInfo uriInfo = Mockito.mock(UriInfo.class);
+        Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
+        VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
+        Response dialogResponse = voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice,
+            localFullAddressBroadsoft, null, uriInfo);
+
+        //check the dialogResponse. This must have a link to the trial audio
+        Assert.assertThat(dialogResponse.getEntity().toString(),
+            Matchers.not(Matchers.containsString(String.format("trial_message\"/>", jettyPort))));
+
+        //check the session and validate the question for the trial audio
+        Session session = Session.getSessionByInternalKey("call", localFullAddressBroadsoft,
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+        Assert.assertThat(session.getAccountType(), Matchers.not(AccountType.TRIAL));
     }
 
     /**
@@ -1181,7 +1262,7 @@ public class VoiceXMLServletIT extends TestFramework {
     private void inboundCallWithDTMFAsAnswerTest(String answerDtmf) throws Exception {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       QuestionInRequest.TWELVE_INPUT.name());
+            QuestionInRequest.TWELVE_INPUT.name());
         url = ServerUtils.getURLWithQueryParams(url, "question", "start");
         Dialog dialog = Dialog.createDialog("Test dialog", url, TEST_PUBLIC_KEY);
 
@@ -1195,16 +1276,16 @@ public class VoiceXMLServletIT extends TestFramework {
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice, localFullAddressBroadsoft,
-                                       null, uriInfo);
+            null, uriInfo);
 
         //fetch current sesison
         Session session = Session.getSessionByInternalKey(adapterConfig.getAdapterType(), adapterConfig.getMyAddress(),
-                                                          PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
         assertNotNull(session);
         //trigger answer 
         Response answer = voiceXMLRESTProxy.answer(answerDtmf, null, answerDtmf, session.getKey(), null, uriInfo);
         assertTrue(String.format("%s doesnt contain %s", answer.getEntity().toString(), "You pressed: " + answerDtmf),
-                   answer.getEntity().toString().contains(URLEncoder.encode("You pressed: " + answerDtmf, "UTF-8")));
+            answer.getEntity().toString().contains(URLEncoder.encode("You pressed: " + answerDtmf, "UTF-8")));
     }
 
     /**
@@ -1217,7 +1298,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         if (url == null) {
             url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                    QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+                QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
             url = ServerUtils.getURLWithQueryParams(url, "question", COMMENT_QUESTION_AUDIO);
             url = ServerUtils.getURLWithQueryParams(url, "secured", "true");
         }
@@ -1234,8 +1315,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
-                                                          localFullAddressBroadsoft, url);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, url);
         adapterConfig.setDialogId(createDialog.getId());
         adapterConfig.update();
 
@@ -1244,7 +1324,7 @@ public class VoiceXMLServletIT extends TestFramework {
         Mockito.when(uriInfo.getBaseUri()).thenReturn(new URI(TestServlet.TEST_SERVLET_PATH));
         VoiceXMLRESTProxy voiceXMLRESTProxy = new VoiceXMLRESTProxy();
         return voiceXMLRESTProxy.getNewDialog("inbound", remoteAddressVoice, remoteAddressVoice,
-                                              localFullAddressBroadsoft, isTest, uriInfo);
+            localFullAddressBroadsoft, isTest, uriInfo);
     }
 
     /**
@@ -1257,12 +1337,12 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //create a dialog
         dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
-        //create SMS adapter
+        //create CALL adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.BROADSOFT,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
-                                                          localFullAddressBroadsoft, null);
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localFullAddressBroadsoft, null);
         //trigger an outbound call
-        return VoiceXMLRESTProxy.dial(remoteAddressVoice, dialog.getId(), adapterConfig, adapterConfig.getOwner(), null);
+        return VoiceXMLRESTProxy.dial(remoteAddressVoice, dialog.getId(), adapterConfig, adapterConfig.getOwner(),
+            null, adapterConfig.getAccountType());
     }
 
     /**

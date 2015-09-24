@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response.Status;
@@ -50,10 +51,12 @@ import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.RestResponse;
+import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.DialogRequest;
+import com.askfast.commons.entity.Language;
 import com.askfast.commons.utils.PhoneNumberUtils;
 
 @SuppressWarnings("deprecation")
@@ -71,7 +74,7 @@ public class CMServletIT extends TestFramework {
         String senderName = "TestUser";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, "ASK", "ASK", "");
+                                                          TEST_ACCOUNT_ID, "ASK", "ASK", "");
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put( remoteAddressVoice, null );
@@ -114,7 +117,7 @@ public class CMServletIT extends TestFramework {
         String senderName = "TestUser";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, remoteAddressVoice, remoteAddressVoice, "");
+                                                          TEST_ACCOUNT_ID, remoteAddressVoice, remoteAddressVoice, "");
 
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(remoteAddressVoice, "testUser1");
@@ -141,7 +144,7 @@ public class CMServletIT extends TestFramework {
         initialAgentURL = ServerUtils.getURLWithQueryParams( initialAgentURL, "questionType", QuestionInRequest.APPOINTMENT.name() );
         //create mail adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, localAddressBroadsoft,
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft,
                                                           localAddressBroadsoft, initialAgentURL);
         //create session
         Session.createSession( adapterConfig, PhoneNumberUtils.formatNumber(remoteAddressVoice, null ));
@@ -166,7 +169,7 @@ public class CMServletIT extends TestFramework {
         String senderName = "TestUser";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, "ASK", "ASK", "");
+                                                          TEST_ACCOUNT_ID, "ASK", "ASK", "");
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put(remoteAddressVoice, null);
@@ -189,7 +192,7 @@ public class CMServletIT extends TestFramework {
         //check the total message parts
         int countMessageParts = CM.countMessageParts(text);
         //fetch the ddr records
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         Assert.assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
@@ -210,7 +213,7 @@ public class CMServletIT extends TestFramework {
         String senderName = "TestUser";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, "ASK", "ASK", "");
+                                                          TEST_ACCOUNT_ID, "ASK", "ASK", "");
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put(remoteAddressVoice, null);
@@ -227,7 +230,7 @@ public class CMServletIT extends TestFramework {
         //check the total message parts
         int countMessageParts = CM.countMessageParts(text);
         //fetch the ddr records
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         Assert.assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
@@ -250,24 +253,24 @@ public class CMServletIT extends TestFramework {
         createTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 1.0, "Adapter purchage", UnitType.PART, null, null);
         //create an SMS adapter
         String adapterConfigID = new AdapterAgent().createMBAdapter(remoteAddressVoice, null, "1111|blabla", "test",
-                                                                    null, TEST_PUBLIC_KEY, null, null);
+                                                                    null, TEST_ACCOUNT_ID, null, null);
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterConfigID);
-        assertEquals(TEST_PUBLIC_KEY, adapterConfig.getOwner());
+        assertEquals(TEST_ACCOUNT_ID, adapterConfig.getOwner());
         //collect all ddrRecord ids and log ids
         HashSet<String> ownerDDRRecordIds = new HashSet<String>();
         HashSet<String> ownerLogIds = new HashSet<String>();
         HashSet<String> ownerLogIdsForDDRRecordId = new HashSet<String>();
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         for (DDRRecord ddrRecord : ddrRecords) {
             ownerDDRRecordIds.add(ddrRecord.get_Id());
         }
-        List<Log> logs = Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null, null);
+        List<Log> logs = Logger.find(TEST_ACCOUNT_ID, null, null, null, null, null, null, null);
         for (Log log : logs) {
             ownerLogIds.add(log.getLogId());
         }
         String ddrRecordId = ownerDDRRecordIds.iterator().next();
-        logs = Logger.find(TEST_PUBLIC_KEY, ddrRecordId, null, null, null, null, null, null);
+        logs = Logger.find(TEST_ACCOUNT_ID, ddrRecordId, null, null, null, null, null, null);
         for (Log log : logs) {
             ownerLogIdsForDDRRecordId.add(log.getLogId());
         }
@@ -289,19 +292,19 @@ public class CMServletIT extends TestFramework {
         assertXMLGeneratedFromOutBoundCall(addressNameMap, adapterConfig, simpleQuestion, senderName);
 
         //check that all the new logs belong to the shared account
-        List<DDRRecord> ddrRecordsReFetch = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null,
+        List<DDRRecord> ddrRecordsReFetch = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null,
                                                                     null, null, null, null, null);
         assertEquals(ddrRecordsReFetch.size(), ddrRecords.size());
         for (DDRRecord ddrRecord : ddrRecordsReFetch) {
             assertTrue(ownerDDRRecordIds.contains(ddrRecord.get_Id()));
         }
-        List<Log> logsRefetch = Logger.find(TEST_PUBLIC_KEY, null, null, null, null, null, null, null);
+        List<Log> logsRefetch = Logger.find(TEST_ACCOUNT_ID, null, null, null, null, null, null, null);
         assertEquals(logsRefetch.size(), logs.size());
         for (Log log : logsRefetch) {
             assertTrue(ownerLogIds.contains(log.getLogId()));
         }
         
-        List<Log> logsRefetchForDDRRecordId = Logger.find(TEST_PUBLIC_KEY, ddrRecordId, null, null, null, null, null,
+        List<Log> logsRefetchForDDRRecordId = Logger.find(TEST_ACCOUNT_ID, ddrRecordId, null, null, null, null, null,
             null);
         assertEquals(logsRefetchForDDRRecordId.size(), logs.size());
         for (Log log : logsRefetchForDDRRecordId) {
@@ -352,7 +355,7 @@ public class CMServletIT extends TestFramework {
         String myAddress = "Ask-Fast";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, myAddress, myAddress, TEST_PRIVATE_KEY);
+                                                          TEST_ACCOUNT_ID, myAddress, myAddress, TEST_PRIVATE_KEY);
 
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 1.0, "SMS outbound", UnitType.PART, null, null);
         
@@ -360,7 +363,7 @@ public class CMServletIT extends TestFramework {
         addressMap.put(remoteAddressVoice, null);
         addressMap.put(secondTestResponder, "Test");
         outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, null, null,
-                               TEST_PUBLIC_KEY);
+                               TEST_ACCOUNT_ID);
         assertXMLGeneratedFromOutBoundCall(addressMap, adapterConfig, simpleQuestion, myAddress);
         //check that multiple SMSDeliveryNotifications are created.
         List<SMSDeliveryStatus> allSMSStatus = SMSDeliveryStatus.fetchAll();
@@ -460,11 +463,11 @@ public class CMServletIT extends TestFramework {
         String myAddress = "Ask-Fast";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.getName(), AdapterProviders.CM,
-                                                          TEST_PUBLIC_KEY, myAddress, myAddress, TEST_PRIVATE_KEY);
+                                                          TEST_ACCOUNT_ID, myAddress, myAddress, TEST_PRIVATE_KEY);
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put(remoteAddressVoice, null);
         outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, null, null,
-                               TEST_PUBLIC_KEY);
+                               TEST_ACCOUNT_ID);
         assertXMLGeneratedFromOutBoundCall(addressMap, adapterConfig, simpleQuestion, myAddress);
     }
     
@@ -546,7 +549,7 @@ public class CMServletIT extends TestFramework {
     public void inboundMBSMSTest() throws Exception {
 
         AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
-                                                       TEST_PUBLIC_KEY, "0642500086", "0642500086", null);
+                                                       TEST_ACCOUNT_ID, "0642500086", "0642500086", null);
         //create a session with already a question (meaning a message is already sent)
         Session session = Session.createSession(smsAdapter,
                                                      PhoneNumberUtils.formatNumber(remoteAddressVoice, null));
@@ -735,10 +738,10 @@ public class CMServletIT extends TestFramework {
 
         //create mail adapter
         AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
-                                                       TEST_PUBLIC_KEY, "0642500086", "0642500086", null);
+                                                       TEST_ACCOUNT_ID, "0642500086", "0642500086", null);
         //send email
         DialogRequest dialogRequestDetails = new DialogRequest();
-        dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
+        dialogRequestDetails.setAccountID(TEST_ACCOUNT_ID);
         dialogRequestDetails.setAdapterID(smsAdapter.getConfigId());
         dialogRequestDetails.setAddressList(Arrays.asList(invalidAddres, remoteAddressVoice));
         dialogRequestDetails.setUrl(url);
@@ -754,7 +757,7 @@ public class CMServletIT extends TestFramework {
 
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(1));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
     }
@@ -781,10 +784,10 @@ public class CMServletIT extends TestFramework {
 
         //create mail adapter
         AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
-                                                       TEST_PUBLIC_KEY, "0642500086", "0642500086", null);
+                                                       TEST_ACCOUNT_ID, "0642500086", "0642500086", null);
         //send email
         DialogRequest dialogRequestDetails = new DialogRequest();
-        dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
+        dialogRequestDetails.setAccountID(TEST_ACCOUNT_ID);
         dialogRequestDetails.setAdapterID(smsAdapter.getConfigId());
         dialogRequestDetails.setUrl(url);
 
@@ -795,7 +798,7 @@ public class CMServletIT extends TestFramework {
 
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(0));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(0));
     }
@@ -822,10 +825,10 @@ public class CMServletIT extends TestFramework {
 
         //create mail adapter
         AdapterConfig smsAdapter = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
-                                                       TEST_PUBLIC_KEY, "0642500086", "0642500086", null);
+                                                       TEST_ACCOUNT_ID, "0642500086", "0642500086", null);
         //send email
         DialogRequest dialogRequestDetails = new DialogRequest();
-        dialogRequestDetails.setAccountID(TEST_PUBLIC_KEY);
+        dialogRequestDetails.setAccountID(TEST_ACCOUNT_ID);
         dialogRequestDetails.setAdapterID(smsAdapter.getConfigId());
         dialogRequestDetails.setAddress(remoteAddressVoice);
         dialogRequestDetails.setMethod("invalid method");
@@ -839,9 +842,59 @@ public class CMServletIT extends TestFramework {
 
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(0));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(0));
+    }
+    
+    /**
+     * check if a trial message is played when an outbound call is initiated
+     * from a trial account sharing an adapter with POST PAID type owner
+     * account.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void trialMessagePlayedWithSharingPostPaidAccountOutBoundTest() throws Exception {
+
+        //setup actions to generate ddr records when the email is sent or received
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "outgoing", UnitType.PART,
+            AdapterType.SMS, null);
+        
+        String sharedAccountId = UUID.randomUUID().toString();
+
+        Map<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put(remoteAddressVoice, "Test");
+        //create POST PAID CALL adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_SMS, AdapterProviders.CM,
+                                                          TEST_ACCOUNT_ID, localAddressBroadsoft, localAddressBroadsoft, null);
+        adapterConfig.setPreferred_language(Language.DUTCH.getCode());
+        adapterConfig.setAccountType(AccountType.POST_PAID);
+        adapterConfig.addAccount(sharedAccountId);
+        adapterConfig.update();
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+            QuestionInRequest.OPEN_QUESION_WITHOUT_ANSWERS.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "Some random text, no one bothers!");
+
+        //trigger an outbound call
+        dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
+        HashMap<String, String> outboundCallWithMap = dialogAgent.outboundCallWithMap(addressNameMap, null, null,
+            "Test", null, url, null, adapterConfig.getConfigId(), sharedAccountId, "", AccountType.TRIAL);
+        
+        //check the message sent
+        DDRRecord ddrRecord = getAllDdrRecords(sharedAccountId).iterator().next();
+        Assert.assertThat(ddrRecord.getAccountType(), Matchers.is(AccountType.TRIAL));
+        
+        //fetch the contents of the sms sent
+        String message = ddrRecord.getAdditionalInfo().get("text").toString();
+        Assert.assertThat(message,
+            Matchers.containsString("Dit is een proefaccount. Overweeg alstublieft om uw account te upgraden. "));
+        
+        //check the session and validate the question for the trial audio
+        Session session = Session.getSession(outboundCallWithMap.values().iterator().next());
+        Assert.assertThat(session.getAccountType(), Matchers.is(AccountType.TRIAL));
     }
 
     private HashMap<String, String> outBoundSMSCallXMLTest(Map<String, String> addressNameMap,
@@ -855,12 +908,13 @@ public class CMServletIT extends TestFramework {
         dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
 
         if (new MockUtil().isMock(dialogAgent)) {
-            Mockito.when(dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                                                         adapterConfig.getConfigId(), accountId, ""))
+            Mockito.when(
+                dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
+                    adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType()))
                                             .thenCallRealMethod();
         }
         result = dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                                                 adapterConfig.getConfigId(), accountId, "");
+            adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
         return result;
     }
 

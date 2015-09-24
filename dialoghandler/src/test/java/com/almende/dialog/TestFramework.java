@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 import java.net.BindException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Properties;
 import java.util.logging.Logger;
 import javax.mail.MessagingException;
@@ -31,6 +32,7 @@ import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
+import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.DatastoreThread;
 import com.almende.util.ParallelInit;
@@ -54,6 +56,7 @@ public class TestFramework
     protected static final String localAddressBroadsoft = "0854881000";
     protected static final String localFullAddressBroadsoft = localAddressBroadsoft + "@blabla.voipit.nl";
     protected static final String remoteAddressVoice    = "0614765800";
+    protected static final String TEST_ACCOUNT_ID       = "test-account-id";
     protected static final String TEST_PUBLIC_KEY    	= "agent1@ask-cs.com";
     protected static final String TEST_PRIVATE_KEY 		= "test_private_key";
     private Server server;
@@ -108,13 +111,13 @@ public class TestFramework
     
     public AdapterConfig createBroadsoftAdapter() throws Exception {
 
-        return createAdapterConfig(AdapterType.CALL.toString(), AdapterProviders.BROADSOFT, TEST_PUBLIC_KEY,
+        return createAdapterConfig(AdapterType.CALL.toString(), AdapterProviders.BROADSOFT, TEST_ACCOUNT_ID,
                                    localAddressBroadsoft, localFullAddressBroadsoft, "");
     }
 
     public AdapterConfig createTwilioAdapter() throws Exception {
 
-        return createAdapterConfig(AdapterType.CALL.toString(), AdapterProviders.TWILIO, TEST_PUBLIC_KEY,
+        return createAdapterConfig(AdapterType.CALL.toString(), AdapterProviders.TWILIO, TEST_ACCOUNT_ID,
                                    localAddressBroadsoft, localAddressBroadsoft, "");
     }
     
@@ -314,5 +317,16 @@ public class TestFramework
                 log.info(String.format("Jetty is already running on port: %s. Ignoring request", jettyPort));
             }
         }
+    }
+    
+    /**
+     * Returns all the ddr records for this accountId
+     * 
+     * @param accountId
+     * @return
+     */
+    protected List<DDRRecord> getAllDdrRecords(String accountId) {
+
+        return DDRRecord.getDDRRecords(accountId, null, null, null, null, null, null, null, null, null, null);
     }
 }

@@ -84,7 +84,6 @@ public class VoiceXMLRESTProxy {
     protected String TIMEOUT_URL = "timeout";
     protected String UPLOAD_URL = "upload";
     protected String EXCEPTION_URL = "exception";
-    @SuppressWarnings( "unused" )
     protected String host = "";
 
     public static void killSession(Session session) {
@@ -107,11 +106,12 @@ public class VoiceXMLRESTProxy {
      * @throws UnsupportedEncodingException
      */
     public static String dial(String address, String dialogIdOrUrl, AdapterConfig config, String accountId,
-        String bearerToken) throws Exception {
+        String bearerToken, AccountType accountType) throws Exception {
 
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(address, "");
-        HashMap<String, String> result = dial(addressNameMap, dialogIdOrUrl, config, accountId, bearerToken);
+        HashMap<String, String> result = dial(addressNameMap, dialogIdOrUrl, config, accountId, bearerToken,
+            accountType);
         return result != null && !result.isEmpty() ? result.values().iterator().next() : null;
     }
 
@@ -135,11 +135,14 @@ public class VoiceXMLRESTProxy {
      * @param bearerToken
      *            Used to check if the account has enough credits to make a
      *            referral
+     * @param accountType
+     *            This is stored in the session and trial messages are played if
+     *            needed
      * @return
      * @throws Exception
      */
     public static HashMap<String, String> dial(Map<String, String> addressNameMap, String dialogIdOrUrl,
-        AdapterConfig config, String accountId, String bearerToken) throws Exception {
+        AdapterConfig config, String accountId, String bearerToken, AccountType accountType) throws Exception {
 
         HashMap<String, Session> sessionMap = new HashMap<String, Session>();
         HashMap<String, String> resultMap = new HashMap<String, String>();
@@ -212,6 +215,7 @@ public class VoiceXMLRESTProxy {
                             session = Session.createSession(config, formattedAddress);
                         }
                     }
+                    session.setAccountType(accountType);
                     session.killed = false;
                     session.setStartUrl(url);
                     session.setDirection("outbound");
@@ -400,6 +404,7 @@ public class VoiceXMLRESTProxy {
             if (isTest != null && Boolean.TRUE.equals(isTest)) {
                 session.setAsTestSession();
             }
+            session.setAccountType(config.getAccountType());
             session.setAccountId(config.getOwner());
             session.setRemoteAddress(externalRemoteID);
             session.storeSession();
@@ -457,7 +462,7 @@ public class VoiceXMLRESTProxy {
 
         if (session.getQuestion() != null) {
             //play trial account audio if the account is trial
-            if (config.getAccountType() != null && config.getAccountType().equals(AccountType.TRIAL)) {
+            if (AccountType.TRIAL.equals(session.getAccountType())) {
                 session.addExtras(PLAY_TRIAL_AUDIO_KEY, "true");
             }
             return handleQuestion(question, config, externalRemoteID, session);

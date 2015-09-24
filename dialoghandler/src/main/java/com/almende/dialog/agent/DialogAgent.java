@@ -43,6 +43,7 @@ import com.almende.util.jackson.JOM;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.askfast.commons.RestResponse;
 import com.askfast.commons.agent.intf.DialogAgentInterface;
+import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DialogRequest;
@@ -130,36 +131,33 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 		return "ok";
 	}
 	
-        public HashMap<String, String> outboundCall(@Name("address") String address,
-            @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
-            @Name("url") String url, @Name("adapterType") @Optional String adapterType,
-            @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountID,
-            @Name("bearerToken") String bearerToken) throws Exception {
-    
-            return outboundCallWithList(Arrays.asList(address), senderName, subject, url, adapterType, adapterID,
-                                        accountID, bearerToken);
-        }
+    public HashMap<String, String> outboundCall(@Name("address") String address,
+        @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
+        @Name("url") String url, @Name("adapterType") @Optional String adapterType,
+        @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountID,
+        @Name("bearerToken") String bearerToken, @Name("accountType") AccountType accountType) throws Exception {
+
+        return outboundCallWithList(Arrays.asList(address), senderName, subject, url, adapterType, adapterID,
+            accountID, bearerToken, accountType);
+    }
 	
-	/**
-	 * updated the outboundCall functionality to support broadcast functionality
-	 * 
-	 * @param addressList
-	 *            list of addresses
-	 * @throws Exception
-	 */
-	public HashMap<String, String> outboundCallWithList(
-			@Name("addressList") Collection<String> addressList,
-			@Name("senderName") @Optional String senderName,
-			@Name("subject") @Optional String subject, @Name("url") String url,
-			@Name("adapterType") @Optional String adapterType,
-			@Name("adapterID") @Optional String adapterID,
-			@Name("accountID") String accountID,
-			@Name("bearerToken") String bearerToken) throws Exception {
-		Map<String, String> addressNameMap = ServerUtils.putCollectionAsKey(
-				addressList, "");
-		return outboundCallWithMap(addressNameMap, null, null, senderName, subject, url,
-				adapterType, adapterID, accountID, bearerToken);
-	}
+    /**
+     * updated the outboundCall functionality to support broadcast functionality
+     * 
+     * @param addressList
+     *            list of addresses
+     * @throws Exception
+     */
+    public HashMap<String, String> outboundCallWithList(@Name("addressList") Collection<String> addressList,
+        @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
+        @Name("url") String url, @Name("adapterType") @Optional String adapterType,
+        @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountID,
+        @Name("bearerToken") String bearerToken, @Name("accountType") AccountType accountType) throws Exception {
+
+        Map<String, String> addressNameMap = ServerUtils.putCollectionAsKey(addressList, "");
+        return outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, adapterType, adapterID,
+            accountID, bearerToken, accountType);
+    }
 	
     /**
      * Triggers seperate call for each member in the address map.
@@ -170,14 +168,14 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
         @Name("url") String url, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
-        @Name("bearerToken") String bearerToken) throws Exception {
+        @Name("bearerToken") String bearerToken, @Name("accountType") AccountType accountType) throws Exception {
 
         HashMap<String, String> result = new HashMap<String, String>();
         for (String address : addressMap.keySet()) {
             Map<String, String> addreses = new HashMap<String, String>();
             addreses.put(address, addressMap.get(address));
             result.putAll(outboundCallWithMap(addreses, null, null, senderName, subject, url, adapterType, adapterID,
-                                              accountId, bearerToken));
+                accountId, bearerToken, accountType));
         }
         return result;
     }
@@ -197,8 +195,8 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
         @Name("url") String url, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
-        @Name("bearerToken") String bearerToken, @Name("callProperties") @Optional Map<String, String> callProperties)
-        throws Exception {
+        @Name("bearerToken") String bearerToken, @Name("callProperties") @Optional Map<String, String> callProperties,
+        @Name("accountType") AccountType accountType) throws Exception {
 
         if (callProperties != null && !callProperties.isEmpty()) {
             log.info("outbound call with properties: " + ServerUtils.serializeWithoutException(callProperties));
@@ -211,7 +209,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             }
         }
         return outboundCallWithMap(addressMap, addressCcMap, addressBccMap, senderName, subject, url, adapterType,
-                                   adapterID, accountId, bearerToken);
+            adapterID, accountId, bearerToken, accountType);
     }
 
     /**
@@ -247,6 +245,9 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      *            communication
      * @param bearerToken
      *            Secure token used for verifying this communication request
+     * @param accountType
+     *            Indicates if the account triggering the call is E.g. trial or
+     *            not. Used to add trial messages etc
      * @return
      * @throws JSONRPCException
      */
@@ -256,7 +257,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
         @Name("url") String dialogIdOrUrl, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
-        @Name("bearerToken") String bearerToken) throws Exception {
+        @Name("bearerToken") String bearerToken, @Name("accountType") AccountType accountType) throws Exception {
 
         log.info("outbound call with map");
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
@@ -284,10 +285,11 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         else {
             // If no adapterId is given. Load the first one of the type.
             // TODO: Add default field to adapter (to be able to load default adapter)
-            adapterType = adapterType != null && AdapterType.getByValue(adapterType) != null ? AdapterType.getByValue(adapterType).getName() : adapterType;
-            final List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount( accountId, adapterType, null );
-            if(adapterConfigs.size() > 0) {
-                config = adapterConfigs.get( 0 );
+            adapterType = adapterType != null && AdapterType.getByValue(adapterType) != null ? AdapterType.getByValue(
+                adapterType).getName() : adapterType;
+            final List<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(accountId, adapterType, null);
+            if (adapterConfigs.size() > 0) {
+                config = adapterConfigs.get(0);
             }
         }
         if (config != null) {
@@ -296,12 +298,12 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             }
 
             log.info(String.format("Config found: %s of Type: %s with address: %s", config.getConfigId(),
-                                   config.getAdapterType(), config.getMyAddress()));
+                config.getAdapterType(), config.getMyAddress()));
 
             adapterType = adapterType != null ? adapterType : config.getAdapterType();
             //log all addresses 
             log.info(String.format("recepients of question at: %s are: %s", dialogIdOrUrl,
-                                   ServerUtils.serialize(addressMap)));
+                ServerUtils.serialize(addressMap)));
             log.info(String.format("cc recepients are: %s", ServerUtils.serialize(addressCcMap)));
             log.info(String.format("bcc recepients are: %s", ServerUtils.serialize(addressBccMap)));
 
@@ -323,7 +325,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
 
             if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_XMPP)) {
                 resultSessionMap = new XMPPServlet().startDialog(addressMap, addressCcMap, addressBccMap,
-                                                                 dialogIdOrUrl, senderName, subject, config, accountId);
+                    dialogIdOrUrl, senderName, subject, config, accountId, accountType);
             }
             else if (config.isCallAdapter() && provider != null) {
                 switch (provider) {
@@ -331,7 +333,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         // fetch the first address in the map
                         if (!addressMap.keySet().isEmpty()) {
                             resultSessionMap = VoiceXMLRESTProxy.dial(addressMap, dialogIdOrUrl, config, accountId,
-                                                                      bearerToken);
+                                bearerToken, accountType);
                         }
                         else {
                             throw new JSONRPCException("Address should not be empty to setup a call");
@@ -342,7 +344,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         // fetch the first address in the map
                         if (!addressMap.keySet().isEmpty() && getApplicationId() != null) {
                             resultSessionMap = TwilioAdapter.dial(addressMap, dialogIdOrUrl, config, accountId,
-                                                                  getApplicationId(), bearerToken);
+                                getApplicationId(), bearerToken);
                         }
                         else {
                             throw new JSONRPCException("Address should not be empty to setup a call");
@@ -350,13 +352,14 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         break;
                     }
                     default:
-                        throw new JSONRPCException(String.format("No calling provider found for adapter: %s with id: %s",
-                                                          config.getMyAddress(), config.getConfigId()));
+                        throw new JSONRPCException(String.format(
+                            "No calling provider found for adapter: %s with id: %s", config.getMyAddress(),
+                            config.getConfigId()));
                 }
             }
             else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_EMAIL)) {
                 resultSessionMap = new MailServlet().startDialog(addressMap, addressCcMap, addressBccMap,
-                                                                 dialogIdOrUrl, senderName, subject, config, accountId);
+                    dialogIdOrUrl, senderName, subject, config, accountId, accountType);
             }
             else if (config.isSMSAdapter()) {
 
@@ -364,33 +367,33 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                     switch (provider) {
                         case MB:
                             resultSessionMap = new MBSmsServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
-                                                                              senderName, subject, config, accountId);
+                                senderName, subject, config, accountId, accountType);
                             break;
                         case CM:
                             resultSessionMap = new CMSmsServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
-                                                                              senderName, subject, config, accountId);
+                                senderName, subject, config, accountId, accountType);
                             break;
                         case ROUTE_SMS:
                             resultSessionMap = new RouteSmsServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
-                                                                                 senderName, subject, config, accountId);
+                                senderName, subject, config, accountId, accountType);
                             break;
                         default:
                             throw new Exception(String.format("No calling provider found for adapter: %s with id: %s",
-                                                              config.getMyAddress(), config.getConfigId()));
+                                config.getMyAddress(), config.getConfigId()));
                     }
                 }
                 else {
                     throw new JSONRPCException(String.format("No calling provider found for adapter: %s with id: %s",
-                                                      config.getMyAddress(), config.getConfigId()));
+                        config.getMyAddress(), config.getConfigId()));
                 }
             }
             else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_USSD)) {
                 resultSessionMap = new CLXUSSDServlet().startDialog(addressMap, null, null, dialogIdOrUrl, senderName,
-                                                                    subject, config, accountId);
+                    subject, config, accountId, accountType);
             }
             else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_PUSH)) {
                 resultSessionMap = new NotificareServlet().startDialog(addressMap, null, null, dialogIdOrUrl,
-                                                                       senderName, subject, config, accountId);
+                    senderName, subject, config, accountId, accountType);
             }
             else if (adapterType.equalsIgnoreCase(AdapterAgent.ADAPTER_TYPE_TWITTER)) {
                 HashMap<String, String> formattedTwitterAddresses = new HashMap<String, String>(addressMap.size());
@@ -400,8 +403,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                     formattedTwitterAddresses.put(formattedTwitterAddress, addressMap.get(address));
                 }
                 resultSessionMap = new TwitterServlet().startDialog(formattedTwitterAddresses, null, null,
-                                                                    dialogIdOrUrl, senderName, subject, config,
-                                                                    accountId);
+                    dialogIdOrUrl, senderName, subject, config, accountId, accountType);
             }
             else {
                 throw new JSONRPCException("Unknown type given: either broadsoft or phone or mail:" +
@@ -837,9 +839,9 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                     case "outboundCall":
                         if (dialogDetails.getAddress() != null) {
                             result = outboundCall(dialogDetails.getAddress(), dialogDetails.getSenderName(),
-                                                  dialogDetails.getSubject(), dialogDetails.getUrl(),
-                                                  dialogDetails.getAdapterType(), dialogDetails.getAdapterID(),
-                                                  dialogDetails.getAccountID(), dialogDetails.getBearerToken());
+                                dialogDetails.getSubject(), dialogDetails.getUrl(), dialogDetails.getAdapterType(),
+                                dialogDetails.getAdapterID(), dialogDetails.getAccountID(),
+                                dialogDetails.getBearerToken(), dialogDetails.getAccountType());
                         }
                         else {
                             result.put("Error!. No addresses found", null);
@@ -848,10 +850,10 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                     case "outboundCallWithList":
                         if (dialogDetails.getAddressList() != null && !dialogDetails.getAddressList().isEmpty()) {
                             result = outboundCallWithList(dialogDetails.getAddressList(),
-                                                          dialogDetails.getSenderName(), dialogDetails.getSubject(),
-                                                          dialogDetails.getUrl(), dialogDetails.getAdapterType(),
-                                                          dialogDetails.getAdapterID(), dialogDetails.getAccountID(),
-                                                          dialogDetails.getBearerToken());
+                                dialogDetails.getSenderName(), dialogDetails.getSubject(), dialogDetails.getUrl(),
+                                dialogDetails.getAdapterType(), dialogDetails.getAdapterID(),
+                                dialogDetails.getAccountID(), dialogDetails.getBearerToken(),
+                                dialogDetails.getAccountType());
                         }
                         else {
                             result.put("Error!. No addresses found", null);
@@ -860,12 +862,10 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                     case "outboundSeperateCallWithMap":
                         if (dialogDetails.getAddressMap() != null && !dialogDetails.getAddressMap().isEmpty()) {
                             result = outboundSeperateCallWithMap(dialogDetails.getAddressMap(),
-                                                                 dialogDetails.getSenderName(),
-                                                                 dialogDetails.getSubject(), dialogDetails.getUrl(),
-                                                                 dialogDetails.getAdapterType(),
-                                                                 dialogDetails.getAdapterID(),
-                                                                 dialogDetails.getAccountID(),
-                                                                 dialogDetails.getBearerToken());
+                                dialogDetails.getSenderName(), dialogDetails.getSubject(), dialogDetails.getUrl(),
+                                dialogDetails.getAdapterType(), dialogDetails.getAdapterID(),
+                                dialogDetails.getAccountID(), dialogDetails.getBearerToken(),
+                                dialogDetails.getAccountType());
                         }
                         else {
                             result.put("Error!. No addresses found", null);
@@ -873,19 +873,17 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         break;
                     case "outboundCallWithProperties":
                         result = outboundCallWithProperties(dialogDetails.getAddressMap(),
-                                                            dialogDetails.getAddressCcMap(),
-                                                            dialogDetails.getAddressBccMap(),
-                                                            dialogDetails.getSenderName(), dialogDetails.getSubject(),
-                                                            dialogDetails.getUrl(), dialogDetails.getAdapterType(),
-                                                            dialogDetails.getAdapterID(), dialogDetails.getAccountID(),
-                                                            dialogDetails.getBearerToken(),
-                                                            dialogDetails.getCallProperties());
+                            dialogDetails.getAddressCcMap(), dialogDetails.getAddressBccMap(),
+                            dialogDetails.getSenderName(), dialogDetails.getSubject(), dialogDetails.getUrl(),
+                            dialogDetails.getAdapterType(), dialogDetails.getAdapterID(), dialogDetails.getAccountID(),
+                            dialogDetails.getBearerToken(), dialogDetails.getCallProperties(),
+                            dialogDetails.getAccountType());
                     case "outboundCallWithMap":
                         result = outboundCallWithMap(dialogDetails.getAddressMap(), dialogDetails.getAddressCcMap(),
-                                                     dialogDetails.getAddressBccMap(), dialogDetails.getSenderName(),
-                                                     dialogDetails.getSubject(), dialogDetails.getUrl(),
-                                                     dialogDetails.getAdapterType(), dialogDetails.getAdapterID(),
-                                                     dialogDetails.getAccountID(), dialogDetails.getBearerToken());
+                            dialogDetails.getAddressBccMap(), dialogDetails.getSenderName(),
+                            dialogDetails.getSubject(), dialogDetails.getUrl(), dialogDetails.getAdapterType(),
+                            dialogDetails.getAdapterID(), dialogDetails.getAccountID(), dialogDetails.getBearerToken(),
+                            dialogDetails.getAccountType());
                         break;
                     default:
                         result.put("Error", INVALID_METHOD_TYPE_MESSAGE + dialogMethod);

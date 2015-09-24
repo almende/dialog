@@ -24,7 +24,7 @@ public class MailServletTest extends TestFramework
     public void MailServletReceiveHelpMessageTest() throws Exception
     {
         //create mail adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_PUBLIC_KEY,
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_EMAIL, null, TEST_ACCOUNT_ID,
                                                           localAddressMail, localAddressMail, "");
         //create session
         Session.createSession( adapterConfig, remoteAddressEmail );

@@ -235,23 +235,46 @@ public class TwilioAdapter {
         return result;
     }
 
+    /**
+     * Handles incoming new calls.
+     * @param CallSid
+     * @param AccountSid
+     * @param localID
+     * @param remoteID
+     * @param direction
+     * @param forwardedFrom
+     * @param callStatus
+     * @param isTest
+     * @return Twilio response
+     */
     @Path("new")
     @GET
     @Produces("application/xml")
     public Response getNewDialog(@QueryParam("CallSid") String CallSid, @QueryParam("AccountSid") String AccountSid,
-        @QueryParam("From") String localID, @QueryParam("To") String remoteID,
-        @QueryParam("Direction") String direction, @QueryParam("ForwardedFrom") String forwardedFrom,
-        @QueryParam("isTest") Boolean isTest) {
+        @QueryParam("From") String localID, @QueryParam("To") String remoteID, @QueryParam("Direction") String direction, 
+        @QueryParam("ForwardedFrom") String forwardedFrom, @QueryParam("CallStatus") String callStatus, @QueryParam("isTest") Boolean isTest) {
 
-        return getNewDialogPost(CallSid, AccountSid, localID, remoteID, direction, forwardedFrom, isTest);
+        return getNewDialogPost(CallSid, AccountSid, localID, remoteID, direction, forwardedFrom, callStatus, isTest);
     }
 	
+    /**
+     *  Handles incoming new calls.
+     * @param CallSid
+     * @param AccountSid
+     * @param localID
+     * @param remoteID
+     * @param direction
+     * @param forwardedFrom
+     * @param callStatus
+     * @param isTest
+     * @return Twilio response
+     */
     @Path("new")
     @POST
     @Produces("application/xml")
     public Response getNewDialogPost(@FormParam("CallSid") String CallSid, @FormParam("AccountSid") String AccountSid,
         @FormParam("From") String localID, @FormParam("To") String remoteID, @FormParam("Direction") String direction,
-        @FormParam("ForwardedFrom") String forwardedFrom, @QueryParam("isTest") Boolean isTest) {
+        @FormParam("ForwardedFrom") String forwardedFrom, @FormParam("CallStatus") String callStatus, @QueryParam("isTest") Boolean isTest) {
 
         log.info("call started:" + direction + ":" + remoteID + ":" + localID);
         localID = checkAnonymousCallerId(localID);
@@ -264,34 +287,42 @@ public class TwilioAdapter {
         Session session = Session.getSessionByExternalKey(CallSid);
         AdapterConfig config = null;
         String formattedRemoteId = null;
-        //swap the remote and the local numbers if its inbound
+        
         DDRRecord ddrRecord = null;
         
         if (direction.equals("inbound")) {
+            //swap the remote and the local numbers if its inbound
             String tmpLocalId = new String(localID);
             localID = new String(remoteID);
             remoteID = tmpLocalId;
+            
             config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
-            //create a session for incoming only. Flush any existing one
-            if (session != null) {
-                session.drop();
-            }
+            
             formattedRemoteId = PhoneNumberUtils.formatNumber(remoteID, null);
-            session = Session.createSession(config, formattedRemoteId);
-            session.setAccountId(config.getOwner());
-            session.setExternalSession(CallSid);
-            if (isTest != null && Boolean.TRUE.equals(isTest)) {
-                session.setAsTestSession();
-            }
-            session.storeSession();
-            url = config.getURLForInboundScenario(session);
-            try {
-                ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, config.getOwner(),
-                                                                            formattedRemoteId, url, session);
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-            }
+            
+            //create a session for incoming only. If the session already exists it is a failover call by twilio.
+            if (session == null) {
+                session = Session.createSession(config, formattedRemoteId);
+                
+                session.setAccountId(config.getOwner());
+                session.setExternalSession(CallSid);
+                if (isTest != null && Boolean.TRUE.equals(isTest)) {
+                    session.setAsTestSession();
+                }
+                session.storeSession();
+                url = config.getURLForInboundScenario(session);
+                try {
+                    ddrRecord = DDRUtils.createDDRRecordOnIncomingCommunication(config, config.getOwner(),
+                                                                                formattedRemoteId, url, session);
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                
+                // when it's a failover call also reuse the ddr record.
+                ddrRecord = session.getDDRRecord();
+            } 
         }
         else {
             direction = "outbound";
@@ -334,6 +365,7 @@ public class TwilioAdapter {
                 //If not load a default error message
                 question = Question.getError(config.getPreferred_language());
             }
+            session.setCallStatus( callStatus );
             session.setQuestion(question);
             session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
             session.storeSession();
@@ -382,7 +414,8 @@ public class TwilioAdapter {
         @QueryParam("From") String localID, @QueryParam("To") String remoteID,
         @QueryParam("Direction") String direction, @QueryParam("RecordingUrl") String recordingUrl,
         @QueryParam("DialCallStatus") String dialCallStatus, @QueryParam("DialCallSid") String dialCallSid,
-        @QueryParam("CallSid") String callSid, @QueryParam("ConferenceSid") String conferenceSid) {
+        @QueryParam("CallSid") String callSid, @QueryParam("ConferenceSid") String conferenceSid, 
+        @QueryParam("CallStatus") String callStatus) {
 
         TwiMLResponse twiml = new TwiMLResponse();
         localID = checkAnonymousCallerId(localID);
@@ -409,6 +442,9 @@ public class TwilioAdapter {
                 answer_input = storeAudioFile(recordingUrl.replace(".wav", "") + ".wav", session.getAccountId(),
                                               session.getDdrRecordId(), session.getAdapterID());
             }
+            
+            // update call status
+            session.setCallStatus( callStatus );
 
             //add a tag in the session saying its picked up
             session.setCallPickedUpStatus(true);
@@ -455,13 +491,18 @@ public class TwilioAdapter {
 
                 //if the linked child session is found and not pickedup. trigger the next question
                 if (callIgnored.contains(dialCallStatus) && session.getQuestion() != null) {
+                    
+                    Map<String, String> extras = session.getPublicExtras();
+                    if(session.getCallStatus() != null) {
+                        extras.put( "callStatus", session.getCallStatus() );
+                    }
 
                     session.addExtras("requester", session.getLocalAddress());
                     Question noAnswerQuestion = session.getQuestion().event("timeout", "Call rejected",
-                                                                            session.getPublicExtras(), remoteID,
+                                                                            extras, remoteID,
                                                                             session);
                     return handleQuestion(noAnswerQuestion, session.getAdapterConfig(), remoteID, session,
-                                          session.getPublicExtras());
+                                          extras);
                 }
             }
 
@@ -523,7 +564,7 @@ public class TwilioAdapter {
     @GET
     @Produces("application/xml")
     public Response timeout(@QueryParam("From") String localID, @QueryParam("To") String remoteID,
-        @QueryParam("Direction") String direction, @QueryParam("CallSid") String callSid) throws Exception {
+        @QueryParam("Direction") String direction, @QueryParam("CallSid") String callSid, @QueryParam("CallStatus") String callStatus) throws Exception {
 
         localID = checkAnonymousCallerId(localID);
 
@@ -535,6 +576,10 @@ public class TwilioAdapter {
         }
         Session session = Session.getSessionByExternalKey(callSid);
         if (session != null) {
+            
+            // update call status
+            session.setCallStatus( callStatus );
+            
             Question question = session.getQuestion();
             String responder = session.getRemoteAddress();
             if (session.killed) {
@@ -543,6 +588,9 @@ public class TwilioAdapter {
             HashMap<String, Object> extras = new HashMap<String, Object>();
             extras.put("sessionKey", session.getKey());
             extras.put("requester", session.getLocalAddress());
+            if(session.getCallStatus()!=null) {
+                extras.put( "callStatus", session.getCallStatus() );
+            }
             question = question.event("timeout", "No answer received", extras, responder, session);
             session.setQuestion(question);
             if (question != null) {
@@ -795,6 +843,9 @@ public class TwilioAdapter {
                 timeMap.put("sessionKey", session.getKey());
                 if(session.getAllExtras() != null && !session.getAllExtras().isEmpty()) {
                     timeMap.putAll(session.getPublicExtras());
+                }
+                if(session.getCallStatus() != null) {
+                    timeMap.put( "callStatus", session.getCallStatus() );
                 }
                 Response hangupResponse = handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(),
                                                          session, null);

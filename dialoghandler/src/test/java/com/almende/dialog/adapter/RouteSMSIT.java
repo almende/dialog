@@ -49,7 +49,7 @@ public class RouteSMSIT extends TestFramework {
         String senderName = "TestUser";
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS,
-                                                          TEST_PUBLIC_KEY, "0612345678", "0612345678", "");
+                                                          TEST_ACCOUNT_ID, "0612345678", "0612345678", "");
         adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
         adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
         adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
@@ -81,7 +81,7 @@ public class RouteSMSIT extends TestFramework {
 
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS,
-                                                          TEST_PUBLIC_KEY, "0612345678", "0612345678", "");
+                                                          TEST_ACCOUNT_ID, "0612345678", "0612345678", "");
         adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
         adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
         adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
@@ -108,7 +108,7 @@ public class RouteSMSIT extends TestFramework {
         }
 
         //fetch the sms ddr records
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         Assert.assertThat(allSessions.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
@@ -136,7 +136,7 @@ public class RouteSMSIT extends TestFramework {
 
         //create SMS adapter
         AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS,
-                                                          TEST_PUBLIC_KEY, "0612345678", "0612345678", "");
+                                                          TEST_ACCOUNT_ID, "0612345678", "0612345678", "");
         adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
         adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
         adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
@@ -165,7 +165,7 @@ public class RouteSMSIT extends TestFramework {
         Assert.assertThat(allSessions.size(), Matchers.is(0));
 
         //fetch the sms ddr records
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
         Assert.assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
@@ -222,11 +222,11 @@ public class RouteSMSIT extends TestFramework {
         DialogAgent dialogAgent = new DialogAgent();
         if (addressNameMap.size() > 1) {
             dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                                            adapterConfig.getConfigId(), accountId, "");
+                                            adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
         }
         else {
             dialogAgent.outboundCall(addressNameMap.keySet().iterator().next(), senderName, subject, url, null,
-                                     adapterConfig.getConfigId(), accountId, "");
+                                     adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
         }
     }
 

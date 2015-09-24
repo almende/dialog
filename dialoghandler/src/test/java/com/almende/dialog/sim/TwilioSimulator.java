@@ -44,6 +44,11 @@ public class TwilioSimulator {
         return this.doCall(true);
     }
     
+    public String timeout() {
+        
+        return this.doCall(true);
+    }
+    
     public String nextQuestion(String digits) {
         this.digits = digits;
         

@@ -817,13 +817,11 @@ abstract public class TextServlet extends HttpServlet {
             ddrRecord = ddrRecord.reload();
             ddrRecord.setQuantity(count);
             ddrRecord.createOrUpdate();
-        }
 
-        //push the cost to hte queue
-        Double totalCost = DDRUtils.calculateDDRCost(ddrRecord, true);
-        DDRUtils.publishDDREntryToQueue(accountId, totalCost);
-        //attach cost to ddr is prepaid type or trial account
-        if (ddrRecord != null && !AccountType.POST_PAID.equals(ddrRecord.getAccountType())) {
+            //push the cost to hte queue
+            Double totalCost = DDRUtils.calculateDDRCost(ddrRecord, true);
+            DDRUtils.publishDDREntryToQueue(accountId, totalCost);
+            //attach cost to ddr in all cases. Change as on ddr processing taking time
             ddrRecord.setTotalCost(totalCost);
             ddrRecord.createOrUpdate();
         }
@@ -905,8 +903,8 @@ abstract public class TextServlet extends HttpServlet {
             if (newInboundSession != null) {
                 DDRUtils.publishDDREntryToQueue(newInboundSession.getAccountId(), totalCost);
             }
-            //attach cost to ddr is prepaid type or trial account
-            if (ddrRecord != null && !AccountType.POST_PAID.equals(ddrRecord.getAccountType())) {
+            //attach cost to ddr in all cases. Change as on ddr processing taking time
+            if (ddrRecord != null) {
                 ddrRecord.setTotalCost(totalCost);
                 ddrRecord.createOrUpdate();
             }

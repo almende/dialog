@@ -53,6 +53,7 @@ public class DDRRecordAgentIT extends TestFramework {
     private static final String ADAPTER_ID_KEY = "ADAPTER_ID";
     private static final String ACCOUNT_ID_KEY = "ACCOUNT_ID";
     private static final String TEST_ACCOUNTID = UUID.randomUUID().toString();
+    private static final String TEST_FROM_EMAIL_ADDRESS = "test@askfastmail.com";
 
     /**
      * check if a ddr created for a PRE_PAID accounts stays the same. cost is
@@ -75,7 +76,7 @@ public class DDRRecordAgentIT extends TestFramework {
         int assertCount = 0;
         for (DDRRecord ddrRecord : allDdrRecords) {
             if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(MailServlet.DEFAULT_SENDER_EMAIL));
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(TEST_FROM_EMAIL_ADDRESS));
                 assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
                 assertThat(ddrRecord.getStatusForAddress(remoteAddressEmail), Matchers.is(CommunicationStatus.SENT));
                 assertCount++;
@@ -105,7 +106,68 @@ public class DDRRecordAgentIT extends TestFramework {
             if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
                 ddrRecord.setShouldGenerateCosts(true);
                 assertThat(ddrRecord.getTotalCost(), Matchers.is(0.5));
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(MailServlet.DEFAULT_SENDER_EMAIL));
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(TEST_FROM_EMAIL_ADDRESS));
+                assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
+                assertThat(ddrRecord.getStatusForAddress(remoteAddressEmail), Matchers.is(CommunicationStatus.SENT));
+                assertCount++;
+            }
+            else if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_ADAPTER_PRICE_KEY))) {
+                assertCount++;
+            }
+        }
+        assertThat(assertCount, Matchers.is(2));
+    }
+    
+    /**
+     * check if a ddr created for a POST_PAID account gets updated with a newer ddrPrice
+     * @throws Exception
+     */
+    @Test
+    public void DDRUpdatesForPostPaidAccountTest() throws Exception {
+
+        Map<String, String> addressNameMap = new HashMap<String, String>();
+        addressNameMap.put(remoteAddressEmail, "Test");
+        Map<String, String> resultMap = createDDRPricesAndAdapterAndSendOutBound(UnitType.PART, AdapterType.EMAIL,
+            "test", addressNameMap, false, AccountType.POST_PAID);
+
+        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId(resultMap.get(ACCOUNT_ID_KEY));
+        assertThat(allDdrRecords.size(), Matchers.is(2));
+
+        int assertCount = 0;
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(TEST_FROM_EMAIL_ADDRESS));
+                assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
+                assertThat(ddrRecord.getStatusForAddress(remoteAddressEmail), Matchers.is(CommunicationStatus.SENT));
+                assertThat(ddrRecord.getTotalCost(), Matchers.is(0.5));
+                assertCount++;
+            }
+            else if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_ADAPTER_PRICE_KEY))) {
+                assertCount++;
+            }
+        }
+        assertThat(assertCount, Matchers.is(2));
+        //create a new DDRPrice in the same time range as the one existing.
+        List<DDRPrice> ddrPrices = DDRPrice.getDDRPrices(resultMap.get(DDR_COMMUNICATION_PRICE_KEY), null, null, null,
+            null);
+        DDRPrice sameDateRangeDDRPrice = getTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.75,
+            "new ddrPrice in the same time range", UnitType.PART, AdapterType.EMAIL, null);
+        assertThat(ddrPrices.size(), Matchers.is(1));
+        //update sameDateRange ddr price with above timestamp
+        sameDateRangeDDRPrice.setStartTime(ddrPrices.iterator().next().getStartTime());
+        sameDateRangeDDRPrice.setEndTime(ddrPrices.iterator().next().getEndTime());
+        sameDateRangeDDRPrice.createOrUpdate();
+
+        //fetch the ddrRecords again!
+        allDdrRecords = DDRRecord.getDDRRecords(resultMap.get(ACCOUNT_ID_KEY), null, null, null, null, null, null,
+            null, null, null, null);
+        assertThat(allDdrRecords.size(), Matchers.is(2));
+        assertCount = 0;
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
+                ddrRecord.setShouldGenerateCosts(true);
+                assertThat(ddrRecord.getTotalCost(), Matchers.is(0.75));
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(TEST_FROM_EMAIL_ADDRESS));
                 assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
                 assertThat(ddrRecord.getStatusForAddress(remoteAddressEmail), Matchers.is(CommunicationStatus.SENT));
                 assertCount++;
@@ -140,7 +202,7 @@ public class DDRRecordAgentIT extends TestFramework {
         int assertCount = 0;
         for (DDRRecord ddrRecord : allDdrRecords) {
             if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(MailServlet.DEFAULT_SENDER_EMAIL));
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(TEST_FROM_EMAIL_ADDRESS));
                 assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
                 assertThat(ddrRecord.getStatusForAddress(remoteAddressEmail), Matchers.is(CommunicationStatus.SENT));
                 ddrRecord.setShouldGenerateCosts(true);
@@ -212,7 +274,7 @@ public class DDRRecordAgentIT extends TestFramework {
         int assertCount = 0;
         for (DDRRecord ddrRecord : allDdrRecords) {
             if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(MailServlet.DEFAULT_SENDER_EMAIL));
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(TEST_FROM_EMAIL_ADDRESS));
                 assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
                 assertThat(ddrRecord.getStatusForAddress(remoteAddressEmail), Matchers.is(CommunicationStatus.SENT));
                 if (type.equals(AccountType.POST_PAID)) {
@@ -428,7 +490,7 @@ public class DDRRecordAgentIT extends TestFramework {
             assertThat(ddrRecord.getAdapterId(), Matchers.is(resultMap.get(ADAPTER_ID_KEY)));
             if (ddrRecord.getDdrTypeId().equals(resultMap.get(DDR_COMMUNICATION_PRICE_KEY))) {
                 assertThat(ddrCost, Matchers.is(0.5));
-                assertThat(ddrRecord.getFromAddress(), Matchers.is(MailServlet.DEFAULT_SENDER_EMAIL));
+                assertThat(ddrRecord.getFromAddress(), Matchers.is(TEST_FROM_EMAIL_ADDRESS));
                 assertThat(ddrRecord.getToAddress(), Matchers.is(addressNameMap));
                 assertThat(ddrRecord.getStatusForAddress(remoteAddressEmail), Matchers.is(CommunicationStatus.SENT));
                 assertThat(ddrRecord.getAdditionalInfo().get(Session.SESSION_KEY), Matchers.notNullValue());
@@ -608,7 +670,7 @@ public class DDRRecordAgentIT extends TestFramework {
                     adapterConfig, adapterConfig.getOwner(), type);
                 break;
             case EMAIL:
-                adapterId = adapterAgent.createEmailAdapter(MailServlet.DEFAULT_SENDER_EMAIL,
+                adapterId = adapterAgent.createEmailAdapter(TEST_FROM_EMAIL_ADDRESS,
                     MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "Test", null, null, null, null, null, null,
                     TEST_ACCOUNTID, null, type.toString(), null);
                 adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
@@ -618,7 +680,7 @@ public class DDRRecordAgentIT extends TestFramework {
                     adapterConfig, adapterConfig.getOwner(), type);
                 break;
             case XMPP:
-                adapterId = adapterAgent.createXMPPAdapter(MailServlet.DEFAULT_SENDER_EMAIL,
+                adapterId = adapterAgent.createXMPPAdapter(TEST_FROM_EMAIL_ADDRESS,
                     MailServlet.DEFAULT_SENDER_EMAIL_PASSWORD, "test", null, null, null, null, TEST_ACCOUNTID, null,
                     type.toString(), null);
                 adapterConfig = AdapterConfig.getAdapterConfig(adapterId);

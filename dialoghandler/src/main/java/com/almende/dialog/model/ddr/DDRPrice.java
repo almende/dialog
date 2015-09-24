@@ -9,6 +9,7 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore.RootFindCommand;
 import com.almende.util.twigmongo.annotations.Id;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.utils.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonCreator;
 
 /**
@@ -46,15 +47,17 @@ public class DDRPrice
     private Integer staffleEnd;
     //used incase this price model has some specific charecteristics. e.g. price for landline numbers for a country
     private String keyword;
-    
+    private Long creationTime;
+
     /**
      * create (if missing) or updates this document instance
      */
-    public void createOrUpdate()
-    {
+    public void createOrUpdate() {
+
         id = id != null && !id.isEmpty() ? id : ObjectId.get().toStringMongod();
+        creationTime = creationTime != null ? creationTime : TimeUtils.getServerCurrentTimeInMillis();
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        datastore.storeOrUpdate( this );
+        datastore.storeOrUpdate(this);
     }
     
     /**
@@ -298,5 +301,15 @@ public class DDRPrice
     public void setKeyword( String keyword )
     {
         this.keyword = keyword;
+    }
+    
+    public Long getCreationTime() {
+        
+        return creationTime;
+    }
+    
+    public void setCreationTime(Long creationTime) {
+    
+        this.creationTime = creationTime;
     }
 }

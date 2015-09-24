@@ -552,8 +552,10 @@ public class DDRRecord
      */
     public Double getTotalCost() throws Exception {
 
-        //generate the costs at runtime, only when requested and when the accountTYpe is not prepaid or trial. These accounts
-        //have fixed costs
+        /**
+         * regenerate the costs at runtime, only when requested and when the
+         * accountTYpe is not prepaid or trial. These accounts have fixed costs
+         */
         if (Boolean.TRUE.equals(shouldGenerateCosts) &&
             (accountType == null || accountType.equals(AccountType.POST_PAID))) {
 

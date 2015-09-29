@@ -135,7 +135,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
         @Name("url") String url, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountID,
-        @Name("bearerToken") String bearerToken, @Name("accountType") AccountType accountType) throws Exception {
+        @Name("bearerToken") String bearerToken, @Name("accountType") @Optional AccountType accountType) throws Exception {
 
         return outboundCallWithList(Arrays.asList(address), senderName, subject, url, adapterType, adapterID,
             accountID, bearerToken, accountType);
@@ -152,7 +152,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
         @Name("url") String url, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountID,
-        @Name("bearerToken") String bearerToken, @Name("accountType") AccountType accountType) throws Exception {
+        @Name("bearerToken") String bearerToken, @Name("accountType") @Optional AccountType accountType) throws Exception {
 
         Map<String, String> addressNameMap = ServerUtils.putCollectionAsKey(addressList, "");
         return outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, adapterType, adapterID,
@@ -168,7 +168,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
         @Name("url") String url, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
-        @Name("bearerToken") String bearerToken, @Name("accountType") AccountType accountType) throws Exception {
+        @Name("bearerToken") String bearerToken, @Name("accountType") @Optional AccountType accountType) throws Exception {
 
         HashMap<String, String> result = new HashMap<String, String>();
         for (String address : addressMap.keySet()) {
@@ -196,7 +196,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("url") String url, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
         @Name("bearerToken") String bearerToken, @Name("callProperties") @Optional Map<String, String> callProperties,
-        @Name("accountType") AccountType accountType) throws Exception {
+        @Name("accountType") @Optional AccountType accountType) throws Exception {
 
         if (callProperties != null && !callProperties.isEmpty()) {
             log.info("outbound call with properties: " + ServerUtils.serializeWithoutException(callProperties));
@@ -257,7 +257,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         @Name("senderName") @Optional String senderName, @Name("subject") @Optional String subject,
         @Name("url") String dialogIdOrUrl, @Name("adapterType") @Optional String adapterType,
         @Name("adapterID") @Optional String adapterID, @Name("accountID") String accountId,
-        @Name("bearerToken") String bearerToken, @Name("accountType") AccountType accountType) throws Exception {
+        @Name("bearerToken") String bearerToken, @Name("accountType") @Optional AccountType accountType) throws Exception {
 
         log.info("outbound call with map");
         HashMap<String, String> resultSessionMap = new HashMap<String, String>();
@@ -296,6 +296,8 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
             if (AdapterConfig.checkIfAdapterMatchesForAccountId(Arrays.asList(accountId), config, false) == null) {
                 throw new JSONRPCException("You are not allowed to use this adapter!");
             }
+            
+            accountType = (accountType==null ? config.getAccountType() : accountType); 
 
             log.info(String.format("Config found: %s of Type: %s with address: %s", config.getConfigId(),
                 config.getAdapterType(), config.getMyAddress()));

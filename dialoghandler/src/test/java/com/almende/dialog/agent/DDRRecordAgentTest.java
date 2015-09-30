@@ -3,13 +3,14 @@ package com.almende.dialog.agent;
 
 
 import static org.junit.Assert.assertThat;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
+import org.junit.Assert;
 import org.junit.Test;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -28,7 +29,6 @@ public class DDRRecordAgentTest extends TestFramework
 {
     DDRRecordAgent ddrRecordAgent = new DDRRecordAgent();
     AdapterAgent adapterAgent = new AdapterAgent();
-    private static final String TEST_ACCOUNTID = UUID.randomUUID().toString();
 
     /**
      * test if there cant be two DDRTypes with the same category possible to
@@ -71,9 +71,9 @@ public class DDRRecordAgentTest extends TestFramework
             AdapterType.EMAIL, null );
         assertThat( ddrPrice.getDdrTypeId(), Matchers.notNullValue() );
         String createAdapter = adapterAgent.createEmailAdapter("test@test.com", "test", null, null, null, null, null,
-                                                               null, null, TEST_ACCOUNTID, null, null, null);
+                                                               null, null, TEST_ACCOUNT_ID, null, null, null);
         //check if a ddr record is created
-        Object ddrRecords = ddrRecordAgent.getDDRRecords(TEST_ACCOUNTID, null, null, null, null, null, null, null,
+        Object ddrRecords = ddrRecordAgent.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                          null, null, null, null, null);
         TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
         {
@@ -81,9 +81,45 @@ public class DDRRecordAgentTest extends TestFramework
         Collection<DDRRecord> allDdrRecords = typesInjector.inject( ddrRecords );
         assertThat( allDdrRecords.size(), Matchers.is( 1 ) );
         DDRRecord ddrRecord = allDdrRecords.iterator().next();
-        assertThat( ddrRecord.getAccountId(), Matchers.is( TEST_ACCOUNTID ) );
+        assertThat( ddrRecord.getAccountId(), Matchers.is( TEST_ACCOUNT_ID ) );
         assertThat( ddrRecord.getAdapterId(), Matchers.is( createAdapter ) );
         assertThat( DDRUtils.calculateDDRCost( ddrRecord ), Matchers.is( 10.0 ) );
+    }
+    
+    /**
+     * check if purchasing an adapter will charge the account
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void ddrRecursiveFetchTest() throws Exception {
+
+        String adapterId = adapterAgent.createEmailAdapter("test@test.com", "test", null, null, null, null, null,
+            null, null, TEST_ACCOUNT_ID, null, null, null);
+        AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
+        
+        //create a test ddr price
+        DDRPrice ddrPrice = getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 10.0, "Test", UnitType.PART,
+            AdapterType.EMAIL, null);
+        assertThat(ddrPrice.getDdrTypeId(), Matchers.notNullValue());
+        
+        //create dummy 5 ddrRecords
+        for (int count = 0; count < 15; count++) {
+            DDRRecord ddrRecord = new DDRRecord(ddrPrice.getDdrTypeId(), adapterConfig, TEST_ACCOUNT_ID, 1);
+            ddrRecord.createOrUpdate();
+        }
+        
+        //fetch the 5 records in batches of 4
+        Object ddrRecords = ddrRecordAgent.getDDRRecordsRecursively(TEST_ACCOUNT_ID, null, null, null, null, null,
+            TimeUtils.getPreviousMonthEndTimestamp(), TimeUtils.getServerCurrentTimeInMillis(), null, null, 4, true,
+            true);
+        
+        TypeUtil<ArrayList<DDRRecord>> typesInjector = new TypeUtil<ArrayList<DDRRecord>>() {
+        };
+        ArrayList<DDRRecord> allDdrRecords = typesInjector.inject(ddrRecords);
+        assertThat(allDdrRecords.size(), Matchers.is(15));
+        //test if the records are sorted in decending order of startTimestamp
+        Assert.assertTrue(allDdrRecords.get(0).getStart() > allDdrRecords.get(14).getStart());
     }
 
     /**
@@ -121,7 +157,7 @@ public class DDRRecordAgentTest extends TestFramework
         DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
         //create an adapter
         getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 0.5, "Test", UnitType.PART, null, null);
-        String adapterId = adapterAgent.createMBAdapter( "TEST", null, "", "", null, TEST_ACCOUNTID, null, null);
+        String adapterId = adapterAgent.createMBAdapter( "TEST", null, "", "", null, TEST_ACCOUNT_ID, null, null);
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
         //create a new price
         getTestDDRPrice(DDRTypeCategory.SUBSCRIPTION_COST, 0.5, "Test", UnitType.HOUR,
@@ -130,7 +166,7 @@ public class DDRRecordAgentTest extends TestFramework
         DDRRecord ddrForSubscription = DDRUtils.createDDRForSubscription(adapterConfig, false);
         assertThat(ddrForSubscription.getStart(), Matchers.greaterThan(serverCurrentTime.minusHours(1).getMillis()));
         //assert two ddrs are created. 1 for adapter creation. 2nd for suscription
-        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( TEST_ACCOUNTID );
+        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( TEST_ACCOUNT_ID );
         assertThat(allDdrRecords.size(), Matchers.is(2));
     }
     
@@ -146,7 +182,7 @@ public class DDRRecordAgentTest extends TestFramework
         DateTime serverCurrentTime = TimeUtils.getServerCurrentTime();
         //create an adapter
         getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 0.5, "Test", UnitType.PART, null, null);
-        String adapterId = adapterAgent.createMBAdapter("TEST", null, "", "", null, TEST_ACCOUNTID, null, null);
+        String adapterId = adapterAgent.createMBAdapter("TEST", null, "", "", null, TEST_ACCOUNT_ID, null, null);
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
         //create a new price
         getTestDDRPrice(DDRTypeCategory.SUBSCRIPTION_COST, 0.5, "Test", UnitType.SECOND,
@@ -160,7 +196,7 @@ public class DDRRecordAgentTest extends TestFramework
         assertThat(ddrForSubscriptionFor2ndSecond.getStart(),
                    Matchers.greaterThan(ddrForSubscription1stSecond.getStart()));
         //assert three ddrs are created. 1 for adapter creation. 2 for suscriptions
-        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( TEST_ACCOUNTID );
+        Collection<DDRRecord> allDdrRecords = getDDRRecordsByAccountId( TEST_ACCOUNT_ID );
         assertThat(allDdrRecords.size(), Matchers.is(3));
     }
     

@@ -151,9 +151,22 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         @Name("limit") @Optional Integer limit, @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
         @Name("shouldIncludeServiceCosts") @Optional Boolean shouldIncludeServiceCosts) throws Exception {
 
-        return getAllDDRRecordsRecursively(accountId, adapterTypes, adapterIds, fromAddress, typeIds, status,
-                                           startTime, endTime, sessionKeys, offset, limit, shouldGenerateCosts,
-                                           shouldIncludeServiceCosts, null);
+        Object ddrRecordObjects = getDDRRecords(accountId, adapterTypes, adapterIds, fromAddress, typeIds, status,
+            startTime, endTime, sessionKeys, offset, limit, shouldGenerateCosts, shouldIncludeServiceCosts);
+        ArrayList<DDRRecord> ddrRecords = JOM.getInstance().convertValue(ddrRecordObjects,
+            new TypeReference<ArrayList<DDRRecord>>() {
+            });
+        if (!ddrRecords.isEmpty() && ddrRecords.get(ddrRecords.size() - 1).getStart() > startTime) {
+
+            ddrRecordObjects = getDDRRecordsRecursively(accountId, adapterTypes, adapterIds, fromAddress, typeIds,
+                status, startTime, ddrRecords.get(ddrRecords.size() - 1).getStart() - 1, sessionKeys, offset, limit,
+                shouldGenerateCosts, shouldIncludeServiceCosts);
+            ArrayList<DDRRecord> ddrRecordsRecursiveFetch = JOM.getInstance().convertValue(ddrRecordObjects,
+                new TypeReference<ArrayList<DDRRecord>>() {
+                });
+            ddrRecords.addAll(ddrRecordsRecursiveFetch);
+        }
+        return ddrRecords;
     }
     
     /**
@@ -694,45 +707,6 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         return result;
     }
 
-    /**
-     * Recursively fetch all the ddrRecords for the given timeframe
-     * @param accountId
-     * @param adapterType
-     * @param adapterIds
-     * @param status
-     * @param startTime
-     *            cannot be null
-     * @param endTime
-     *            cannot be null
-     * @param sessionKeys
-     * @return
-     * @throws Exception
-     */
-    private Object getAllDDRRecordsRecursively(String accountId, Collection<AdapterType> adapterTypes,
-        Collection<String> adapterIds, @Name("fromAddress") @Optional String fromAddress, Collection<String> typeIds,
-        String status, long startTime, long endTime, Collection<String> sessionKeys, Integer offset, Integer limit,
-        Boolean shouldGenerateCosts, Boolean shouldIncludeServiceCosts, ArrayList<DDRRecord> allDdrRecords)
-        throws Exception {
-
-        Object ddrRecordObjects = getDDRRecords(accountId, adapterTypes, adapterIds, null, null, status, startTime,
-                                                endTime, sessionKeys, offset, limit, shouldGenerateCosts,
-                                                shouldIncludeServiceCosts);
-        ArrayList<DDRRecord> ddrRecords = JOM.getInstance().convertValue(ddrRecordObjects,
-                                                                         new TypeReference<ArrayList<DDRRecord>>() {});
-        allDdrRecords = allDdrRecords != null ? allDdrRecords : new ArrayList<DDRRecord>();
-        allDdrRecords.addAll(ddrRecords);
-        if (!ddrRecords.isEmpty() && ddrRecords.get(ddrRecords.size() - 1).getStart() > startTime) {
-
-            return getAllDDRRecordsRecursively(accountId, adapterTypes, adapterIds, fromAddress, typeIds, status,
-                                               startTime, ddrRecords.get(ddrRecords.size() - 1).getStart() - 1,
-                                               sessionKeys, offset, limit, shouldGenerateCosts,
-                                               shouldIncludeServiceCosts, allDdrRecords);
-        }
-        else {
-            return allDdrRecords;
-        }
-    }
-    
     /**
      * Returns the subscription Id that is used to save the task details
      * corresponding to the given ddrPrice

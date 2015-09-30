@@ -304,8 +304,8 @@ public class DDRPrice
     }
     
     public Long getCreationTime() {
-        
-        return creationTime;
+
+        return creationTime == null ? 0L : creationTime;
     }
     
     public void setCreationTime(Long creationTime) {

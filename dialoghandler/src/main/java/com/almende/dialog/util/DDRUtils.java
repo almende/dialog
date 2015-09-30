@@ -1064,7 +1064,7 @@ public class DDRUtils
                         //TODO: should check for other mechanisms that fetch the closet offer to the ddrRecord timestamp
                         //1. Fetch the lastest ddr price by creation time 
                         if (isDDRPriceInTimerange &&
-                            (selectedDDRPrice == null || (selectedDDRPrice != null && ddrPrice.getCreationTime() > selectedDDRPrice.getCreationTime()))) {
+                            (selectedDDRPrice == null || (ddrPrice.getCreationTime() > selectedDDRPrice.getCreationTime()))) {
 
                             selectedDDRPrice = ddrPrice;
                         }

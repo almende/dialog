@@ -410,13 +410,15 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
             config.setMyAddress(externalAddress);
             config.setAddress(externalAddress);
             config.setPreferred_language(preferredLanguage);
-            config.setPublicKey(accountId);
-            config.setOwner(accountId);
             config.setAccessToken(accountSid);
             config.setAccessTokenSecret(authToken);
-            config.addAccount(accountId);
             config.setAnonymous(anonymous);
             config.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO);
+            if(accountId != null) {
+                config.setPublicKey(accountId);
+                config.addAccount(accountId);
+            }
+            
             AdapterConfig newConfig = createAdapter(config, isPrivate);
             return newConfig.getConfigId();
         }
@@ -816,7 +818,6 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         AdapterConfig config = AdapterConfig.getAdapterConfig(adapterId);
         if (config == null)
             throw new Exception("No adapter with this id");
-        config.setStatus(Status.ACTIVE);
         config.addAccount(accountId);
         config.update();
     }
@@ -1133,9 +1134,17 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
                                                 config.getURLForInboundScenario(null), config.getOwner());
             config.getProperties().put(AdapterConfig.DIALOG_ID_KEY, dialog.getId());
         }
+        
+        // Check if the status is set, if not try to determine it based on the ownerId
+        if (config.getStatus() == null) {        
+            if(config.getOwner() == null ) {
+                config.setStatus(Status.INACTIVE);
+            } else {
+                config.setStatus(Status.ACTIVE);
+            }
+        }
 
         config.setAdapterType(config.getAdapterType().toLowerCase());
-        config.setStatus(Status.INACTIVE);
         if (Boolean.TRUE.equals(isPrivate)) {
             config.markAsPrivate();
         }

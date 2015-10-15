@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+15-10-2015, version 1.13.4
+- fix: creation of twilio adapters and adding them to accounts
+
 30-9-2015, version 1.13.3
 - fix: issue with recursive fetch of ddrRecords. Added tests.
 

@@ -730,6 +730,7 @@ public class AdapterConfig {
         //make the first shared account as the owner (if its missing)
         if (accounts != null && !accounts.isEmpty() && (owner == null || owner.trim().isEmpty())) {
             owner = accounts.iterator().next();
+            status = com.askfast.commons.Status.ACTIVE;
         }
         //add the current timestamp of the account added
         getProperties().put(ADAPTER_ATTACH_TIME_KEY + accountId, TimeUtils.getServerCurrentTimeInMillis());

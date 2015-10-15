@@ -18,7 +18,7 @@ public class Settings {
         public static final String BUCKET_NAME = null;
         public static final String AWS_ACCESS_KEY = null;
         public static final String AWS_ACCESS_KEY_SECRET = null;
-        public static final String DIALOG_HANDLER_VERSION = "1.13.0";
+        public static final String DIALOG_HANDLER_VERSION = "1.13.4";
         public static final String DEFAULT_SENDER_EMAIL = "";
         public static final String DEFAULT_SENDER_EMAIL_PASSWORD = "";
         

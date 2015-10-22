@@ -190,7 +190,7 @@ public class CMServletIT extends TestFramework {
                                "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
         assertXMLGeneratedFromOutBoundCall(addressMap, adapterConfig, text, senderName);
         //check the total message parts
-        int countMessageParts = CM.countMessageParts(text);
+        int countMessageParts = CM.countMessageParts(text, addressMap.size());
         //fetch the ddr records
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);
@@ -217,6 +217,7 @@ public class CMServletIT extends TestFramework {
 
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put(remoteAddressVoice, null);
+        addressMap.put("0612345678", null);
         String text = "ç, @, € and courteous withthem? ç, @, € ç, @, € % ç, @, € ç, @, € ç, @, € ç, " +
                       "@, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, " +
                       "@, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, € ç, @, " +
@@ -228,7 +229,7 @@ public class CMServletIT extends TestFramework {
                                "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
         assertXMLGeneratedFromOutBoundCall(addressMap, adapterConfig, text, senderName);
         //check the total message parts
-        int countMessageParts = CM.countMessageParts(text);
+        int countMessageParts = CM.countMessageParts(text, addressMap.size());
         //fetch the ddr records
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
                                                              null, null, null);

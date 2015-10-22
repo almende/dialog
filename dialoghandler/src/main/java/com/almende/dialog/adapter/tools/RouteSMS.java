@@ -115,7 +115,7 @@ public class RouteSMS {
             throw new Exception(validateResult);
         }
         log.info("Result from RouteSMS: " + result);
-        return CM.countMessageParts(message, dcs);
+        return CM.countMessageParts(message, dcs, addressNameMap.size());
     }
 
     /**

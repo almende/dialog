@@ -65,7 +65,7 @@ public class CM {
                 throw new Exception(result);
             log.info("Result from CM: " + result);
         }
-        return countMessageParts(message, dcs);
+        return countMessageParts(message, dcs, addressNameMap.size());
     }
 
     /**
@@ -277,14 +277,14 @@ public class CM {
     /*
      * gets the number of message parts based on the charecters in the message
      */
-    public static int countMessageParts(String message) {
+    public static int countMessageParts(String message, Integer recipientsCount) {
 
         String dcs;
         dcs = getMessageType(message);
-        return countMessageParts(message, dcs);
+        return countMessageParts(message, dcs, recipientsCount);
     }
 	
-    public static int countMessageParts(String message, String type) {
+    public static int countMessageParts(String message, String type, Integer recipientsCount) {
 
         int maxChars = 0;
 
@@ -305,6 +305,6 @@ public class CM {
         }
 
         int count = Math.round((message.toCharArray().length - 1) / maxChars) + 1;
-        return count;
+        return count * recipientsCount;
     }
 }

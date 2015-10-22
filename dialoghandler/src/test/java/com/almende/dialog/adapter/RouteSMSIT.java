@@ -214,6 +214,10 @@ public class RouteSMSIT extends TestFramework {
         Assert.assertThat(smsStatues.iterator().next().getCode(), Matchers.is("1701"));
     }
     
+    /**
+     * Test to check if one session exists per outbound SMS sent in a broadcast scenario.
+     * @throws Exception
+     */
     @Test
     public void checkOneSessionPerNumberIsCreatedTest() throws Exception {
 
@@ -256,6 +260,12 @@ public class RouteSMSIT extends TestFramework {
         Assert.assertThat(outboundDdrRecord.getStatusPerAddress().size(), Matchers.is(2));
     }
     
+    /**
+     * Tests to validate if the sesisons are clears for broadcast after the SMS
+     * delivery notifitions are received
+     * 
+     * @throws Exception
+     */
     @Test
     public void checkSessionsAreClearedAfterDeliveryNotification() throws Exception {
         
@@ -275,6 +285,26 @@ public class RouteSMSIT extends TestFramework {
         //test the dd status
         testDDRStatusAndSessionExistence(remoteAddressVoice, CommunicationStatus.DELIVERED, null, 0);
         testDDRStatusAndSessionExistence("0614765801", CommunicationStatus.DELIVERED, null, 0);
+    }
+    
+    /**
+     * Test to check if the SMS quantity is updated correctly for a long sms for a broadcast scenario
+     * @throws Exception 
+     */
+    @Test
+    public void checkIfQuantityIsUpdatedCorrectlyInDDRRecord() throws Exception {
+        
+        //send a broadcast
+        checkOneSessionPerNumberIsCreatedTest();
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        DDRRecord outboundDdrRecord = null;
+        //made sure only one ddr record exist with outbound charge
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            if (ddrRecord.getDirection().equals("outbound")) {
+                outboundDdrRecord = allDdrRecords.iterator().next();
+            }
+        }
+        Assert.assertThat(outboundDdrRecord.getQuantity(), Matchers.is(2));
     }
     
     /**

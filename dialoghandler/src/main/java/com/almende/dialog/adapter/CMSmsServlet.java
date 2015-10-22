@@ -165,8 +165,7 @@ public class CMSmsServlet extends TextServlet {
 
         //add costs with no.of messages * recipients
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, senderName, toAddress,
-                                                               CM.countMessageParts(message) * toAddress.size(),
-                                                               message, sessionKeyMap);
+            CM.countMessageParts(message, toAddress.size()), message, sessionKeyMap);
     }
 
     /**

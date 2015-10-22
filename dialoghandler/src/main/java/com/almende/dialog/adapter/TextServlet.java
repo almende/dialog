@@ -366,10 +366,6 @@ abstract public class TextServlet extends HttpServlet {
                         }
                         question.setPreferred_language(preferred_language);
                         session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, getProviderType());
-                        //check if session can be killed??
-                        if (res == null || res.question == null) {
-                            session.setKilled(true);
-                        }
                         dialogIdOrUrl = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
                         session.setStartUrl(dialogIdOrUrl);
                         session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, getProviderType());
@@ -379,11 +375,19 @@ abstract public class TextServlet extends HttpServlet {
                             session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, provider.toString());
                         }
                     }
+                    //check if session can be killed??
+                    if (res == null || res.question == null) {
+                        session.setKilled(true);
+                    }
                     session.setAccountId(accountId);
                     session.setDirection("outbound");
                     session.setQuestion(question);
                     session.setLocalName(senderName);
-                    session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
+                    if(ddrRecord != null) {
+                        session.setDdrRecordId(ddrRecord.getId());
+                        ddrRecord.addSessionKey(session.getKey());
+                        ddrRecord.createOrUpdate();
+                    }
                     //update the startTime of the session
                     session.setStartTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
                     //save this session
@@ -393,7 +397,6 @@ abstract public class TextServlet extends HttpServlet {
                     // Add key to the map (for the return)
                     sessionKeyMap.put(formattedAddress, session);
                     result.put(formattedAddress, session.getKey());
-
                 }
                 else {
                     result.put(address, String.format(DialogAgent.INVALID_ADDRESS_MESSAGE, address));
@@ -406,7 +409,9 @@ abstract public class TextServlet extends HttpServlet {
                     log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
                 }
             }
-
+            //add result to extras
+            extras.put(Session.SESSION_KEY, result);
+            
             subject = subject != null && !subject.isEmpty() ? subject : "Message from Ask-Fast";
             //play trial account audio if the account is trial
             if (AccountType.TRIAL.equals(session.getAccountType())) {
@@ -761,8 +766,8 @@ abstract public class TextServlet extends HttpServlet {
     }
 
     /**
-     * First creates a ddr record, broadcasts a message and charges the owner of
-     * the adapter for outbound communication
+     * First creates a ddr record if its missing, broadcasts a message and
+     * charges the accountId passedfor outbound communication
      * 
      * @param message
      *            message to be sent

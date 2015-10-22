@@ -801,7 +801,7 @@ public class TwilioAdapter {
                 }
                 
                 //flush the keys if ddrProcessing was successful
-                if (DDRUtils.stopDDRCosts(session)) {
+                if (session.isTestSession() || DDRUtils.stopDDRCosts(session)) {
                     session.drop();
                 }
                 hangup(session);

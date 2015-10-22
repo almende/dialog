@@ -106,7 +106,10 @@ public class AFHttpClient {
             type = "application/json";
         }
         MediaType mediaType = MediaType.parse(type);
-        RequestBody body = RequestBody.create(mediaType, json);
+        RequestBody body = null;
+        if (json != null) {
+            body = RequestBody.create(mediaType, json);
+        }
         long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
         Request request = getBuilderWIthBasicAuthHeader(url).post(body).build();
         Response response = null;

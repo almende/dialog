@@ -209,8 +209,6 @@ public class RouteSmsServlet extends TextServlet {
             SMSDeliveryStatus routeSMSStatus = SMSDeliveryStatus.fetch(messageId);
             to = PhoneNumberUtils.formatNumber(to, null);
             if (routeSMSStatus != null && to != null) {
-                Session session = Session.getSessionByInternalKey(Session.getInternalSessionKey(routeSMSStatus
-                                                .getAdapterConfig(), to));
                 if (sent != null) {
                     routeSMSStatus.setSentTimeStamp(String.valueOf(TimeUtils
                                                     .getTimeWithFormat(sent, "yyyy-mm-dd hh:mm:ss",
@@ -248,7 +246,13 @@ public class RouteSmsServlet extends TextServlet {
                 //fetch ddr corresponding to this
                 DDRRecord ddrRecord = DDRRecord.getDDRRecord(routeSMSStatus.getDdrRecordId(),
                                                              routeSMSStatus.getAccountId());
+                Session session = null;
                 if (ddrRecord != null) {
+                    String sessionKeyByAddress = ddrRecord.getSessionKeyByAddress(
+                        PhoneNumberUtils.formatNumber(to, null));
+                    if (sessionKeyByAddress != null) {
+                        session = Session.getSession(sessionKeyByAddress);
+                    }
                     if (isErrorInDelivery(statusCode)) {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
                         ddrRecord.addAdditionalInfo(to, "ERROR: " + routeSMSStatus.getDescription());
@@ -268,7 +272,7 @@ public class RouteSmsServlet extends TextServlet {
                     log.warning(String.format("No ddr record found for id: %s", routeSMSStatus.getDdrRecordId()));
                 }
                 //check if session is killed. if so drop it :)
-                if (session != null && session.isKilled() && isSMSsDelivered(ddrRecord)) {
+                if (session != null && session.isKilled() && isSMSsDelivered(to, ddrRecord)) {
                     session.drop();
                 }
                 routeSMSStatus.store();
@@ -285,27 +289,19 @@ public class RouteSmsServlet extends TextServlet {
     }
 
     /**
-     * check if all of the SMSs to toAddresses in the ddrRecord is
-     * {@link CommunicationStatus#DELIVERED}
+     * check if the SMS is delivered to addresse given corresponding to the
+     * ddrRecord is {@link CommunicationStatus#DELIVERED}
      * 
      * @param ddrRecord
      * @return true if ddrRecord is null or all SMS are delivered
      */
-    private boolean isSMSsDelivered(DDRRecord ddrRecord) {
+    private boolean isSMSsDelivered(String address, DDRRecord ddrRecord) {
 
         if (ddrRecord == null) {
             return true;
         }
-        else if (ddrRecord.getStatusPerAddress() != null) {
-            int smsDeliveryCount = 0;
-            for (String toAddress : ddrRecord.getStatusPerAddress().keySet()) {
-                if (ddrRecord.getStatusForAddress(toAddress).equals(CommunicationStatus.DELIVERED)) {
-                    smsDeliveryCount++;
-                }
-            }
-            if (smsDeliveryCount == ddrRecord.getStatusPerAddress().size()) {
-                return true;
-            }
+        else if (ddrRecord.getStatusPerAddress() != null && ddrRecord.getStatusForAddress(address) != null) {
+            return true;
         }
         return false;
     }

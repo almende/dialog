@@ -874,6 +874,27 @@ public class DDRRecord
     }
     
     /**
+     * Based on the address (assumed to be formatted if its a number), fetches
+     * the sessionKey as stored in the {@link DDRRecord#additionalInfo}
+     * 
+     * @param address
+     * @return
+     * @throws Exception
+     */
+    public String getSessionKeyByAddress(String address) throws Exception {
+
+        Map<String, Object> additionalInfo = getAdditionalInfo();
+        if (additionalInfo != null && additionalInfo.get(Session.SESSION_KEY) != null) {
+            Object sessionKeyObject = additionalInfo.get(Session.SESSION_KEY);
+            Map<String, String> sessionKeys = ServerUtils.convert(sessionKeyObject, false,
+                new TypeReference<Map<String, String>>() {
+                });
+            return sessionKeys != null ? sessionKeys.get(address) : null;
+        }
+        return null;
+    }
+    
+    /**
      * Ideally should be called by the GETTER methods of fields whose dot (.) values are to be
      * replaced by {@link DDRRecord#DOT_REPLACER_KEY}
      * @param data

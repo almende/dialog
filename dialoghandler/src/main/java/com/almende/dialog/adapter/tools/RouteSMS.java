@@ -7,6 +7,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.DialogAgent;
+import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
@@ -261,6 +262,10 @@ public class RouteSMS {
                     ddrRecord.addStatusForAddress(remoteAddress, status);
                     ddrRecord.createOrUpdate();
                 }
+            }
+            //perform some unit by logging the XML generated
+            if (ServerUtils.isInUnitTestingEnvironment()) {
+                TestServlet.logForTest(remoteAddress, messageReference);
             }
         }
     }

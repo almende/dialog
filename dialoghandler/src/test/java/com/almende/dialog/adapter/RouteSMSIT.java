@@ -24,7 +24,9 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
+import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
@@ -210,6 +212,121 @@ public class RouteSMSIT extends TestFramework {
         Assert.assertThat(smsStatues.size(), Matchers.is(1));
         Assert.assertThat(smsStatues.iterator().next().getDescription(), Matchers.is("DELIVRD"));
         Assert.assertThat(smsStatues.iterator().next().getCode(), Matchers.is("1701"));
+    }
+    
+    @Test
+    public void checkOneSessionPerNumberIsCreatedTest() throws Exception {
+
+        String senderName = "TestUser";
+        String remoteAddressVoice1 = "0614765801";
+
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS,
+            TEST_ACCOUNT_ID, "0612345678", "0612345678", "");
+        adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
+        adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
+        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
+        adapterConfig.update();
+
+        //create ddrType for the ddr records to be created.
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.10, "outgoing sms", UnitType.PART,
+            AdapterType.SMS, null);
+
+        HashMap<String, String> addressMap = new HashMap<String, String>();
+        addressMap.put(remoteAddressVoice, null);
+        addressMap.put(remoteAddressVoice1, null);
+
+        outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
+            "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        DDRRecord outboundDdrRecord = null;
+        int outboundDrrCount = 0;
+        //made sure only one ddr record exist with outbound charge
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            if (ddrRecord.getDirection().equals("outbound")) {
+                outboundDdrRecord = allDdrRecords.iterator().next();
+                outboundDrrCount++;
+            }
+        }
+        Assert.assertNotNull(outboundDdrRecord);
+        Assert.assertThat(outboundDrrCount, Matchers.is(1));
+        //make sure two sessions are linked to the ddrRecord
+        Assert.assertThat(outboundDdrRecord.getSessionKeys().size(), Matchers.is(2));
+        Assert.assertThat(outboundDdrRecord.getStatusPerAddress().size(), Matchers.is(2));
+    }
+    
+    @Test
+    public void checkSessionsAreClearedAfterDeliveryNotification() throws Exception {
+        
+        //send a broadcast
+        checkOneSessionPerNumberIsCreatedTest();
+        //fetch the message id
+        String messageId = TestServlet.getLogObject(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)).toString();
+        //make a post delivery notification request for remoteAddressVoice
+        performPOSTDeliveryStatusRequest(remoteAddressVoice, messageId);
+        //test the dd status
+        testDDRStatusAndSessionExistence(remoteAddressVoice, CommunicationStatus.DELIVERED, "0614765801", 1);
+        testDDRStatusAndSessionExistence("0614765801", CommunicationStatus.SENT, "0614765801", 1);
+
+        messageId = TestServlet.getLogObject(PhoneNumberUtils.formatNumber("0614765801", null)).toString();
+        //make a post delivery notification request for 0614765801
+        performPOSTDeliveryStatusRequest("0614765801", messageId);
+        //test the dd status
+        testDDRStatusAndSessionExistence(remoteAddressVoice, CommunicationStatus.DELIVERED, null, 0);
+        testDDRStatusAndSessionExistence("0614765801", CommunicationStatus.DELIVERED, null, 0);
+    }
+    
+    /**
+     * Performs a RouteSMS delivery status
+     * 
+     * @param messageId
+     * @throws Exception
+     */
+    private void performPOSTDeliveryStatusRequest(String address, String messageId) throws Exception {
+
+        //make a post delivery notification request for remoteAddressVoice
+        String payload = ServerUtils.getURLWithQueryParams("", "messageid", messageId);
+        payload = ServerUtils.getURLWithQueryParams(payload, "source", "0612345678"); //0612345678 is the adapter myaddress
+        payload = ServerUtils.getURLWithQueryParams(payload, "destination", address);
+        payload = ServerUtils.getURLWithQueryParams(payload, "status", "DELIVRD");
+        payload = ServerUtils.getURLWithQueryParams(payload, "sentdate",
+            TimeUtils.getStringFormatFromDateTime(TimeUtils.getServerCurrentTimeInMillis(), "yyyy-mm-dd hh:mm:ss"));
+        payload = ServerUtils.getURLWithQueryParams(payload, "donedate",
+            TimeUtils.getStringFormatFromDateTime(TimeUtils.getServerCurrentTimeInMillis(), "yyyy-mm-dd hh:mm:ss"));
+        AFHttpClient client = ParallelInit.getAFHttpClient();
+        client.post(payload.replace("?", ""), host + "/sms/route-sms/deliveryStatus");
+    }
+
+    /**
+     * Check if the addressToValidate exists in the ddrRecords and has a status
+     * of the given statueToValidate. The number of sessions currently in the
+     * system must match the given sessionsToValidate
+     * 
+     * @param addressToValidateForStatus
+     * @param statusToValidate
+     * @param sessionsToValidate
+     */
+    private void testDDRStatusAndSessionExistence(String addressToValidateForStatus,
+        CommunicationStatus statusToValidate, String addressToValidateForSession, int sessionsToValidate) {
+
+        //check if ddr record is marked as delivered
+        DDRRecord outboundDdrRecord = null;
+        for (DDRRecord ddrRecord : getAllDdrRecords(TEST_ACCOUNT_ID)) {
+            if (ddrRecord.getDirection().equals("outbound")) {
+                outboundDdrRecord = ddrRecord;
+            }
+        }
+        Assert.assertThat(
+            outboundDdrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(addressToValidateForStatus, null)),
+            Matchers.is(statusToValidate));
+        List<Session> allSessions = Session.getAllSessions();
+        Assert.assertThat(allSessions.size(), Matchers.is(sessionsToValidate));
+        if (sessionsToValidate > 0) {
+            Session session = allSessions.iterator().next();
+            Assert.assertThat(session.getRemoteAddress(),
+                Matchers.is(PhoneNumberUtils.formatNumber(addressToValidateForSession, null)));
+        }
     }
 
     private void

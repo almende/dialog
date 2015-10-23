@@ -860,6 +860,7 @@ abstract public class TextServlet extends HttpServlet {
         throws Exception {
 
         TextMessage receiveMessage = receiveMessage(req, resp);
+        log.info("Message received: " + ServerUtils.serializeWithoutException(receiveMessage));
         return receiveMessageAndAttachCharge(receiveMessage);
     }
 
@@ -877,6 +878,11 @@ abstract public class TextServlet extends HttpServlet {
             //create a session if it does not exist
             Session session = Session.getSessionByInternalKey(getAdapterType(), receiveMessage.getLocalAddress(),
                                                               receiveMessage.getAddress());
+            //trying to fetch session by localName. This happens when one SMS adapter is used for outbound and another is used for inbound
+            if(session == null) {
+                session = Session.getSessionByLocalName(getAdapterType(), receiveMessage.getLocalAddress(),
+                    receiveMessage.getAddress());
+            }
             AdapterConfig config = null;
             Session newInboundSession = null;
             

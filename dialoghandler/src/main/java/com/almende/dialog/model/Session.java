@@ -239,6 +239,36 @@ public class Session{
     }
     
     /**
+     * Returns the first session found for the localName. Localname is used for
+     * E.g. SMS adapter with myAddress TEST but senderName is 0612345678 while
+     * initiating an outbound request. LocalName is attached to all TextMessages
+     * 
+     * @param internalSessionKey
+     * @return
+     */
+    public static Session getSessionByLocalName(String adapterType, String remoteAddress, String localName) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        RootFindCommand<Session> sessionFindCommand = datastore.find().type(Session.class);
+        if (adapterType != null) {
+            sessionFindCommand = sessionFindCommand.addFilter("type", FilterOperator.EQUAL, adapterType.toLowerCase());
+        }
+        if (remoteAddress != null) {
+            sessionFindCommand = sessionFindCommand.addFilter("remoteAddress", FilterOperator.EQUAL, remoteAddress);
+        }
+        if (localName != null) {
+            sessionFindCommand = sessionFindCommand.addFilter("localName", FilterOperator.EQUAL, localName);
+        }
+        sessionFindCommand.addSort("creationTimestamp", SortDirection.DESCENDING);
+        sessionFindCommand.fetchMaximum(1);
+        QueryResultIterator<Session> sessionIterator = sessionFindCommand.now();
+        if (sessionIterator != null && sessionIterator.hasNext()) {
+            return sessionIterator.next();
+        }
+        return null;
+    }
+    
+    /**
      * Returns the first session found for the internal session id given
      * @param internalSessionKey
      * @return

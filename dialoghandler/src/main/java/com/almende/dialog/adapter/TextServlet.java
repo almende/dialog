@@ -519,7 +519,7 @@ abstract public class TextServlet extends HttpServlet {
         int count = 0;
         Map<String, Object> extras = msg.getExtras();
         AdapterConfig config;
-        Session session = Session.getSessionByInternalKey(getAdapterType() + "|" + localaddress + "|" + address);
+        Session session = Session.getSessionByInternalKey(getAdapterType(), localaddress, address);
         //create a new session to mark the outbound communication
         Session newSessionForOutbound = Session.cloneSession(session, "outbound");
         session.drop();
@@ -643,8 +643,7 @@ abstract public class TextServlet extends HttpServlet {
                 //instead just mark the session that it can be killed 
                 if (AdapterAgent.ADAPTER_TYPE_SMS.equalsIgnoreCase(config.getAdapterType())) {
                     //refetch session
-                    newSessionForOutbound = Session.getSessionByInternalKey(Session.getInternalSessionKey(config,
-                                                                                                          address));
+                    newSessionForOutbound = newSessionForOutbound.reload();
                     newSessionForOutbound.setKilled(true);
                     newSessionForOutbound.storeSession();
                 }

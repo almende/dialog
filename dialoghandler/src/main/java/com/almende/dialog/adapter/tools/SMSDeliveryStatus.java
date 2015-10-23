@@ -57,7 +57,7 @@ public class SMSDeliveryStatus implements Serializable {
             TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
             sentTimeStamp = sentTimeStamp == null ? TimeUtils.getServerCurrentTime().toString() : sentTimeStamp;
             datastore.storeOrUpdate(this);
-            log.info("CM status saved: " + ServerUtils.serializeWithoutException(this));
+            log.info("SMS status saved: " + ServerUtils.serializeWithoutException(this));
         }
     }
 

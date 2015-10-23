@@ -1,12 +1,10 @@
 package com.almende.dialog.adapter;
 
 import java.lang.reflect.Method;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
@@ -58,14 +56,43 @@ public class RouteSMSIT extends TestFramework {
         adapterConfig.update();
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put(remoteAddressVoice, null);
-        outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
-                               "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+        outBoundCall(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.APPOINTMENT, senderName,
+            "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner(), null);
         //fetch the sms delivery status reports
         List<SMSDeliveryStatus> smsStatues = SMSDeliveryStatus.fetchAll();
         Assert.assertThat(smsStatues, Matchers.notNullValue());
         Assert.assertThat(smsStatues.size(), Matchers.is(1));
         Assert.assertThat(smsStatues.iterator().next().getCode(), Matchers.is("1701"));
         Assert.assertThat(smsStatues.iterator().next().getDescription(), Matchers.is("Successfully Sent"));
+    }
+    
+    /**
+     * This is a test to verify if RouteSMS is used when <br>
+     * 1. An outbound open/closed question sent using ROUTE_SMS using the MB or
+     * CM address <br>
+     * 2. An inbound SMS reply using CM or MB servlet <br>
+     * 3. An outbound SMS must then be sent with RouteSMS (based on the initial
+     * step1) and not CM or MB.
+     * @throws Exception 
+     */
+    @Test
+    public void outbound2WaySMSTest() throws Exception {
+
+        //send an outbound sms with the apointment question
+        outBoundSMSCallStatusCheck();
+        //flush the log
+        TestServlet.clearLogObject();
+        //receive an inbound sms usinwg CM
+        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapterByAccount(TEST_ACCOUNT_ID,
+            AdapterType.SMS.toString(), null);
+        AdapterConfig smsAdapter = adapters.iterator().next();
+        processInboundMessage("yup", remoteAddressVoice, "0612345678", smsAdapter);
+        //The processed message must be sent using the same initial adapter
+        List<Session> allSessions = Session.getAllSessions();
+        Session session = allSessions.iterator().next();
+        Assert.assertThat(session.getAdapterConfig().getProvider(), Matchers.is(AdapterProviders.ROUTE_SMS));
+        //validate the log saved
+        Assert.assertNotNull(TestServlet.getLogObject(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
     }
     
     /**
@@ -98,8 +125,8 @@ public class RouteSMSIT extends TestFramework {
         addressMap.put(landlineNumber, null);
         addressMap.put(invalidNumber, null);
 
-        outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
-                               "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+        outBoundCall(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
+            "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner(), null);
         //fetch sessions
         List<Session> allSessions = Session.getAllSessions();
         //sessions for the landline and the invalid numbers must be dropped
@@ -154,8 +181,8 @@ public class RouteSMSIT extends TestFramework {
         boolean isExceptionThrown = false;
         try {
 
-            outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT,
-                                   senderName, "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+            outBoundCall(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
+                "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner(), null);
         }
         catch (Exception e) {
             isExceptionThrown = true;
@@ -240,8 +267,8 @@ public class RouteSMSIT extends TestFramework {
         addressMap.put(remoteAddressVoice, null);
         addressMap.put(remoteAddressVoice1, null);
 
-        outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
-            "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+        outBoundCall(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
+            "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner(), null);
 
         List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         DDRRecord outboundDdrRecord = null;
@@ -358,23 +385,4 @@ public class RouteSMSIT extends TestFramework {
                 Matchers.is(PhoneNumberUtils.formatNumber(addressToValidateForSession, null)));
         }
     }
-
-    private void
-        outBoundSMSCallXMLTest(Map<String, String> addressNameMap, AdapterConfig adapterConfig, String simpleQuestion,
-            QuestionInRequest questionInRequest, String senderName, String subject, String accountId) throws Exception {
-
-        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       questionInRequest.name());
-        url = ServerUtils.getURLWithQueryParams(url, "question", URLEncoder.encode(simpleQuestion, "UTF-8"));
-        DialogAgent dialogAgent = new DialogAgent();
-        if (addressNameMap.size() > 1) {
-            dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                                            adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
-        }
-        else {
-            dialogAgent.outboundCall(addressNameMap.keySet().iterator().next(), senderName, subject, url, null,
-                                     adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
-        }
-    }
-
 }

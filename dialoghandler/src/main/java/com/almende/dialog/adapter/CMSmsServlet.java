@@ -57,7 +57,7 @@ public class CMSmsServlet extends TextServlet {
         String[] tokens = config.getAccessToken().split("\\|");
         CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
         return cm.broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId,
-                                   ddrRecord);
+            ddrRecord);
     }
 
     @Override

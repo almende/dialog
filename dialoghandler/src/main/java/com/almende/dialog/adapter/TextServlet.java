@@ -655,7 +655,7 @@ abstract public class TextServlet extends HttpServlet {
         }
         catch (Exception ex) {
             ex.printStackTrace();
-            log.severe("Message sending failed. Message: " + ex.getLocalizedMessage());
+            log.severe("Message sending failed. Message: " + ex.getMessage());
         }
         return count;
     }
@@ -805,18 +805,34 @@ abstract public class TextServlet extends HttpServlet {
         }
         else {
             ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, senderName,
-                                                                        copyOfAddressNameMap,
-                                                                        copyOfAddressNameMap.size(), message,
-                                                                        sessionKeyMap);
+                copyOfAddressNameMap, copyOfAddressNameMap.size(), message, sessionKeyMap);
         }
 
         //update the sessions to the extras
         if (sessionKeyMap != null && !sessionKeyMap.isEmpty()) {
             extras.put(Session.SESSION_KEY, sessionKeyMap);
         }
-        //broadcast the message if its not a test environment
-        Integer count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId,
-                                         ddrRecord);
+        /**
+         * Broadcast the message. <br>
+         * Only if its Route_SMS Config, use RouteSMS specifically to send
+         * outbound SMS. Scenario: <br>
+         * 1. An outbound open/closed question sent using ROUTE_SMS using the MB
+         * or CM address <br>
+         * 2. An inbound SMS reply using CM or MB servlet <br>
+         * 3. An outbound SMS must then be sent with RouteSMS (based on the
+         * initial step1) and not CM or MB.
+         */
+        Integer count = 0;
+        switch (config.getProvider()) {
+            case ROUTE_SMS:
+                count = new RouteSmsServlet().broadcastMessage(message, subject, from, senderName, addressNameMap,
+                    extras, config, accountId, ddrRecord);
+                break;
+            default:
+                count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId,
+                    ddrRecord);
+                break;
+        }
         //reload the ddrRecord
         if (ddrRecord != null) {
             ddrRecord = ddrRecord.reload();

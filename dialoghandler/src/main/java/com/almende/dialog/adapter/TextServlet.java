@@ -879,9 +879,9 @@ abstract public class TextServlet extends HttpServlet {
             Session session = Session.getSessionByInternalKey(getAdapterType(), receiveMessage.getLocalAddress(),
                                                               receiveMessage.getAddress());
             //trying to fetch session by localName. This happens when one SMS adapter is used for outbound and another is used for inbound
-            if(session == null) {
-                session = Session.getSessionByLocalName(getAdapterType(), receiveMessage.getLocalAddress(),
-                    receiveMessage.getAddress());
+            if (session == null) {
+                session = Session.getSessionByLocalName(getAdapterType(), receiveMessage.getAddress(),
+                    receiveMessage.getLocalAddress());
             }
             AdapterConfig config = null;
             Session newInboundSession = null;

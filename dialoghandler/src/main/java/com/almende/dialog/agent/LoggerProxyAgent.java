@@ -5,7 +5,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.logging.Logger;
-
+import com.almende.dialog.Settings;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.eve.agent.Agent;
 import com.almende.eve.protocol.jsonrpc.annotation.Access;
@@ -37,7 +37,7 @@ public class LoggerProxyAgent extends Agent {
         @Name("sessionKey") String sessionKey, @Name("accountId") String accountId,
         @Name("ddrRecordId") @Optional String ddrRecordId, @Name("isSuccessful") @Optional Boolean isSuccessful) {
 
-        if (!ServerUtils.isInUnitTestingEnvironment()) {
+        if (!ServerUtils.isInUnitTestingEnvironment() && Settings.ENABLE_LOGGER) {
             
             ObjectMapper om = JOM.getInstance();
             

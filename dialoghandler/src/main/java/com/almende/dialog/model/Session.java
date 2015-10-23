@@ -313,6 +313,7 @@ public class Session{
      * @return
      */
     public static Session getSessionByInternalKey(String adapterType, String localAddress, String remoteAddress) {
+        adapterType = adapterType != null ? adapterType.toLowerCase() : null;
         String sessionKey = adapterType + "|" + localAddress + "|" + remoteAddress;
         return getSessionByInternalKey(sessionKey);
     }

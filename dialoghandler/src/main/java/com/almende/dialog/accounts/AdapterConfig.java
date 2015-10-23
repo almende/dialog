@@ -312,13 +312,9 @@ public class AdapterConfig {
 
     public static AdapterConfig findAdapterConfig(String adapterType, String lookupKey) {
 
-        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
-        Iterator<AdapterConfig> config = datastore.find().type(AdapterConfig.class)
-                                        .addFilter("myAddress", FilterOperator.EQUAL, lookupKey)
-                                        .addFilter("adapterType", FilterOperator.EQUAL, adapterType.toLowerCase())
-                                        .now();
-        if (config.hasNext()) {
-            return config.next();
+        ArrayList<AdapterConfig> configs = findAdapters(adapterType, lookupKey, null);
+        if (configs != null && !configs.isEmpty()) {
+            return configs.iterator().next();
         }
         log.severe("AdapterConfig not found:'" + adapterType + "':'" + lookupKey + "'");
         return null;
@@ -347,13 +343,19 @@ public class AdapterConfig {
 		return null;
 	}
 
-	/**
-	 * Fetches all adapters for the given matching filters
-	 * @param adapterType Lowercased and queried
-	 * @param myAddress case insensitive query is performed
-	 * @param keyword if "null" then a search for null is performed. 
-	 * @return
-	 */
+    /**
+     * Fetches all adapters for the given matching filters. The myAddress is
+     * also (phoneNumber) formatted if no adapters are fetched for given
+     * myAddress
+     * 
+     * @param adapterType
+     *            Lowercased and queried
+     * @param myAddress
+     *            case insensitive query is performed
+     * @param keyword
+     *            if "null" then a search for null is performed.
+     * @return
+     */
     public static ArrayList<AdapterConfig> findAdapters(String adapterType, String myAddress, String keyword) {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
@@ -374,9 +376,16 @@ public class AdapterConfig {
         ArrayList<AdapterConfig> adapters = new ArrayList<AdapterConfig>();
         while (resultIterator.hasNext()) {
             AdapterConfig adapterConfig = resultIterator.next();
-            if(myAddress != null) {
-                if(adapterConfig.getMyAddress().equalsIgnoreCase(myAddress)) {
+            if (myAddress != null) {
+                if (adapterConfig.getMyAddress().equalsIgnoreCase(myAddress)) {
                     adapters.add(adapterConfig);
+                }
+                else {
+                    //trying to find the adapter by formatting the address
+                    String formattedAddress = PhoneNumberUtils.formatNumber(myAddress, null);
+                    if (adapterConfig.getMyAddress().equalsIgnoreCase(formattedAddress)) {
+                        adapters.add(adapterConfig);
+                    }
                 }
             }
             else {

@@ -5,7 +5,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.Method;
 import java.net.BindException;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -76,6 +75,7 @@ public class TestFramework
     public static final int jettyPort = 8078;
     public static final String host = "http://localhost:"+jettyPort+"/dialoghandler";
     private static final Logger log = Logger.getLogger(TestFramework.class.toString());
+    protected DialogAgent dialogAgent = null;
     
     @Before
     public void setup() throws Exception {
@@ -93,7 +93,7 @@ public class TestFramework
 
             startJettyServer();
         }
-        DialogAgent dialogAgent = new DialogAgent();
+        dialogAgent = new DialogAgent();
         dialogAgent.setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.CM);
         dialogAgent.setDefaultProviderSettings(AdapterType.CALL, AdapterProviders.BROADSOFT);
     }
@@ -356,30 +356,22 @@ public class TestFramework
      * @return
      * @throws Exception
      */
-    public static HashMap<String, String> outBoundCall(Map<String, String> addressNameMap, AdapterConfig adapterConfig,
-        String simpleQuestion, QuestionInRequest questionInRequest, String senderName, String subject, String accountId,
-        DialogAgent dialogAgent) throws Exception {
+    public HashMap<String, String> outBoundCall(Map<String, String> addressNameMap, AdapterConfig adapterConfig,
+        String simpleQuestion, QuestionInRequest questionInRequest, String senderName, String subject, String accountId)
+            throws Exception {
 
         String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
             questionInRequest.name());
         HashMap<String, String> result = null;
         if (simpleQuestion != null) {
-            url = ServerUtils.getURLWithQueryParams(url, "question", URLEncoder.encode(simpleQuestion, "UTF-8"));
+            url = ServerUtils.getURLWithQueryParams(url, "question", simpleQuestion);
         }
-        dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
-
         if (new MockUtil().isMock(dialogAgent)) {
             Mockito.when(dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
                 adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType())).thenCallRealMethod();
         }
-        if (addressNameMap.size() > 1) {
-            result = dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
-        }
-        else {
-            result = dialogAgent.outboundCall(addressNameMap.keySet().iterator().next(), senderName, subject, url, null,
-                adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
-        }
+        result = dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
+            adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
         return result;
     }
     
@@ -388,9 +380,11 @@ public class TestFramework
      * that a session is already active
      * 
      * @param smsAdapter
+     * @return The textMessage that is parsed and processed
      * @throws Exception
      */
-    protected void processInboundMessage(String message, String sender, String receiver, AdapterConfig smsAdapter) throws Exception {
+    protected TextMessage processInboundMessage(String message, String sender, String receiver, AdapterConfig smsAdapter)
+        throws Exception {
 
         //setup test inbound data
         Method receiveMessage = fetchMethodByReflection("receiveMessage", MBSmsServlet.class, HashMap.class);
@@ -402,10 +396,14 @@ public class TestFramework
         testInboundSMSData.put("body", message);
         testInboundSMSData.put("receiver", receiver); //"0612345678");
         Object textMessage = invokeMethodByReflection(receiveMessage, mbSmsServlet, testInboundSMSData);
-        
+        receiveMessage = fetchMethodByReflection("receiveMessageAndAttachCharge", TextServlet.class,
+            TextMessage.class);
+        textMessage = invokeMethodByReflection(receiveMessage, mbSmsServlet, textMessage);
+
         //process the message
         Method processMessage = fetchMethodByReflection("processMessage", TextServlet.class, TextMessage.class);
         invokeMethodByReflection(processMessage, mbSmsServlet, textMessage);
+        return (TextMessage) textMessage;
     }
     
     /**

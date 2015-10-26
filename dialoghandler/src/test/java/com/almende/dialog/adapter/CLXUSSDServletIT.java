@@ -29,8 +29,8 @@ public class CLXUSSDServletIT extends TestFramework{
         HashMap<String, String> addressNameMap = new HashMap<String, String>();
         addressNameMap.put(remoteAdressVoice2, senderName);
 
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), null, TEST_ACCOUNT_ID,
-                                                          remoteAddressVoice, remoteAddressVoice, "");
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.USSD.toString(), AdapterProviders.CLX,
+            TEST_ACCOUNT_ID, remoteAddressVoice, remoteAddressVoice, "");
         // for test ser real password and username
         adapterConfig.setAccessToken("ASKFastBV_h_ugw0");
         adapterConfig.setAccessTokenSecret("qMA3gBY5");

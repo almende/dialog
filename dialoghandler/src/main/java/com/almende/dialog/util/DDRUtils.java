@@ -202,7 +202,7 @@ public class DDRUtils
             Map<String, Session> sessionKeyMap = new HashMap<String, Session>();
             sessionKeyMap.put(fromAddress, session);
             return createDDRRecordOnCommunication(config, accountId, DDRTypeCategory.INCOMING_COMMUNICATION_COST,
-                                                  fromAddresses, CommunicationStatus.RECEIVED, message, sessionKeyMap);
+                fromAddresses, CommunicationStatus.RECEIVED, message, sessionKeyMap);
         }
         else {
             throw new Exception("Session is not expected to be null..");
@@ -877,7 +877,14 @@ public class DDRUtils
                     case RECEIVED:
                         ddrRecord.setFromAddress(addresses.keySet().iterator().next());
                         Map<String, String> toAddresses = new HashMap<String, String>();
-                        toAddresses.put(config.getFormattedMyAddress(), "");
+                        String toAddress = config.getFormattedMyAddress();
+                        if(sessionKeyMap != null && !sessionKeyMap.values().isEmpty()) {
+                            String localName = sessionKeyMap.values().iterator().next().getLocalName();
+                            if(localName != null && !localName.isEmpty()) {
+                                toAddress = localName;
+                            }
+                        }
+                        toAddresses.put(toAddress, "");
                         ddrRecord.setToAddress(toAddresses);
                         ddrRecord.setDirection("inbound");
                         break;

@@ -35,6 +35,8 @@ import com.askfast.commons.utils.TimeUtils;
 public class RouteSMSIT extends TestFramework {
 
     private static final String simpleQuestion = "How are you?";
+    AdapterConfig adapterConfig = null;
+    String senderName = "0612345678";
 
     @Before
     public void setup() throws Exception {
@@ -46,10 +48,9 @@ public class RouteSMSIT extends TestFramework {
     @Test
     public void outBoundSMSCallStatusCheck() throws Exception {
 
-        String senderName = "0612345678";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS,
-                                                          TEST_ACCOUNT_ID, "0612345678", "0612345678", "");
+        adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS, TEST_ACCOUNT_ID,
+            "ASK", "ASK", "");
         adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
         adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
         adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
@@ -84,13 +85,30 @@ public class RouteSMSIT extends TestFramework {
         
         //send an outbound sms with the apointment question
         outBoundSMSCallStatusCheck();
+        //validate if the ddrRecord shows the senderName instead of the adapter myaddress
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        Assert.assertThat(allDdrRecords.size(), Matchers.is(1));
+        Assert.assertThat(allDdrRecords.iterator().next().getFromAddress(), Matchers.is(senderName));
+        
         //flush the log
         TestServlet.clearLogObject();
         //receive an inbound sms usinwg CM
-        ArrayList<AdapterConfig> adapters = AdapterConfig.findAdapterByAccount(TEST_ACCOUNT_ID,
-            AdapterType.SMS.toString(), null);
-        AdapterConfig smsAdapter = adapters.iterator().next();
-        processInboundMessage("yup", remoteAddressVoice, "0612345678", smsAdapter);
+        processInboundMessage("yup", remoteAddressVoice, "0612345678", adapterConfig);
+
+        //validate if the ddrRecord shows the senderName instead of the adapter myaddress        
+        allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        DDRRecord incomingDddrRecord = null;
+        DDRRecord outgoingDddrRecord = null;
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            if (ddrRecord.getMessage().equals("yup")) {
+                incomingDddrRecord = ddrRecord;
+            }
+            else if(ddrRecord.getMessage().equals(TestServlet.APPOINTMENT_SECOND_QUESION)) {
+                outgoingDddrRecord = ddrRecord;
+            }
+        }
+        Assert.assertTrue(incomingDddrRecord.getToAddress().containsKey(senderName));
+        Assert.assertThat(outgoingDddrRecord.getFromAddress(), Matchers.is(senderName));
 
         //The processed message must be sent using the same initial adapter
         List<Session> allSessions = Session.getAllSessions();
@@ -103,14 +121,26 @@ public class RouteSMSIT extends TestFramework {
         Assert.assertNotNull(TestServlet.getLogObject(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
 
         //receive an inbound sms using CM saying free for 50mins
-        processInboundMessage("50", remoteAddressVoice, "0612345678", smsAdapter);
+        processInboundMessage("50", remoteAddressVoice, "0612345678", adapterConfig);
+        //validate if the ddrRecord shows the senderName instead of the adapter myaddress  
+        allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        incomingDddrRecord = null;
+        outgoingDddrRecord = null;
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            if (ddrRecord.getMessage().equals("50")) {
+                incomingDddrRecord = ddrRecord;
+            }
+            else if(ddrRecord.getMessage().equals(TestServlet.APPOINTMENT_ACCEPTANCE_RESPONSE)) {
+                outgoingDddrRecord = ddrRecord;
+            }
+        }
+        Assert.assertTrue(incomingDddrRecord.getToAddress().containsKey(senderName));
+        Assert.assertThat(outgoingDddrRecord.getFromAddress(), Matchers.is(senderName));
+        
         //The processed message must be sent using the same initial adapter
         allSessions = Session.getAllSessions();
         Assert.assertThat(allSessions.size(), Matchers.is(0));
         //leading ddrRecord must have the latest message sent
-        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
-        DDRRecord ddrRecord = allDdrRecords.iterator().next();
-        Assert.assertThat(ddrRecord.getMessage(), Matchers.is(TestServlet.APPOINTMENT_ACCEPTANCE_RESPONSE));
         Assert.assertEquals(allDdrRecords.size(), 5);
     }
     

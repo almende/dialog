@@ -899,6 +899,7 @@ public class DDRRecord
      * 
      * @return
      */
+    @JsonIgnore
     public String getMessage() {
 
         if (additionalInfo != null && additionalInfo.get(DDRUtils.DDR_MESSAGE_KEY) != null) {

@@ -974,6 +974,9 @@ public class AdapterConfig {
             providers = getProperties(ADAPTER_PROVIDER_KEY, new TypeReference<AdapterProviders>() {
             });
         }
+        if (providers == null && AdapterAgent.ADAPTER_TYPE_EMAIL.equalsIgnoreCase(adapterType)) {
+            return AdapterProviders.DEFAULT;
+        }
         return providers;
     }
     

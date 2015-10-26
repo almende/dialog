@@ -895,6 +895,19 @@ public class DDRRecord
     }
     
     /**
+     * Returns the message parameter stored in the ddrRecord
+     * 
+     * @return
+     */
+    public String getMessage() {
+
+        if (additionalInfo != null && additionalInfo.get(DDRUtils.DDR_MESSAGE_KEY) != null) {
+            return additionalInfo.get(DDRUtils.DDR_MESSAGE_KEY).toString();
+        }
+        return null;
+    }
+    
+    /**
      * Ideally should be called by the GETTER methods of fields whose dot (.) values are to be
      * replaced by {@link DDRRecord#DOT_REPLACER_KEY}
      * @param data

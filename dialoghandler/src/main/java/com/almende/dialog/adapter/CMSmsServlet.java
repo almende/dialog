@@ -287,7 +287,6 @@ public class CMSmsServlet extends TextServlet {
                 else {
                     log.info("Reference: " + reference + ". No delivered callback found.");
                 }
-                Session session = Session.getSession(cmStatus.getSessionKey());
                 //fetch ddr corresponding to this
                 DDRRecord ddrRecord = DDRRecord.getDDRRecord(cmStatus.getDdrRecordId(), cmStatus.getAccountId());
                 if (ddrRecord != null) {
@@ -297,18 +296,11 @@ public class CMSmsServlet extends TextServlet {
                     else {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
                         ddrRecord.addAdditionalInfo(to, "ERROR: " + cmStatus.getDescription());
-                        if (session != null) {
-                            session.drop();
-                        }
                     }
                     ddrRecord.createOrUpdate();
                 }
                 else {
                     log.warning(String.format("No ddr record found for id: %s", cmStatus.getDdrRecordId()));
-                }
-                //check if session is killed. if so drop it :)
-                if (session != null && session.isKilled() && isSMSsDelivered(ddrRecord)) {
-                    session.drop();
                 }
                 cmStatus.store();
             }

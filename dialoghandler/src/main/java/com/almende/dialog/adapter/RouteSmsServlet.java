@@ -245,19 +245,10 @@ public class RouteSmsServlet extends TextServlet {
                 //fetch ddr corresponding to this
                 DDRRecord ddrRecord = DDRRecord.getDDRRecord(routeSMSStatus.getDdrRecordId(),
                                                              routeSMSStatus.getAccountId());
-                Session session = null;
                 if (ddrRecord != null) {
-                    String sessionKeyByAddress = ddrRecord.getSessionKeyByAddress(
-                        PhoneNumberUtils.formatNumber(to, null));
-                    if (sessionKeyByAddress != null) {
-                        session = Session.getSession(sessionKeyByAddress);
-                    }
                     if (isErrorInDelivery(statusCode)) {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
                         ddrRecord.addAdditionalInfo(to, "ERROR: " + routeSMSStatus.getDescription());
-                        if (session != null) {
-                            session.drop();
-                        }
                     }
                     else if (statusCode.equalsIgnoreCase("DELIVRD")) {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.DELIVERED);
@@ -269,10 +260,6 @@ public class RouteSmsServlet extends TextServlet {
                 }
                 else {
                     log.warning(String.format("No ddr record found for id: %s", routeSMSStatus.getDdrRecordId()));
-                }
-                //check if session is killed. if so drop it :)
-                if (session != null && session.isKilled() && isSMSsDelivered(to, ddrRecord)) {
-                    session.drop();
                 }
                 routeSMSStatus.store();
             }

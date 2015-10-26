@@ -12,7 +12,6 @@ import javax.servlet.http.HttpServletResponse;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
-import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
@@ -299,11 +298,11 @@ abstract public class TextServlet extends HttpServlet {
         // add addresses in cc and bcc map
         Map<String, Object> extras = new HashMap<String, Object>();
         HashMap<String, String> fullAddressMap = new HashMap<String, String>(addressNameMap);
-        if (addressCcNameMap != null) {
+        if (addressCcNameMap != null && !addressCcNameMap.isEmpty()) {
             fullAddressMap.putAll(addressCcNameMap);
             extras.put(MailServlet.CC_ADDRESS_LIST_KEY, addressCcNameMap);
         }
-        if (addressBccNameMap != null) {
+        if (addressBccNameMap != null && !addressBccNameMap.isEmpty()) {
             fullAddressMap.putAll(addressBccNameMap);
             extras.put(MailServlet.BCC_ADDRESS_LIST_KEY, addressBccNameMap);
         }
@@ -436,6 +435,13 @@ abstract public class TextServlet extends HttpServlet {
                                                             sessionKeyMap, ddrRecord);
                 if (count < 1) {
                     log.severe("Error generating XML");
+                }
+                //flush the session is no more question is there. 
+                //Even for SMS. DLR callback loads the DDR Record instead now.
+                if (res.question == null) {
+                    for (Session sessionForDrop : sessionKeyMap.values()) {
+                        sessionForDrop.drop();
+                    }
                 }
             }
         }
@@ -623,6 +629,10 @@ abstract public class TextServlet extends HttpServlet {
                 Return replystr = formQuestion(question, config.getConfigId(), address, null, newSessionForOutbound);
                 // fix for bug: #15 https://github.com/almende/dialog/issues/15
                 escapeInput.reply = URLDecoder.decode(replystr.reply, "UTF-8");
+                //save the question that is to be sent to the receipient
+                newSessionForOutbound.setQuestion(question);
+                newSessionForOutbound.storeSession();
+                //set the new question formed
                 question = replystr.question;
             }
             else {
@@ -632,24 +642,13 @@ abstract public class TextServlet extends HttpServlet {
         }
 
         try {
-            newSessionForOutbound.setQuestion(question);
-            newSessionForOutbound.storeSession();
             count = sendMessageAndAttachCharge(escapeInput.reply, subject, localaddress, fromName, address, toName,
                                                extras, config, newSessionForOutbound.getAccountId(),
                                                newSessionForOutbound);
-            //flush the session is no more question is there
+            //flush the session is no more question is there. 
+            //Even for SMS. DLR callback loads the DDR Record instead now.
             if (question == null) {
-                //dont flush the session yet if its an sms. the DLR callback needs a session.
-                //instead just mark the session that it can be killed 
-                if (AdapterAgent.ADAPTER_TYPE_SMS.equalsIgnoreCase(config.getAdapterType())) {
-                    //refetch session
-                    newSessionForOutbound = newSessionForOutbound.reload();
-                    newSessionForOutbound.setKilled(true);
-                    newSessionForOutbound.storeSession();
-                }
-                else {
-                    newSessionForOutbound.drop();
-                }
+                newSessionForOutbound.drop();
             }
         }
         catch (Exception ex) {
@@ -877,11 +876,6 @@ abstract public class TextServlet extends HttpServlet {
             //create a session if it does not exist
             Session session = Session.getSessionByInternalKey(getAdapterType(), receiveMessage.getLocalAddress(),
                                                               receiveMessage.getAddress());
-            //trying to fetch session by localName. This happens when one SMS adapter is used for outbound and another is used for inbound
-            if (session == null) {
-                session = Session.getSessionByLocalName(getAdapterType(), receiveMessage.getAddress(),
-                    receiveMessage.getLocalAddress());
-            }
             AdapterConfig config = null;
             Session newInboundSession = null;
             

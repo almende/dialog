@@ -16,6 +16,7 @@ import com.almende.util.twigmongo.annotations.Id;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * This is the generic format for saving delivery status of SMS sent from any
@@ -23,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  * 
  * @author Shravan
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SMSDeliveryStatus implements Serializable {
 
     private static final long serialVersionUID = 3674394844170200281L;
@@ -45,7 +47,6 @@ public class SMSDeliveryStatus implements Serializable {
     private String accountId = null;
     private String provider = "";
     private String ddrRecordId = "";
-    private String sessionKey = "";
     private Map<String, Object> extraInfos = null;
 
     @JsonIgnore
@@ -111,7 +112,6 @@ public class SMSDeliveryStatus implements Serializable {
                 smsStatus.setCallback(deliveryEventCallback.getCallback());
             }
             smsStatus.setDdrRecordId(ddrRecordId);
-            smsStatus.setSessionKey(session.getKey());
             smsStatus.store();
             return smsStatus;
         }
@@ -325,15 +325,5 @@ public class SMSDeliveryStatus implements Serializable {
             }
         }
         return this;
-    }
-
-    public String getSessionKey() {
-
-        return sessionKey;
-    }
-
-    public void setSessionKey(String sessionKey) {
-
-        this.sessionKey = sessionKey;
     }
 }

@@ -121,7 +121,7 @@ public class TwilioAdapter {
         session.killed = false;
         session.setDirection("outbound");
         session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
-        session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
+        session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO.toString());
         session.setAdapterID(config.getConfigId());
         session.setAccountId(accountId);
         session.addExtras(DialogAgent.BEARER_TOKEN_KEY, bearerToken);

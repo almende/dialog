@@ -218,11 +218,6 @@
 			<artifactId>xmlunit</artifactId>
 			<version>${xmlunit.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>com.askfast.strowger.sdk</groupId>
-			<artifactId>strowger-sdk</artifactId>
-			<version>${strowger.version}</version>
-		</dependency>
 
 	</dependencies>
 

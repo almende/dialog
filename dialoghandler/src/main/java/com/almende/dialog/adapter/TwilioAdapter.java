@@ -703,7 +703,7 @@ public class TwilioAdapter {
                 finalizeCall(config, session, callSid, remoteID);
             }
         }
-        log.info("Session key: or external sid" + session != null && session.getKey() != null ? session.getKey() : callSid);
+        log.info("Session key: or external sid" + ((session != null && session.getKey() != null) ? session.getKey() : callSid));
         return Response.ok("").build();
     }
     

@@ -37,10 +37,11 @@
 		<mongojack.version>2.0.0</mongojack.version>
 		<jongo.version>1.1</jongo.version>
 		<smack.version>3.1.0</smack.version>
-		<twilio.version>3.4.5</twilio.version>
+		<twilio.version>5.2.1</twilio.version>
 		<okhttp.version>2.2.0</okhttp.version>
 		<aws-sdk.version>1.9.25</aws-sdk.version>
 		<xmlunit.version>1.6</xmlunit.version>
+		<strowger.version>0.1.0-SNAPSHOT</strowger.version>
 		<commons-fileupload.version>1.3</commons-fileupload.version>
 	</properties>
 
@@ -216,6 +217,11 @@
 			<groupId>xmlunit</groupId>
 			<artifactId>xmlunit</artifactId>
 			<version>${xmlunit.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.askfast.strowger.sdk</groupId>
+			<artifactId>strowger-sdk</artifactId>
+			<version>${strowger.version}</version>
 		</dependency>
 
 	</dependencies>

@@ -685,7 +685,7 @@ public class TwilioAdapter {
 
         localID = checkAnonymousCallerId(localID);
 
-        log.info("Received twiliocc status: " + status);
+        log.info("Received twiliocc status: " + status + " from CallSid: " + callSid);
 
         if (direction.equals("outbound-api")) {
             direction = "outbound";
@@ -879,14 +879,14 @@ public class TwilioAdapter {
             String created = call.getProperty("date_created");
             session.setStartTimestamp(format.parse(created).getTime() + "");
             if (call.getEndTime() != null) {
-                session.setReleaseTimestamp(format.parse(call.getEndTime()).getTime() + "");
+                session.setReleaseTimestamp(call.getEndTime().getTime() + "");
             }
             if (call.getDuration() != null) {
                 if(call.getDuration().equals("0")) {
                     session.setAnswerTimestamp(session.getReleaseTimestamp());
                 }
                 else if(call.getStartTime() != null) {
-                    session.setAnswerTimestamp(format.parse(call.getStartTime()).getTime() + "");
+                    session.setAnswerTimestamp(call.getStartTime().getTime() + "");
                 }
             }
             else {
@@ -1067,6 +1067,11 @@ public class TwilioAdapter {
                     Number number = new Number( PhoneNumberUtils.formatNumber(url, null));
                     number.setMethod("GET");
                     number.setUrl(getPreconnectUrl());
+                    
+                    number.setStatusCallback( getCCUrl() );
+                    number.setStatusCallbackEvents( "initiated ringing answered completed" );
+                    number.setStatusCallbackMethod( "GET" );
+                    
                     dial.append(number);
                 }
             }
@@ -1571,7 +1576,11 @@ public class TwilioAdapter {
     }
     
     protected String getPreconnectUrl() {
-    	return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/preconnect";
+        return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/preconnect";
+    }
+    
+    protected String getCCUrl() {
+        return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/cc";
     }
     
     private String checkAnonymousCallerId(String callerId) {

@@ -1,6 +1,7 @@
 com.almende.dialog.adapter.VoiceXMLRESTProxy
 com.almende.dialog.adapter.ComsysVoiceXMLRESTProxy
 com.almende.dialog.adapter.TwilioAdapter
+com.almende.dialog.adapter.TPAdapter
 com.almende.dialog.adapter.VoxeoVoiceXMLRESTProxy
 #com.almende.dialog.example.agent.AskCharlotte
 #com.almende.dialog.example.agent.Charlotte

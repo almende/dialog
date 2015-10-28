@@ -68,7 +68,7 @@ import com.twilio.sdk.verbs.Verb;
 @Path("twilio")
 public class TwilioAdapter {
     
-    protected static final Logger log = Logger.getLogger(VoiceXMLRESTProxy.class.getName());
+    protected static final Logger log = Logger.getLogger(TwilioAdapter.class.getName());
     protected static final com.almende.dialog.Logger dialogLog = new com.almende.dialog.Logger();
     private static final int LOOP_DETECTION = 10;
     protected String TIMEOUT_URL = "timeout";
@@ -353,7 +353,7 @@ public class TwilioAdapter {
                                             ddrRecord != null ? ddrRecord.getId() : null, session, extraParams);
             }
 
-            if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
+            if (!ServerUtils.isValidBearerToken(session, config)) {
 
                 TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
                 String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
@@ -1464,7 +1464,7 @@ public class TwilioAdapter {
                                 if (redirectedId != null) {
 
                                     //check credits
-                                    if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
+                                    if (!ServerUtils.isValidBearerToken(session, adapterConfig)) {
 
                                         TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
                                         String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());

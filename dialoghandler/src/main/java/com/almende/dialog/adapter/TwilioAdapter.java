@@ -695,18 +695,19 @@ public class TwilioAdapter {
             localID = remoteID;
             remoteID = tmpLocalId;
         }
-        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
+        //AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
         Session session = Session.getSessionByExternalKey(callSid);
         if (session != null) {
             //update session with call timings
             if (status.equals("completed")) {
+                AdapterConfig config = session.getAdapterConfig();
                 finalizeCall(config, session, callSid, remoteID);
             }
         }
         log.info("Session key: or external sid" + ((session != null && session.getKey() != null) ? session.getKey() : callSid));
         return Response.ok("").build();
     }
-    
+        
     public void answered(String direction, String remoteID, String localID, String sessionKey) {
 
         log.info("call answered with:" + direction + "_" + remoteID + "_" + localID);

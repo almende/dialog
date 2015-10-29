@@ -1,15 +1,12 @@
 package com.almende.dialog.adapter;
 
 import static org.junit.Assert.assertEquals;
-
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.logging.Logger;
-
 import org.junit.Test;
-
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.TPAdapter.Return;
@@ -27,7 +24,7 @@ public class TPAdapterTest extends TestFramework {
     protected static final String COMMENT_QUESTION_ID = "1";
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio";
     protected static final String COMMENT_QUESTION_TEXT = "text://Hello World";
-    protected static final String REFERRAL_PHONE_NUMBER = "tel:0643002549";
+    protected static final String REFERRAL_PHONE_NUMBER = "tel:0612345679";
     
     protected static final String secondRemoteAddress = "0612345678";
 

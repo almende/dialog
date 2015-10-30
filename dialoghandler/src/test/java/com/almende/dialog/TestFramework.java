@@ -66,7 +66,8 @@ public class TestFramework{
     public static final int jettyPort = 8078;
     public static final String host = "http://localhost:" + jettyPort + "/dialoghandler";
     private static final Logger log = Logger.getLogger( TestFramework.class.toString() );
-
+    protected DialogAgent dialogAgent = null;
+    
     @Before
     public void setup() throws Exception {
 
@@ -82,7 +83,7 @@ public class TestFramework{
 
             startJettyServer();
         }
-        DialogAgent dialogAgent = new DialogAgent();
+        dialogAgent = new DialogAgent();
         dialogAgent.setDefaultProviderSettings( AdapterType.SMS, AdapterProviders.CM );
         dialogAgent.setDefaultProviderSettings( AdapterType.CALL, AdapterProviders.BROADSOFT );
     }
@@ -118,6 +119,12 @@ public class TestFramework{
     public AdapterConfig createTwilioAdapter() throws Exception {
 
         return createAdapterConfig( AdapterType.CALL.toString(), AdapterProviders.TWILIO, TEST_ACCOUNT_ID, localAddressBroadsoft, localAddressBroadsoft, "" );
+    }
+    
+    public AdapterConfig createTPAdapter() throws Exception {
+
+        return createAdapterConfig(AdapterType.CALL.toString(), AdapterProviders.TP, TEST_ACCOUNT_ID,
+            localAddressBroadsoft, localAddressBroadsoft, "");
     }
 
     public static AdapterConfig createAdapterConfig( String adapterType, AdapterProviders adapterProviders, String accountId, String address, String myAddress, String initiatAgentURL ) throws Exception {

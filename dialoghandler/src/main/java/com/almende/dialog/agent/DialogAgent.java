@@ -23,6 +23,7 @@ import com.almende.dialog.adapter.MBSmsServlet;
 import com.almende.dialog.adapter.MailServlet;
 import com.almende.dialog.adapter.NotificareServlet;
 import com.almende.dialog.adapter.RouteSmsServlet;
+import com.almende.dialog.adapter.TPAdapter;
 import com.almende.dialog.adapter.TwilioAdapter;
 import com.almende.dialog.adapter.TwitterServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
@@ -353,6 +354,17 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         }
                         break;
                     }
+                    case TP: {
+                        // fetch the first address in the map
+                        if (!addressMap.keySet().isEmpty()) {
+                            resultSessionMap = TPAdapter.dial(addressMap, dialogIdOrUrl, config, accountId,
+                                getApplicationId(), bearerToken);
+                        }
+                        else {
+                            throw new JSONRPCException("Address should not be empty to setup a call");
+                        }
+                        break;
+                    }
                     default:
                         throw new JSONRPCException(String.format(
                             "No calling provider found for adapter: %s with id: %s", config.getMyAddress(),
@@ -380,12 +392,12 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                                 senderName, subject, config, accountId, accountType);
                             break;
                         default:
-                            throw new Exception(String.format("No calling provider found for adapter: %s with id: %s",
+                            throw new Exception(String.format("No SMS provider found for adapter: %s with id: %s",
                                 config.getMyAddress(), config.getConfigId()));
                     }
                 }
                 else {
-                    throw new JSONRPCException(String.format("No calling provider found for adapter: %s with id: %s",
+                    throw new JSONRPCException(String.format("No SMS provider found for adapter: %s with id: %s",
                         config.getMyAddress(), config.getConfigId()));
                 }
             }

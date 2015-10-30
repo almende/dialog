@@ -43,6 +43,7 @@ import com.askfast.strowger.sdk.actions.Include;
 import com.askfast.strowger.sdk.actions.Play;
 import com.askfast.strowger.sdk.actions.StrowgerAction;
 import com.askfast.strowger.sdk.model.Peer;
+import com.askfast.strowger.sdk.model.StatusCallback;
 import com.askfast.strowger.sdk.model.StrowgerRequest;
 import com.askfast.strowger.sdk.resources.Call;
 import com.askfast.strowger.sdk.resources.Dial;
@@ -162,11 +163,12 @@ public class TPAdapter {
                         StrowgerRestClient client = new StrowgerRestClient( config.getAccessToken(), config.getAccessTokenSecret() );
 
                         // Make a call
+                        StatusCallback callback = new StatusCallback( URI.create("http://" + Settings.HOST + "/dialoghandler/rest/twilio/cc"), Arrays.asList( "initiated", "ringing", "answered", "completed", "aborted" ) );
+                        
                         Dial dial = new Dial();
-                        dial.addPeer( new Peer( formattedAddress ) );
+                        dial.addPeer( new Peer( formattedAddress, callback ) );
                         dial.setCallerId( config.getMyAddress() );
                         dial.setControlUrl( URI.create( "http://" + Settings.HOST + "/dialoghandler/rest/twilio/new" ) );
-                        dial.setCompletionUrl( URI.create("http://" + Settings.HOST + "/dialoghandler/rest/twilio/cc") );
                         
                         extSession = client.initiateCall( config.getMyAddress(), dial );
                         log.info(String.format("Call triggered with external id: %s", extSession));

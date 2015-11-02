@@ -21,12 +21,12 @@ import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
@@ -414,9 +414,10 @@ public class RouteSMSIT extends TestFramework {
      * 
      * @param addressToValidateForStatus
      * @param statusToValidate
+     * @throws Exception 
      */
     private void testDDRStatusAndSessionExistence(String addressToValidateForStatus,
-        CommunicationStatus statusToValidate) {
+        CommunicationStatus statusToValidate) throws Exception {
 
         //check if ddr record is marked as delivered
         DDRRecord outboundDdrRecord = null;

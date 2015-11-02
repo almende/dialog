@@ -337,8 +337,9 @@ public class TestFramework
      * 
      * @param accountId
      * @return
+     * @throws Exception 
      */
-    protected List<DDRRecord> getAllDdrRecords(String accountId) {
+    protected List<DDRRecord> getAllDdrRecords(String accountId) throws Exception {
 
         return DDRRecord.getDDRRecords(accountId, null, null, null, null, null, null, null, null, null, null);
     }

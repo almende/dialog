@@ -11,6 +11,7 @@ public class Log implements Serializable {
 
     private static final long serialVersionUID = -8797389516750753990L;
 
+    @SuppressWarnings("deprecation")
     @Id
     private String logId = null;
     private LogLevel level = null;

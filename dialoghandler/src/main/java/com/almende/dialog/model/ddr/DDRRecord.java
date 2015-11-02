@@ -23,10 +23,10 @@ import com.almende.util.ParallelInit;
 import com.almende.util.jackson.JOM;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -47,37 +47,6 @@ public class DDRRecord
     public static final String DDR_RECORD_KEY = "DDR_RECORD_ID";
     public static final String ANSWER_INPUT_KEY = "ANSWER_INPUT";
     private static final String DOT_REPLACER_KEY = "[%dot%]";
-    
-    /**
-     * status of the communication
-     */
-    public enum CommunicationStatus {
-        DELIVERED, RECEIVED("RECEIEVED"), SENT, FINISHED, MISSED, ERROR, UNKNOWN;
-
-        /**
-         * use to collect alternate name. there was a typo in the enum back in
-         * the days :) But we want to fetch both RECEIVED as well as RECEIEVED
-         * 
-         * @param name
-         */
-        private String alternateName;
-
-        private CommunicationStatus(String name) {
-
-            this.alternateName = name;
-        }
-
-        private CommunicationStatus() {
-
-        }
-
-        @JsonCreator
-        public static CommunicationStatus fromJson(String name) {
-
-                name = name != null && name.equals(RECEIVED.alternateName) ? RECEIVED.toString() : name; 
-                return valueOf(name.toUpperCase());
-        }
-    }
     
     @Id
     public String _id;
@@ -223,71 +192,21 @@ public class DDRRecord
      * @param startTime
      * @param endTime
      * @param offset
-     * @param limit
-     *            fetchs 1000 records if limit is null or greater than 1000.
      * @return
      */
     public static List<DDRRecord> getDDRRecords(String accountId, Collection<AdapterType> adapterTypes,
         Collection<String> adapterIds, String fromAddress, Collection<String> ddrTypeIds, CommunicationStatus status,
         Long startTime, Long endTime, Collection<String> sessionKeys, Integer offset, Integer limit) {
 
-        limit = limit != null && limit <= 1000 ? limit : 1000;
-        offset = offset != null ? offset : 0;
-        JacksonDBCollection<DDRRecord, String> collection = getCollection();
-        ArrayList<Query> queryList = new ArrayList<Query>();
-        //fetch accounts that match
-        queryList.add(DBQuery.is("accountId", accountId));
-        //pick all adapterIds belong to the adapterType if its given. If AdapterIds are given choose that instead
-        if ((adapterTypes != null && !adapterTypes.isEmpty()) && (adapterIds == null || adapterIds.isEmpty())) {
-
-            for (AdapterType adapterType : adapterTypes) {
-                ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(accountId,
-                                                                                             adapterType.name(), null);
-                if (adapterConfigs != null) {
-                    adapterIds = new HashSet<String>();
-                    for (AdapterConfig adapterConfig : adapterConfigs) {
-                        adapterIds.add(adapterConfig.getConfigId());
-                    }
-                }
-            }
-        }
-        if (adapterIds != null) {
-            if (adapterIds.size() == 1) {
-                queryList.add(DBQuery.is("adapterId", adapterIds.iterator().next()));
-            }
-            else {
-                queryList.add(DBQuery.in("adapterId", adapterIds));
-            }
-        }
-        if (fromAddress != null) {
-            queryList.add(DBQuery.is("fromAddress", fromAddress));
-        }
-        if (ddrTypeIds != null) {
-            queryList.add(DBQuery.in("ddrTypeId", ddrTypeIds));
-        }
-        if (startTime != null) {
-            queryList.add(DBQuery.greaterThanEquals("start", startTime));
-        }
-        if (endTime != null) {
-            queryList.add(DBQuery.lessThanEquals("start", endTime));
-        }
-
-        Query[] dbQueries = new Query[queryList.size()];
-        for (int queryCounter = 0; queryCounter < queryList.size(); queryCounter++) {
-            dbQueries[queryCounter] = queryList.get(queryCounter);
-        }
-        DBCursor<DDRRecord> ddrCursor = collection.find(DBQuery.and(dbQueries));
-
-        if (sessionKeys != null) {
-            ddrCursor = ddrCursor.in("sessionKeys", sessionKeys);
-        }
-        List<DDRRecord> result = ddrCursor.skip(offset).limit(limit).sort(DBSort.desc("start")).toArray();
+        DBCursor<DDRRecord> ddrCursorForFilter = getDDRCursorForFilter(accountId, adapterTypes, adapterIds, fromAddress,
+            ddrTypeIds, startTime, endTime, sessionKeys, offset, limit);
+        List<DDRRecord> result = ddrCursorForFilter.toArray();
         if (result != null && !result.isEmpty() && status != null) {
             ArrayList<DDRRecord> resultByStatus = new ArrayList<DDRRecord>();
             for (DDRRecord ddrRecord : result) {
                 if (ddrRecord.getStatusPerAddress() != null &&
                     ddrRecord.getStatusPerAddress().values().contains(status)) {
-                    
+
                     resultByStatus.add(ddrRecord);
                 }
             }
@@ -297,7 +216,7 @@ public class DDRRecord
             return result;
         }
     }
-    
+
     /**
      * fetch the ddr record for a particular Session. This inverts the lookup. Normally used when a 
      * ddr is not found corresponding to a session {@link Session#getDdrRecordId()} 
@@ -1006,6 +925,77 @@ public class DDRRecord
             return false;
         return true;
     }
-    
-    
+
+    /**
+     * This method returns a cursor for all the DDRRecords that are fetched based on the filter conditions
+     * @param accountId
+     * @param adapterTypes
+     * @param adapterIds
+     * @param fromAddress
+     * @param ddrTypeIds
+     * @param startTime
+     * @param endTime
+     * @param sessionKeys
+     * @param offset
+     * @param limit
+     * @return
+     */
+    private static DBCursor<DDRRecord> getDDRCursorForFilter(String accountId, Collection<AdapterType> adapterTypes,
+        Collection<String> adapterIds, String fromAddress, Collection<String> ddrTypeIds, Long startTime, Long endTime,
+        Collection<String> sessionKeys, Integer offset, Integer limit) {
+
+        limit = limit != null && limit <= 1000 ? limit : 1000;
+        offset = offset != null ? offset : 0;
+        startTime = startTime != null ? startTime : TimeUtils.getCurrentDayStartTimestamp();
+        endTime = endTime != null ? endTime : TimeUtils.getServerCurrentTimeInMillis();
+        JacksonDBCollection<DDRRecord, String> collection = getCollection();
+        ArrayList<Query> queryList = new ArrayList<Query>();
+        //fetch accounts that match
+        queryList.add(DBQuery.is("accountId", accountId));
+        //pick all adapterIds belong to the adapterType if its given. If AdapterIds are given choose that instead
+        if ((adapterTypes != null && !adapterTypes.isEmpty()) && (adapterIds == null || adapterIds.isEmpty())) {
+
+            for (AdapterType adapterType : adapterTypes) {
+                ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(accountId,
+                    adapterType.name(), null);
+                if (adapterConfigs != null) {
+                    adapterIds = new HashSet<String>();
+                    for (AdapterConfig adapterConfig : adapterConfigs) {
+                        adapterIds.add(adapterConfig.getConfigId());
+                    }
+                }
+            }
+        }
+        if (adapterIds != null) {
+            if (adapterIds.size() == 1) {
+                queryList.add(DBQuery.is("adapterId", adapterIds.iterator().next()));
+            }
+            else {
+                queryList.add(DBQuery.in("adapterId", adapterIds));
+            }
+        }
+        if (fromAddress != null) {
+            queryList.add(DBQuery.is("fromAddress", fromAddress));
+        }
+        if (ddrTypeIds != null) {
+            queryList.add(DBQuery.in("ddrTypeId", ddrTypeIds));
+        }
+        if (startTime != null) {
+            queryList.add(DBQuery.greaterThanEquals("start", startTime));
+        }
+        if (endTime != null) {
+            queryList.add(DBQuery.lessThanEquals("start", endTime));
+        }
+
+        Query[] dbQueries = new Query[queryList.size()];
+        for (int queryCounter = 0; queryCounter < queryList.size(); queryCounter++) {
+            dbQueries[queryCounter] = queryList.get(queryCounter);
+        }
+        DBCursor<DDRRecord> ddrCursor = collection.find(DBQuery.and(dbQueries));
+
+        if (sessionKeys != null) {
+            ddrCursor = ddrCursor.in("sessionKeys", sessionKeys);
+        }
+        return ddrCursor.skip(offset).limit(limit).sort(DBSort.desc("start"));
+    }
 }

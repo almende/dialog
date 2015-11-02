@@ -21,8 +21,11 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.util.TypeUtil;
+import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
+import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
 
 public class DDRRecordAgentTest extends TestFramework
@@ -236,6 +239,62 @@ public class DDRRecordAgentTest extends TestFramework
                                              null);
         ddrRecord = ddrRecords.iterator().next();
         assertThat(ddrRecord.getToAddress(), Matchers.is(toAddress));
+    }
+    
+    /**
+     * Test to verify if filtering by {@link CommunicationStatus} works as expected for a large set
+     * @throws Exception
+     */
+    @Test
+    public void fetchLargeDDRRecordByStatus() throws Exception {
+
+        int ddrCount = 10;
+        String secondAddress = "0612345678";
+        AdapterConfig adapterConfig = createBroadsoftAdapter();
+        HashMap<String, Session> sessionKeyMap = new HashMap<String, Session>(1);
+        sessionKeyMap.put(remoteAddressVoice, createSession(adapterConfig, remoteAddressVoice));
+        sessionKeyMap.put(secondAddress, createSession(adapterConfig, secondAddress));
+
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.MINUTE, AdapterType.CALL,
+            null);
+        HashMap<String, String> toAddress = new HashMap<String, String>();
+        toAddress.put(remoteAddressVoice, null);
+        toAddress.put(secondAddress, null);
+        //create a 1000 ddrRecords
+        int count = 0;
+        while (count++ < ddrCount) {
+            DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, TEST_ACCOUNT_ID, toAddress,
+                "some test message", sessionKeyMap);
+        }
+        //fetch the ddrRecords
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        assertThat(allDdrRecords.size(), Matchers.is(ddrCount));
+        DDRRecord ddrRecord = allDdrRecords.iterator().next();
+        String formattedRemoteAddressVoice = PhoneNumberUtils.formatNumber(remoteAddressVoice, null);
+        secondAddress = PhoneNumberUtils.formatNumber(secondAddress, null);
+        assertThat(ddrRecord.getStatusForAddress(formattedRemoteAddressVoice), Matchers.is(CommunicationStatus.SENT));
+        assertThat(ddrRecord.getStatusForAddress(secondAddress), Matchers.is(CommunicationStatus.SENT));
+
+        //fetch ddr by status
+        allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.SENT, null,
+            null, null, null, null);
+        assertThat(allDdrRecords.size(), Matchers.is(ddrCount));
+
+        //update ddrRecoed with different Communication status
+        ddrRecord.addStatusForAddress(formattedRemoteAddressVoice, CommunicationStatus.FINISHED);
+        ddrRecord.addStatusForAddress(secondAddress, CommunicationStatus.MISSED);
+        ddrRecord.createOrUpdate();
+        //fetch ddr by status
+        allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.FINISHED,
+            null, null, null, null, null);
+        assertThat(allDdrRecords.size(), Matchers.is(1));
+        allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.MISSED,
+            null, null, null, null, null);
+        RestResponse ddrRecordsCount = new DDRRecordAgent().getDDRRecordsCount(TEST_ACCOUNT_ID, null, null, null, null,
+            CommunicationStatus.MISSED.toString(), null, null, null, null);
+        assertThat(allDdrRecords.size(), Matchers.is(1));
+        assertThat((Integer) ddrRecordsCount.getResult(), Matchers.is(1));
     }
 
     /**

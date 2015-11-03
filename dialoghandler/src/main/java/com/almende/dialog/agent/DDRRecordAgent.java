@@ -128,30 +128,17 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
     }
     
     @Override
-    public RestResponse getDDRRecordsCount(@Name("accountId") String accountId,
+    public RestResponse getDDRRecordsQuantity(@Name("accountId") String accountId,
         @Name("adapterTypes") @Optional Collection<AdapterType> adapterTypes,
         @Name("adapterIds") @Optional Collection<String> adapterIds, @Name("fromAddress") @Optional String fromAddress,
-        @Name("typeId") @Optional Collection<String> typeIds, @Name("communicationStatus") @Optional String status,
-        @Name("startTime") Long startTime, @Name("endTime") Long endTime,
-        @Name("sessionKeys") @Optional Collection<String> sessionKeys, @Name("offset") @Optional Integer offset)
-            throws Exception {
+        @Name("typeId") @Optional Collection<String> typeIds,
+        @Name("communicationStatus") @Optional CommunicationStatus status, @Name("startTime") Long startTime,
+        @Name("endTime") Long endTime, @Name("sessionKeys") @Optional Collection<String> sessionKeys,
+        @Name("offset") @Optional Integer offset) throws Exception {
 
-        Object ddrRecordsRecursively = getDDRRecordsRecursively(accountId, adapterTypes, adapterIds, fromAddress,
-            typeIds, status, startTime, endTime, sessionKeys, offset, null, false, false);
-        if (ddrRecordsRecursively != null) {
-            ArrayList<DDRRecord> ddrRecords = ServerUtils.convert(ddrRecordsRecursively, false,
-                new TypeReference<ArrayList<DDRRecord>>() {
-                });
-            if (ddrRecords != null) {
-                return RestResponse.ok(Settings.DIALOG_HANDLER_VERSION, ddrRecords.size());
-            }
-            else {
-                return new RestResponse(Settings.DIALOG_HANDLER_VERSION, null,
-                    javax.ws.rs.core.Response.Status.NO_CONTENT.getStatusCode(),
-                    "DDR Records missing or error occured");
-            }
-        }
-        return null;
+        Integer ddrRecordsQuantity = DDRRecord.getDDRRecordsQuantity(accountId, adapterTypes, adapterIds, fromAddress,
+            typeIds, status, startTime, endTime, sessionKeys, offset);
+        return RestResponse.ok(Settings.DIALOG_HANDLER_VERSION, ddrRecordsQuantity);
     }
     
     /**

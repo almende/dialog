@@ -170,8 +170,7 @@ public class VoiceXMLServletIT extends TestFramework {
         TestServlet.TEST_SERVLET_PATH += "test";
         VoiceXMLRESTProxy.dial(remoteAddressVoice, url, adapterConfig, TEST_ACCOUNT_ID, null,
             adapterConfig.getAccountType());
-        List<DDRRecord> allDdrRecords = DDRRecord.getDDRRecords(null, null, null, null, null, null, null, null, null,
-            null, null);
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertThat(allDdrRecords.isEmpty(), Matchers.is(true));
         Session session = Session.getSessionByInternalKey(adapterConfig.getAdapterType(), adapterConfig.getMyAddress(),
             PhoneNumberUtils.formatNumber(remoteAddressVoice, null));

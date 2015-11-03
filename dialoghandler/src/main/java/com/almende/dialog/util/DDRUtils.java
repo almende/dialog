@@ -477,10 +477,12 @@ public class DDRUtils
                         if("inbound".equalsIgnoreCase(session.getDirection())) {
                             ddrRecord.setFromAddress(session.getRemoteAddress());
                             ddrRecord.addToAddress(localAddress);
+                            ddrRecord.setDirection("inbound");
                         }
                         else {
                             ddrRecord.setFromAddress(localAddress);
                             ddrRecord.addToAddress(session.getRemoteAddress());
+                            ddrRecord.setDirection("outbound");
                         }
                         ddrRecord.addSessionKey(session.getKey());
                         if (ttsProvider != null) {

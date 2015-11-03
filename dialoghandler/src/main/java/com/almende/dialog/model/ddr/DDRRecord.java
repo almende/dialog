@@ -7,12 +7,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import javax.persistence.Id;
 import org.bson.types.ObjectId;
-import org.mongojack.DBCursor;
-import org.mongojack.DBQuery;
-import org.mongojack.DBQuery.Query;
-import org.mongojack.DBSort;
-import org.mongojack.Id;
+import org.jongo.Find;
+import org.jongo.Jongo;
+import org.jongo.MongoCollection;
+import org.jongo.MongoCursor;
+import org.jongo.ResultHandler;
+import org.jongo.marshall.jackson.JacksonMapper;
 import org.mongojack.JacksonDBCollection;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -32,24 +34,27 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.mongodb.DB;
+import com.mongodb.DBObject;
 
 /**
  * The actual price charged as part of the service and/or communication cost
+ * 
  * @author Shravan
  */
 @JsonPropertyOrder({"totalCost"})
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class DDRRecord
-{
+public class DDRRecord {
+
     protected static final Logger log = Logger.getLogger(DDRRecord.class.getName());
     public static final String DDR_TOTALCOST_KEY = "totalCost";
     public static final String DDR_RECORD_KEY = "DDR_RECORD_ID";
     public static final String ANSWER_INPUT_KEY = "ANSWER_INPUT";
     private static final String DOT_REPLACER_KEY = "[%dot%]";
-    
+
     @Id
-    public String _id;
+    private String _id;
     //used for backward compatibility as TwigMongoWrapper was used before. so it maintained two ids: id and _id in the datastore.
     String id;
     String adapterId;
@@ -57,7 +62,7 @@ public class DDRRecord
     String fromAddress;
     @JsonIgnore
     Map<String, String> toAddress;
-    //creating a dummy serialized version of toAddress as dot(.) in keys is not allowed by mongo 
+    //creating a dummy serialized version of toAddress as dot(.) in keys is not allowed by mongo
     String toAddressString;
     String ddrTypeId;
     Integer quantity;
@@ -65,23 +70,24 @@ public class DDRRecord
     Long duration;
     Collection<String> sessionKeys;
     Map<String, CommunicationStatus> statusPerAddress;
-    
+
     @JsonIgnore
     Boolean shouldGenerateCosts = false;
     @JsonIgnore
     Boolean shouldIncludeServiceCosts = false;
     Map<String, Object> additionalInfo;
     /**
-     * PRE_PAID accounts must have a fixed ddrCost. POST_PAID can have a variable one. 
-     * This can be got from the adapterId too, but just makes it more explicit
+     * PRE_PAID accounts must have a fixed ddrCost. POST_PAID can have a
+     * variable one. This can be got from the adapterId too, but just makes it
+     * more explicit
      */
     AccountType accountType;
-    
+
     //links to other ddrRecords, parent and children
     String parentId;
     Collection<String> childIds;
-    String direction;
-    
+    String direction = null;
+
     /**
      * total cost is not sent for any ddr if its a post paid account
      */
@@ -92,14 +98,15 @@ public class DDRRecord
     @JsonIgnore
     private AdapterConfig config;
     /**
-     * Flag to make sure that the data with (.) is correcting on a get from any level other than 
-     * database/mongo e.g. resource/agent 
+     * Flag to make sure that the data with (.) is correcting on a get from any
+     * level other than database/mongo e.g. resource/agent
      */
     @JsonIgnore
     private boolean correctDotData;
-    
-    public DDRRecord(){}
-    
+
+    public DDRRecord() {
+    }
+
     public DDRRecord(String ddrTypeId, String adapterId, String accountId, Integer quantity) {
 
         this.ddrTypeId = ddrTypeId;
@@ -107,7 +114,7 @@ public class DDRRecord
         this.accountId = accountId;
         this.quantity = quantity;
     }
-    
+
     public DDRRecord(String ddrTypeId, AdapterConfig adapterConfig, String accountId, Integer quantity) {
 
         this.ddrTypeId = ddrTypeId;
@@ -115,13 +122,13 @@ public class DDRRecord
         this.accountId = accountId;
         this.quantity = quantity;
     }
-    
+
     @JsonIgnore
     public DDRRecord createOrUpdate() {
 
         _id = _id != null && !_id.isEmpty() ? _id : ObjectId.get().toStringMongod();
         correctDotData = true;
-        JacksonDBCollection<DDRRecord, String> collection = getCollection();
+        JacksonDBCollection<DDRRecord, String> collection = getMongoJackCollection();
         DDRRecord existingDDRRecord = collection.findOneById(_id);
         //update if existing
         if (existingDDRRecord != null) {
@@ -134,21 +141,23 @@ public class DDRRecord
         log.info("ddr record saved: " + ServerUtils.serializeWithoutException(this));
         return this;
     }
-    
+
     /**
-     * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
+     * creates/updates a ddr record and creates a log of type
+     * {@link LogLevel#DDR}
      */
     @JsonIgnore
     public DDRRecord createOrUpdateWithLog(Session session) {
 
-        if(session != null && session.isTestSession()) {
+        if (session != null && session.isTestSession()) {
             return null;
         }
         return createOrUpdate();
     }
-    
+
     /**
-     * creates/updates a ddr record and creates a log of type {@link LogLevel#DDR} 
+     * creates/updates a ddr record and creates a log of type
+     * {@link LogLevel#DDR}
      */
     public DDRRecord createOrUpdateWithLog(Map<String, Session> sessionKeyMap) {
 
@@ -158,7 +167,7 @@ public class DDRRecord
         }
         return ddrRecord;
     }
-    
+
     /**
      * Gets the DDRRecord for the given id only if accountId matches that of the
      * owner of the DDRRecord itself
@@ -170,14 +179,14 @@ public class DDRRecord
      */
     public static DDRRecord getDDRRecord(String id, String accountId) throws Exception {
 
-        JacksonDBCollection<DDRRecord, String> coll = getCollection();
-        DDRRecord ddrRecord = id != null ? coll.findOneById(id) : null;
+        MongoCollection coll = getCollection();
+        DDRRecord ddrRecord = id != null ? coll.findOne(getQueryById(id)).as(DDRRecord.class) : null;
         if (ddrRecord != null && ddrRecord.getAccountId() != null && !ddrRecord.getAccountId().equals(accountId)) {
             throw new Exception(String.format("DDR record: %s is not owned by account: %s", id, accountId));
         }
         return ddrRecord;
     }
-    
+
     /**
      * Fetch the ddr records based the input parameters. fetches the records
      * that matches to all the parameters given. The accountId is mandatory and
@@ -193,80 +202,171 @@ public class DDRRecord
      * @param endTime
      * @param offset
      * @return
+     * @throws Exception 
      */
     public static List<DDRRecord> getDDRRecords(String accountId, Collection<AdapterType> adapterTypes,
-        Collection<String> adapterIds, String fromAddress, Collection<String> ddrTypeIds, CommunicationStatus status,
-        Long startTime, Long endTime, Collection<String> sessionKeys, Integer offset, Integer limit) {
+        Collection<String> adapterIds, String fromAddress, Collection<String> ddrTypeIds, final CommunicationStatus status,
+        Long startTime, Long endTime, Collection<String> sessionKeys, Integer offset, Integer limit) throws Exception {
 
-        DBCursor<DDRRecord> ddrCursorForFilter = getDDRCursorForFilter(accountId, adapterTypes, adapterIds, fromAddress,
-            ddrTypeIds, startTime, endTime, sessionKeys, offset, limit);
-        List<DDRRecord> result = ddrCursorForFilter.toArray();
-        if (result != null && !result.isEmpty() && status != null) {
-            ArrayList<DDRRecord> resultByStatus = new ArrayList<DDRRecord>();
-            for (DDRRecord ddrRecord : result) {
-                if (ddrRecord.getStatusPerAddress() != null &&
-                    ddrRecord.getStatusPerAddress().values().contains(status)) {
-
-                    resultByStatus.add(ddrRecord);
+        String ddrQuery = getDDRQuery(accountId, adapterTypes, adapterIds, fromAddress, ddrTypeIds, startTime,
+            endTime, sessionKeys);
+        limit = limit != null && limit <= 1000 ? limit : 1000;
+        offset = offset != null ? offset : 0;
+        
+        Find ddrFind = getCollection().find(String.format("{%s}", ddrQuery)).skip(offset)
+             .limit(limit).sort("{start: -1}");
+        MongoCursor<DDRRecord> ddrCursor = null;
+        if(status != null) {
+            ddrCursor = ddrFind.map(new ResultHandler<DDRRecord>() {
+                @Override
+                public DDRRecord map(DBObject result) {
+           
+                    try {
+                        if (result.get("statusPerAddress") != null) {
+                            Map<String, String> statusForAddresses = ServerUtils.deserialize(
+                                result.get("statusPerAddress").toString(), false,
+                                new TypeReference<Map<String, String>>() {
+                            });
+                            if(statusForAddresses != null) {
+                                for (String address : statusForAddresses.keySet()) {
+                                    Object statusForAddress = statusForAddresses.get(address);
+                                    if (statusForAddress != null &&
+                                        CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
+                                        String serializedDDR = ServerUtils.serializeWithoutException(result);
+                                        if(serializedDDR != null) {
+                                            return ServerUtils.deserialize(serializedDDR, false, DDRRecord.class);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return null;
                 }
-            }
-            return resultByStatus;
+            });
         }
         else {
-            return result;
+            ddrCursor = ddrFind.as(DDRRecord.class);
         }
+        List<DDRRecord> result = new ArrayList<DDRRecord>(1);
+        while (ddrCursor.hasNext()) {
+            DDRRecord ddrRecord = ddrCursor.next();
+            if(ddrRecord != null) {
+                result.add(ddrRecord);
+            }
+        }
+        return result;
     }
 
     /**
-     * fetch the ddr record for a particular Session. This inverts the lookup. Normally used when a 
-     * ddr is not found corresponding to a session {@link Session#getDdrRecordId()} 
+     * Fetch the quantity of ddr records based the input parameters. The
+     * accountId is mandatory and rest are optional
+     * 
+     * @param adapterId
+     * @param accountId
+     *            Mandatory field
+     * @param fromAddress
+     * @param ddrTypeIds
+     * @param status
+     * @param startTime
+     * @param endTime
+     * @param offset
+     * @return
+     * @throws Exception
+     */
+    public static Integer getDDRRecordsQuantity(String accountId, Collection<AdapterType> adapterTypes,
+        Collection<String> adapterIds, String fromAddress, Collection<String> ddrTypeIds,
+        final CommunicationStatus status, Long startTime, Long endTime, Collection<String> sessionKeys, Integer offset)
+            throws Exception {
+
+        String ddrQuery = getDDRQuery(accountId, adapterTypes, adapterIds, fromAddress, ddrTypeIds, startTime, endTime,
+            sessionKeys);
+        offset = offset != null ? offset : 0;
+        MongoCursor<Integer> ddrCursor = getCollection().find(String.format("{%s}", ddrQuery)).skip(offset)
+             .map(new ResultHandler<Integer>() {
+            
+                 @Override
+                 public Integer map(DBObject result) {
+            
+                     try {
+                         if (result.get("statusPerAddress") != null) {
+                             Map<String, String> statusForAddresses = ServerUtils.deserialize(
+                                 result.get("statusPerAddress").toString(), false,
+                                 new TypeReference<Map<String, String>>() {
+                             });
+                             if(statusForAddresses != null) {
+                                 for (String address : statusForAddresses.keySet()) {
+                                     Object statusForAddress = statusForAddresses.get(address);
+                                     if (statusForAddress != null &&
+                                         CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
+                                         return (Integer) result.get("quantity");
+                                     }
+                                 }
+                             }
+                         }
+                     }
+                     catch (Exception e) {
+                         e.printStackTrace();
+                     }
+                     return 0;
+                 }
+             });
+        Integer quantity = 0;
+        while (ddrCursor.hasNext()) {
+            quantity += ddrCursor.next();
+        }
+        return quantity;
+    }
+
+    /**
+     * fetch the ddr record for a particular Session. This inverts the lookup.
+     * Normally used when a ddr is not found corresponding to a session
+     * {@link Session#getDdrRecordId()}
+     * 
      * @param session
      * @return
-     * @throws Exception 
+     * @throws Exception
      */
     public static DDRRecord getDDRRecord(String sessionKey) {
 
         Session session = Session.getSession(sessionKey);
         if (session != null) {
-            JacksonDBCollection<DDRRecord, String> collection = getCollection();
-            ArrayList<Query> queryList = new ArrayList<Query>();
+            String queryString = "accountId:\"" + session.getAccountId() + "\"";
             //fetch accounts that match
-            queryList.add(DBQuery.is("accountId", session.getAccountId()));
             if (session.getAdapterID() != null) {
-                queryList.add(DBQuery.is("adapterId", session.getAdapterID()));
+                queryString += ", adapterId:\"" + session.getAdapterID() + "\"";
             }
             if (session.getDirection() != null) {
                 HashMap<String, String> addressMap = new HashMap<String, String>(1);
                 if (session.getDirection().equalsIgnoreCase("incoming")) {
-                    queryList.add(DBQuery.is("fromAddress", session.getRemoteAddress()));
+                    queryString += ", fromAddress:\"" + session.getRemoteAddress() + "\"";
                     addressMap.put(session.getLocalAddress(), "");
-                    queryList.add(DBQuery.is("status", CommunicationStatus.RECEIVED));
+                    queryString += ", status:\"" + CommunicationStatus.RECEIVED + "\"";
                 }
                 else {
-                    queryList.add(DBQuery.is("fromAddress", session.getLocalAddress()));
+                    queryString += ", fromAddress:\"" + session.getLocalAddress() + "\"";
                     addressMap.put(session.getRemoteAddress(), "");
-                    queryList.add(DBQuery.is("status", CommunicationStatus.SENT));
+                    queryString += ", status:\"" + CommunicationStatus.SENT + "\"";
                 }
                 try {
-                    queryList.add(DBQuery.is("toAddressString", ServerUtils.serialize(addressMap)));
+                    queryString += ", toAddressString:\"" + ServerUtils.serialize(addressMap) + "\"";
                 }
                 catch (Exception e) {
                     e.printStackTrace();
                     log.severe("Error while serializing. Message: " + e.toString());
                 }
             }
-            Query[] dbQueries = new Query[queryList.size()];
-            for (int queryCounter = 0; queryCounter < queryList.size(); queryCounter++) {
-                dbQueries[queryCounter] = queryList.get(queryCounter);
-            }
-            DBCursor<DDRRecord> ddrCursor = collection.find(DBQuery.and(dbQueries));
-            if (ddrCursor != null) {
-                while (ddrCursor.hasNext()) {
-                    DDRRecord ddrRecord = ddrCursor.next();
+            MongoCollection collection = getCollection();
+            MongoCursor<DDRRecord> ddrRecords = collection.find(String.format("{%s}", queryString)).as(DDRRecord.class);
+            if (ddrRecords != null) {
+                for (DDRRecord ddrRecord : ddrRecords) {
                     //return the ddrRecord whose startTime matches the creationTime or answerTime of the session
                     if (ddrRecord.getStart() != null &&
-                        (ddrRecord.getStart().toString().equals(session.getCreationTimestamp()) || ddrRecord.getStart()
-                                                        .toString().equals(session.getAnswerTimestamp()))) {
+                        (ddrRecord.getStart().toString().equals(session.getCreationTimestamp()) ||
+                            ddrRecord.getStart().toString().equals(session.getAnswerTimestamp()))) {
                         return ddrRecord;
                     }
                 }
@@ -274,70 +374,84 @@ public class DDRRecord
         }
         return null;
     }
-    
+
     // -- getters and setters --
     @JsonProperty("_id")
     public String get_Id() {
-        
+
         return _id;
     }
+
     @JsonProperty("_id")
     public void set_Id(String id) {
-    
+
         this._id = id;
     }
+
     /**
-     * used for backward compatibility as TwigMongoWrapper was used before. so it maintained two ids: id and _id in the datastore.
-     * uses the {@link DDRRecord#get_Id()} itself
+     * used for backward compatibility as TwigMongoWrapper was used before. so
+     * it maintained two ids: id and _id in the datastore. uses the
+     * {@link DDRRecord#get_Id()} itself
      */
     @JsonIgnore
     public String getId() {
-        
+
         return get_Id();
     }
+
     /**
-     * used for backward compatibility as TwigMongoWrapper was used before. so it maintained two ids: id and _id in the datastore.
-     * uses the {@link DDRRecord#set_Id(String)} itself
+     * used for backward compatibility as TwigMongoWrapper was used before. so
+     * it maintained two ids: id and _id in the datastore. uses the
+     * {@link DDRRecord#set_Id(String)} itself
+     * 
      * @param id
      */
     @JsonIgnore
     public void setId(String id) {
-    
+
         set_Id(id);
     }
-    public String getAdapterId()
-    {
+
+    public String getAdapterId() {
+
         return adapterId;
     }
-    public void setAdapterId( String adapterId )
-    {
+
+    public void setAdapterId(String adapterId) {
+
         this.adapterId = adapterId;
     }
-    public String getAccountId()
-    {
+
+    public String getAccountId() {
+
         return accountId;
     }
-    public void setAccountId( String accountId )
-    {
+
+    public void setAccountId(String accountId) {
+
         this.accountId = accountId;
     }
-    public String getFromAddress()
-    {
+
+    public String getFromAddress() {
+
         return fromAddress;
     }
-    public void setFromAddress( String fromAddress )
-    {
+
+    public void setFromAddress(String fromAddress) {
+
         this.fromAddress = fromAddress;
     }
+
     @JsonIgnore
     public Map<String, String> getToAddress() {
 
-        if (toAddress == null && toAddressString == null) {
+        if (toAddress == null && getToAddressString() == null) {
             toAddress = new HashMap<String, String>();
         }
-        else if ((toAddress == null || toAddress.isEmpty()) && toAddressString != null) {
+        else if ((toAddress == null || getToAddressString().isEmpty()) && getToAddressString() != null) {
             try {
-                toAddress = ServerUtils.deserialize(toAddressString, new TypeReference<HashMap<String, String>>() {});
+                toAddress = ServerUtils.deserialize(getToAddressString(), new TypeReference<HashMap<String, String>>() {
+                });
             }
             catch (Exception e) {
                 e.printStackTrace();
@@ -346,51 +460,59 @@ public class DDRRecord
         }
         return toAddress;
     }
-    
+
     @JsonIgnore
-    public void setToAddress( Map<String, String> toAddress )
-    {
+    public void setToAddress(Map<String, String> toAddress) {
+
         this.toAddress = toAddress;
+        this.toAddressString = getToAddressString();
     }
+
     @JsonIgnore
-    public void addToAddress( String toAddress )
-    {
+    public void addToAddress(String toAddress) {
+
         this.toAddress = this.toAddress != null ? this.toAddress : new HashMap<String, String>();
         this.toAddress.put(toAddress, "");
+        this.toAddressString = getToAddressString();
     }
-    public String getDdrTypeId()
-    {
+
+    public String getDdrTypeId() {
+
         return ddrTypeId;
     }
-    public void setDdrTypeId( String ddrTypeId )
-    {
+
+    public void setDdrTypeId(String ddrTypeId) {
+
         this.ddrTypeId = ddrTypeId;
     }
-    public Integer getQuantity()
-    {
+
+    public Integer getQuantity() {
+
         return quantity != null ? quantity : 0;
     }
-    
-    public Long getStart()
-    {
+
+    public Long getStart() {
+
         return start;
     }
-    public Long getDuration()
-    {
+
+    public Long getDuration() {
+
         return duration;
     }
-    public void setQuantity( Integer quantity )
-    {
+
+    public void setQuantity(Integer quantity) {
+
         this.quantity = quantity;
     }
 
-    public void setStart( Long start )
-    {
+    public void setStart(Long start) {
+
         this.start = start;
     }
 
-    public void setDuration( Long duration )
-    {
+    public void setDuration(Long duration) {
+
         this.duration = duration;
     }
 
@@ -421,46 +543,45 @@ public class DDRRecord
 
     /**
      * only used by the mongo serializing/deserializing
+     * 
      * @param toAddressString
      * @throws Exception
      */
-    public void setToAddressString( String toAddressString ) throws Exception
-    {
+    public void setToAddressString(String toAddressString) throws Exception {
+
         this.toAddressString = correctDotReplacedString(toAddressString);
     }
-    
-    @JsonIgnore    
-    public DDRType getDdrType()
-    {
-        if(ddrTypeId != null && !ddrTypeId.isEmpty())
-        {
-            return DDRType.getDDRType( ddrTypeId );
+
+    @JsonIgnore
+    public DDRType getDdrType() {
+
+        if (ddrTypeId != null && !ddrTypeId.isEmpty()) {
+            return DDRType.getDDRType(ddrTypeId);
         }
         return null;
     }
 
     @JsonIgnore
-    public AdapterConfig getAdapter()
-    {
-        if(adapterId != null && !adapterId.isEmpty() && config == null)
-        {
-            config = AdapterConfig.getAdapterConfig( adapterId );
+    public AdapterConfig getAdapter() {
+
+        if (adapterId != null && !adapterId.isEmpty() && config == null) {
+            config = AdapterConfig.getAdapterConfig(adapterId);
         }
         return config;
     }
 
     @JsonIgnore
-    public void setShouldGenerateCosts( Boolean shouldGenerateCosts )
-    {
+    public void setShouldGenerateCosts(Boolean shouldGenerateCosts) {
+
         this.shouldGenerateCosts = shouldGenerateCosts;
     }
-    
+
     @JsonIgnore
-    public void setShouldIncludeServiceCosts( Boolean shouldIncludeServiceCosts )
-    {
+    public void setShouldIncludeServiceCosts(Boolean shouldIncludeServiceCosts) {
+
         this.shouldIncludeServiceCosts = shouldIncludeServiceCosts;
     }
-    
+
     /**
      * Generally only called by the serializer method to lazy load all the
      * charges involved. This method will generate costs if it is a
@@ -494,7 +615,7 @@ public class DDRRecord
         }
         return DDRUtils.getCeilingAtPrecision(totalCost, 3);
     }
-    
+
     /**
      * Generally just used by JACKSON to (de)serialize the variable for all
      * accounts except PRE_PAID. Setting the value does not matter as the actual
@@ -504,7 +625,7 @@ public class DDRRecord
      * @param totalCost
      */
     public void setTotalCost(Double totalCost) {
-        
+
         this.totalCost = totalCost != null ? totalCost : 0.0;
     }
 
@@ -517,9 +638,9 @@ public class DDRRecord
                 Object value = additionalInfo.get(key);
                 if (value instanceof Map) {
                     try {
-                        Map<String, Object> valueAsMap = JOM.getInstance()
-                                                        .convertValue(value, new TypeReference<Map<String, Object>>() {
-                                                        });
+                        Map<String, Object> valueAsMap = JOM.getInstance().convertValue(value,
+                            new TypeReference<Map<String, Object>>() {
+                            });
                         valueAsMap = getDotReplaceKeys(valueAsMap);
                         additionalInfoCopy.put(key, valueAsMap);
                     }
@@ -536,10 +657,23 @@ public class DDRRecord
     }
 
     public void setAdditionalInfo(Map<String, Object> additionalInfo) {
-    
+
         if (additionalInfo != null) {
             this.additionalInfo = this.additionalInfo != null ? this.additionalInfo : new HashMap<String, Object>();
             for (String key : additionalInfo.keySet()) {
+                //go one level deeper
+                Object value = additionalInfo.get(key);
+                if (value != null && value instanceof Map) {
+                    Map<String, Object> valueMap = null;
+                    try {
+                        valueMap = ServerUtils.convert(value, false, new TypeReference<Map<String, Object>>() {
+                        });
+                    }
+                    catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    value = getDotReplaceKeys(valueMap);
+                }
                 this.additionalInfo.put(correctDotReplacedString(key), additionalInfo.get(key));
             }
         }
@@ -547,53 +681,45 @@ public class DDRRecord
             this.additionalInfo = additionalInfo;
         }
     }
-    
+
     @JsonIgnore
     public void addAdditionalInfo(String key, Object value) {
 
         additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, Object>();
         if (!DDR_RECORD_KEY.equals(key)) {
-            //dot(.) is not allowed to be saved in mongo. just replace with -
+            //dot(.) is not allowed to be saved in mongo. just replace with [%dot%]
             additionalInfo.put(getDotReplacedString(key), value);
         }
     }
-    
+
     public AccountType getAccountType() {
-        
+
         return accountType;
     }
-    
+
     public void setAccountType(AccountType accountType) {
-    
+
         //update null accountType with POST_PAID
         accountType = accountType != null ? accountType : AccountType.POST_PAID;
         this.accountType = accountType;
     }
-    
+
     public Collection<String> getSessionKeys() {
-        
+
         return sessionKeys;
     }
 
     public void setSessionKeys(Collection<String> sessionKeys) {
-    
+
         this.sessionKeys = sessionKeys;
     }
-    
+
     public void addSessionKey(String sessionKey) {
-        
+
         sessionKeys = sessionKeys != null ? sessionKeys : new HashSet<String>();
         sessionKeys.add(sessionKey);
     }
-    
-    private static JacksonDBCollection<DDRRecord, String> getCollection() {
 
-        DB db = ParallelInit.getDatastore();
-        return JacksonDBCollection.wrap(db.getCollection(DDRRecord.class.getCanonicalName().toLowerCase() + "s"),
-                                        DDRRecord.class, String.class);
-    }
-
-    
     public Map<String, CommunicationStatus> getStatusPerAddress() {
 
         statusPerAddress = statusPerAddress != null ? statusPerAddress : new HashMap<String, CommunicationStatus>();
@@ -613,7 +739,7 @@ public class DDRRecord
         //make sure each of the key is dot corrected
         if (statusPerAddress != null) {
             this.statusPerAddress = this.statusPerAddress != null ? this.statusPerAddress
-                                                                 : new HashMap<String, CommunicationStatus>();
+                : new HashMap<String, CommunicationStatus>();
             for (String key : statusPerAddress.keySet()) {
                 this.statusPerAddress.put(correctDotReplacedString(key), statusPerAddress.get(key));
             }
@@ -622,9 +748,10 @@ public class DDRRecord
             this.statusPerAddress = statusPerAddress;
         }
     }
-    
+
     /**
      * add a status per address
+     * 
      * @param address
      * @param status
      */
@@ -632,14 +759,15 @@ public class DDRRecord
 
         AdapterConfig adapter = getAdapter();
         if (address != null && adapter != null && (adapter.isCallAdapter() || adapter.isSMSAdapter())) {
-            
+
             address = PhoneNumberUtils.formatNumber(address.trim().split("@")[0], null);
         }
         getStatusPerAddress().put(getDotReplacedString(address), status);
     }
-    
+
     /**
      * add a status all all the address
+     * 
      * @param addresses
      * @param status
      */
@@ -649,9 +777,10 @@ public class DDRRecord
             addStatusForAddress(getDotReplacedString(address), status);
         }
     }
-    
+
     /**
      * return status based on address
+     * 
      * @param address
      * @param status
      */
@@ -659,42 +788,46 @@ public class DDRRecord
 
         return getStatusPerAddress().get(getDotReplacedString(address));
     }
-    
+
     /**
-     * gets the direction of this ddrRecord based on the toAddress and the adapter address
+     * gets the direction of this ddrRecord based on the toAddress and the
+     * adapter address
+     * 
      * @return either "inbound" or "outbound"
      */
     public String getDirection() {
 
         //if the from address is not equal to the adapter address, its an incoming communication
         if (direction == null && getToAddress() != null && getAdapter() != null) {
-            return getToAddress().containsKey(getAdapter().getFormattedMyAddress()) && getToAddress().size() == 1 ? "inbound"
-                : "outbound";
+            return getToAddress().containsKey(getAdapter().getFormattedMyAddress()) && getToAddress().size() == 1
+                ? "inbound" : "outbound";
         }
         return direction;
     }
-    
+
     public void setDirection(String direction) {
 
         this.direction = direction;
     }
-    
+
     /**
      * Reloads the instance from the db
+     * 
      * @return
-     * @throws Exception 
+     * @throws Exception
      */
     @JsonIgnore
     public DDRRecord reload() throws Exception {
 
         return getDDRRecord(getId(), accountId);
     }
-    
+
     /**
      * Adds the given sessionKeys to additionalInfo, and to collection of
      * sessionKeys. If the session is found. adds the external caller id too
      * 
      * @param sessionMap
+     * @throws Exception 
      */
     @JsonIgnore
     public void setSessionKeysFromMap(Map<String, Session> sessionMap) {
@@ -725,30 +858,27 @@ public class DDRRecord
         DDRType ddrType = DDRType.getDDRType(ddrTypeId);
         return ddrType != null ? ddrType.getCategory() : null;
     }
-    
+
     public String getParentId() {
-        
+
         return parentId;
     }
 
-    
     public void setParentId(String parentId) {
-    
+
         this.parentId = parentId;
     }
 
-    
     public Collection<String> getChildIds() {
-    
+
         return childIds;
     }
 
-    
     public void setChildIds(Collection<String> childIds) {
-    
+
         this.childIds = childIds;
     }
-    
+
     @JsonIgnore
     public void addChildId(String childId) {
 
@@ -757,9 +887,10 @@ public class DDRRecord
             childIds.add(childId);
         }
     }
-    
+
     /**
      * Gets the linked parentDDRRecord, if any
+     * 
      * @return
      * @throws Exception
      */
@@ -771,9 +902,10 @@ public class DDRRecord
         }
         return null;
     }
-    
+
     /**
      * Gets all the linked childDDRRecords, if any.
+     * 
      * @return
      * @throws Exception
      */
@@ -791,7 +923,7 @@ public class DDRRecord
         }
         return childDDRRecords;
     }
-    
+
     /**
      * Based on the address (assumed to be formatted if its a number), fetches
      * the sessionKey as stored in the {@link DDRRecord#additionalInfo}
@@ -812,7 +944,7 @@ public class DDRRecord
         }
         return null;
     }
-    
+
     /**
      * Returns the message parameter stored in the ddrRecord
      * 
@@ -826,10 +958,11 @@ public class DDRRecord
         }
         return null;
     }
-    
+
     /**
-     * Ideally should be called by the GETTER methods of fields whose dot (.) values are to be
-     * replaced by {@link DDRRecord#DOT_REPLACER_KEY}
+     * Ideally should be called by the GETTER methods of fields whose dot (.)
+     * values are to be replaced by {@link DDRRecord#DOT_REPLACER_KEY}
+     * 
      * @param data
      * @return
      */
@@ -842,19 +975,22 @@ public class DDRRecord
             return correctDotReplacedString(data);
         }
     }
-    
+
     /**
-     * Ideally should be called by the SETTER methods of fields whose dot (.) values are 
-     * replaced by {@link DDRRecord#DOT_REPLACER_KEY}
+     * Ideally should be called by the SETTER methods of fields whose dot (.)
+     * values are replaced by {@link DDRRecord#DOT_REPLACER_KEY}
+     * 
      * @param data
      * @return
      */
     private String correctDotReplacedString(String data) {
+
         return data != null ? data.replace(DOT_REPLACER_KEY, ".") : null;
     }
-    
+
     /**
-     * Replace all dots (.) in keys of a map object 
+     * Replace all dots (.) in keys of a map object
+     * 
      * @param data
      */
     private Map<String, Object> getDotReplaceKeys(Map<String, Object> data) {
@@ -868,7 +1004,7 @@ public class DDRRecord
         }
         return null;
     }
-    
+
     /**
      * Updates/adds (commits to mongo too) the linked parent ddrRecord with this
      * child ddrRecordId (via Session) and also sets the parentDDRRecorid to
@@ -879,10 +1015,10 @@ public class DDRRecord
     private void updateParentAndChildDDRRecordIds(Session session) {
 
         Session parentSession = session.getParentSession();
-        if(parentSession != null) {
+        if (parentSession != null) {
             DDRRecord parentDDRRecord = parentSession.getDDRRecord();
-            if(parentDDRRecord != null) {
-                if(getId() == null) {
+            if (parentDDRRecord != null) {
+                if (getId() == null) {
                     setId(ObjectId.get().toStringMongod());
                 }
                 parentDDRRecord.addChildId(getId());
@@ -927,7 +1063,8 @@ public class DDRRecord
     }
 
     /**
-     * This method returns a cursor for all the DDRRecords that are fetched based on the filter conditions
+     * This method returns a aggregator based on the filter conditions
+     * 
      * @param accountId
      * @param adapterTypes
      * @param adapterIds
@@ -939,19 +1076,21 @@ public class DDRRecord
      * @param offset
      * @param limit
      * @return
+     * @return
+     * @throws Exception
      */
-    private static DBCursor<DDRRecord> getDDRCursorForFilter(String accountId, Collection<AdapterType> adapterTypes,
+    private static String getDDRQuery(String accountId, Collection<AdapterType> adapterTypes,
         Collection<String> adapterIds, String fromAddress, Collection<String> ddrTypeIds, Long startTime, Long endTime,
-        Collection<String> sessionKeys, Integer offset, Integer limit) {
+        Collection<String> sessionKeys) throws Exception {
 
-        limit = limit != null && limit <= 1000 ? limit : 1000;
-        offset = offset != null ? offset : 0;
-        startTime = startTime != null ? startTime : TimeUtils.getCurrentDayStartTimestamp();
-        endTime = endTime != null ? endTime : TimeUtils.getServerCurrentTimeInMillis();
-        JacksonDBCollection<DDRRecord, String> collection = getCollection();
-        ArrayList<Query> queryList = new ArrayList<Query>();
         //fetch accounts that match
-        queryList.add(DBQuery.is("accountId", accountId));
+        String matchQuery = "";
+        if (accountId != null) {
+            matchQuery += "accountId:\"" + accountId + "\"";
+        }
+        else {
+            throw new Exception("AccountId is not expected to be null.");
+        }
         //pick all adapterIds belong to the adapterType if its given. If AdapterIds are given choose that instead
         if ((adapterTypes != null && !adapterTypes.isEmpty()) && (adapterIds == null || adapterIds.isEmpty())) {
 
@@ -968,34 +1107,57 @@ public class DDRRecord
         }
         if (adapterIds != null) {
             if (adapterIds.size() == 1) {
-                queryList.add(DBQuery.is("adapterId", adapterIds.iterator().next()));
+                matchQuery += ", adapterId:\"" + adapterIds.iterator().next() + "\"";
             }
             else {
-                queryList.add(DBQuery.in("adapterId", adapterIds));
+                matchQuery += ", adapterId: {$in:" + ServerUtils.serialize(adapterIds) + "}";
             }
         }
         if (fromAddress != null) {
-            queryList.add(DBQuery.is("fromAddress", fromAddress));
+            matchQuery += ", fromAddress:\"" + fromAddress + "\"";
         }
         if (ddrTypeIds != null) {
-            queryList.add(DBQuery.in("ddrTypeId", ddrTypeIds));
+            matchQuery += ", ddrTypeId: {$in:" + ServerUtils.serialize(ddrTypeIds) + "}";
         }
         if (startTime != null) {
-            queryList.add(DBQuery.greaterThanEquals("start", startTime));
+            matchQuery += ", start: {$gte:" + startTime + "}";
         }
         if (endTime != null) {
-            queryList.add(DBQuery.lessThanEquals("start", endTime));
+            matchQuery += ", start: {$lte:" + endTime + "}";
         }
-
-        Query[] dbQueries = new Query[queryList.size()];
-        for (int queryCounter = 0; queryCounter < queryList.size(); queryCounter++) {
-            dbQueries[queryCounter] = queryList.get(queryCounter);
-        }
-        DBCursor<DDRRecord> ddrCursor = collection.find(DBQuery.and(dbQueries));
-
         if (sessionKeys != null) {
-            ddrCursor = ddrCursor.in("sessionKeys", sessionKeys);
+            matchQuery += ", sessionKeys: {$in:" + ServerUtils.serialize(sessionKeys) + "}";
         }
-        return ddrCursor.skip(offset).limit(limit).sort(DBSort.desc("start"));
+        return matchQuery;
+    }
+
+    private static MongoCollection getCollection() {
+
+        DB db = ParallelInit.getDatastore();
+        Jongo jongo = new Jongo(db,
+            new JacksonMapper.Builder().registerModule(new JodaModule()).withView(DDRRecord.class).build());
+        return jongo.getCollection(DDRRecord.class.getCanonicalName().toLowerCase() + "s");
+    }
+    
+    /**
+     * This is used to save the document. Lot of serializing issues with jongo
+     * @return
+     */
+    private static JacksonDBCollection<DDRRecord, String> getMongoJackCollection() {
+
+        DB db = ParallelInit.getDatastore();
+        return JacksonDBCollection.wrap(db.getCollection(DDRRecord.class.getCanonicalName().toLowerCase() + "s"),
+                                        DDRRecord.class, String.class);
+    }
+    
+    /**
+     * Returns the simple Jongo query for fetching by _id. 
+     * 
+     * @param _id
+     * @return {_id: \"<_id>\"}
+     */
+    private static String getQueryById(String _id) {
+
+        return String.format("{_id: '%s'}", _id);
     }
 }

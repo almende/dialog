@@ -97,30 +97,32 @@ public class DDRRecordAgentTest extends TestFramework
     @Test
     public void ddrRecursiveFetchTest() throws Exception {
 
-        String adapterId = adapterAgent.createEmailAdapter("test@test.com", "test", null, null, null, null, null,
-            null, null, TEST_ACCOUNT_ID, null, null, null);
+        int ddrCount = 15;
+        String adapterId = adapterAgent.createEmailAdapter("test@test.com", "test", null, null, null, null, null, null,
+            null, TEST_ACCOUNT_ID, null, null, null);
         AdapterConfig adapterConfig = AdapterConfig.getAdapterConfig(adapterId);
-        
+
         //create a test ddr price
         DDRPrice ddrPrice = getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 10.0, "Test", UnitType.PART,
             AdapterType.EMAIL, null);
         assertThat(ddrPrice.getDdrTypeId(), Matchers.notNullValue());
-        
-        //create dummy 5 ddrRecords
-        for (int count = 0; count < 15; count++) {
+
+        //create dummy ddrRecords
+        for (int count = 0; count < ddrCount; count++) {
             DDRRecord ddrRecord = new DDRRecord(ddrPrice.getDdrTypeId(), adapterConfig, TEST_ACCOUNT_ID, 1);
             ddrRecord.createOrUpdate();
+            Thread.sleep(1);
         }
-        
-        //fetch the 5 records in batches of 4
+
+        //fetch the records in batches of 4
         Object ddrRecords = ddrRecordAgent.getDDRRecordsRecursively(TEST_ACCOUNT_ID, null, null, null, null, null,
             TimeUtils.getPreviousMonthEndTimestamp(), TimeUtils.getServerCurrentTimeInMillis(), null, null, 4, true,
             true);
-        
+
         TypeUtil<ArrayList<DDRRecord>> typesInjector = new TypeUtil<ArrayList<DDRRecord>>() {
         };
         ArrayList<DDRRecord> allDdrRecords = typesInjector.inject(ddrRecords);
-        assertThat(allDdrRecords.size(), Matchers.is(15));
+        assertThat(allDdrRecords.size(), Matchers.is(ddrCount));
         //test if the records are sorted in decending order of startTimestamp
         Assert.assertTrue(allDdrRecords.get(0).getStart() > allDdrRecords.get(14).getStart());
     }
@@ -132,21 +134,20 @@ public class DDRRecordAgentTest extends TestFramework
      * @throws Exception
      */
     @Test
-    public void adapterNotOwnedCreateTest() throws Exception
-    {
-        DDRPrice ddrPrice = getTestDDRPrice( DDRTypeCategory.ADAPTER_PURCHASE, 10.0, "Test", UnitType.PART,
-            AdapterType.EMAIL, null );
-        assertThat( ddrPrice.getDdrTypeId(), Matchers.notNullValue() );
+    public void adapterNotOwnedCreateTest() throws Exception {
+
+        DDRPrice ddrPrice = getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 10.0, "Test", UnitType.PART,
+            AdapterType.EMAIL, null);
+        assertThat(ddrPrice.getDdrTypeId(), Matchers.notNullValue());
         adapterAgent.createEmailAdapter("test@test.com", "test", null, null, null, null, null, null, null, null, null,
-                                        null, null);
+            null, null);
         //check if a ddr record is created
-        Object ddrRecords = ddrRecordAgent.getDDRRecords(null, null, null, null, null, null, null, null, null, null,
-                                                         null, null, null);
-        TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
-        {
+        Object ddrRecords = ddrRecordAgent.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
+            null, null, null, null, null);
+        TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>() {
         };
-        Collection<DDRRecord> allDdrRecords = typesInjector.inject( ddrRecords );
-        assertThat( allDdrRecords.size(), Matchers.is( 0 ) );
+        Collection<DDRRecord> allDdrRecords = typesInjector.inject(ddrRecords);
+        assertThat(allDdrRecords.size(), Matchers.is(0));
     }
 
     /**
@@ -210,33 +211,33 @@ public class DDRRecordAgentTest extends TestFramework
      */
     @Test
     public void saveDDRRecordTest() throws Exception {
-       
+
         AdapterConfig adapterConfig = createBroadsoftAdapter();
         Session session = createSession(adapterConfig, remoteAddressVoice);
-        
+
         new DDRRecordAgent().generateDefaultDDRTypes();
         createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.MINUTE, AdapterType.CALL,
-                           null);
+            null);
         DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, TEST_PUBLIC_KEY, remoteAddressVoice, 1,
-                                                        "some test message", session);
+            "some test message", session);
         //fetch the ddrRecord
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
-                                                             null, null, null);
+            null, null, null);
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         //toaddress check
         Map<String, String> toAddress = new HashMap<String, String>(1);
         toAddress.put(session.getRemoteAddress(), "");
         assertThat(ddrRecord.getToAddress(), Matchers.is(toAddress));
-        
+
         //add one more element to the toList
         String secondRemoteAddress = "0612345678";
         toAddress.put(secondRemoteAddress, "");
-        
+
         ddrRecord.addToAddress(secondRemoteAddress);
         ddrRecord.createOrUpdate();
-        
+
         ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null, null,
-                                             null);
+            null);
         ddrRecord = ddrRecords.iterator().next();
         assertThat(ddrRecord.getToAddress(), Matchers.is(toAddress));
     }
@@ -248,7 +249,7 @@ public class DDRRecordAgentTest extends TestFramework
     @Test
     public void fetchLargeDDRRecordByStatus() throws Exception {
 
-        int ddrCount = 10;
+        int ddrCount = 1000;
         String secondAddress = "0612345678";
         AdapterConfig adapterConfig = createBroadsoftAdapter();
         HashMap<String, Session> sessionKeyMap = new HashMap<String, Session>(1);
@@ -291,10 +292,21 @@ public class DDRRecordAgentTest extends TestFramework
         assertThat(allDdrRecords.size(), Matchers.is(1));
         allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.MISSED,
             null, null, null, null, null);
-        RestResponse ddrRecordsCount = new DDRRecordAgent().getDDRRecordsCount(TEST_ACCOUNT_ID, null, null, null, null,
-            CommunicationStatus.MISSED.toString(), null, null, null, null);
+        RestResponse ddrRecordsCount = new DDRRecordAgent().getDDRRecordsQuantity(TEST_ACCOUNT_ID, null, null, null, null,
+            CommunicationStatus.MISSED, null, null, null, null);
+        long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        Integer ddrQuantity = DDRRecord.getDDRRecordsQuantity(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.MISSED, null, null,
+            null, null);
+        
+        //fetch time should be less than 1second
+        long fetchTime = TimeUtils.getServerCurrentTimeInMillis() - startTimestamp;
+        log.info(String.format("Actual quantity fetch time is: %s", fetchTime));
+        assertThat(String.format("Actual quantity time is: %s", fetchTime), fetchTime, Matchers.lessThan(500L));
+        
         assertThat(allDdrRecords.size(), Matchers.is(1));
-        assertThat((Integer) ddrRecordsCount.getResult(), Matchers.is(1));
+        assertThat((Integer) ddrRecordsCount.getResult(), Matchers.is(2));
+        //each ddr record has two message.. 
+        assertThat(ddrQuantity, Matchers.is(2));
     }
 
     /**

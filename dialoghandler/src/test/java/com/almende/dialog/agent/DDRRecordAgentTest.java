@@ -3,6 +3,7 @@ package com.almende.dialog.agent;
 
 
 import static org.junit.Assert.assertThat;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -21,12 +22,17 @@ import com.almende.dialog.model.ddr.DDRRecord;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.util.TypeUtil;
+import com.almende.util.jackson.JOM;
 import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 public class DDRRecordAgentTest extends TestFramework
 {
@@ -270,6 +276,7 @@ public class DDRRecordAgentTest extends TestFramework
         }
         //fetch the ddrRecords
         List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        Assert.assertTrue(checkThatDDRRecordHasNonEmptyFields(allDdrRecords));
         assertThat(allDdrRecords.size(), Matchers.is(ddrCount));
         DDRRecord ddrRecord = allDdrRecords.iterator().next();
         String formattedRemoteAddressVoice = PhoneNumberUtils.formatNumber(remoteAddressVoice, null);
@@ -281,6 +288,7 @@ public class DDRRecordAgentTest extends TestFramework
         allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.SENT, null,
             null, null, null, null);
         assertThat(allDdrRecords.size(), Matchers.is(ddrCount));
+        Assert.assertTrue(checkThatDDRRecordHasNonEmptyFields(allDdrRecords));
 
         //update ddrRecoed with different Communication status
         ddrRecord.addStatusForAddress(formattedRemoteAddressVoice, CommunicationStatus.FINISHED);
@@ -290,8 +298,10 @@ public class DDRRecordAgentTest extends TestFramework
         allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.FINISHED,
             null, null, null, null, null);
         assertThat(allDdrRecords.size(), Matchers.is(1));
+        Assert.assertTrue(checkThatDDRRecordHasNonEmptyFields(allDdrRecords));
         allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.MISSED,
             null, null, null, null, null);
+        Assert.assertTrue(checkThatDDRRecordHasNonEmptyFields(allDdrRecords));
         RestResponse ddrRecordsCount = new DDRRecordAgent().getDDRRecordsQuantity(TEST_ACCOUNT_ID, null, null, null, null,
             CommunicationStatus.MISSED, null, null, null, null);
         long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
@@ -343,5 +353,28 @@ public class DDRRecordAgentTest extends TestFramework
         };
         Collection<DDRRecord> allDdrRecords = typesInjector.inject(ddrRecords);
         return allDdrRecords;
+    }
+    
+    /**
+     * Simple check on all fields of the ddrRecord given to make sure they are not null or empty
+     * @return
+     * @throws IOException 
+     */
+    private boolean checkThatDDRRecordHasNonEmptyFields(Collection<DDRRecord> ddrRecords) throws IOException {
+
+        ObjectMapper mapper = JOM.getInstance().setSerializationInclusion(Include.NON_EMPTY)
+                                 .setSerializationInclusion(Include.NON_NULL)
+                                 .configure(SerializationFeature.WRITE_NULL_MAP_VALUES, false)
+                                 .configure(SerializationFeature.WRITE_EMPTY_JSON_ARRAYS, false);
+        String serialized = mapper.writeValueAsString(ddrRecords);
+        Collection<DDRRecord> ddrRecordsAfterConversion = mapper.readValue(serialized,
+            new TypeReference<ArrayList<DDRRecord>>() {
+            });
+        for (DDRRecord ddrRecord : ddrRecordsAfterConversion) {
+            if (ddrRecord.getId() == null || ddrRecord.getId().isEmpty()) {
+                return false;
+            }
+        }
+        return true;
     }
 }

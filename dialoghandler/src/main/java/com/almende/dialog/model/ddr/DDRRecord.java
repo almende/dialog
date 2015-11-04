@@ -232,9 +232,8 @@ public class DDRRecord {
                                     Object statusForAddress = statusForAddresses.get(address);
                                     if (statusForAddress != null &&
                                         CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
-                                        String serializedDDR = ServerUtils.serializeWithoutException(result);
-                                        if(serializedDDR != null) {
-                                            return ServerUtils.deserialize(serializedDDR, false, DDRRecord.class);
+                                        if(result.toString() != null) {
+                                            return ServerUtils.deserialize(result.toString(), false, DDRRecord.class);
                                         }
                                     }
                                 }

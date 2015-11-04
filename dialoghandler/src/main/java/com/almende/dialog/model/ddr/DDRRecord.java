@@ -290,6 +290,7 @@ public class DDRRecord {
                  @Override
                  public Integer map(DBObject result) {
             
+                     Integer quantity = 0;
                      try {
                          if (result.get("statusPerAddress") != null) {
                              Map<String, String> statusForAddresses = ServerUtils.deserialize(
@@ -301,7 +302,7 @@ public class DDRRecord {
                                      Object statusForAddress = statusForAddresses.get(address);
                                      if (statusForAddress != null &&
                                          CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
-                                         return (Integer) result.get("quantity");
+                                         quantity++;
                                      }
                                  }
                              }
@@ -310,7 +311,7 @@ public class DDRRecord {
                      catch (Exception e) {
                          e.printStackTrace();
                      }
-                     return 0;
+                     return quantity;
                  }
              });
         Integer quantity = 0;

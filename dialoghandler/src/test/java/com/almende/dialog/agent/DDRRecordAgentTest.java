@@ -307,6 +307,8 @@ public class DDRRecordAgentTest extends TestFramework
         long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
         Integer ddrQuantity = DDRRecord.getDDRRecordsQuantity(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.MISSED, null, null,
             null, null);
+        Integer ddrDeliveredQuantity = DDRRecord.getDDRRecordsQuantity(TEST_ACCOUNT_ID, null, null, null, null,
+            CommunicationStatus.DELIVERED, null, null, null, null);
         
         //fetch time should be less than 1second
         long fetchTime = TimeUtils.getServerCurrentTimeInMillis() - startTimestamp;
@@ -314,9 +316,10 @@ public class DDRRecordAgentTest extends TestFramework
         assertThat(String.format("Actual quantity time is: %s", fetchTime), fetchTime, Matchers.lessThan(500L));
         
         assertThat(allDdrRecords.size(), Matchers.is(1));
-        assertThat((Integer) ddrRecordsCount.getResult(), Matchers.is(2));
+        assertThat((Integer) ddrRecordsCount.getResult(), Matchers.is(1));
         //each ddr record has two message.. 
-        assertThat(ddrQuantity, Matchers.is(2));
+        assertThat(ddrQuantity, Matchers.is(1));
+        assertThat(ddrDeliveredQuantity, Matchers.is(0));
     }
 
     /**

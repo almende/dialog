@@ -3,19 +3,23 @@ package com.almende.dialog.adapter;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
+
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -42,11 +46,9 @@ import com.askfast.strowger.sdk.actions.Hangup;
 import com.askfast.strowger.sdk.actions.Include;
 import com.askfast.strowger.sdk.actions.Play;
 import com.askfast.strowger.sdk.actions.StrowgerAction;
-import com.askfast.strowger.sdk.model.Peer;
-import com.askfast.strowger.sdk.model.StatusCallback;
-import com.askfast.strowger.sdk.model.StrowgerRequest;
-import com.askfast.strowger.sdk.resources.Call;
-import com.askfast.strowger.sdk.resources.Dial;
+import com.askfast.strowger.sdk.model.Call;
+import com.askfast.strowger.sdk.model.ControlResult;
+import com.askfast.strowger.sdk.model.Dial;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat;
 
 @Path("strowger")
@@ -55,6 +57,8 @@ public class TPAdapter {
     protected static final Logger log = Logger.getLogger(TPAdapter.class.getName());
     private static final int LOOP_DETECTION = 10;
     protected String TIMEOUT_URL = "timeout";
+    private static final String INBOUND = "incoming";
+    private static final String OUTBOUND = "outgoing";
     
         //protected String EXCEPTION_URL="exception";
         
@@ -82,7 +86,7 @@ public class TPAdapter {
      * @throws Exception
      */
     public static HashMap<String, String> dial(Map<String, String> addressNameMap, String dialogIdOrUrl,
-        AdapterConfig config, String accountId, String applicationId, String bearerToken) throws Exception {
+        AdapterConfig config, String accountId, String senderName, String bearerToken) throws Exception {
 
         HashMap<String, Session> sessionMap = new HashMap<String, Session>();
         HashMap<String, String> result = new HashMap<String, String>();
@@ -102,7 +106,7 @@ public class TPAdapter {
         Session session = Session.getOrCreateSession(config, firstRemoteAddress);
         session.setAccountId(accountId);
         session.killed = false;
-        session.setDirection("outbound");
+        session.setDirection(OUTBOUND);
         session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
         session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TP.toString());
         session.setAdapterID(config.getConfigId());
@@ -138,7 +142,7 @@ public class TPAdapter {
                     session.killed = false;
                     session.setStartUrl(url);
                     session.setAccountId(accountId);
-                    session.setDirection("outbound");
+                    session.setDirection(OUTBOUND);
                     session.setRemoteAddress(formattedAddress);
                     session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
                     session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TP.toString());
@@ -163,14 +167,19 @@ public class TPAdapter {
                         StrowgerRestClient client = new StrowgerRestClient( config.getAccessToken(), config.getAccessTokenSecret() );
 
                         // Make a call
-                        StatusCallback callback = new StatusCallback( URI.create("http://" + Settings.HOST + "/dialoghandler/rest/twilio/cc"), Arrays.asList( "initiated", "ringing", "answered", "completed", "aborted" ) );
                         
-                        Dial dial = new Dial();
-                        dial.addPeer( new Peer( formattedAddress, callback ) );
-                        dial.setCallerId( config.getMyAddress() );
-                        dial.setControlUrl( URI.create( "http://" + Settings.HOST + "/dialoghandler/rest/twilio/new" ) );
+                        Dial dial = new Dial(config.getMyAddress(), senderName, formattedAddress);
+                        Call call = client.initiateCall( config.getMyAddress(), dial );
                         
-                        extSession = client.initiateCall( config.getMyAddress(), dial );
+                        if(call==null) {
+                            String errorMessage = String.format("Call not started between %s and %s. Error in requesting adapter provider",
+                                                                config.getMyAddress(), formattedAddress);
+                            log.severe(errorMessage);
+                            session.drop();
+                            result.put(formattedAddress, errorMessage);
+                            continue;
+                        }
+                        extSession = call.getCallId();
                         log.info(String.format("Call triggered with external id: %s", extSession));
                         session.setExternalSession(extSession);
                         session.storeSession();
@@ -227,14 +236,14 @@ public class TPAdapter {
     @Produces("application/json")
     public Response getNewDialogPost(@QueryParam("isTest") Boolean isTest, String json) {
         
-        StrowgerRequest req = StrowgerRequest.fromJson( json );
-        Call call = req.getData();
-        String callId = call.getId();
+        ControlResult res = ControlResult.fromJson( json );
+        Call call = res.getCall();
+        String callId = call.getCallId();
         String remoteID = call.getCalled();
         String localID = call.getCaller();
-        String direction = call.getType();
+        String direction = call.getCallType();
 
-        log.info("call started:" + call.getType() + ":" + remoteID + ":" + localID);
+        log.info("call started:" + call.getCallType() + ":" + remoteID + ":" + localID);
         Map<String, String> extraParams = new HashMap<String, String>();
 
         String url = "";
@@ -244,7 +253,7 @@ public class TPAdapter {
         
         DDRRecord ddrRecord = null;
         
-        if (direction.equals("inbound")) {
+        if (direction.equals(INBOUND)) {
             //swap the remote and the local numbers if its inbound
             String tmpLocalId = new String(localID);
             localID = new String(remoteID);
@@ -279,7 +288,7 @@ public class TPAdapter {
             } 
         }
         else {
-            direction = "outbound";
+            direction = OUTBOUND;
             config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
             try {
                 if (session != null) {
@@ -296,7 +305,7 @@ public class TPAdapter {
             session.setDirection(direction);
             session.setRemoteAddress(formattedRemoteId);
             session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
-            session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO.toString());
+            session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TP.toString());
             session.setAdapterID(config.getConfigId());
             //fetch the question
             Question question = session.getQuestion();
@@ -362,14 +371,14 @@ public class TPAdapter {
     @Produces("application/json")
     public Response answer(String json) {
 
-        StrowgerRequest req = StrowgerRequest.fromJson( json );
-        Call call = req.getData();
-        String callId = call.getId();
+        ControlResult res = ControlResult.fromJson( json );
+        Call call = res.getCall();
+        String callId = call.getCallId();
         String localID = call.getCaller();
         String remoteID = call.getCalled();
-        String direction = call.getType();
-        String answer_input = call.getDigits();
-        String recordingUrl = call.getAudioUrl();
+        String direction = call.getCallType();
+        String answer_input = res.getDtmf();
+        String recordingUrl = res.getRecordingUrl();
         
         StrowgerAction strowger = new StrowgerAction();
 
@@ -380,7 +389,7 @@ public class TPAdapter {
             log.warning(String.format("Answer input decode failed for: %s", answer_input));
         }
 
-        if (direction.equals("inbound")) {
+        if (direction.equals(INBOUND)) {
             String tmpLocalId = new String(localID);
             localID = new String(remoteID);
             remoteID = tmpLocalId;
@@ -459,15 +468,15 @@ public class TPAdapter {
     @Produces("application/json")
     public Response timeout(String json) throws Exception {
 
-        StrowgerRequest req = StrowgerRequest.fromJson( json );
-        Call call = req.getData();
-        String callId = call.getId();
+        ControlResult res = ControlResult.fromJson( json );
+        Call call = res.getCall();
+        String callId = call.getCallId();
         String localID = call.getCaller();
         String remoteID = call.getCalled();
-        String direction = call.getType();
+        String direction = call.getCallType();
         
         //swap local and remote ids if its an incoming call
-        if (direction.equals("inbound")) {
+        if (direction.equals(INBOUND)) {
             String tmpLocalId = new String(localID);
             localID = new String(remoteID);
             remoteID = tmpLocalId;
@@ -521,19 +530,18 @@ public class TPAdapter {
     @POST
     public Response receiveCCMessage(String json) {
 
-        Call call = Call.fromJson( json );
-        String callId = call.getId();
+        ControlResult res = ControlResult.fromJson( json );
+        Call call = res.getCall();
+        String callId = call.getCallId();
         String localID = call.getCaller();
         String remoteID = call.getCalled();
-        String direction = call.getType();
-        String status = call.getStatus();
-        
-        log.info("Received twiliocc status: " + status);
+        String direction = call.getCallType();
+        Date termanationTime = call.getTerminationTime();
 
         if (direction.equals("outbound-api")) {
-            direction = "outbound";
+            direction = OUTBOUND;
         }
-        else if (direction.equals("inbound")) {
+        else if (direction.equals(INBOUND)) {
             String tmpLocalId = new String(localID);
             localID = remoteID;
             remoteID = tmpLocalId;
@@ -542,8 +550,8 @@ public class TPAdapter {
         Session session = Session.getSessionByExternalKey(callId);
         if (session != null) {
             //update session with call timings
-            if (status.equals("completed")) {
-                finalizeCall(config, session, callId, remoteID);
+            if (termanationTime != null) {
+                finalizeCall(config, session, callId, remoteID, call);
             }
         }
         log.info("Session key: or external sid" + session != null ? session.getKey() : callId);
@@ -560,7 +568,7 @@ public class TPAdapter {
             
             //update the communication status to received status
             DDRRecord ddrRecord = session.getDDRRecord();
-            if (ddrRecord != null && !"inbound".equals(session.getDirection())) {
+            if (ddrRecord != null && !INBOUND.equals(session.getDirection())) {
                 ddrRecord.addStatusForAddress(session.getRemoteAddress(), CommunicationStatus.RECEIVED);
                 ddrRecord.createOrUpdate();
             }
@@ -590,9 +598,149 @@ public class TPAdapter {
      * @param direction
      * @param remoteID
      */
-    private void finalizeCall(AdapterConfig config, Session session, String callSid, String remoteID) {
+    private void finalizeCall(AdapterConfig config, Session session, String callSid, String remoteID, Call call) {
 
         // TODO: Implement
+        if (session == null && callSid != null) {
+            session = Session.getSessionByExternalKey(callSid);
+        } 
+        // The remoteID is the one in the session then the session 
+        else if (session.getExternalSession()==null && callSid!=null) {
+            session.setExternalSession( callSid );
+        }
+
+        if (session != null) {
+            log.info(String.format("Finalizing call for id: %s, internal id: %s", session.getKey(),
+                                   session.getInternalSession()));
+            String direction = session.getDirection();
+            
+            try {
+                // Only update the call times if the session belongs to the callSID
+                if(call!=null) {
+                    //sometimes answerTimeStamp is only given in the ACTIVE ccxml
+                    updateSessionWithCallTimes(session, call);
+                } else {
+                    log.info("Session belongs to the other leg? i: "+session.getLocalAddress()+" e: "+session.getRemoteAddress());
+                    session.setReleaseTimestamp( session.getStartTimestamp() );
+                }
+                session.setDirection(direction);
+                if(remoteID!=null) {
+                    session.setRemoteAddress(remoteID);
+                }
+                session.setLocalAddress(config.getMyAddress());
+                session.storeSession();
+                
+                // finalize child sessions if there are any left
+                List<Session> childSessions = session.getLinkedChildSession();
+                for(Session childSession : childSessions) {
+                    finalizeCall( config, childSession, null, null, null );
+                }
+                
+                //flush the keys if ddrProcessing was successful
+                if (DDRUtils.stopDDRCosts(session)) {
+                    session.drop();
+                }
+                hangup(session);
+
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            log.warning("Failed to finalize call because no session was found for: " + callSid);
+        }
+    }
+    
+    /**
+     * hang up a call based on the session.
+     * 
+     * @param session
+     *            if null, doesnt trigger an hangup event. Also expects a
+     *            question to be there in this session, or atleast a startURL
+     *            from where the question can be fetched.
+     * @return
+     * @throws Exception
+     */
+    public Response hangup(Session session) throws Exception {
+
+        if (session != null) {
+            log.info("call hangup with:" + session.getDirection() + ":" + session.getRemoteAddress() + ":" +
+                     session.getLocalAddress());
+            if (session.getQuestion() == null) {
+                Question question = Question.fromURL(session.getStartUrl(), session.getRemoteAddress(), session);
+                session.setQuestion(question);
+            }
+            if (session.getQuestion() != null && !isEventTriggered("hangup", session)) {
+                
+                HashMap<String, Object> timeMap = getTimeMap(session.getStartTimestamp(), session.getAnswerTimestamp(),
+                                                             session.getReleaseTimestamp());
+                timeMap.put("referredCalledId", session.getAllExtras().get("referredCalledId"));
+                timeMap.put("sessionKey", session.getKey());
+                if(session.getAllExtras() != null && !session.getAllExtras().isEmpty()) {
+                    timeMap.putAll(session.getPublicExtras());
+                }
+                if(session.getCallStatus() != null) {
+                    timeMap.put( "callStatus", session.getCallStatus() );
+                }
+                Response hangupResponse = handleQuestion(null, session.getAdapterConfig(), session.getRemoteAddress(),
+                                                         session, null);
+                timeMap.put("requester", session.getLocalAddress());
+                QuestionEventRunner questionEventRunner = new QuestionEventRunner(session.getQuestion(), "hangup",
+                                                                                  "Hangup", session.getRemoteAddress(),
+                                                                                  timeMap, session);
+                Thread questionEventRunnerThread = new Thread(questionEventRunner);
+                questionEventRunnerThread.start();
+                return hangupResponse;
+            }
+            else {
+                log.info("no question received");
+            }
+        }
+        return Response.ok("").build();
+    }
+    
+    /**
+     * @param startTime
+     * @param answerTime
+     * @param releaseTime
+     * @return
+     */
+    private HashMap<String, Object> getTimeMap( String startTime, String answerTime, String releaseTime )
+    {
+        HashMap<String, Object> timeMap = new HashMap<String, Object>();
+        timeMap.put( "startTime", startTime );
+        timeMap.put( "answerTime", answerTime );
+        timeMap.put( "releaseTime", releaseTime );
+        return timeMap;
+    }
+    
+    /**
+     * Updates the session with the call times
+     * @param session
+     * @param call
+     * @return
+     * @throws ParseException
+     */
+    public static Session updateSessionWithCallTimes(Session session, Call call) throws ParseException {
+
+        if (call != null && session != null) {
+            
+            Date dialTime = call.getDialTime();
+            Date connectTime = call.getConnectTime();
+            Date terminationTime = call.getTerminationTime();
+            if(dialTime != null) {
+                session.setStartTimestamp(dialTime.getTime() + "");
+            }
+            if (terminationTime != null) {
+                session.setReleaseTimestamp(terminationTime.getTime() + "");
+            }
+            if (connectTime != null) {
+                session.setAnswerTimestamp(connectTime.getTime() + "");
+            }
+            return session;
+        }
+        return null;
     }
     
     private Response handleQuestion(Question question, AdapterConfig adapterConfig, String remoteID, Session session,

@@ -358,7 +358,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         // fetch the first address in the map
                         if (!addressMap.keySet().isEmpty()) {
                             resultSessionMap = TPAdapter.dial(addressMap, dialogIdOrUrl, config, accountId,
-                                getApplicationId(), bearerToken);
+                                senderName, bearerToken);
                         }
                         else {
                             throw new JSONRPCException("Address should not be empty to setup a call");

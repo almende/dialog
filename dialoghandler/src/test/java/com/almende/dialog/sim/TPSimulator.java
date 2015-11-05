@@ -1,8 +1,8 @@
 package com.almende.dialog.sim;
 
 import com.askfast.strowger.sdk.actions.StrowgerAction;
-import com.askfast.strowger.sdk.model.StrowgerRequest;
-import com.askfast.strowger.sdk.resources.Call;
+import com.askfast.strowger.sdk.model.Call;
+import com.askfast.strowger.sdk.model.ControlResult;
 import com.squareup.okhttp.MediaType;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
@@ -61,16 +61,15 @@ public class TPSimulator {
         }
         
         Call call = new Call();
-        call.setId( callId );
+        call.setCallId( callId );
         call.setCalled( this.called );
         call.setCaller( this.caller );
-        call.setType( this.type );
-        call.setDigits( this.digits );
+        call.setCallType( this.type );
         
-        StrowgerRequest req = new StrowgerRequest( call );
+        ControlResult res = new ControlResult(call, this.digits);
         
         OkHttpClient client = new OkHttpClient();
-        RequestBody reqBody = RequestBody.create(JSON, req.toJson());
+        RequestBody reqBody = RequestBody.create(JSON, res.toJson());
         Request request = new Request.Builder()
         .url(baseUrl)
         .post( reqBody )

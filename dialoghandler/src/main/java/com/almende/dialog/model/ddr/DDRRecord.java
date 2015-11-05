@@ -292,22 +292,27 @@ public class DDRRecord {
             
                      Integer quantity = 0;
                      try {
-                         if (result.get("statusPerAddress") != null) {
-                             Map<String, String> statusForAddresses = ServerUtils.deserialize(
-                                 result.get("statusPerAddress").toString(), false,
-                                 new TypeReference<Map<String, String>>() {
-                             });
-                             if(statusForAddresses != null) {
-                                 for (String address : statusForAddresses.keySet()) {
-                                     Object statusForAddress = statusForAddresses.get(address);
-                                     if (statusForAddress != null &&
-                                         CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
-                                         quantity++;
+                         if(status != null) {
+                             if (result.get("statusPerAddress") != null) {
+                                 Map<String, String> statusForAddresses = ServerUtils.deserialize(
+                                     result.get("statusPerAddress").toString(), false,
+                                     new TypeReference<Map<String, String>>() {
+                                 });
+                                 if(statusForAddresses != null) {
+                                     for (String address : statusForAddresses.keySet()) {
+                                         Object statusForAddress = statusForAddresses.get(address);
+                                         if (statusForAddress != null &&
+                                             CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
+                                             quantity++;
+                                         }
                                      }
                                  }
                              }
                          }
-                     }
+                         else if(result.get("quantity") != null) {
+                             quantity = (Integer) result.get("quantity");
+                         }
+                     }  
                      catch (Exception e) {
                          e.printStackTrace();
                      }
@@ -1119,15 +1124,21 @@ public class DDRRecord {
         if (ddrTypeIds != null) {
             matchQuery += ", ddrTypeId: {$in:" + ServerUtils.serialize(ddrTypeIds) + "}";
         }
-        if (startTime != null) {
-            matchQuery += ", start: {$gte:" + startTime + "}";
+        if (startTime != null && endTime != null) {
+            matchQuery += ", start: {$gte:" + startTime + ", $lte: " + endTime + "}";
         }
-        if (endTime != null) {
-            matchQuery += ", start: {$lte:" + endTime + "}";
+        else {
+            if (startTime != null) {
+                matchQuery += ", start: {$gte:" + startTime + "}";
+            }
+            if (endTime != null) {
+                matchQuery += ", start: {$lte:" + endTime + "}";
+            }
         }
         if (sessionKeys != null) {
             matchQuery += ", sessionKeys: {$in:" + ServerUtils.serialize(sessionKeys) + "}";
         }
+        log.info(String.format("Query processed: %s", matchQuery));
         return matchQuery;
     }
 

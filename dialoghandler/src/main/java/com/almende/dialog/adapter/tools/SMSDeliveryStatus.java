@@ -253,6 +253,9 @@ public class SMSDeliveryStatus implements Serializable {
 
     public void setHost(String host) {
 
+        if (host != null && !host.startsWith("http")) {
+            host = "http://" + host;
+        }
         this.host = host;
     }
 

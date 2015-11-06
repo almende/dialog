@@ -127,19 +127,16 @@ public class CM {
                 }
                 if (storeSMSRelatedData != null) {
                     reference = UUID.randomUUID().toString() + ":" + Settings.HOST;
-                    SMSDeliveryStatus linkedSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to, 
-                                                                       config, accountId, session.getQuestion(), 
-                                                                       null, "SENT", ddrRecordId,
-                                                                       AdapterProviders.CM.getName(), session);
+                    SMSDeliveryStatus linkedSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to,
+                        config, accountId, session.getQuestion(), null, "SENT", ddrRecordId,
+                        AdapterProviders.CM.getName(), session);
                     storeSMSRelatedData.addExtraInfo(linkedSMSRelatedData.getRemoteAddress(),
                                                      linkedSMSRelatedData.getReference());
                     storeSMSRelatedData.store();
                 }
                 else {
                     storeSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to, config, accountId,
-                                                                                session.getQuestion(), null, "SENT",
-                                                                                ddrRecordId,
-                                                                                AdapterProviders.CM.getName(), session);
+                        session.getQuestion(), null, "SENT", ddrRecordId, AdapterProviders.CM.getName(), session);
                 }
                 outputter.startTag("MSG");
                 outputter.startTag("CONCATENATIONTYPE");

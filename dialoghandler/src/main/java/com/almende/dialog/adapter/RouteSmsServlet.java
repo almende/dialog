@@ -267,7 +267,7 @@ public class RouteSmsServlet extends TextServlet {
                 routeSMSStatus.store();
             }
             else {
-                log.severe(routeSMSStatus != null ? "Invalid to address" : "No CM status found");
+                log.severe(routeSMSStatus != null ? "Invalid to address" : "No Route SMS status found");
             }
             return routeSMSStatus;
         }

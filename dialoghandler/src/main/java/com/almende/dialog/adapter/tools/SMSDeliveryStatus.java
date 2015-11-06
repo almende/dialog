@@ -260,7 +260,9 @@ public class SMSDeliveryStatus implements Serializable {
     }
 
     /**
-     * returns the HOST path set in the reference when an SMS is sent
+     * Returns the HOST path set in the reference when an SMS is sent. <br>
+     * First checks if the message is saved on this messageId, else tries to
+     * fetch the host from a format <messageId:host>
      * 
      * @param messageId
      * @return
@@ -271,6 +273,12 @@ public class SMSDeliveryStatus implements Serializable {
             SMSDeliveryStatus routeSMSStatus = fetch(messageId);
             if (routeSMSStatus != null) {
                 return routeSMSStatus.getHost();
+            }
+            else {
+                String[] messageIdAndHost = messageId.split(":");
+                if (messageIdAndHost.length > 2) {
+                    return messageIdAndHost[1];
+                }
             }
         }
         return null;

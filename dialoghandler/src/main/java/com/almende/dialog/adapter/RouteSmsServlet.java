@@ -226,7 +226,8 @@ public class RouteSmsServlet extends TextServlet {
                 }
                 if (statusCode != null) {
                     routeSMSStatus.setDescription(statusCode);
-                    routeSMSStatus.setStatusCode(SMSDeliveryStatus.statusCodeMapping(AdapterProviders.CM, statusCode));
+                    routeSMSStatus.setStatusCode(
+                        SMSDeliveryStatus.statusCodeMapping(AdapterProviders.ROUTE_SMS, statusCode));
                 }
                 if (routeSMSStatus.getCallback() != null && routeSMSStatus.getCallback().startsWith("http")) {
                     AFHttpClient client = ParallelInit.getAFHttpClient();

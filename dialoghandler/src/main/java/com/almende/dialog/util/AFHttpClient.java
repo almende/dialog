@@ -48,12 +48,13 @@ public class AFHttpClient {
     public ResponseLog get(String url, boolean createLog, String sessionKey, String accountId, String ddrRecordId)
         throws Exception {
 
-        long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
-        Request request = getBuilderWIthBasicAuthHeader(url).build();
         Response response = null;
         ResponseLog responseLog = null;
         boolean isSuccess = false;
+        long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
+        Request request = null;
         try {
+            request = getBuilderWIthBasicAuthHeader(url).build();
             response = client.newCall(request).execute();
             isSuccess = response != null ? response.isSuccessful() : false;
             responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
@@ -67,9 +68,14 @@ public class AFHttpClient {
         }
         if (createLog && sessionKey != null) {
             RequestLog requestLog = new RequestLog(request);
+            //if request is null, the url in request log will be null because of the constructor
+            if(requestLog.getUrl() == null) {
+                requestLog.setUrl(url);
+                requestLog.setHttpMethod("GET");
+            }
             if (Settings.ENABLE_LOGGER) {
                 ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
-                                                        isSuccess);
+                    isSuccess);
             }
         }
         return responseLog;
@@ -111,11 +117,12 @@ public class AFHttpClient {
             body = RequestBody.create(mediaType, json);
         }
         long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
-        Request request = getBuilderWIthBasicAuthHeader(url).post(body).build();
         Response response = null;
         ResponseLog responseLog = null;
         boolean isSuccess = false;
+        Request request = null;
         try {
+            request = getBuilderWIthBasicAuthHeader(url).post(body).build();
             response = client.newCall(request).execute();
             isSuccess = response != null ? response.isSuccessful() : false;
             responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
@@ -129,6 +136,12 @@ public class AFHttpClient {
         }
         if (createLog && sessionKey != null) {
             RequestLog requestLog = new RequestLog(request);
+            //if request is null, the url in request log will be null because of the constructor
+            if(requestLog.getUrl() == null) {
+                requestLog.setUrl(url);
+                requestLog.setRequestBody(json);
+                requestLog.setHttpMethod("POST");
+            }
             if (Settings.ENABLE_LOGGER) {
                 ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
                                                         isSuccess);
@@ -160,11 +173,12 @@ public class AFHttpClient {
         MediaType mediaType = MediaType.parse(type);
         RequestBody body = RequestBody.create(mediaType, json);
         long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
-        Request request = getBuilderWIthBasicAuthHeader(url).put(body).build();
+        Request request = null; 
         Response response = null;
         ResponseLog responseLog = null;
         boolean isSuccess = false;
         try {
+            request = getBuilderWIthBasicAuthHeader(url).put(body).build();
             response = client.newCall(request).execute();
             isSuccess = response != null ? response.isSuccessful() : false;
             responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
@@ -178,6 +192,12 @@ public class AFHttpClient {
         }
         if (createLog && sessionKey != null) {
             RequestLog requestLog = new RequestLog(request);
+            //if request is null, the url in request log will be null because of the constructor
+            if(requestLog.getUrl() == null) {
+                requestLog.setUrl(url);
+                requestLog.setRequestBody(json);
+                requestLog.setHttpMethod("PUT");
+            }
             if (Settings.ENABLE_LOGGER) {
                 ParallelInit.getLoggerAgent().createLog(requestLog, responseLog, sessionKey, accountId, ddrRecordId,
                                                         isSuccess);

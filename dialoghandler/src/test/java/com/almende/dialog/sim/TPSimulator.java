@@ -34,7 +34,7 @@ public class TPSimulator {
         this.caller = caller;
         this.called = called;
         
-        this.type = "inbound";
+        this.type = "incoming";
         
         return this.doCall(true);
     }

@@ -65,7 +65,7 @@ public class TPAdapterIT extends TestFramework {
         Dialog createDialog = Dialog.createDialog("Test secured dialog", url, TEST_PUBLIC_KEY);
 
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TWILIO,
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, AdapterProviders.TP,
                                                           TEST_ACCOUNT_ID, localAddressBroadsoft,
                                                           localAddressBroadsoft, url);
         adapterConfig.setPreferred_language(Language.ENGLISH_UNITEDSTATES.getCode());

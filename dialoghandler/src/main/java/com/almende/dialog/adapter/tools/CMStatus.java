@@ -9,6 +9,7 @@ import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.annotations.Id;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+@Deprecated
 public class CMStatus implements Serializable {
 
     private static final long serialVersionUID = 3674394844170200281L;

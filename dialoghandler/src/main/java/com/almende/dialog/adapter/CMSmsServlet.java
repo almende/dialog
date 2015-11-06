@@ -260,9 +260,11 @@ public class CMSmsServlet extends TextServlet {
                 }
                 if (code != null) {
                     cmStatus.setCode(code);
+                    cmStatus.setStatusCode(SMSDeliveryStatus.statusCodeMapping(AdapterProviders.CM, code));
                 }
                 if (errorCode != null) {
                     cmStatus.setCode(errorCode);
+                    cmStatus.setStatusCode(SMSDeliveryStatus.statusCodeMapping(AdapterProviders.CM, errorCode));
                 }
                 if (errorDescription != null) {
                     cmStatus.setDescription(errorDescription);
@@ -274,7 +276,7 @@ public class CMSmsServlet extends TextServlet {
                     Client client = ParallelInit.getClient();
                     WebResource webResource = client.resource(cmStatus.getCallback());
                     try {
-                        String callbackPayload = ServerUtils.serialize(cmStatus);
+                        String callbackPayload = SMSDeliveryStatus.getDeliveryStatusForClient(cmStatus);
                         if (ServerUtils.isInUnitTestingEnvironment()) {
                             TestServlet.logForTest(getAdapterType(), cmStatus);
                         }

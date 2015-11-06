@@ -226,11 +226,12 @@ public class RouteSmsServlet extends TextServlet {
                 }
                 if (statusCode != null) {
                     routeSMSStatus.setDescription(statusCode);
+                    routeSMSStatus.setStatusCode(SMSDeliveryStatus.statusCodeMapping(AdapterProviders.CM, statusCode));
                 }
                 if (routeSMSStatus.getCallback() != null && routeSMSStatus.getCallback().startsWith("http")) {
                     AFHttpClient client = ParallelInit.getAFHttpClient();
                     try {
-                        String callbackPayload = ServerUtils.serialize(routeSMSStatus);
+                        String callbackPayload = SMSDeliveryStatus.getDeliveryStatusForClient(routeSMSStatus);
                         client.post(callbackPayload, routeSMSStatus.getCallback());
                         if (ServerUtils.isInUnitTestingEnvironment()) {
                             TestServlet.logForTest(getAdapterType(), routeSMSStatus);
@@ -273,24 +274,6 @@ public class RouteSmsServlet extends TextServlet {
             log.severe("Reference code cannot be null");
             return null;
         }
-    }
-
-    /**
-     * check if the SMS is delivered to addresse given corresponding to the
-     * ddrRecord is {@link CommunicationStatus#DELIVERED}
-     * 
-     * @param ddrRecord
-     * @return true if ddrRecord is null or all SMS are delivered
-     */
-    private boolean isSMSsDelivered(String address, DDRRecord ddrRecord) {
-
-        if (ddrRecord == null) {
-            return true;
-        }
-        else if (ddrRecord.getStatusPerAddress() != null && ddrRecord.getStatusForAddress(address) != null) {
-            return true;
-        }
-        return false;
     }
 
     /**

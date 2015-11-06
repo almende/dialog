@@ -11,12 +11,17 @@ import com.almende.dialog.model.EventCallback;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.util.ParallelInit;
 import com.almende.util.twigmongo.TwigCompatibleMongoDatastore;
 import com.almende.util.twigmongo.annotations.Id;
+import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This is the generic format for saving delivery status of SMS sent from any
@@ -32,6 +37,16 @@ public class SMSDeliveryStatus implements Serializable {
     //used to save the reference of the sms sent in the session
     public static final String SMS_REFERENCE_KEY = "SMS_REFERENCE";
 
+    /**
+     * Explicit status code for SMS
+     * @author shravan
+     *
+     */
+    public enum SMSStatusCode {
+
+            UNKNOWN, EXPIRED, DELETED, UNDELIVERED, REJECTED, ACKNOWLEDGED, ENROUTE, DELIVERED, ACCEPTED;
+    }
+    
     @Id
     public String reference;
     private String sms = "";
@@ -43,6 +58,7 @@ public class SMSDeliveryStatus implements Serializable {
     private String sentTimeStamp = "";
     private String deliveredTimeStamp = "";
     private String code = "";
+    private SMSStatusCode statusCode;
     private String description = "";
     private String accountId = null;
     private String provider = "";
@@ -302,6 +318,16 @@ public class SMSDeliveryStatus implements Serializable {
 
         this.ddrRecordId = ddrRecordId;
     }
+    
+    public SMSStatusCode getStatusCode() {
+
+        return statusCode;
+    }
+
+    public void setStatusCode(SMSStatusCode statusCode) {
+
+        this.statusCode = statusCode;
+    }
 
     /**
      * Returns the linked delivery status based on the remoteAddress
@@ -325,5 +351,137 @@ public class SMSDeliveryStatus implements Serializable {
             }
         }
         return this;
+    }
+    
+    /**
+     * Trims off the important details that are not show to hte client in the
+     * callback E.g. provider etc
+     * 
+     * @param status
+     * @return
+     * @throws JsonProcessingException
+     */
+    public static String getDeliveryStatusForClient(SMSDeliveryStatus status) throws JsonProcessingException {
+
+        if (status != null) {
+            status.setProvider(null);
+            status.setExtraInfos(null);
+            //make sure that the object mapper is set to setSerializationInclusion( Include.NON_NULL )
+            ObjectMapper mapper = ParallelInit.getObjectMapper().setSerializationInclusion(Include.NON_NULL);
+            return mapper.writeValueAsString(status);
+        }
+        return null;
+    }
+    
+    /**
+     * gives a mapping of the error code to the error description according to
+     * Section 4. of the http://docs.cm.nl/http_SR.pdf
+     * 
+     * @param errorCode
+     * @return
+     */
+    public static SMSStatusCode statusCodeMapping(AdapterProviders provider, String errorCode) {
+
+        switch (provider) {
+            case ROUTE_SMS: {
+                switch (errorCode) {
+                    case "UNKNOWN":
+                        return SMSStatusCode.UNKNOWN;
+                    case "EXPIRED":
+                        return SMSStatusCode.EXPIRED;
+                    case "DELETED":
+                        return SMSStatusCode.DELETED;
+                    case "UNDELIV":
+                        return SMSStatusCode.UNDELIVERED;
+                    case "REJECTD":
+                        return SMSStatusCode.REJECTED;
+                    case "ACKED":
+                        return SMSStatusCode.ACKNOWLEDGED;
+                    case "ENROUTE":
+                        return SMSStatusCode.ENROUTE;
+                    case "DELIVRD":
+                        return SMSStatusCode.DELIVERED;
+                    case "ACCEPTED":
+                        return SMSStatusCode.ACCEPTED;
+                    default:
+                        return SMSStatusCode.UNKNOWN;
+                }
+            }
+            case CM: {
+                switch (errorCode) {
+                    case "0":
+                    case "200":
+                        //Message is delivered
+                        return SMSStatusCode.DELIVERED;
+                    case "5":
+                        //"The message has been confirmed as undelivered but no detailed information related to the failure is known.";
+                        return SMSStatusCode.UNDELIVERED;
+                    case "7":
+                        //"Used to indicate to the client that the message has not yet been delivered due to insufficient subscriber credit but is being retried within the network.";
+                        return SMSStatusCode.ENROUTE;
+                    case "8":
+                        //"Temporary Used when a message expired (could not be delivered within the life time of the message) within the operator SMSC but is not associated with a reason for failure. ";
+                        return SMSStatusCode.EXPIRED;
+                    case "20":
+                        //"Used when a message in its current form is undeliverable.";
+                        return SMSStatusCode.UNDELIVERED;
+                    case "21":
+                        //"Temporary Only occurs where the operator accepts the message before performing the subscriber credit check. If there is insufficient credit then the operator will retry the message until the subscriber tops up or the message expires. If the message expires and the last failure reason is related to credit then this error code will be used.";
+                        return SMSStatusCode.ENROUTE;
+                    case "22":
+                        //"Temporary Only occurs where the operator performs the subscriber credit check before accepting the message and rejects messages if there are insufficient funds available.";
+                        return SMSStatusCode.REJECTED;
+                    case "23":
+                        //"Used when the message is undeliverable due to an incorrect / invalid / blacklisted / permanently barred MSISDN for this operator. This MSISDN should not be used again for message submissions to this operator.";
+                        return SMSStatusCode.REJECTED;
+                    case "24":
+                        //"Used when a message is undeliverable because the subscriber is temporarily absent, e.g. his/her phone is switch off, he/she cannot be located on the network. ";
+                        return SMSStatusCode.UNDELIVERED;
+                    case "25":
+                        //"Used when the message has failed due to a temporary condition in the operator network. This could be related to the SS7 layer, SMSC or gateway. ";
+                        return SMSStatusCode.UNDELIVERED;
+                    case "26":
+                        //"Used when a message has failed due to a temporary phone related error, e.g. SIM card full, SME busy, memory exceeded etc. This does not mean the phone is unable to receive this type of message/content (refer to error code 27).";
+                        return SMSStatusCode.UNDELIVERED;
+                    case "27":
+                        //"Permanent Used when a handset is permanently incompatible or unable to receive this type of message. ";
+                        return SMSStatusCode.UNDELIVERED;
+                    case "28":
+                        //"Used if a message fails or is rejected due to suspicion of SPAM on the operator network. This could indicate in some geographies that the operator has no record of the mandatory MO required for an MT. ";
+                        return SMSStatusCode.REJECTED;
+                    case "29":
+                        //"Used when this specific content is not permitted on the network / shortcode. ";
+                        return SMSStatusCode.REJECTED;
+                    case "30":
+                        //"Used when message fails or is rejected because the subscriber has reached the predetermined spend limit for the current billing period.";
+                        return SMSStatusCode.REJECTED;
+                    case "31":
+                        //"Used when the MSISDN is for a valid subscriber on the operator but the message fails or is rejected because the subscriber is unable to be billed, e.g. the subscriber account is suspended (either voluntarily or involuntarily), the subscriber is not enabled for bill-to-phone services, the subscriber is not eligible for bill-to-phone services, etc.";
+                        return SMSStatusCode.REJECTED;
+                    case "33":
+                        //"Used when the subscriber cannot receive adult content because of a parental lock. ";
+                        return SMSStatusCode.UNDELIVERED;
+                    case "34":
+                        //"Permanent Used when the subscriber cannot receive adult content because they have previously failed the age verification process. ";
+                        return SMSStatusCode.UNDELIVERED;
+                    case "35":
+                        //"Temporary Used when the subscriber cannot receive adult content because they have not previously completed age verification. ";
+                        return SMSStatusCode.UNDELIVERED;
+                    case "36":
+                        //"Temporary Used when the subscriber cannot receive adult content because a temporary communication error prevents their status being verified on the age verification platform.";
+                        return SMSStatusCode.UNDELIVERED;
+                    case "37":
+                        //"The MSISDN is on the national blacklist (currently only for NL: SMS dienstenfilter)";
+                        return SMSStatusCode.DELETED;
+                    default:
+                        return SMSStatusCode.UNKNOWN;
+                }
+            }
+            default:
+                log.severe(String.format(
+                    "Provider: %s is either not implemented for status delivery or adapter not of SMS type", provider));
+                break;
+        }
+        return SMSStatusCode.UNKNOWN;
     }
 }

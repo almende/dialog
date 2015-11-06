@@ -37,6 +37,7 @@ import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.adapter.tools.SMSDeliveryStatus;
+import com.almende.dialog.adapter.tools.SMSDeliveryStatus.SMSStatusCode;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DDRRecordAgent;
 import com.almende.dialog.agent.DialogAgent;
@@ -466,6 +467,7 @@ public class CMServletIT extends TestFramework {
 
         assertEquals(cmStatus.getLinkedSmsDeliveryStatus(remoteAddress).getReference(),
                      linkeDeliveryStatus.getReference());
+        assertEquals(cmStatus.getStatusCode(), SMSStatusCode.DELIVERED);
         assertEquals("2009-06-15T13:45:30", cmStatus.getSentTimeStamp());
         assertEquals(linkeDeliveryStatus.getRemoteAddress(), PhoneNumberUtils.formatNumber(remoteAddress, null));
         assertEquals("2009-06-15T13:45:30", linkeDeliveryStatus.getDeliveredTimeStamp());

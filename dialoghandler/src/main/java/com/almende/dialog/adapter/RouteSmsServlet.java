@@ -68,6 +68,7 @@ public class RouteSmsServlet extends TextServlet {
                     String responseText = "No result fetched";
                     String requestData = ServerUtils.getRequestData(req);
                     String thisHost = "http://" + Settings.HOST + "?" + requestData;
+                    log.info("Delivery notification from Route-SMS: "+ thisHost);
                     List<NameValuePair> nameValuePairs = URLEncodedUtils.parse(new URI(thisHost), "UTF-8");
                     String messageId = null;
                     String source = null;
@@ -113,9 +114,8 @@ public class RouteSmsServlet extends TextServlet {
                             responseText = forwardToHost(host, HTTPMethod.POST, requestData);
                         }
                         else {
-                            SMSDeliveryStatus routeSMSStatus = handleDeliveryStatusReport(messageId, sentDate,
-                                                                                          doneDate, destination,
-                                                                                          source, status);
+                            SMSDeliveryStatus routeSMSStatus = handleDeliveryStatusReport(messageId, sentDate, doneDate,
+                                destination, source, status);
                             if (routeSMSStatus == null) {
                                 responseText = "No Route-SMS status entity found for messageId: " + messageId;
                             }
@@ -124,6 +124,7 @@ public class RouteSmsServlet extends TextServlet {
                             }
                         }
                     }
+                    log.info("Delivery from Route-SMS parsed: "+ responseText);
                     res.getWriter().println(responseText);
                 }
                 catch (Exception e) {

@@ -140,7 +140,7 @@ public class ComsysVoiceXMLRESTProxy extends VoiceXMLRESTProxy {
                 question = Question.fromURL(url, formattedRemoteId, config.getFormattedMyAddress(),
                                             session.getDdrRecordId(), session, extraParams);
             }
-            if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
+            if (!ServerUtils.isValidBearerToken(session, config)) {
                 TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
                 ttsInfo.setProvider(TTSProvider.VOICE_RSS);
                 String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());

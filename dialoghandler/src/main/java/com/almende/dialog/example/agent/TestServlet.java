@@ -153,7 +153,7 @@ public class TestServlet extends HttpServlet
                     result = getTwelveAnswerQuestion(req.getParameter("question"));
                     break;
                 case SIMPLE_COMMENT:
-                    result = getJsonSimpleCommentQuestion(req.getParameter("question"), req.getParameter("lang"), null);
+                    result = getJsonSimpleCommentQuestion(req.getParameter("question"), req.getParameter("lang"), req.getParameter("callback"));
                     break;
                 case OPEN_QUESTION:
                     result = getJsonSimpleOpenQuestion(req.getParameter("question"), req.getParameter("lang"));

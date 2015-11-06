@@ -438,7 +438,7 @@ public class VoiceXMLRESTProxy {
                 question = Question.fromURL(url, externalRemoteID, config.getFormattedMyAddress(),
                                             session.getDdrRecordId(), session, extraParams);
             }
-            if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
+            if (!ServerUtils.isValidBearerToken(session, config)) {
                 TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
                 ttsInfo.setProvider(TTSProvider.VOICE_RSS);
                 String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
@@ -1813,7 +1813,7 @@ public class VoiceXMLRESTProxy {
                                session != null ? session.getKey() : null, remoteID));
         
         String url = question.getUrl().get(0);
-        if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
+        if (!ServerUtils.isValidBearerToken(session, adapterConfig)) {
             
             TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
             ttsInfo.setProvider(TTSProvider.VOICE_RSS);

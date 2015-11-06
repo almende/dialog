@@ -1099,11 +1099,11 @@ public class DDRRecord {
         //pick all adapterIds belong to the adapterType if its given. If AdapterIds are given choose that instead
         if ((adapterTypes != null && !adapterTypes.isEmpty()) && (adapterIds == null || adapterIds.isEmpty())) {
 
+            adapterIds = new HashSet<String>();
             for (AdapterType adapterType : adapterTypes) {
                 ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(accountId,
                     adapterType.name(), null);
                 if (adapterConfigs != null) {
-                    adapterIds = new HashSet<String>();
                     for (AdapterConfig adapterConfig : adapterConfigs) {
                         adapterIds.add(adapterConfig.getConfigId());
                     }

@@ -34,9 +34,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.mongodb.DB;
 import com.mongodb.DBObject;
+import com.mongodb.WriteResult;
 
 /**
  * The actual price charged as part of the service and/or communication cost
@@ -54,6 +56,7 @@ public class DDRRecord {
     private static final String DOT_REPLACER_KEY = "[%dot%]";
 
     @Id
+    @JsonProperty("_id")
     private String _id;
     //used for backward compatibility as TwigMongoWrapper was used before. so it maintained two ids: id and _id in the datastore.
     String id;
@@ -386,19 +389,42 @@ public class DDRRecord {
      * 
      * @throws Exception
      */
-    public static Integer updateDDRRecordsWithAdapterType() throws Exception {
+    @JsonIgnore
+    public static double updateDDRRecordsWithAdapterType() throws Exception {
 
-        MongoCursor<DDRRecord> ddrCursor = getCollection().find().as(DDRRecord.class);
-        Integer count = 0;
+        String query = "{adapterType : null}";
+        double totalDddrs = getCollection().count(query);
+        MongoCollection collection = getCollection();
+        MongoCursor<ObjectNode> ddrCursor = collection.find(query).as(ObjectNode.class);
+        double count = 0;
+        log.info(String.format("Going to update %s ddr records", totalDddrs));
+        double percentageDone = 0.0;
         while (ddrCursor.hasNext()) {
-            DDRRecord ddrRecord = ddrCursor.next();
-            if (ddrRecord.getAdapterType() == null) {
-                AdapterConfig adapter = ddrRecord.getAdapter();
+            ObjectNode ddrRecord = ddrCursor.next();
+            if (ddrRecord.get("adapterType") == null) {
+                AdapterConfig adapter = AdapterConfig.getAdapterConfig(ddrRecord.get("adapterId").textValue());
                 if (adapter != null) {
-                    ddrRecord.setAdapterType(AdapterType.fromJson(adapter.getAdapterType()));
-                    ddrRecord.createOrUpdate();
-                    count++;
+                    AdapterType adapterType = AdapterType.fromJson(adapter.getAdapterType());
+                    if (adapterType != null) {
+                        ddrRecord.put("adapterType", adapterType.toString());
+                        if (ddrRecord.get("id") != null) {
+                            ddrRecord.remove("id");
+                        }
+                        WriteResult writeResult = collection.update(new ObjectId(ddrRecord.get("_id").asText()))
+                                                            .with(ddrRecord);
+                        if (writeResult.getN() == 0) {
+                            writeResult = collection.update(getQueryById(ddrRecord.get("_id").asText()))
+                                                    .with(ddrRecord);
+                        }
+                        if (writeResult.getN() > 0) {
+                            count++;
+                        }
+                    }
                 }
+            }
+            if ((count / totalDddrs) > (0.3 + percentageDone)) {
+                percentageDone += 0.3;
+                log.info(String.format("%s of the ddr records are parsed", (percentageDone * 100) + "%"));
             }
         }
         log.info(String.format("%s DDRRecords are updated with AdapterTypes", count));
@@ -913,7 +939,6 @@ public class DDRRecord {
         
         return adapterType;
     }
-    
     public void setAdapterType(AdapterType adapterType) {
     
         this.adapterType = adapterType;

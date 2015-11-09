@@ -621,7 +621,7 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
      * @return
      * @throws Exception
      */
-    public Integer updateDDRRecordsWithAdapterType() throws Exception {
+    public double updateDDRRecordsWithAdapterType() throws Exception {
 
         return DDRRecord.updateDDRRecordsWithAdapterType();
     }

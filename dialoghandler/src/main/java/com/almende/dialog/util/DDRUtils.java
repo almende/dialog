@@ -61,8 +61,7 @@ public class DDRUtils
                 config.getOwner(), config.getConfigId(), config.getMyAddress() ) );
             if ( config.getConfigId() != null && config.getOwner() != null )
             {
-                DDRRecord ddrRecord = new DDRRecord( adapterPurchaseDDRType.getTypeId(), config.getConfigId(),
-                    config.getOwner(), 1 );
+                DDRRecord ddrRecord = new DDRRecord(adapterPurchaseDDRType.getTypeId(), config, config.getOwner(), 1);
                 ddrRecord.setStart( TimeUtils.getServerCurrentTimeInMillis() );
                 ddrRecord.setAccountType(config.getAccountType());
                 ddrRecord.addAdditionalInfo(DDR_MESSAGE_KEY,
@@ -337,7 +336,7 @@ public class DDRUtils
             }
             //create new ddrRecord
             if (createNewDDRRecord) {
-                newestDDRRecord = new DDRRecord(subscriptionDDRType.getTypeId(), adapterConfig.getConfigId(),
+                newestDDRRecord = new DDRRecord(subscriptionDDRType.getTypeId(), adapterConfig,
                     adapterConfig.getOwner(), 1);
                 newestDDRRecord.setAccountType(adapterConfig.getAccountType());
                 newestDDRRecord.setStart(serverCurrentTime.getMillis());
@@ -866,8 +865,7 @@ public class DDRUtils
             log.info(String.format("Applying charges for account: %s and adapter: %s with address: %s", accountId,
                                    config.getConfigId(), config.getMyAddress()));
             if (config.getConfigId() != null && accountId != null) {
-                DDRRecord ddrRecord = new DDRRecord(communicationCostDDRType.getTypeId(), config.getConfigId(),
-                                                    accountId, 1);
+                DDRRecord ddrRecord = new DDRRecord(communicationCostDDRType.getTypeId(), config, accountId, 1);
                 switch (status) {
                     case SENT:
                         String fromAddress = senderName != null && !senderName.isEmpty() ? senderName

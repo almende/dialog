@@ -58,6 +58,7 @@ public class DDRRecord {
     //used for backward compatibility as TwigMongoWrapper was used before. so it maintained two ids: id and _id in the datastore.
     String id;
     String adapterId;
+    AdapterType adapterType;
     String accountId;
     String fromAddress;
     @JsonIgnore
@@ -107,18 +108,13 @@ public class DDRRecord {
     public DDRRecord() {
     }
 
-    public DDRRecord(String ddrTypeId, String adapterId, String accountId, Integer quantity) {
-
-        this.ddrTypeId = ddrTypeId;
-        this.adapterId = adapterId;
-        this.accountId = accountId;
-        this.quantity = quantity;
-    }
-
     public DDRRecord(String ddrTypeId, AdapterConfig adapterConfig, String accountId, Integer quantity) {
 
         this.ddrTypeId = ddrTypeId;
-        this.adapterId = adapterConfig != null ? adapterConfig.getConfigId() : null;
+        if(adapterConfig != null) {
+            this.adapterId = adapterConfig.getConfigId();
+            this.adapterType = AdapterType.fromJson(adapterConfig.getAdapterType());
+        }
         this.accountId = accountId;
         this.quantity = quantity;
     }
@@ -378,6 +374,35 @@ public class DDRRecord {
             }
         }
         return null;
+    }
+    
+    /**
+     * Script to update all ddrRecords with adapterType if there is an
+     * associated adapterId found too. This is to fix the issue with removing an
+     * adapter, before the billing date, and then fetching all teh ddr for that
+     * adapterType
+     * 
+     * @return
+     * 
+     * @throws Exception
+     */
+    public static Integer updateDDRRecordsWithAdapterType() throws Exception {
+
+        MongoCursor<DDRRecord> ddrCursor = getCollection().find().as(DDRRecord.class);
+        Integer count = 0;
+        while (ddrCursor.hasNext()) {
+            DDRRecord ddrRecord = ddrCursor.next();
+            if (ddrRecord.getAdapterType() == null) {
+                AdapterConfig adapter = ddrRecord.getAdapter();
+                if (adapter != null) {
+                    ddrRecord.setAdapterType(AdapterType.fromJson(adapter.getAdapterType()));
+                    ddrRecord.createOrUpdate();
+                    count++;
+                }
+            }
+        }
+        log.info(String.format("%s DDRRecords are updated with AdapterTypes", count));
+        return count;
     }
 
     // -- getters and setters --
@@ -883,6 +908,16 @@ public class DDRRecord {
 
         this.childIds = childIds;
     }
+    
+    public AdapterType getAdapterType() {
+        
+        return adapterType;
+    }
+    
+    public void setAdapterType(AdapterType adapterType) {
+    
+        this.adapterType = adapterType;
+    }
 
     @JsonIgnore
     public void addChildId(String childId) {
@@ -1099,16 +1134,7 @@ public class DDRRecord {
         //pick all adapterIds belong to the adapterType if its given. If AdapterIds are given choose that instead
         if ((adapterTypes != null && !adapterTypes.isEmpty()) && (adapterIds == null || adapterIds.isEmpty())) {
 
-            adapterIds = new HashSet<String>();
-            for (AdapterType adapterType : adapterTypes) {
-                ArrayList<AdapterConfig> adapterConfigs = AdapterConfig.findAdapterByAccount(accountId,
-                    adapterType.name(), null);
-                if (adapterConfigs != null) {
-                    for (AdapterConfig adapterConfig : adapterConfigs) {
-                        adapterIds.add(adapterConfig.getConfigId());
-                    }
-                }
-            }
+            matchQuery += ", adapterType: {$in:" + ServerUtils.serialize(adapterTypes) + "}";
         }
         if (adapterIds != null) {
             if (adapterIds.size() == 1) {

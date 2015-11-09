@@ -613,6 +613,20 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
     }
     
     /**
+     * Script to update all ddrRecords with adapterType if there is an
+     * associated adapterId found too. This is to fix the issue with removing an
+     * adapter, before the billing date, and then fetching all teh ddr for that
+     * adapterType. Added on 9-Nov-2015
+     * 
+     * @return
+     * @throws Exception
+     */
+    public Integer updateDDRRecordsWithAdapterType() throws Exception {
+
+        return DDRRecord.updateDDRRecordsWithAdapterType();
+    }
+    
+    /**
      * Returns the scheduler id initiated for this ddrPrice. The id is chosen
      * based on the unit type (frequency) and the keyword in the subscription
      * parameter. Valid values are "ALL" for all adapterTypes or SMS,Call etc

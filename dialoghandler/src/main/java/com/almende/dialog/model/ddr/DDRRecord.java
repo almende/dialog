@@ -392,6 +392,7 @@ public class DDRRecord {
     @JsonIgnore
     public static double updateDDRRecordsWithAdapterType() throws Exception {
 
+        long startTime = TimeUtils.getServerCurrentTimeInMillis();
         String query = "{adapterType : null}";
         double totalDddrs = getCollection().count(query);
         MongoCollection collection = getCollection();
@@ -424,10 +425,12 @@ public class DDRRecord {
             }
             if ((count / totalDddrs) > (0.3 + percentageDone)) {
                 percentageDone += 0.3;
-                log.info(String.format("%s of the ddr records are parsed", (percentageDone * 100) + "%"));
+                log.info(String.format("%s of the ddr records are parsed in %s secs", (percentageDone * 100) + "%",
+                    (TimeUtils.getServerCurrentTimeInMillis() - startTime) / 1000));
             }
         }
-        log.info(String.format("%s DDRRecords are updated with AdapterTypes", count));
+        log.info(String.format("%s DDRRecords are updated with AdapterTypes in %s secs", count,
+            (TimeUtils.getServerCurrentTimeInMillis() - startTime) / 1000));
         return count;
     }
 

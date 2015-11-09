@@ -395,14 +395,16 @@ public class AdapterConfig {
         return adapters;
     }
 	
-	/**
-	 * Fetches all the adapters where the accountId only matches that of the owner of the adapter. Doesnt 
-	 * return if the accountId is in the shared accounts list
-	 * @param accountId
-	 * @param adapterType
-	 * @param address
-	 * @return
-	 */
+    /**
+     * Fetches all the adapters where the accountId only matches that of the
+     * owner of the adapter. Doesnt return if the accountId is in the shared
+     * accounts list
+     * 
+     * @param accountId
+     * @param adapterType
+     * @param address
+     * @return
+     */
     public static ArrayList<AdapterConfig> findAdapterByOwner(String accountId, String adapterType, String address) {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();

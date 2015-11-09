@@ -406,7 +406,7 @@ public class DDRRecord {
                 if (adapter != null) {
                     AdapterType adapterType = AdapterType.fromJson(adapter.getAdapterType());
                     if (adapterType != null) {
-                        ddrRecord.put("adapterType", adapterType.toString());
+                        ddrRecord.put("adapterType", adapterType.toString().toLowerCase());
                         if (ddrRecord.get("id") != null) {
                             ddrRecord.remove("id");
                         }
@@ -1159,7 +1159,7 @@ public class DDRRecord {
         //pick all adapterIds belong to the adapterType if its given. If AdapterIds are given choose that instead
         if ((adapterTypes != null && !adapterTypes.isEmpty()) && (adapterIds == null || adapterIds.isEmpty())) {
 
-            matchQuery += ", adapterType: {$in:" + ServerUtils.serialize(adapterTypes) + "}";
+            matchQuery += ", adapterType: {$in:" + ServerUtils.serialize(adapterTypes).toLowerCase() + "}";
         }
         if (adapterIds != null) {
             if (adapterIds.size() == 1) {

@@ -338,7 +338,10 @@ abstract public class TextServlet extends HttpServlet {
                 String formattedAddress = address; //initialize formatted address to be the original one
                 if (config.isSMSAdapter()) {
                     formattedAddress = PhoneNumberUtils.formatNumber(address, null);
-                    if (!PhoneNumberType.MOBILE.equals(PhoneNumberUtils.getPhoneNumberType(formattedAddress))) {
+                    PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(formattedAddress);
+                    if (!PhoneNumberType.MOBILE.equals(numberType) &&
+                        !PhoneNumberType.FIXED_LINE_OR_MOBILE.equals(numberType)) {
+                        
                         formattedAddress = null;
                     }
                 }

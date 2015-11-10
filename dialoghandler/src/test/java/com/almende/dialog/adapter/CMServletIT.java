@@ -214,8 +214,7 @@ public class CMServletIT extends TestFramework {
         //check the total message parts
         int countMessageParts = CM.countMessageParts(text, addressMap.size());
         //fetch the ddr records
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         Assert.assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         ddrRecord.setShouldIncludeServiceCosts(true);
@@ -253,8 +252,7 @@ public class CMServletIT extends TestFramework {
         //check the total message parts
         int countMessageParts = CM.countMessageParts(text, addressMap.size());
         //fetch the ddr records
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         Assert.assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         ddrRecord.setShouldIncludeServiceCosts(true);
@@ -283,8 +281,7 @@ public class CMServletIT extends TestFramework {
         HashSet<String> ownerDDRRecordIds = new HashSet<String>();
         HashSet<String> ownerLogIds = new HashSet<String>();
         HashSet<String> ownerLogIdsForDDRRecordId = new HashSet<String>();
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         for (DDRRecord ddrRecord : ddrRecords) {
             ownerDDRRecordIds.add(ddrRecord.get_Id());
         }
@@ -315,8 +312,7 @@ public class CMServletIT extends TestFramework {
         assertXMLGeneratedFromOutBoundCall(addressNameMap, adapterConfig, simpleQuestion, senderName);
 
         //check that all the new logs belong to the shared account
-        List<DDRRecord> ddrRecordsReFetch = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null,
-                                                                    null, null, null, null, null);
+        List<DDRRecord> ddrRecordsReFetch = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertEquals(ddrRecordsReFetch.size(), ddrRecords.size());
         for (DDRRecord ddrRecord : ddrRecordsReFetch) {
             assertTrue(ownerDDRRecordIds.contains(ddrRecord.get_Id()));
@@ -335,8 +331,7 @@ public class CMServletIT extends TestFramework {
         }
 
         //check that there are logs formed with shared account
-        ddrRecords = DDRRecord.getDDRRecords(TEST_PRIVATE_KEY, null, null, null, null, null, null, null, null, null,
-                                             null);
+        ddrRecords = getAllDdrRecords(TEST_PRIVATE_KEY);
         assertTrue(ddrRecords.size() > 0);
     }
     
@@ -450,8 +445,7 @@ public class CMServletIT extends TestFramework {
         assertEquals("No Error", cmStatus.getDescription());
         
         //fetch ddr records
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(cmStatus.getAccountId(), null, null, null, null, null,
-                                                             null, null, null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(cmStatus.getAccountId());
         assertEquals(1, ddrRecords.size());
         assertEquals(ddrRecords.iterator().next().getId(), cmStatus.getDdrRecordId());
         
@@ -769,8 +763,7 @@ public class CMServletIT extends TestFramework {
 
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(1));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertThat(ddrRecords.size(), Matchers.is(1));
     }
     
@@ -810,8 +803,7 @@ public class CMServletIT extends TestFramework {
 
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(0));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertThat(ddrRecords.size(), Matchers.is(0));
     }
     
@@ -854,8 +846,7 @@ public class CMServletIT extends TestFramework {
 
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(0));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertThat(ddrRecords.size(), Matchers.is(0));
     }
     

@@ -15,6 +15,7 @@ import org.jongo.MongoCollection;
 import org.jongo.MongoCursor;
 import org.jongo.ResultHandler;
 import org.jongo.marshall.jackson.JacksonMapper;
+import org.jongo.marshall.jackson.configuration.MapperModifier;
 import org.mongojack.JacksonDBCollection;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.accounts.AdapterConfig;
@@ -31,9 +32,11 @@ import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 import com.mongodb.DB;
@@ -191,48 +194,66 @@ public class DDRRecord {
      * that matches to all the parameters given. The accountId is mandatory and
      * rest are optional
      * 
-     * @param adapterId
      * @param accountId
-     *            Mandatory field
+     * @param adapterTypes
+     * @param adapterIds
      * @param fromAddress
      * @param ddrTypeIds
      * @param status
      * @param startTime
      * @param endTime
+     * @param sessionKeys
      * @param offset
+     * @param limit
+     * @param shouldGenerateCosts
+     *            Can be used to recalculate all the prices for individual
+     *            ddrRecords.
+     * @param shouldIncludeServiceCosts
+     *            Attaches the service costs too. shouldGenerateCosts param must
+     *            be set to true as well
      * @return
-     * @throws Exception 
+     * @throws Exception
      */
     public static List<DDRRecord> getDDRRecords(String accountId, Collection<AdapterType> adapterTypes,
-        Collection<String> adapterIds, String fromAddress, Collection<String> ddrTypeIds, final CommunicationStatus status,
-        Long startTime, Long endTime, Collection<String> sessionKeys, Integer offset, Integer limit) throws Exception {
+        Collection<String> adapterIds, String fromAddress, Collection<String> ddrTypeIds,
+        final CommunicationStatus status, Long startTime, Long endTime, Collection<String> sessionKeys, Integer offset,
+        Integer limit, final Boolean shouldGenerateCosts, final Boolean shouldIncludeServiceCosts) throws Exception {
 
-        String ddrQuery = getDDRQuery(accountId, adapterTypes, adapterIds, fromAddress, ddrTypeIds, startTime,
-            endTime, sessionKeys);
+        String ddrQuery = getDDRQuery(accountId, adapterTypes, adapterIds, fromAddress, ddrTypeIds, startTime, endTime,
+            sessionKeys);
         limit = limit != null && limit <= 1000 ? limit : 1000;
         offset = offset != null ? offset : 0;
-        
-        Find ddrFind = getCollection().find(String.format("{%s}", ddrQuery)).skip(offset)
-             .limit(limit).sort("{start: -1}");
+
+        Find ddrFind = getCollection().find(String.format("{%s}", ddrQuery)).skip(offset).limit(limit)
+                                      .sort("{start: -1}");
         MongoCursor<DDRRecord> ddrCursor = null;
-        if(status != null) {
+        if (status != null) {
             ddrCursor = ddrFind.map(new ResultHandler<DDRRecord>() {
+
                 @Override
                 public DDRRecord map(DBObject result) {
-           
+
                     try {
                         if (result.get("statusPerAddress") != null) {
                             Map<String, String> statusForAddresses = ServerUtils.deserialize(
                                 result.get("statusPerAddress").toString(), false,
                                 new TypeReference<Map<String, String>>() {
                             });
-                            if(statusForAddresses != null) {
+                            if (statusForAddresses != null) {
                                 for (String address : statusForAddresses.keySet()) {
                                     Object statusForAddress = statusForAddresses.get(address);
                                     if (statusForAddress != null &&
                                         CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
-                                        if(result.toString() != null) {
-                                            return ServerUtils.deserialize(result.toString(), false, DDRRecord.class);
+                                        if (result.toString() != null) {
+                                            
+                                            DDRRecord ddrRecord = ServerUtils.deserialize(result.toString(), false,
+                                                DDRRecord.class);
+                                            if (shouldGenerateCosts != null && shouldGenerateCosts) {
+                                                ddrRecord.setShouldGenerateCosts(shouldGenerateCosts);
+                                                ddrRecord.setShouldIncludeServiceCosts(shouldIncludeServiceCosts);
+                                                ddrRecord.setTotalCost(ddrRecord.getTotalCost());
+                                            }
+                                            return ddrRecord;
                                         }
                                     }
                                 }
@@ -252,13 +273,19 @@ public class DDRRecord {
         List<DDRRecord> result = new ArrayList<DDRRecord>(1);
         while (ddrCursor.hasNext()) {
             DDRRecord ddrRecord = ddrCursor.next();
-            if(ddrRecord != null) {
+            if (ddrRecord != null) {
+
+                if (status == null && shouldGenerateCosts != null && shouldGenerateCosts) {
+                    ddrRecord.setShouldGenerateCosts(shouldGenerateCosts);
+                    ddrRecord.setShouldIncludeServiceCosts(shouldIncludeServiceCosts);
+                    ddrRecord.setTotalCost(ddrRecord.getTotalCost());
+                }
                 result.add(ddrRecord);
             }
         }
         return result;
     }
-
+    
     /**
      * Fetch the quantity of ddr records based the input parameters. The
      * accountId is mandatory and rest are optional
@@ -393,34 +420,27 @@ public class DDRRecord {
     public static double updateDDRRecordsWithAdapterType() throws Exception {
 
         long startTime = TimeUtils.getServerCurrentTimeInMillis();
-        String query = "{adapterType : null}";
+        String query = "{$or: [ {direction: null}, {adapterType: null}]}";
         double totalDddrs = getCollection().count(query);
         MongoCollection collection = getCollection();
         MongoCursor<ObjectNode> ddrCursor = collection.find(query).as(ObjectNode.class);
         double count = 0;
         log.info(String.format("Going to update %s ddr records", totalDddrs));
         double percentageDone = 0.0;
+        boolean forUpdate = false;
         while (ddrCursor.hasNext()) {
             ObjectNode ddrRecord = ddrCursor.next();
-            if (ddrRecord.get("adapterType") == null) {
-                AdapterConfig adapter = AdapterConfig.getAdapterConfig(ddrRecord.get("adapterId").textValue());
-                if (adapter != null) {
-                    AdapterType adapterType = AdapterType.fromJson(adapter.getAdapterType());
-                    if (adapterType != null) {
-                        ddrRecord.put("adapterType", adapterType.toString().toLowerCase());
-                        if (ddrRecord.get("id") != null) {
-                            ddrRecord.remove("id");
-                        }
-                        WriteResult writeResult = collection.update(new ObjectId(ddrRecord.get("_id").asText()))
-                                                            .with(ddrRecord);
-                        if (writeResult.getN() == 0) {
-                            writeResult = collection.update(getQueryById(ddrRecord.get("_id").asText()))
+            AdapterConfig adapter = AdapterConfig.getAdapterConfig(ddrRecord.get("adapterId").textValue());
+            forUpdate = updateDirection(forUpdate, ddrRecord, adapter);
+            forUpdate = updateAdapterType(forUpdate, ddrRecord, adapter);
+            if (forUpdate) {
+                WriteResult writeResult = collection.update(new ObjectId(ddrRecord.get("_id").asText()))
                                                     .with(ddrRecord);
-                        }
-                        if (writeResult.getN() > 0) {
-                            count++;
-                        }
-                    }
+                if (writeResult.getN() == 0) {
+                    writeResult = collection.update(getQueryById(ddrRecord.get("_id").asText())).with(ddrRecord);
+                }
+                if (writeResult.getN() > 0) {
+                    count++;
                 }
             }
             if ((count / totalDddrs) > (0.3 + percentageDone)) {
@@ -432,6 +452,59 @@ public class DDRRecord {
         log.info(String.format("%s DDRRecords are updated with AdapterTypes in %s secs", count,
             (TimeUtils.getServerCurrentTimeInMillis() - startTime) / 1000));
         return count;
+    }
+
+    /**
+     * Add a adapterType if its missing. Fetches it from the given adapter
+     * @param forUpdate
+     * @param ddrRecord
+     * @param adapter
+     * @return
+     */
+    private static boolean updateAdapterType(boolean forUpdate, ObjectNode ddrRecord, AdapterConfig adapter) {
+
+        if (ddrRecord.get("adapterType") == null) {
+            if (adapter != null) {
+
+                AdapterType adapterType = AdapterType.fromJson(adapter.getAdapterType());
+                if (adapterType != null) {
+                    ddrRecord.put("adapterType", adapterType.toString());
+                    if (ddrRecord.get("id") != null) {
+                        ddrRecord.remove("id");
+                    }
+                    forUpdate = true;
+                }
+            }
+        }
+        return forUpdate;
+    }
+
+    /**
+     * Add a direction if its missing. If the from address is not equal
+     * to the adapter address, its an incoming communication
+     * @param forUpdate
+     * @param ddrRecord
+     * @param adapter
+     * @return
+     * @throws Exception
+     */
+    private static boolean updateDirection(boolean forUpdate, ObjectNode ddrRecord, AdapterConfig adapter)
+        throws Exception {
+
+        if (ddrRecord.get("direction") == null && ddrRecord.get("toAddressString") != null && adapter != null) {
+
+            String toAddressString = getToAddressString(null, ddrRecord.get("toAddressString").asText(), false);
+            Map<String, String> toAddress = ServerUtils.deserialize(toAddressString,
+                new TypeReference<Map<String, String>>() {
+                });
+            if (toAddress != null) {
+                String direction = toAddress.containsKey(adapter.getFormattedMyAddress()) && toAddress.size() == 1
+                    ? "inbound" : "outbound";
+                ddrRecord.put("direction", direction);
+                forUpdate = true;
+            }
+        }
+        return forUpdate;
     }
 
     // -- getters and setters --
@@ -583,20 +656,7 @@ public class DDRRecord {
      */
     public String getToAddressString() {
 
-        if ((toAddress == null || toAddress.isEmpty()) && toAddressString != null) {
-            toAddressString = getDotReplacedString(toAddressString);
-        }
-        else {
-            try {
-                toAddressString = ServerUtils.serialize(toAddress);
-                //replace dot(.) by - as mongo doesnt allow map variables with (.)
-                toAddressString = getDotReplacedString(toAddressString);
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-                log.severe(String.format("Exception while serializing toAddress: %s", toAddress));
-            }
-        }
+        toAddressString = getToAddressString(toAddress, toAddressString, correctDotData);
         return toAddressString;
     }
 
@@ -747,7 +807,7 @@ public class DDRRecord {
         additionalInfo = additionalInfo != null ? additionalInfo : new HashMap<String, Object>();
         if (!DDR_RECORD_KEY.equals(key)) {
             //dot(.) is not allowed to be saved in mongo. just replace with [%dot%]
-            additionalInfo.put(getDotReplacedString(key), value);
+            additionalInfo.put(getDotReplacedString(key, correctDotData), value);
         }
     }
 
@@ -786,7 +846,7 @@ public class DDRRecord {
         if (!statusPerAddress.isEmpty()) {
             HashMap<String, CommunicationStatus> statusPerAddressCopy = new HashMap<String, CommunicationStatus>();
             for (String key : statusPerAddress.keySet()) {
-                statusPerAddressCopy.put(getDotReplacedString(key), statusPerAddress.get(key));
+                statusPerAddressCopy.put(getDotReplacedString(key, correctDotData), statusPerAddress.get(key));
             }
             statusPerAddress = statusPerAddressCopy;
         }
@@ -821,7 +881,7 @@ public class DDRRecord {
 
             address = PhoneNumberUtils.formatNumber(address.trim().split("@")[0], null);
         }
-        getStatusPerAddress().put(getDotReplacedString(address), status);
+        getStatusPerAddress().put(getDotReplacedString(address, correctDotData), status);
     }
 
     /**
@@ -833,7 +893,7 @@ public class DDRRecord {
     public void setStatusForAddresses(Collection<String> addresses, CommunicationStatus status) {
 
         for (String address : addresses) {
-            addStatusForAddress(getDotReplacedString(address), status);
+            addStatusForAddress(getDotReplacedString(address, correctDotData), status);
         }
     }
 
@@ -845,7 +905,7 @@ public class DDRRecord {
      */
     public CommunicationStatus getStatusForAddress(String address) {
 
-        return getStatusPerAddress().get(getDotReplacedString(address));
+        return getStatusPerAddress().get(getDotReplacedString(address, correctDotData));
     }
 
     /**
@@ -1028,35 +1088,6 @@ public class DDRRecord {
     }
 
     /**
-     * Ideally should be called by the GETTER methods of fields whose dot (.)
-     * values are to be replaced by {@link DDRRecord#DOT_REPLACER_KEY}
-     * 
-     * @param data
-     * @return
-     */
-    private String getDotReplacedString(String data) {
-
-        if (Boolean.TRUE.equals(correctDotData)) {
-            return data != null ? data.replace(".", DOT_REPLACER_KEY) : null;
-        }
-        else {
-            return correctDotReplacedString(data);
-        }
-    }
-
-    /**
-     * Ideally should be called by the SETTER methods of fields whose dot (.)
-     * values are replaced by {@link DDRRecord#DOT_REPLACER_KEY}
-     * 
-     * @param data
-     * @return
-     */
-    private String correctDotReplacedString(String data) {
-
-        return data != null ? data.replace(DOT_REPLACER_KEY, ".") : null;
-    }
-
-    /**
      * Replace all dots (.) in keys of a map object
      * 
      * @param data
@@ -1066,7 +1097,7 @@ public class DDRRecord {
         if (data != null) {
             Map<String, Object> copyOfData = new HashMap<String, Object>();
             for (String key : data.keySet()) {
-                copyOfData.put(getDotReplacedString(key), data.get(key));
+                copyOfData.put(getDotReplacedString(key, correctDotData ), data.get(key));
             }
             return copyOfData;
         }
@@ -1162,7 +1193,7 @@ public class DDRRecord {
         //pick all adapterIds belong to the adapterType if its given. If AdapterIds are given choose that instead
         if ((adapterTypes != null && !adapterTypes.isEmpty()) && (adapterIds == null || adapterIds.isEmpty())) {
 
-            matchQuery += ", adapterType: {$in:" + ServerUtils.serialize(adapterTypes).toLowerCase() + "}";
+            matchQuery += ", adapterType: {$in:" + ServerUtils.serialize(adapterTypes) + "}";
         }
         if (adapterIds != null) {
             if (adapterIds.size() == 1) {
@@ -1199,13 +1230,23 @@ public class DDRRecord {
     private static MongoCollection getCollection() {
 
         DB db = ParallelInit.getDatastore();
-        Jongo jongo = new Jongo(db,
-            new JacksonMapper.Builder().registerModule(new JodaModule()).withView(DDRRecord.class).build());
-        return jongo.getCollection(DDRRecord.class.getCanonicalName().toLowerCase() + "s");
+        Jongo jongo = new Jongo(db, new JacksonMapper.Builder().addModifier(new MapperModifier() {
+
+            @Override
+            public void modify(ObjectMapper mapper) {
+
+                mapper.setSerializationInclusion(JsonInclude.Include.ALWAYS);
+            }
+        }).registerModule(new JodaModule()).withView(DDRRecord.class).build());
+        MongoCollection collection = jongo.getCollection(DDRRecord.class.getCanonicalName().toLowerCase() + "s");
+        collection.ensureIndex("{ _id: 1}");
+        return collection;
     }
     
     /**
-     * This is used to save the document. Lot of serializing issues with jongo
+     * This is used to save the document. Lot of serializing issues with jongo,
+     * additionalInfo serializer is not called. (.) remains in address
+     * 
      * @return
      */
     private static JacksonDBCollection<DDRRecord, String> getMongoJackCollection() {
@@ -1224,5 +1265,54 @@ public class DDRRecord {
     private static String getQueryById(String _id) {
 
         return String.format("{_id: '%s'}", _id);
+    }
+    
+    private static String getToAddressString(Map<String, String> toAddress, String toAddressString,
+        Boolean correctDotData) {
+
+        if ((toAddress == null || toAddress.isEmpty()) && toAddressString != null) {
+            toAddressString = getDotReplacedString(toAddressString, correctDotData);
+        }
+        else {
+            try {
+                toAddressString = ServerUtils.serialize(toAddress);
+                //replace dot(.) by - as mongo doesnt allow map variables with (.)
+                toAddressString = getDotReplacedString(toAddressString, correctDotData);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                log.severe(String.format("Exception while serializing toAddress: %s", toAddress));
+            }
+        }
+        return toAddressString;
+    }
+    
+    /**
+     * Ideally should be called by the GETTER methods of fields whose dot (.)
+     * values are to be replaced by {@link DDRRecord#DOT_REPLACER_KEY}
+     * 
+     * @param data
+     * @return
+     */
+    private static String getDotReplacedString(String data, Boolean correctDotData) {
+
+        if (Boolean.TRUE.equals(correctDotData)) {
+            return data != null ? data.replace(".", DOT_REPLACER_KEY) : null;
+        }
+        else {
+            return correctDotReplacedString(data);
+        }
+    }
+
+    /**
+     * Ideally should be called by the SETTER methods of fields whose dot (.)
+     * values are replaced by {@link DDRRecord#DOT_REPLACER_KEY}
+     * 
+     * @param data
+     * @return
+     */
+    private static String correctDotReplacedString(String data) {
+
+        return data != null ? data.replace(DOT_REPLACER_KEY, ".") : null;
     }
 }

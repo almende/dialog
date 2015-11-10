@@ -116,15 +116,8 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
 
         CommunicationStatus communicationStatus = status != null && !status.isEmpty()
             ? CommunicationStatus.fromJson(status) : null;
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(accountId, adapterTypes, adapterIds, fromAddress, typeIds,
-            communicationStatus, startTime, endTime, sessionKeys, offset, limit);
-        if (shouldGenerateCosts != null && shouldGenerateCosts) {
-            for (DDRRecord ddrRecord : ddrRecords) {
-                ddrRecord.setShouldGenerateCosts(shouldGenerateCosts);
-                ddrRecord.setShouldIncludeServiceCosts(shouldIncludeServiceCosts);
-            }
-        }
-        return ddrRecords;
+        return DDRRecord.getDDRRecords(accountId, adapterTypes, adapterIds, fromAddress, typeIds, communicationStatus,
+            startTime, endTime, sessionKeys, offset, limit, shouldGenerateCosts, shouldIncludeServiceCosts);
     }
     
     @Override

@@ -129,8 +129,7 @@ public class VoiceXMLServletIT extends TestFramework {
             assertEquals(new Integer(Question.DEFAULT_MAX_QUESTION_LOAD), retryCount);
         }
         //check all the ddrs created
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-            null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertEquals(ddrRecords.size(), 1);
         for (DDRRecord ddrRecord : ddrRecords) {
             assertEquals("inbound", ddrRecord.getDirection());
@@ -287,8 +286,7 @@ public class VoiceXMLServletIT extends TestFramework {
         //trigger an outbound call
         outboundPhoneCallMissingDDRTest();
         //fetch all the ddrRecords
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-            null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         //make sure that all the logs belong to atleast one ddrRecord
         //        int logsCount = 0;
         long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
@@ -328,8 +326,7 @@ public class VoiceXMLServletIT extends TestFramework {
         //trigger an outbound call
         outboundPhoneCallMissingDDRTest();
         //fetch all the ddrRecords
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-            null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         //make sure that all the logs belong to atleast one ddrRecord
         //        int logsCount = 0;
         long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
@@ -595,8 +592,7 @@ public class VoiceXMLServletIT extends TestFramework {
         assertOpenQuestionWithDTMFType(securedDialogResponse.getEntity().toString());
 
         //validate that ddr records are created when isTest is set to false
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-            null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         Assert.assertThat(ddrRecords.size(), Matchers.equalTo(1));
 
         //trigger a second incoming call with test flag to be true. flush all sessions, adapters and ddrRecords
@@ -610,8 +606,7 @@ public class VoiceXMLServletIT extends TestFramework {
         assertOpenQuestionWithDTMFType(securedDialogResponse.getEntity().toString());
 
         //validate that ddr records are created when isTest is set to false
-        ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null, null, null,
-            null);
+        ddrRecords = getAllDdrRecords(TEST_PUBLIC_KEY);
         Assert.assertThat(ddrRecords.size(), Matchers.equalTo(0));
     }
 
@@ -767,8 +762,7 @@ public class VoiceXMLServletIT extends TestFramework {
         }
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-            null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         int ttsServiceChargesAttached = 0;
         for (DDRRecord ddrRecord : ddrRecords) {
             Assert.assertFalse(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_COST));
@@ -802,8 +796,7 @@ public class VoiceXMLServletIT extends TestFramework {
         assertThat(newDialog.getEntity().toString(), Matchers.not(Matchers.containsString(invalidNumber)));
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(0));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-            null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertThat(ddrRecords.size(), Matchers.is(1));
         int ddrInfoCount = 0;
         DDRRecord ddrRecord = ddrRecords.iterator().next();
@@ -882,8 +875,7 @@ public class VoiceXMLServletIT extends TestFramework {
         Response securedDialogResponse = performSecuredInboundCall("testuserName", "testpassword", ttsInfo, url, null);
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-            null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         int ttsChargesAttached = 0;
         for (DDRRecord ddrRecord : ddrRecords) {
             Assert.assertFalse(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_SERVICE_COST));
@@ -1062,8 +1054,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //verify that the session is not saved
         assertEquals(0, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-            null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertEquals(1, ddrRecords.size());
         assertEquals(CommunicationStatus.ERROR,
             ddrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
@@ -1106,8 +1097,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //verify that the session is not saved
         assertEquals(1, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-            null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertEquals(1, ddrRecords.size());
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         assertEquals(CommunicationStatus.ERROR,
@@ -1154,8 +1144,7 @@ public class VoiceXMLServletIT extends TestFramework {
 
         //verify that the session is not saved
         assertEquals(0, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-            null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertEquals(1, ddrRecords.size());
         assertEquals(CommunicationStatus.ERROR,
             ddrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber("0611223", null)));

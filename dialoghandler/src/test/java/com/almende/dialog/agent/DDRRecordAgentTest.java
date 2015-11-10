@@ -75,25 +75,24 @@ public class DDRRecordAgentTest extends TestFramework
      * @throws Exception
      */
     @Test
-    public void adapterPurchaseTest() throws Exception
-    {
-        DDRPrice ddrPrice = getTestDDRPrice( DDRTypeCategory.ADAPTER_PURCHASE, 10.0, "Test", UnitType.PART,
-            AdapterType.EMAIL, null );
-        assertThat( ddrPrice.getDdrTypeId(), Matchers.notNullValue() );
+    public void adapterPurchaseTest() throws Exception {
+
+        DDRPrice ddrPrice = getTestDDRPrice(DDRTypeCategory.ADAPTER_PURCHASE, 10.0, "Test", UnitType.PART,
+            AdapterType.EMAIL, null);
+        assertThat(ddrPrice.getDdrTypeId(), Matchers.notNullValue());
         String createAdapter = adapterAgent.createEmailAdapter("test@test.com", "test", null, null, null, null, null,
-                                                               null, null, TEST_ACCOUNT_ID, null, null, null);
+            null, null, TEST_ACCOUNT_ID, null, null, null);
         //check if a ddr record is created
         Object ddrRecords = ddrRecordAgent.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                         null, null, null, null, null);
-        TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>()
-        {
+            null, null, null, true, true);
+        TypeUtil<Collection<DDRRecord>> typesInjector = new TypeUtil<Collection<DDRRecord>>() {
         };
-        Collection<DDRRecord> allDdrRecords = typesInjector.inject( ddrRecords );
-        assertThat( allDdrRecords.size(), Matchers.is( 1 ) );
+        Collection<DDRRecord> allDdrRecords = typesInjector.inject(ddrRecords);
+        assertThat(allDdrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = allDdrRecords.iterator().next();
-        assertThat( ddrRecord.getAccountId(), Matchers.is( TEST_ACCOUNT_ID ) );
-        assertThat( ddrRecord.getAdapterId(), Matchers.is( createAdapter ) );
-        assertThat( DDRUtils.calculateDDRCost( ddrRecord ), Matchers.is( 10.0 ) );
+        assertThat(ddrRecord.getAccountId(), Matchers.is(TEST_ACCOUNT_ID));
+        assertThat(ddrRecord.getAdapterId(), Matchers.is(createAdapter));
+        assertThat(DDRUtils.calculateDDRCost(ddrRecord), Matchers.is(10.0));
     }
     
     /**
@@ -228,8 +227,7 @@ public class DDRRecordAgentTest extends TestFramework
         DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, TEST_PUBLIC_KEY, remoteAddressVoice, 1,
             "some test message", session);
         //fetch the ddrRecord
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null, null, null, null,
-            null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_PUBLIC_KEY);
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         //toaddress check
         Map<String, String> toAddress = new HashMap<String, String>(1);
@@ -243,7 +241,7 @@ public class DDRRecordAgentTest extends TestFramework
         ddrRecord.addToAddress(secondRemoteAddress);
         ddrRecord.createOrUpdate();
 
-        ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        ddrRecords = getAllDdrRecords(TEST_PUBLIC_KEY);
         ddrRecord = ddrRecords.iterator().next();
         assertThat(ddrRecord.getToAddress(), Matchers.is(toAddress));
     }
@@ -286,7 +284,7 @@ public class DDRRecordAgentTest extends TestFramework
 
         //fetch ddr by status
         allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.SENT, null,
-            null, null, null, null);
+            null, null, null, null, null, null);
         assertThat(allDdrRecords.size(), Matchers.is(ddrCount));
         Assert.assertTrue(checkThatDDRRecordHasNonEmptyFields(allDdrRecords));
 
@@ -296,11 +294,11 @@ public class DDRRecordAgentTest extends TestFramework
         ddrRecord.createOrUpdate();
         //fetch ddr by status
         allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.FINISHED,
-            null, null, null, null, null);
+            null, null, null, null, null, null, null);
         assertThat(allDdrRecords.size(), Matchers.is(1));
         Assert.assertTrue(checkThatDDRRecordHasNonEmptyFields(allDdrRecords));
         allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.MISSED,
-            null, null, null, null, null);
+            null, null, null, null, null, null, null);
         Assert.assertTrue(checkThatDDRRecordHasNonEmptyFields(allDdrRecords));
         RestResponse ddrRecordsCount = new DDRRecordAgent().getDDRRecordsQuantity(TEST_ACCOUNT_ID, null, null, null, null,
             CommunicationStatus.MISSED, null, null, null, null);
@@ -350,7 +348,7 @@ public class DDRRecordAgentTest extends TestFramework
         }
         //fetch the ddrRecords
         List<DDRRecord> allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, Arrays.asList(AdapterType.CALL), null,
-            null, null, null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null, null, null);
         assertThat(allDdrRecords.size(), Matchers.is(ddrCount));
 
         //update couple of adapters and flush their adapterType
@@ -361,7 +359,7 @@ public class DDRRecordAgentTest extends TestFramework
         ddrRecord.setAdapterType(null);
         ddrRecord.createOrUpdate();
         allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, Arrays.asList(AdapterType.CALL), null, null, null,
-            null, null, null, null, null, null);
+            null, null, null, null, null, null, null, null);
         assertThat(allDdrRecords.size(), Matchers.is(ddrCount -2));
     }
 

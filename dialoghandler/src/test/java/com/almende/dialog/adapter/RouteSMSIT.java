@@ -186,8 +186,7 @@ public class RouteSMSIT extends TestFramework {
         }
 
         //fetch the sms ddr records
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         Assert.assertThat(allSessions.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         Assert.assertThat(ddrRecord.getStatusForAddress(invalidNumber), Matchers.is(CommunicationStatus.ERROR));
@@ -243,8 +242,7 @@ public class RouteSMSIT extends TestFramework {
         Assert.assertThat(allSessions.size(), Matchers.is(0));
 
         //fetch the sms ddr records
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         Assert.assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         Assert.assertThat(ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),

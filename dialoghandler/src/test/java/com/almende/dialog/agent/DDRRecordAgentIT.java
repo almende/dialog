@@ -159,8 +159,7 @@ public class DDRRecordAgentIT extends TestFramework {
         sameDateRangeDDRPrice.createOrUpdate();
 
         //fetch the ddrRecords again!
-        allDdrRecords = DDRRecord.getDDRRecords(resultMap.get(ACCOUNT_ID_KEY), null, null, null, null, null, null,
-            null, null, null, null);
+        allDdrRecords = getAllDdrRecords(resultMap.get(ACCOUNT_ID_KEY));
         assertThat(allDdrRecords.size(), Matchers.is(2));
         assertCount = 0;
         for (DDRRecord ddrRecord : allDdrRecords) {
@@ -617,8 +616,7 @@ public class DDRRecordAgentIT extends TestFramework {
         assertThat(sessions, Matchers.emptyCollectionOf(Session.class));
 
         //check that all ddrs are processed
-        Collection<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(resultMap.get(ACCOUNT_ID_KEY), null, null, null,
-                                                                   null, null, null, null, null, null, null);
+        Collection<DDRRecord> ddrRecords = getAllDdrRecords(resultMap.get(ACCOUNT_ID_KEY));
         assertThat(ddrRecords.size(), Matchers.is(2));
         for (DDRRecord ddrRecord : ddrRecords) {
 

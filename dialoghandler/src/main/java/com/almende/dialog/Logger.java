@@ -402,6 +402,8 @@ public class Logger {
         DB db = ParallelInit.getDatastore();
         Jongo jongo = new Jongo(db, new JacksonMapper.Builder().registerModule(new JodaModule())
                                         .enable(MapperFeature.AUTO_DETECT_GETTERS).withView(Log.class).build());
-        return jongo.getCollection(Log.class.getCanonicalName().toLowerCase() + "s");
+        MongoCollection collection = jongo.getCollection(Log.class.getCanonicalName().toLowerCase() + "s");
+        collection.ensureIndex("{ logId: 1}");
+        return collection;
     }
 }

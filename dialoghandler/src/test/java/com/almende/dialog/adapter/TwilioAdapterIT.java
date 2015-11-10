@@ -136,12 +136,13 @@ public class TwilioAdapterIT extends TestFramework {
         }
 
         //new inbound call should trigger a redirect with preconnect 
-        assertXMLGeneratedByTwilioLibrary(String.format("<Response><Play>%s</Play><Dial method=\"GET\" action=\"http://%s/dialoghandler/rest/twilio/answer\"  "
-                                                            + "callerId =\"%s\" timeout=\"30\"><Number method=\"GET\" url=\"http://%s/dialoghandler/rest/twilio/preconnect\">"
-                                                            + "%s</Number></Dial></Response>", COMMENT_QUESTION_AUDIO,
-                                                        Settings.HOST, adapterConfig.getMyAddress(), Settings.HOST,
-                                                        PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
-                                          newInboundResponse.getEntity().toString());
+        assertXMLGeneratedByTwilioLibrary(String.format(
+            "<Response><Play>%s</Play><Dial method=\"GET\" action=\"http://%s/dialoghandler/rest/twilio/answer\"  " +
+                "callerId =\"%s\" timeout=\"30\"><Number method=\"GET\" url=\"http://%s/dialoghandler/rest/twilio/preconnect\" " +
+                "statusCallback=\"http://%s/dialoghandler/rest/twilio/cc\" statusCallbackEvent=\"initiated ringing answered completed\" statusCallbackMethod=\"GET\">" +
+                "%s</Number></Dial></Response>",
+            COMMENT_QUESTION_AUDIO, Settings.HOST, adapterConfig.getMyAddress(), Settings.HOST, Settings.HOST,
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null)), newInboundResponse.getEntity().toString());
 
         Mockito.when(twilioAdapter.fetchSessionFromParent(null, null, null, null, null))
                .thenReturn(Session.getSessionFromParentExternalId(testCallId1, testCallId,
@@ -177,13 +178,14 @@ public class TwilioAdapterIT extends TestFramework {
                                                                                                                    null));
         Assert.assertThat(sessionFromParentExternalId, Matchers.notNullValue());
 
-        assertXMLGeneratedByTwilioLibrary(String.format("<Response><Play>%s</Play><Dial action=\"http://%s/dialoghandler/rest/twilio/answer\" method=\"GET\"  "
-                                                            + "callerId =\"%s\" timeout=\"30\"><Number method=\"GET\" url=\"http://%s/dialoghandler/rest/twilio/preconnect\">"
-                                                            + "%s</Number></Dial></Response>", COMMENT_QUESTION_AUDIO,
-                                                        Settings.HOST, adapterConfig.getMyAddress(), Settings.HOST,
-                                                        PhoneNumberUtils.formatNumber(secondRemoteAddress, null)),
-                                          answer.getEntity().toString());
-
+        assertXMLGeneratedByTwilioLibrary(String.format(
+            "<Response><Play>%s</Play><Dial method=\"GET\" action=\"http://%s/dialoghandler/rest/twilio/answer\"  " +
+                "callerId =\"%s\" timeout=\"30\"><Number method=\"GET\" url=\"http://%s/dialoghandler/rest/twilio/preconnect\" " +
+                "statusCallback=\"http://%s/dialoghandler/rest/twilio/cc\" statusCallbackEvent=\"initiated ringing answered completed\" statusCallbackMethod=\"GET\">" +
+                "%s</Number></Dial></Response>",
+            COMMENT_QUESTION_AUDIO, Settings.HOST, adapterConfig.getMyAddress(), Settings.HOST, Settings.HOST,
+            PhoneNumberUtils.formatNumber(secondRemoteAddress, null)), answer.getEntity().toString());
+        
         preconnect = twilioAdapter.preconnect(adapterConfig.getMyAddress(), TEST_PUBLIC_KEY, secondRemoteAddress,
                                               "outbound-dial", testCallId2, testCallId);
         assertXMLGeneratedByTwilioLibrary(String.format("<Response><Gather numDigits=\"1\" finishOnKey=\"\" action=\"http://%s/dialoghandler/rest/twilio/answer\" "

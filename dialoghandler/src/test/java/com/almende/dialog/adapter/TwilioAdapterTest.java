@@ -385,8 +385,8 @@ public class TwilioAdapterTest extends TestFramework{
             .thenReturn( "Mon, 15 Aug 2005 15:52:01 +0000" );
         Mockito.when( call.getEndTime() ).thenReturn( null );
         Mockito.when( call.getDuration() ).thenReturn( "30" );
-        Mockito.when( call.getStartTime() )
-            .thenReturn( "Mon, 15 Aug 2005 15:52:02 +0000" );
+        //Mockito.when( call.getStartTime() )
+        //    .thenReturn( "Mon, 15 Aug 2005 15:52:02 +0000" );
         Session session = new Session();
         Session updateSessionWithCallTimes = TwilioAdapter
             .updateSessionWithCallTimes( session, call );
@@ -433,11 +433,11 @@ public class TwilioAdapterTest extends TestFramework{
         Call call = Mockito.mock( Call.class );
         Mockito.when( call.getProperty( "date_created" ) )
             .thenReturn( "Mon, 15 Aug 2005 15:52:01 +0000" );
-        Mockito.when( call.getEndTime() )
-            .thenReturn( "Mon, 15 Aug 2005 15:52:32 +0000" );
+        //Mockito.when( call.getEndTime() )
+        //    .thenReturn( "Mon, 15 Aug 2005 15:52:32 +0000" );
         Mockito.when( call.getDuration() ).thenReturn( "31" );
-        Mockito.when( call.getStartTime() )
-            .thenReturn( "Mon, 15 Aug 2005 15:52:02 +0000" );
+        //Mockito.when( call.getStartTime() )
+        //    .thenReturn( "Mon, 15 Aug 2005 15:52:02 +0000" );
         Session session = new Session();
         Session updateSessionWithCallTimes = TwilioAdapter
             .updateSessionWithCallTimes( session, call );

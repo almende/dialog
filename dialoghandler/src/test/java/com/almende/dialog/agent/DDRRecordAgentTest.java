@@ -16,6 +16,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import com.almende.dialog.TestFramework;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.tools.CM;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -317,6 +318,90 @@ public class DDRRecordAgentTest extends TestFramework
         assertThat((Integer) ddrRecordsCount.getResult(), Matchers.is(1));
         //each ddr record has two message.. 
         assertThat(ddrQuantity, Matchers.is(1));
+        assertThat(ddrDeliveredQuantity, Matchers.is(0));
+    }
+    
+    /**
+     * Test to verify if filtering by {@link CommunicationStatus} works as
+     * expected for a large set for a long text message of SMS length more than
+     * 2
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void fetchLargeDDRRecordByStatusForLongMessageTest() throws Exception {
+
+        String message = "Nouvelle offre TNT est en cours 174666 de Villepinte FR �� CORTACCIA IT. Vehicule: Van-1200 kgs Hayon. Votre numero de cotation est 998015. Coter sur  www.tnt.co";
+        int ddrCount = 100;
+        String secondAddress = "0612345678";
+        AdapterConfig adapterConfig = createBroadsoftAdapter();
+        HashMap<String, Session> sessionKeyMap = new HashMap<String, Session>(1);
+        sessionKeyMap.put(remoteAddressVoice, createSession(adapterConfig, remoteAddressVoice));
+        sessionKeyMap.put(secondAddress, createSession(adapterConfig, secondAddress));
+
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.MINUTE, AdapterType.CALL,
+            null);
+        HashMap<String, String> toAddress = new HashMap<String, String>();
+        toAddress.put(remoteAddressVoice, null);
+        toAddress.put(secondAddress, null);
+        //create a 1000 ddrRecords
+        int count = 0;
+        int countLength = CM.countMessageParts(message, toAddress.size());
+        while (count++ < ddrCount) {
+            DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, TEST_ACCOUNT_ID, null, toAddress,
+                countLength, message, sessionKeyMap);
+        }
+        //fetch the ddrRecords
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        Assert.assertTrue(checkThatDDRRecordHasNonEmptyFields(allDdrRecords));
+        assertThat(allDdrRecords.size(), Matchers.is(ddrCount));
+        DDRRecord ddrRecord = allDdrRecords.iterator().next();
+        String formattedRemoteAddressVoice = PhoneNumberUtils.formatNumber(remoteAddressVoice, null);
+        secondAddress = PhoneNumberUtils.formatNumber(secondAddress, null);
+        assertThat(ddrRecord.getStatusForAddress(formattedRemoteAddressVoice), Matchers.is(CommunicationStatus.SENT));
+        assertThat(ddrRecord.getStatusForAddress(secondAddress), Matchers.is(CommunicationStatus.SENT));
+
+        //fetch ddr by status
+        allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.SENT, null,
+            null, null, null, null, null, null);
+        assertThat(allDdrRecords.size(), Matchers.is(ddrCount));
+        Assert.assertTrue(checkThatDDRRecordHasNonEmptyFields(allDdrRecords));
+
+        //update ddrRecoed with different Communication status
+        ddrRecord.addStatusForAddress(formattedRemoteAddressVoice, CommunicationStatus.FINISHED);
+        ddrRecord.addStatusForAddress(secondAddress, CommunicationStatus.MISSED);
+        ddrRecord.createOrUpdate();
+        
+        //fetch ddr by status
+        allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.FINISHED,
+            null, null, null, null, null, null, null);
+        assertThat(allDdrRecords.size(), Matchers.is(1));
+        Assert.assertTrue(checkThatDDRRecordHasNonEmptyFields(allDdrRecords));
+        allDdrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, CommunicationStatus.MISSED,
+            null, null, null, null, null, null, null);
+        Assert.assertTrue(checkThatDDRRecordHasNonEmptyFields(allDdrRecords));
+        
+        RestResponse ddrRecordsCount = new DDRRecordAgent().getDDRRecordsQuantity(TEST_ACCOUNT_ID, null, null, null, null,
+            CommunicationStatus.MISSED, null, null, null, null);
+        long startTimestamp = TimeUtils.getServerCurrentTimeInMillis();
+        Integer ddrMissedQuantity = DDRRecord.getDDRRecordsQuantity(TEST_ACCOUNT_ID, null, null, null, null,
+            CommunicationStatus.MISSED, null, null, null, null);
+        Integer ddrDeliveredQuantity = DDRRecord.getDDRRecordsQuantity(TEST_ACCOUNT_ID, null, null, null, null,
+            CommunicationStatus.DELIVERED, null, null, null, null);
+        Integer ddrFinishedQuantity = DDRRecord.getDDRRecordsQuantity(TEST_ACCOUNT_ID, null, null, null, null,
+            CommunicationStatus.FINISHED, null, null, null, null);
+        
+        //fetch time should be less than 1second
+        long fetchTime = TimeUtils.getServerCurrentTimeInMillis() - startTimestamp;
+        log.info(String.format("Actual quantity fetch time is: %s", fetchTime));
+        assertThat(String.format("Actual quantity time is: %s", fetchTime), fetchTime, Matchers.lessThan(500L));
+        
+        assertThat(allDdrRecords.size(), Matchers.is(1));
+        assertThat((Integer) ddrRecordsCount.getResult(), Matchers.is(countLength/toAddress.size()));
+        //each ddr record has two message.. 
+        assertThat(ddrMissedQuantity, Matchers.is(countLength/toAddress.size()));
+        assertThat(ddrFinishedQuantity, Matchers.is(countLength/toAddress.size()));
         assertThat(ddrDeliveredQuantity, Matchers.is(0));
     }
     

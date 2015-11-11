@@ -329,7 +329,21 @@ public class DDRRecord {
                                          Object statusForAddress = statusForAddresses.get(address);
                                          if (statusForAddress != null &&
                                              CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
-                                             quantity++;
+                                            if (result.get("quantity") != null) {
+                                                try{
+                                                        //for a 3 part message sent to 2 ppl. ddrQuantity would be 6, 
+                                                        //but we should return quantity for each
+                                                        quantity += (Integer.parseInt(result.get("quantity").toString()) /
+                                                                                        statusForAddresses.size());
+                                                }
+                                                catch(NumberFormatException e) {
+                                                    log.severe(String.format("%s cannot be parsed to Integer",result.get("quantity").toString()));
+                                                    quantity++;
+                                                }
+                                            }
+                                            else {
+                                                quantity++;
+                                            }
                                          }
                                      }
                                  }

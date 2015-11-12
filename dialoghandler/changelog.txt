@@ -1,6 +1,12 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+10-11-2015, version 1.13.5
+- update: ddr quantity fetch
+- update: ddr update direction and adapterType
+- fix: 2 way SMS
+- fix: session deletion
+
 15-10-2015, version 1.13.4
 - fix: creation of twilio adapters and adding them to accounts
 

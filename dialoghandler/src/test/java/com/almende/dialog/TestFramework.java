@@ -75,7 +75,7 @@ public class TestFramework{
     private Server server;
     public static final int jettyPort = 8078;
     public static final String host = "http://localhost:" + jettyPort + "/dialoghandler";
-    private static final Logger log = Logger.getLogger( TestFramework.class.toString() );
+    protected static final Logger log = Logger.getLogger( TestFramework.class.toString() );
     protected DialogAgent dialogAgent = null;
     
     @Before

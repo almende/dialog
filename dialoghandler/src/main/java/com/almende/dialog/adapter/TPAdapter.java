@@ -12,14 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Logger;
-
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -33,10 +31,10 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.QuestionEventRunner;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;

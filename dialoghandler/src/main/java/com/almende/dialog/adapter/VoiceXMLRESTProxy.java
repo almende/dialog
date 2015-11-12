@@ -58,12 +58,12 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.QuestionEventRunner;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
@@ -368,8 +368,7 @@ public class VoiceXMLRESTProxy {
         }
 
         //get or create a session based on the remoteId that is always populated.  
-        String internalSessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + formattedRemoteId;
-        Session session = Session.getSessionByInternalKey(internalSessionKey);
+        Session session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localID, formattedRemoteId);
         String url = "";
         DDRRecord ddrRecord = null;
         
@@ -447,7 +446,7 @@ public class VoiceXMLRESTProxy {
             }
         }
         else {
-            log.severe(String.format("Session not found for internalKey: %s", internalSessionKey));
+            log.severe(String.format("Session not found for localId: %s remoteId:", localID, formattedRemoteId));
             return null;
         }
 
@@ -587,8 +586,7 @@ public class VoiceXMLRESTProxy {
         AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
         String formattedAddress = PhoneNumberUtils.formatNumber(redirectID, PhoneNumberFormat.E164);
 
-        String internalSessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + formattedAddress;
-        Session session = Session.getSessionByInternalKey(internalSessionKey);
+        Session session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localID, formattedAddress);
         if (session != null) {
             localID = session.getAdapterConfig() != null ? session.getAdapterConfig().getFormattedMyAddress() : localID;
             if (session.getQuestion() != null) {
@@ -621,7 +619,7 @@ public class VoiceXMLRESTProxy {
             }
         }
         else {
-            log.warning("No session found for: " + internalSessionKey);
+            log.warning(String.format("No session found for localId: %s remoteId: %s", localID, formattedAddress));
         }
         return Response.ok(reply).build();
     }
@@ -630,14 +628,14 @@ public class VoiceXMLRESTProxy {
     @GET
     @Produces("application/voicexml")
     public Response connected(@QueryParam("remoteID") String remoteID, @QueryParam("localID") String localID,
-                                        @QueryParam("redirectID") String redirectID, @Context UriInfo ui) {
+        @QueryParam("redirectID") String redirectID, @Context UriInfo ui) {
+
         String result = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><vxml version=\"2.1\" xmlns=\"http://www.w3.org/2001/vxml\"><form><block><exit/></block></form></vxml>";
         String formattedAddress = PhoneNumberUtils.formatNumber(redirectID, PhoneNumberFormat.E164);
         //String formattedRemoteAddress = PhoneNumberUtils.formatNumber(remoteID, PhoneNumberFormat.E164);
-        
-        String internalSessionKey = AdapterAgent.ADAPTER_TYPE_CALL + "|" + localID + "|" + formattedAddress;
-        Session session = Session.getSessionByInternalKey(internalSessionKey);
-        session.setCallConnectedStatus( true );
+
+        Session session = Session.getSessionByInternalKey(AdapterAgent.ADAPTER_TYPE_CALL, localID, formattedAddress);
+        session.setCallConnectedStatus(true);
         session.storeSession();
         return Response.ok(result).build();
     }
@@ -906,13 +904,11 @@ public class VoiceXMLRESTProxy {
                                     address += "@" + addressArray[1];
                                 }
 
-                                String sessionKey = config.getAdapterType() + "|" + config.getMyAddress() + "|" +
-                                                    formattedAddress;
-                                
-                                Session session = Session.getSessionByInternalKey(sessionKey);
+                                Session session = Session.getSessionByInternalKey(config.getAdapterType(),
+                                    config.getMyAddress(), formattedAddress);
                                 if (session != null) {
 
-                                    log.info("Session key: " + sessionKey);
+                                    log.info("Session key: " + session.getKey());
                                     String direction = "inbound";
                                     if (personality.getTextContent().equals("Originator") &&
                                         !address.contains("outbound")) {

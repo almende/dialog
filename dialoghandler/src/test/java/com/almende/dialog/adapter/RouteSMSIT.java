@@ -1,12 +1,10 @@
 package com.almende.dialog.adapter;
 
 import java.lang.reflect.Method;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
@@ -23,10 +21,12 @@ import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
+import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
@@ -35,6 +35,8 @@ import com.askfast.commons.utils.TimeUtils;
 public class RouteSMSIT extends TestFramework {
 
     private static final String simpleQuestion = "How are you?";
+    AdapterConfig adapterConfig = null;
+    String senderName = "0612345678";
 
     @Before
     public void setup() throws Exception {
@@ -46,24 +48,100 @@ public class RouteSMSIT extends TestFramework {
     @Test
     public void outBoundSMSCallStatusCheck() throws Exception {
 
-        String senderName = "TestUser";
         //create SMS adapter
-        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS,
-                                                          TEST_ACCOUNT_ID, "0612345678", "0612345678", "");
+        adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS, TEST_ACCOUNT_ID,
+            "ASK", "ASK", "");
         adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
         adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
         adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
         adapterConfig.update();
         HashMap<String, String> addressMap = new HashMap<String, String>();
         addressMap.put(remoteAddressVoice, null);
-        outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
-                               "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+        outBoundCall(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.APPOINTMENT, senderName,
+            "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
         //fetch the sms delivery status reports
         List<SMSDeliveryStatus> smsStatues = SMSDeliveryStatus.fetchAll();
         Assert.assertThat(smsStatues, Matchers.notNullValue());
         Assert.assertThat(smsStatues.size(), Matchers.is(1));
         Assert.assertThat(smsStatues.iterator().next().getCode(), Matchers.is("1701"));
         Assert.assertThat(smsStatues.iterator().next().getDescription(), Matchers.is("Successfully Sent"));
+    }
+    
+    /**
+     * This is a test to verify if RouteSMS is used when <br>
+     * 1. An outbound open/closed question sent using ROUTE_SMS using the MB or
+     * CM address <br>
+     * 2. An inbound SMS reply using CM or MB servlet <br>
+     * 3. An outbound SMS must then be sent with RouteSMS (based on the initial
+     * step1) and not CM or MB.
+     * @throws Exception 
+     */
+    @Test
+    public void outbound2WaySMSTest() throws Exception {
+
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.07, "sms charge", UnitType.PART,
+                           AdapterType.SMS, null);
+        
+        //send an outbound sms with the apointment question
+        outBoundSMSCallStatusCheck();
+        //validate if the ddrRecord shows the senderName instead of the adapter myaddress
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        Assert.assertThat(allDdrRecords.size(), Matchers.is(1));
+        Assert.assertThat(allDdrRecords.iterator().next().getFromAddress(), Matchers.is(senderName));
+        
+        //flush the log
+        TestServlet.clearLogObject();
+        //receive an inbound sms usinwg CM
+        processInboundMessage("yup", remoteAddressVoice, "0612345678", adapterConfig);
+
+        //validate if the ddrRecord shows the senderName instead of the adapter myaddress        
+        allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        DDRRecord incomingDddrRecord = null;
+        DDRRecord outgoingDddrRecord = null;
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            if (ddrRecord.getMessage().equals("yup")) {
+                incomingDddrRecord = ddrRecord;
+            }
+            else if(ddrRecord.getMessage().equals(TestServlet.APPOINTMENT_SECOND_QUESION)) {
+                outgoingDddrRecord = ddrRecord;
+            }
+        }
+        Assert.assertTrue(incomingDddrRecord.getToAddress().containsKey(senderName));
+        Assert.assertThat(outgoingDddrRecord.getFromAddress(), Matchers.is(senderName));
+
+        //The processed message must be sent using the same initial adapter
+        List<Session> allSessions = Session.getAllSessions();
+        Session session = allSessions.iterator().next();
+        Assert.assertThat(allSessions.size(), Matchers.is(1));
+        Assert.assertThat(session.getAdapterConfig().getProvider(), Matchers.is(AdapterProviders.ROUTE_SMS));
+        Assert.assertThat(session.getQuestion().getQuestion_expandedtext(null, null),
+            Matchers.is(TestServlet.APPOINTMENT_SECOND_QUESION));
+        //validate the log saved
+        Assert.assertNotNull(TestServlet.getLogObject(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
+
+        //receive an inbound sms using CM saying free for 50mins
+        processInboundMessage("50", remoteAddressVoice, "0612345678", adapterConfig);
+        //validate if the ddrRecord shows the senderName instead of the adapter myaddress  
+        allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        incomingDddrRecord = null;
+        outgoingDddrRecord = null;
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            if (ddrRecord.getMessage().equals("50")) {
+                incomingDddrRecord = ddrRecord;
+            }
+            else if(ddrRecord.getMessage().equals(TestServlet.APPOINTMENT_ACCEPTANCE_RESPONSE)) {
+                outgoingDddrRecord = ddrRecord;
+            }
+        }
+        Assert.assertTrue(incomingDddrRecord.getToAddress().containsKey(senderName));
+        Assert.assertThat(outgoingDddrRecord.getFromAddress(), Matchers.is(senderName));
+        
+        //The processed message must be sent using the same initial adapter
+        allSessions = Session.getAllSessions();
+        Assert.assertThat(allSessions.size(), Matchers.is(0));
+        //leading ddrRecord must have the latest message sent
+        Assert.assertEquals(allDdrRecords.size(), 5);
     }
     
     /**
@@ -96,8 +174,8 @@ public class RouteSMSIT extends TestFramework {
         addressMap.put(landlineNumber, null);
         addressMap.put(invalidNumber, null);
 
-        outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
-                               "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+        outBoundCall(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.OPEN_QUESTION, senderName,
+            "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
         //fetch sessions
         List<Session> allSessions = Session.getAllSessions();
         //sessions for the landline and the invalid numbers must be dropped
@@ -108,8 +186,7 @@ public class RouteSMSIT extends TestFramework {
         }
 
         //fetch the sms ddr records
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         Assert.assertThat(allSessions.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         Assert.assertThat(ddrRecord.getStatusForAddress(invalidNumber), Matchers.is(CommunicationStatus.ERROR));
@@ -152,8 +229,8 @@ public class RouteSMSIT extends TestFramework {
         boolean isExceptionThrown = false;
         try {
 
-            outBoundSMSCallXMLTest(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT,
-                                   senderName, "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+            outBoundCall(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
+                "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
         }
         catch (Exception e) {
             isExceptionThrown = true;
@@ -165,8 +242,7 @@ public class RouteSMSIT extends TestFramework {
         Assert.assertThat(allSessions.size(), Matchers.is(0));
 
         //fetch the sms ddr records
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         Assert.assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         Assert.assertThat(ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
@@ -211,23 +287,145 @@ public class RouteSMSIT extends TestFramework {
         Assert.assertThat(smsStatues.iterator().next().getDescription(), Matchers.is("DELIVRD"));
         Assert.assertThat(smsStatues.iterator().next().getCode(), Matchers.is("1701"));
     }
+    
+    /**
+     * Test to check if one session exists per outbound SMS sent in a broadcast scenario.
+     * @throws Exception
+     */
+    @Test
+    public void checkOneSessionPerNumberIsCreatedTest() throws Exception {
 
-    private void
-        outBoundSMSCallXMLTest(Map<String, String> addressNameMap, AdapterConfig adapterConfig, String simpleQuestion,
-            QuestionInRequest questionInRequest, String senderName, String subject, String accountId) throws Exception {
+        String senderName = "TestUser";
+        String remoteAddressVoice1 = "0614765801";
 
-        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
-                                                       questionInRequest.name());
-        url = ServerUtils.getURLWithQueryParams(url, "question", URLEncoder.encode(simpleQuestion, "UTF-8"));
-        DialogAgent dialogAgent = new DialogAgent();
-        if (addressNameMap.size() > 1) {
-            dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
-                                            adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
+        //create SMS adapter
+        AdapterConfig adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS,
+            TEST_ACCOUNT_ID, "0612345678", "0612345678", "");
+        adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
+        adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
+        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
+        adapterConfig.update();
+
+        //create ddrType for the ddr records to be created.
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.10, "outgoing sms", UnitType.PART,
+            AdapterType.SMS, null);
+
+        HashMap<String, String> addressMap = new HashMap<String, String>();
+        addressMap.put(remoteAddressVoice, null);
+        addressMap.put(remoteAddressVoice1, null);
+
+        outBoundCall(addressMap, adapterConfig, simpleQuestion, QuestionInRequest.SIMPLE_COMMENT, senderName,
+            "outBoundSMSCallSenderNameNotNullTest", adapterConfig.getOwner());
+
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        DDRRecord outboundDdrRecord = null;
+        int outboundDrrCount = 0;
+        //made sure only one ddr record exist with outbound charge
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            if (ddrRecord.getDirection().equals("outbound")) {
+                outboundDdrRecord = allDdrRecords.iterator().next();
+                outboundDrrCount++;
+            }
         }
-        else {
-            dialogAgent.outboundCall(addressNameMap.keySet().iterator().next(), senderName, subject, url, null,
-                                     adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
+        Assert.assertNotNull(outboundDdrRecord);
+        Assert.assertThat(outboundDrrCount, Matchers.is(1));
+        //make sure two sessions are linked to the ddrRecord
+        Assert.assertThat(outboundDdrRecord.getSessionKeys().size(), Matchers.is(2));
+        Assert.assertThat(outboundDdrRecord.getStatusPerAddress().size(), Matchers.is(2));
+    }
+    
+    /**
+     * Tests to validate if the sesisons are clears for broadcast after the SMS
+     * delivery notifitions are received
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void checkSessionsAreClearedAfterDeliveryNotification() throws Exception {
+        
+        //send a broadcast
+        checkOneSessionPerNumberIsCreatedTest();
+        //fetch the message id
+        String messageId = TestServlet.getLogObject(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)).toString();
+        //make a post delivery notification request for remoteAddressVoice
+        performPOSTDeliveryStatusRequest(remoteAddressVoice, messageId);
+        //test the dd status
+        testDDRStatusAndSessionExistence(remoteAddressVoice, CommunicationStatus.DELIVERED);
+        testDDRStatusAndSessionExistence("0614765801", CommunicationStatus.SENT);
+        List<Session> allSessions = Session.getAllSessions();
+        Assert.assertEquals(allSessions.size(), 0);
+
+        messageId = TestServlet.getLogObject(PhoneNumberUtils.formatNumber("0614765801", null)).toString();
+        //make a post delivery notification request for 0614765801
+        performPOSTDeliveryStatusRequest("0614765801", messageId);
+        //test the dd status
+        testDDRStatusAndSessionExistence(remoteAddressVoice, CommunicationStatus.DELIVERED);
+        testDDRStatusAndSessionExistence("0614765801", CommunicationStatus.DELIVERED);
+        allSessions = Session.getAllSessions();
+        Assert.assertEquals(allSessions.size(), 0);
+    }
+    
+    /**
+     * Test to check if the SMS quantity is updated correctly for a long sms for a broadcast scenario
+     * @throws Exception 
+     */
+    @Test
+    public void checkIfQuantityIsUpdatedCorrectlyInDDRRecord() throws Exception {
+        
+        //send a broadcast
+        checkOneSessionPerNumberIsCreatedTest();
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        DDRRecord outboundDdrRecord = null;
+        //made sure only one ddr record exist with outbound charge
+        for (DDRRecord ddrRecord : allDdrRecords) {
+            if (ddrRecord.getDirection().equals("outbound")) {
+                outboundDdrRecord = allDdrRecords.iterator().next();
+            }
         }
+        Assert.assertThat(outboundDdrRecord.getQuantity(), Matchers.is(2));
+    }
+    
+    /**
+     * Performs a RouteSMS delivery status
+     * 
+     * @param messageId
+     * @throws Exception
+     */
+    private void performPOSTDeliveryStatusRequest(String address, String messageId) throws Exception {
+
+        //make a post delivery notification request for remoteAddressVoice
+        String payload = ServerUtils.getURLWithQueryParams("", "messageid", messageId);
+        payload = ServerUtils.getURLWithQueryParams(payload, "source", "0612345678"); //0612345678 is the adapter myaddress
+        payload = ServerUtils.getURLWithQueryParams(payload, "destination", address);
+        payload = ServerUtils.getURLWithQueryParams(payload, "status", "DELIVRD");
+        payload = ServerUtils.getURLWithQueryParams(payload, "sentdate",
+            TimeUtils.getStringFormatFromDateTime(TimeUtils.getServerCurrentTimeInMillis(), "yyyy-mm-dd hh:mm:ss"));
+        payload = ServerUtils.getURLWithQueryParams(payload, "donedate",
+            TimeUtils.getStringFormatFromDateTime(TimeUtils.getServerCurrentTimeInMillis(), "yyyy-mm-dd hh:mm:ss"));
+        AFHttpClient client = ParallelInit.getAFHttpClient();
+        client.post(payload.replace("?", ""), host + "/sms/route-sms/deliveryStatus");
     }
 
+    /**
+     * Check if the addressToValidate exists in the ddrRecords and has a status
+     * of the given statueToValidate.
+     * 
+     * @param addressToValidateForStatus
+     * @param statusToValidate
+     * @throws Exception 
+     */
+    private void testDDRStatusAndSessionExistence(String addressToValidateForStatus,
+        CommunicationStatus statusToValidate) throws Exception {
+
+        //check if ddr record is marked as delivered
+        DDRRecord outboundDdrRecord = null;
+        for (DDRRecord ddrRecord : getAllDdrRecords(TEST_ACCOUNT_ID)) {
+            if (ddrRecord.getDirection().equals("outbound")) {
+                outboundDdrRecord = ddrRecord;
+            }
+        }
+        Assert.assertThat(
+            outboundDdrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(addressToValidateForStatus, null)),
+            Matchers.is(statusToValidate));
+    }
 }

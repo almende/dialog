@@ -40,10 +40,10 @@ import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.TypeUtil;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.utils.TimeUtils;
 
 

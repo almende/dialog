@@ -94,6 +94,32 @@ public class ServerUtils
             }
         }
     }
+    
+    /**
+     * Converts the given jsonObject to the required. Throws an exception if
+     * throwException is set to true
+     * 
+     * @param jsonObject
+     * @param throwException
+     * @param type
+     * @return
+     * @throws Exception
+     */
+    public static <T> T convert(Object jsonObject, boolean throwException, TypeReference<T> type) throws Exception {
+
+        try {
+            return oMapper.convertValue(jsonObject, type);
+        }
+        catch (Exception e) {
+            if (throwException) {
+                throw e;
+            }
+            else {
+                log.severe(e.getLocalizedMessage());
+                return null;
+            }
+        }
+    }
 
     public static String serializeWithoutException( Object objectToBeSerialized )
     {

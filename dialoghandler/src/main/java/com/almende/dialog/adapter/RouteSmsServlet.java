@@ -23,12 +23,12 @@ import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.exception.NotFoundException;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
 import com.thetransactioncompany.cors.HTTPMethod;
@@ -68,6 +68,7 @@ public class RouteSmsServlet extends TextServlet {
                     String responseText = "No result fetched";
                     String requestData = ServerUtils.getRequestData(req);
                     String thisHost = "http://" + Settings.HOST + "?" + requestData;
+                    log.info("Delivery notification from Route-SMS: "+ thisHost);
                     List<NameValuePair> nameValuePairs = URLEncodedUtils.parse(new URI(thisHost), "UTF-8");
                     String messageId = null;
                     String source = null;
@@ -113,9 +114,8 @@ public class RouteSmsServlet extends TextServlet {
                             responseText = forwardToHost(host, HTTPMethod.POST, requestData);
                         }
                         else {
-                            SMSDeliveryStatus routeSMSStatus = handleDeliveryStatusReport(messageId, sentDate,
-                                                                                          doneDate, destination,
-                                                                                          source, status);
+                            SMSDeliveryStatus routeSMSStatus = handleDeliveryStatusReport(messageId, sentDate, doneDate,
+                                destination, source, status);
                             if (routeSMSStatus == null) {
                                 responseText = "No Route-SMS status entity found for messageId: " + messageId;
                             }
@@ -124,6 +124,7 @@ public class RouteSmsServlet extends TextServlet {
                             }
                         }
                     }
+                    log.info("Delivery from Route-SMS parsed: "+ responseText);
                     res.getWriter().println(responseText);
                 }
                 catch (Exception e) {
@@ -182,8 +183,7 @@ public class RouteSmsServlet extends TextServlet {
 
         //add costs with no.of messages * recipients
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, senderName, toAddress,
-                                                               CM.countMessageParts(message) * toAddress.size(),
-                                                               message, sessionKeyMap);
+            CM.countMessageParts(message, toAddress.size()), message, sessionKeyMap);
     }
 
     /**
@@ -209,8 +209,6 @@ public class RouteSmsServlet extends TextServlet {
             SMSDeliveryStatus routeSMSStatus = SMSDeliveryStatus.fetch(messageId);
             to = PhoneNumberUtils.formatNumber(to, null);
             if (routeSMSStatus != null && to != null) {
-                Session session = Session.getSessionByInternalKey(Session.getInternalSessionKey(routeSMSStatus
-                                                .getAdapterConfig(), to));
                 if (sent != null) {
                     routeSMSStatus.setSentTimeStamp(String.valueOf(TimeUtils
                                                     .getTimeWithFormat(sent, "yyyy-mm-dd hh:mm:ss",
@@ -228,11 +226,13 @@ public class RouteSmsServlet extends TextServlet {
                 }
                 if (statusCode != null) {
                     routeSMSStatus.setDescription(statusCode);
+                    routeSMSStatus.setStatusCode(
+                        SMSDeliveryStatus.statusCodeMapping(AdapterProviders.ROUTE_SMS, statusCode));
                 }
                 if (routeSMSStatus.getCallback() != null && routeSMSStatus.getCallback().startsWith("http")) {
                     AFHttpClient client = ParallelInit.getAFHttpClient();
                     try {
-                        String callbackPayload = ServerUtils.serialize(routeSMSStatus);
+                        String callbackPayload = SMSDeliveryStatus.getDeliveryStatusForClient(routeSMSStatus);
                         client.post(callbackPayload, routeSMSStatus.getCallback());
                         if (ServerUtils.isInUnitTestingEnvironment()) {
                             TestServlet.logForTest(getAdapterType(), routeSMSStatus);
@@ -252,9 +252,6 @@ public class RouteSmsServlet extends TextServlet {
                     if (isErrorInDelivery(statusCode)) {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
                         ddrRecord.addAdditionalInfo(to, "ERROR: " + routeSMSStatus.getDescription());
-                        if (session != null) {
-                            session.drop();
-                        }
                     }
                     else if (statusCode.equalsIgnoreCase("DELIVRD")) {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.DELIVERED);
@@ -267,14 +264,10 @@ public class RouteSmsServlet extends TextServlet {
                 else {
                     log.warning(String.format("No ddr record found for id: %s", routeSMSStatus.getDdrRecordId()));
                 }
-                //check if session is killed. if so drop it :)
-                if (session != null && session.isKilled() && isSMSsDelivered(ddrRecord)) {
-                    session.drop();
-                }
                 routeSMSStatus.store();
             }
             else {
-                log.severe(routeSMSStatus != null ? "Invalid to address" : "No CM status found");
+                log.severe(routeSMSStatus != null ? "Invalid to address" : "No Route SMS status found");
             }
             return routeSMSStatus;
         }
@@ -282,32 +275,6 @@ public class RouteSmsServlet extends TextServlet {
             log.severe("Reference code cannot be null");
             return null;
         }
-    }
-
-    /**
-     * check if all of the SMSs to toAddresses in the ddrRecord is
-     * {@link CommunicationStatus#DELIVERED}
-     * 
-     * @param ddrRecord
-     * @return true if ddrRecord is null or all SMS are delivered
-     */
-    private boolean isSMSsDelivered(DDRRecord ddrRecord) {
-
-        if (ddrRecord == null) {
-            return true;
-        }
-        else if (ddrRecord.getStatusPerAddress() != null) {
-            int smsDeliveryCount = 0;
-            for (String toAddress : ddrRecord.getStatusPerAddress().keySet()) {
-                if (ddrRecord.getStatusForAddress(toAddress).equals(CommunicationStatus.DELIVERED)) {
-                    smsDeliveryCount++;
-                }
-            }
-            if (smsDeliveryCount == ddrRecord.getStatusPerAddress().size()) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**

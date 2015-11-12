@@ -7,12 +7,13 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.agent.DialogAgent;
+import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 
@@ -69,7 +70,9 @@ public class RouteSMS {
             Session session = sessionMap != null ? sessionMap.get(address) : null;
             //check if its a mobile number, if no ignore, log, drop session and continue
             PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(address);
-            if (!PhoneNumberType.MOBILE.equals(numberType)) {
+            if (!PhoneNumberType.MOBILE.equals(numberType) &&
+                !PhoneNumberType.FIXED_LINE_OR_MOBILE.equals(numberType)) {
+                
                 String errorMessage = String.format("Ignoring SMS request to: %s from: %s, as it is not of type MOBILE",
                                                     address, config.getMyAddress());
                 logger.warning(config, errorMessage, session);
@@ -96,25 +99,28 @@ public class RouteSMS {
 
         boolean validSenderId = isValidSenderId(fromName);
         String result = !validSenderId ? "1707" : null; //by default assign a result
-        if (!ServerUtils.isInUnitTestingEnvironment()) {
-            result = afHttpClient.get(uriBuilder.build().toString()).getResponseBody();
-        }
-        else {
-            result = result != null ? result : "1701";
-            String collectiveResult = "";
-            for (String address : sessionMap.keySet()) {
-                collectiveResult += String.format("%s|%s:%s,", result, address, UUID.randomUUID().toString());
+        //if no destination is added
+        if (!destination.trim().isEmpty()) {
+            if (!ServerUtils.isInUnitTestingEnvironment()) {
+                result = afHttpClient.get(uriBuilder.build().toString()).getResponseBody();
             }
-            result = collectiveResult;
+            else {
+                result = result != null ? result : "1701";
+                String collectiveResult = "";
+                for (String address : sessionMap.keySet()) {
+                    collectiveResult += String.format("%s|%s:%s,", result, address, UUID.randomUUID().toString());
+                }
+                result = collectiveResult;
+            }
+
+            String validateResult = isValidResult(config, result, sessionMap);
+            if (!validateResult.equalsIgnoreCase("Successfully Sent")) {
+
+                throw new Exception(validateResult);
+            }
+            log.info("Result from RouteSMS: " + result);
         }
-        
-        String validateResult = isValidResult(config, result, sessionMap);
-        if (!validateResult.equalsIgnoreCase("Successfully Sent")) {
-            
-            throw new Exception(validateResult);
-        }
-        log.info("Result from RouteSMS: " + result);
-        return CM.countMessageParts(message, dcs);
+        return CM.countMessageParts(message, dcs, addressNameMap.size());
     }
 
     /**
@@ -133,6 +139,7 @@ public class RouteSMS {
         boolean isResultValid = false;
 
         if (resultFromRouteSMS != null) {
+            log.info(String.format("Validating result from RouteSMS: %s", resultFromRouteSMS));
             String[] splitResult = resultFromRouteSMS.split(",");
 
             for (String splitResultPerAddress : splitResult) {
@@ -261,6 +268,10 @@ public class RouteSMS {
                     ddrRecord.addStatusForAddress(remoteAddress, status);
                     ddrRecord.createOrUpdate();
                 }
+            }
+            //perform some unit by logging the XML generated
+            if (ServerUtils.isInUnitTestingEnvironment()) {
+                TestServlet.logForTest(remoteAddress, messageReference);
             }
         }
     }

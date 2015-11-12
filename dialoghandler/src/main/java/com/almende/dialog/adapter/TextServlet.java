@@ -12,14 +12,12 @@ import javax.servlet.http.HttpServletResponse;
 import com.almende.dialog.LogLevel;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
-import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.RequestUtil;
 import com.almende.dialog.util.ServerUtils;
@@ -28,6 +26,7 @@ import com.almende.util.TypeUtil;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
@@ -299,11 +298,11 @@ abstract public class TextServlet extends HttpServlet {
         // add addresses in cc and bcc map
         Map<String, Object> extras = new HashMap<String, Object>();
         HashMap<String, String> fullAddressMap = new HashMap<String, String>(addressNameMap);
-        if (addressCcNameMap != null) {
+        if (addressCcNameMap != null && !addressCcNameMap.isEmpty()) {
             fullAddressMap.putAll(addressCcNameMap);
             extras.put(MailServlet.CC_ADDRESS_LIST_KEY, addressCcNameMap);
         }
-        if (addressBccNameMap != null) {
+        if (addressBccNameMap != null && !addressBccNameMap.isEmpty()) {
             fullAddressMap.putAll(addressBccNameMap);
             extras.put(MailServlet.BCC_ADDRESS_LIST_KEY, addressBccNameMap);
         }
@@ -339,7 +338,10 @@ abstract public class TextServlet extends HttpServlet {
                 String formattedAddress = address; //initialize formatted address to be the original one
                 if (config.isSMSAdapter()) {
                     formattedAddress = PhoneNumberUtils.formatNumber(address, null);
-                    if (!PhoneNumberType.MOBILE.equals(PhoneNumberUtils.getPhoneNumberType(formattedAddress))) {
+                    PhoneNumberType numberType = PhoneNumberUtils.getPhoneNumberType(formattedAddress);
+                    if (!PhoneNumberType.MOBILE.equals(numberType) &&
+                        !PhoneNumberType.FIXED_LINE_OR_MOBILE.equals(numberType)) {
+                        
                         formattedAddress = null;
                     }
                 }
@@ -366,10 +368,6 @@ abstract public class TextServlet extends HttpServlet {
                         }
                         question.setPreferred_language(preferred_language);
                         session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, getProviderType());
-                        //check if session can be killed??
-                        if (res == null || res.question == null) {
-                            session.setKilled(true);
-                        }
                         dialogIdOrUrl = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
                         session.setStartUrl(dialogIdOrUrl);
                         session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, getProviderType());
@@ -379,11 +377,19 @@ abstract public class TextServlet extends HttpServlet {
                             session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, provider.toString());
                         }
                     }
+                    //check if session can be killed??
+                    if (res == null || res.question == null) {
+                        session.setKilled(true);
+                    }
                     session.setAccountId(accountId);
                     session.setDirection("outbound");
                     session.setQuestion(question);
                     session.setLocalName(senderName);
-                    session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);
+                    if(ddrRecord != null) {
+                        session.setDdrRecordId(ddrRecord.getId());
+                        ddrRecord.addSessionKey(session.getKey());
+                        ddrRecord.createOrUpdate();
+                    }
                     //update the startTime of the session
                     session.setStartTimestamp(String.valueOf(TimeUtils.getServerCurrentTimeInMillis()));
                     //save this session
@@ -393,7 +399,6 @@ abstract public class TextServlet extends HttpServlet {
                     // Add key to the map (for the return)
                     sessionKeyMap.put(formattedAddress, session);
                     result.put(formattedAddress, session.getKey());
-
                 }
                 else {
                     result.put(address, String.format(DialogAgent.INVALID_ADDRESS_MESSAGE, address));
@@ -406,7 +411,9 @@ abstract public class TextServlet extends HttpServlet {
                     log.severe(String.format("To address is invalid: %s. Ignoring.. ", address));
                 }
             }
-
+            //add result to extras
+            extras.put(Session.SESSION_KEY, result);
+            
             subject = subject != null && !subject.isEmpty() ? subject : "Message from Ask-Fast";
             //play trial account audio if the account is trial
             if (AccountType.TRIAL.equals(session.getAccountType())) {
@@ -431,6 +438,13 @@ abstract public class TextServlet extends HttpServlet {
                                                             sessionKeyMap, ddrRecord);
                 if (count < 1) {
                     log.severe("Error generating XML");
+                }
+                //flush the session is no more question is there. 
+                //Even for SMS. DLR callback loads the DDR Record instead now.
+                if (res.question == null) {
+                    for (Session sessionForDrop : sessionKeyMap.values()) {
+                        sessionForDrop.drop();
+                    }
                 }
             }
         }
@@ -514,7 +528,7 @@ abstract public class TextServlet extends HttpServlet {
         int count = 0;
         Map<String, Object> extras = msg.getExtras();
         AdapterConfig config;
-        Session session = Session.getSessionByInternalKey(getAdapterType() + "|" + localaddress + "|" + address);
+        Session session = Session.getSessionByInternalKey(getAdapterType(), localaddress, address);
         //create a new session to mark the outbound communication
         Session newSessionForOutbound = Session.cloneSession(session, "outbound");
         session.drop();
@@ -618,6 +632,10 @@ abstract public class TextServlet extends HttpServlet {
                 Return replystr = formQuestion(question, config.getConfigId(), address, null, newSessionForOutbound);
                 // fix for bug: #15 https://github.com/almende/dialog/issues/15
                 escapeInput.reply = URLDecoder.decode(replystr.reply, "UTF-8");
+                //save the question that is to be sent to the receipient
+                newSessionForOutbound.setQuestion(question);
+                newSessionForOutbound.storeSession();
+                //set the new question formed
                 question = replystr.question;
             }
             else {
@@ -627,30 +645,18 @@ abstract public class TextServlet extends HttpServlet {
         }
 
         try {
-            newSessionForOutbound.setQuestion(question);
-            newSessionForOutbound.storeSession();
             count = sendMessageAndAttachCharge(escapeInput.reply, subject, localaddress, fromName, address, toName,
                                                extras, config, newSessionForOutbound.getAccountId(),
                                                newSessionForOutbound);
-            //flush the session is no more question is there
+            //flush the session is no more question is there. 
+            //Even for SMS. DLR callback loads the DDR Record instead now.
             if (question == null) {
-                //dont flush the session yet if its an sms. the DLR callback needs a session.
-                //instead just mark the session that it can be killed 
-                if (AdapterAgent.ADAPTER_TYPE_SMS.equalsIgnoreCase(config.getAdapterType())) {
-                    //refetch session
-                    newSessionForOutbound = Session.getSessionByInternalKey(Session.getInternalSessionKey(config,
-                                                                                                          address));
-                    newSessionForOutbound.setKilled(true);
-                    newSessionForOutbound.storeSession();
-                }
-                else {
-                    newSessionForOutbound.drop();
-                }
+                newSessionForOutbound.drop();
             }
         }
         catch (Exception ex) {
             ex.printStackTrace();
-            log.severe("Message sending failed. Message: " + ex.getLocalizedMessage());
+            log.severe("Message sending failed. Message: " + ex.getMessage());
         }
         return count;
     }
@@ -761,8 +767,8 @@ abstract public class TextServlet extends HttpServlet {
     }
 
     /**
-     * First creates a ddr record, broadcasts a message and charges the owner of
-     * the adapter for outbound communication
+     * First creates a ddr record if its missing, broadcasts a message and
+     * charges the accountId passedfor outbound communication
      * 
      * @param message
      *            message to be sent
@@ -800,18 +806,34 @@ abstract public class TextServlet extends HttpServlet {
         }
         else {
             ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, senderName,
-                                                                        copyOfAddressNameMap,
-                                                                        copyOfAddressNameMap.size(), message,
-                                                                        sessionKeyMap);
+                copyOfAddressNameMap, copyOfAddressNameMap.size(), message, sessionKeyMap);
         }
 
         //update the sessions to the extras
         if (sessionKeyMap != null && !sessionKeyMap.isEmpty()) {
             extras.put(Session.SESSION_KEY, sessionKeyMap);
         }
-        //broadcast the message if its not a test environment
-        Integer count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId,
-                                         ddrRecord);
+        /**
+         * Broadcast the message. <br>
+         * Only if its Route_SMS Config, use RouteSMS specifically to send
+         * outbound SMS. Scenario: <br>
+         * 1. An outbound open/closed question sent using ROUTE_SMS using the MB
+         * or CM address <br>
+         * 2. An inbound SMS reply using CM or MB servlet <br>
+         * 3. An outbound SMS must then be sent with RouteSMS (based on the
+         * initial step1) and not CM or MB.
+         */
+        Integer count = 0;
+        switch (config.getProvider()) {
+            case ROUTE_SMS:
+                count = new RouteSmsServlet().broadcastMessage(message, subject, from, senderName, addressNameMap,
+                    extras, config, accountId, ddrRecord);
+                break;
+            default:
+                count = broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId,
+                    ddrRecord);
+                break;
+        }
         //reload the ddrRecord
         if (ddrRecord != null) {
             ddrRecord = ddrRecord.reload();
@@ -839,6 +861,7 @@ abstract public class TextServlet extends HttpServlet {
         throws Exception {
 
         TextMessage receiveMessage = receiveMessage(req, resp);
+        log.info("Message received: " + ServerUtils.serializeWithoutException(receiveMessage));
         return receiveMessageAndAttachCharge(receiveMessage);
     }
 

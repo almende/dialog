@@ -7,11 +7,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.logging.Logger;
+import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
@@ -22,9 +22,11 @@ import com.almende.eve.protocol.jsonrpc.annotation.Optional;
 import com.almende.eve.protocol.jsonrpc.formats.JSONRequest;
 import com.almende.util.TypeUtil;
 import com.almende.util.jackson.JOM;
+import com.askfast.commons.RestResponse;
 import com.askfast.commons.agent.ScheduleAgent;
 import com.askfast.commons.agent.intf.DDRRecordAgentInterface;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.ScheduledTask;
 import com.askfast.commons.utils.PhoneNumberUtils;
@@ -112,18 +114,24 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         @Name("limit") @Optional Integer limit, @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
         @Name("shouldIncludeServiceCosts") @Optional Boolean shouldIncludeServiceCosts) throws Exception {
 
-        CommunicationStatus communicationStatus = status != null && !status.isEmpty() ? CommunicationStatus.fromJson(status)
-            : null;
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(accountId, adapterTypes, adapterIds, fromAddress, typeIds,
-                                                             communicationStatus, startTime, endTime, sessionKeys,
-                                                             offset, limit);
-        if (shouldGenerateCosts != null && shouldGenerateCosts) {
-            for (DDRRecord ddrRecord : ddrRecords) {
-                ddrRecord.setShouldGenerateCosts(shouldGenerateCosts);
-                ddrRecord.setShouldIncludeServiceCosts(shouldIncludeServiceCosts);
-            }
-        }
-        return ddrRecords;
+        CommunicationStatus communicationStatus = status != null && !status.isEmpty()
+            ? CommunicationStatus.fromJson(status) : null;
+        return DDRRecord.getDDRRecords(accountId, adapterTypes, adapterIds, fromAddress, typeIds, communicationStatus,
+            startTime, endTime, sessionKeys, offset, limit, shouldGenerateCosts, shouldIncludeServiceCosts);
+    }
+    
+    @Override
+    public RestResponse getDDRRecordsQuantity(@Name("accountId") String accountId,
+        @Name("adapterTypes") @Optional Collection<AdapterType> adapterTypes,
+        @Name("adapterIds") @Optional Collection<String> adapterIds, @Name("fromAddress") @Optional String fromAddress,
+        @Name("typeId") @Optional Collection<String> typeIds,
+        @Name("communicationStatus") @Optional CommunicationStatus status, @Name("startTime") Long startTime,
+        @Name("endTime") Long endTime, @Name("sessionKeys") @Optional Collection<String> sessionKeys,
+        @Name("offset") @Optional Integer offset) throws Exception {
+
+        Integer ddrRecordsQuantity = DDRRecord.getDDRRecordsQuantity(accountId, adapterTypes, adapterIds, fromAddress,
+            typeIds, status, startTime, endTime, sessionKeys, offset);
+        return RestResponse.ok(Settings.DIALOG_HANDLER_VERSION, ddrRecordsQuantity);
     }
     
     /**
@@ -146,7 +154,7 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         @Name("adapterTypes") @Optional Collection<AdapterType> adapterTypes,
         @Name("adapterIds") @Optional Collection<String> adapterIds, @Name("fromAddress") @Optional String fromAddress,
         @Name("typeId") @Optional Collection<String> typeIds, @Name("communicationStatus") @Optional String status,
-        @Name("startTime") long startTime, @Name("endTime") long endTime,
+        @Name("startTime") Long startTime, @Name("endTime") Long endTime,
         @Name("sessionKeys") @Optional Collection<String> sessionKeys, @Name("offset") @Optional Integer offset,
         @Name("limit") @Optional Integer limit, @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
         @Name("shouldIncludeServiceCosts") @Optional Boolean shouldIncludeServiceCosts) throws Exception {
@@ -156,7 +164,8 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
         ArrayList<DDRRecord> ddrRecords = JOM.getInstance().convertValue(ddrRecordObjects,
             new TypeReference<ArrayList<DDRRecord>>() {
             });
-        if (!ddrRecords.isEmpty() && ddrRecords.get(ddrRecords.size() - 1).getStart() > startTime) {
+        if (startTime != null && !ddrRecords.isEmpty() &&
+            ddrRecords.get(ddrRecords.size() - 1).getStart() > startTime) {
 
             ddrRecordObjects = getDDRRecordsRecursively(accountId, adapterTypes, adapterIds, fromAddress, typeIds,
                 status, startTime, ddrRecords.get(ddrRecords.size() - 1).getStart() - 1, sessionKeys, offset, limit,
@@ -594,6 +603,20 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
             }
         }
         return result;
+    }
+    
+    /**
+     * Script to update all ddrRecords with adapterType if there is an
+     * associated adapterId found too. This is to fix the issue with removing an
+     * adapter, before the billing date, and then fetching all teh ddr for that
+     * adapterType. Added on 9-Nov-2015
+     * 
+     * @return
+     * @throws Exception
+     */
+    public double updateDDRRecordsWithAdapterType() throws Exception {
+
+        return DDRRecord.updateDDRRecordsWithAdapterType();
     }
     
     /**

@@ -239,16 +239,26 @@ public class Session{
     }
     
     /**
-     * Returns the first session found for the internal session id given
+     * Returns the first session found for the localName. Localname is used for
+     * E.g. SMS adapter with myAddress TEST but senderName is 0612345678 while
+     * initiating an outbound request. LocalName is attached to all TextMessages
+     * 
      * @param internalSessionKey
      * @return
      */
-    public static Session getSessionByInternalKey(String internalSessionKey) {
+    public static Session getSessionByLocalName(String adapterType, String remoteAddress, String localName) {
 
         TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
         RootFindCommand<Session> sessionFindCommand = datastore.find().type(Session.class);
-        sessionFindCommand = sessionFindCommand.addFilter("internalSession", FilterOperator.EQUAL,
-                                                          internalSessionKey.toLowerCase());
+        if (adapterType != null) {
+            sessionFindCommand = sessionFindCommand.addFilter("type", FilterOperator.EQUAL, adapterType.toLowerCase());
+        }
+        if (remoteAddress != null) {
+            sessionFindCommand = sessionFindCommand.addFilter("remoteAddress", FilterOperator.EQUAL, remoteAddress);
+        }
+        if (localName != null) {
+            sessionFindCommand = sessionFindCommand.addFilter("localName", FilterOperator.EQUAL, localName);
+        }
         sessionFindCommand.addSort("creationTimestamp", SortDirection.DESCENDING);
         sessionFindCommand.fetchMaximum(1);
         QueryResultIterator<Session> sessionIterator = sessionFindCommand.now();
@@ -276,15 +286,25 @@ public class Session{
     }
     
     /**
-     * parses the sessionKey from the method parameters and tries to fetch it
+     * Parses the sessionKey from the method parameters and tries to fetch it.
+     * Does an match with the internalSessionKey first. If not found, tries to
+     * fetch it by the localName. Still not found, returns null
+     * 
      * @param adapterType
      * @param localAddress
      * @param remoteAddress
      * @return
      */
     public static Session getSessionByInternalKey(String adapterType, String localAddress, String remoteAddress) {
+
+        adapterType = adapterType != null ? adapterType.toLowerCase() : null;
         String sessionKey = adapterType + "|" + localAddress + "|" + remoteAddress;
-        return getSessionByInternalKey(sessionKey);
+        Session sessionByInternalKey = getSessionByInternalKey(sessionKey);
+        if (sessionByInternalKey == null) {
+            //try fetching the session by localName
+            sessionByInternalKey = getSessionByLocalName(adapterType, remoteAddress, localAddress);
+        }
+        return sessionByInternalKey;
     }
     
     /**
@@ -925,5 +945,25 @@ public class Session{
             clonedSession.storeSession();
         }
         return clonedSession;
+    }
+    
+    /**
+     * Returns the first session found for the internal session id given
+     * @param internalSessionKey
+     * @return
+     */
+    private static Session getSessionByInternalKey(String internalSessionKey) {
+
+        TwigCompatibleMongoDatastore datastore = new TwigCompatibleMongoDatastore();
+        RootFindCommand<Session> sessionFindCommand = datastore.find().type(Session.class);
+        sessionFindCommand = sessionFindCommand.addFilter("internalSession", FilterOperator.EQUAL,
+                                                          internalSessionKey.toLowerCase());
+        sessionFindCommand.addSort("creationTimestamp", SortDirection.DESCENDING);
+        sessionFindCommand.fetchMaximum(1);
+        QueryResultIterator<Session> sessionIterator = sessionFindCommand.now();
+        if (sessionIterator != null && sessionIterator.hasNext()) {
+            return sessionIterator.next();
+        }
+        return null;
     }
 }

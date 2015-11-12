@@ -1,11 +1,15 @@
 package com.almende.dialog;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.lang.reflect.Method;
 import java.net.BindException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Logger;
 import javax.mail.MessagingException;
@@ -23,12 +27,20 @@ import org.eclipse.jetty.webapp.WebAppContext;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
+import org.mockito.internal.util.MockUtil;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import com.almende.dialog.accounts.AdapterConfig;
+import com.almende.dialog.adapter.MBSmsServlet;
+import com.almende.dialog.adapter.TextServlet;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DDRRecordAgent;
 import com.almende.dialog.agent.DialogAgent;
+import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.example.agent.TestServlet;
+import com.almende.dialog.example.agent.TestServlet.QuestionInRequest;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
@@ -62,7 +74,8 @@ public class TestFramework
     private Server server;
     public static final int jettyPort = 8078;
     public static final String host = "http://localhost:"+jettyPort+"/dialoghandler";
-    private static final Logger log = Logger.getLogger(TestFramework.class.toString());
+    protected static final Logger log = Logger.getLogger(TestFramework.class.toString());
+    protected DialogAgent dialogAgent = null;
     
     @Before
     public void setup() throws Exception {
@@ -80,7 +93,7 @@ public class TestFramework
 
             startJettyServer();
         }
-        DialogAgent dialogAgent = new DialogAgent();
+        dialogAgent = new DialogAgent();
         dialogAgent.setDefaultProviderSettings(AdapterType.SMS, AdapterProviders.CM);
         dialogAgent.setDefaultProviderSettings(AdapterType.CALL, AdapterProviders.BROADSOFT);
     }
@@ -324,9 +337,133 @@ public class TestFramework
      * 
      * @param accountId
      * @return
+     * @throws Exception 
      */
-    protected List<DDRRecord> getAllDdrRecords(String accountId) {
+    protected List<DDRRecord> getAllDdrRecords(String accountId) throws Exception {
 
-        return DDRRecord.getDDRRecords(accountId, null, null, null, null, null, null, null, null, null, null);
+        return DDRRecord.getDDRRecords(accountId, null, null, null, null, null, null, null, null, null, null, null,
+            null);
+    }
+    
+    /**
+     * Sends an outbound call based on the given params
+     * @param addressNameMap
+     * @param adapterConfig
+     * @param simpleQuestion
+     * @param questionInRequest
+     * @param senderName
+     * @param subject
+     * @param accountId
+     * @param dialogAgent
+     * @return
+     * @throws Exception
+     */
+    public HashMap<String, String> outBoundCall(Map<String, String> addressNameMap, AdapterConfig adapterConfig,
+        String simpleQuestion, QuestionInRequest questionInRequest, String senderName, String subject, String accountId)
+            throws Exception {
+
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+            questionInRequest.name());
+        HashMap<String, String> result = null;
+        if (simpleQuestion != null) {
+            url = ServerUtils.getURLWithQueryParams(url, "question", simpleQuestion);
+        }
+        if (new MockUtil().isMock(dialogAgent)) {
+            Mockito.when(dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
+                adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType())).thenCallRealMethod();
+        }
+        result = dialogAgent.outboundCallWithMap(addressNameMap, null, null, senderName, subject, url, null,
+            adapterConfig.getConfigId(), accountId, "", adapterConfig.getAccountType());
+        return result;
+    }
+    
+    /**
+     * This method processes an inbound text using MBSmsServlet, considering
+     * that a session is already active
+     * 
+     * @param smsAdapter
+     * @return The textMessage that is parsed and processed
+     * @throws Exception
+     */
+    protected TextMessage processInboundMessage(String message, String sender, String receiver, AdapterConfig smsAdapter)
+        throws Exception {
+
+        //setup test inbound data
+        Method receiveMessage = fetchMethodByReflection("receiveMessage", MBSmsServlet.class, HashMap.class);
+        MBSmsServlet mbSmsServlet = new MBSmsServlet();
+        HashMap<String, String> testInboundSMSData = new HashMap<String, String>();
+        testInboundSMSData.put("id", "87708ec0453c4d95a284ff4m68999827");
+        testInboundSMSData.put("message", message);
+        testInboundSMSData.put("sender", sender);
+        testInboundSMSData.put("body", message);
+        testInboundSMSData.put("receiver", receiver); //"0612345678");
+        Object textMessage = invokeMethodByReflection(receiveMessage, mbSmsServlet, testInboundSMSData);
+        receiveMessage = fetchMethodByReflection("receiveMessageAndAttachCharge", TextServlet.class,
+            TextMessage.class);
+        textMessage = invokeMethodByReflection(receiveMessage, mbSmsServlet, textMessage);
+
+        //process the message
+        Method processMessage = fetchMethodByReflection("processMessage", TextServlet.class, TextMessage.class);
+        invokeMethodByReflection(processMessage, mbSmsServlet, textMessage);
+        return (TextMessage) textMessage;
+    }
+    
+    /**
+     * Asserts the xml generated by CMServlet while sending an SMS 
+     * @param addressNameMap
+     * @param adapterConfig
+     * @param simpleQuestion
+     * @param senderName
+     * @return
+     * @throws Exception
+     */
+    protected String assertXMLGeneratedFromOutBoundCall(Map<String, String> addressNameMap, AdapterConfig adapterConfig,
+        String simpleQuestion, String senderName) throws Exception {
+
+        //fetch the xml generated
+        Document builder = getXMLDocumentBuilder(TestServlet.getLogObject(AdapterType.SMS.toString()).toString());
+        NodeList messageNodeList = builder.getElementsByTagName("MESSAGES");
+        NodeList customerNodeList = builder.getElementsByTagName("CUSTOMER");
+        NodeList userNodeList = builder.getElementsByTagName("USER");
+        NodeList childMessageNodeList = builder.getElementsByTagName("MSG");
+        NodeList referenceNodeList = builder.getElementsByTagName("REFERENCE");
+        assertTrue(messageNodeList.getLength() == 1);
+        assertTrue(customerNodeList.getLength() == 1);
+        assertTrue(userNodeList.getLength() == 1);
+        assertTrue(referenceNodeList.getLength() == 1);
+        assertEquals(addressNameMap.size(), childMessageNodeList.getLength());
+        //fetch customerInfo from adapter
+        String[] customerInfo = adapterConfig.getAccessToken().split("\\|");
+        assertEquals(customerInfo[0], customerNodeList.item(0).getAttributes().getNamedItem("ID").getNodeValue());
+
+        assertEquals(customerInfo[1], userNodeList.item(0).getAttributes().getNamedItem("LOGIN").getNodeValue());
+
+        for (int addressCount = 0; addressCount < addressNameMap.keySet().size(); addressCount++) {
+            Node msgNode = childMessageNodeList.item(addressCount);
+            NodeList childNodes = msgNode.getChildNodes();
+            for (int childNodeCount = 0; childNodeCount < childNodes.getLength(); childNodeCount++) {
+                Node childNode = childNodes.item(childNodeCount);
+                if (childNode.getNodeName().equals("CONCATENATIONTYPE")) {
+                    assertEquals("TEXT", childNode.getFirstChild().getNodeValue());
+                }
+                else if (childNode.getNodeName().equals("FROM")) {
+                    assertEquals(senderName, childNode.getFirstChild().getNodeValue());
+                }
+                else if (childNode.getNodeName().equals("BODY")) {
+                    assertEquals(simpleQuestion, childNode.getFirstChild().getNodeValue());
+                }
+                else if (childNode.getNodeName().equals("TO")) {
+                    boolean addressMatchFlag = false;
+                    for (String address : addressNameMap.keySet()) {
+                        if (PhoneNumberUtils.formatNumber(address, null)
+                                                        .equals(childNode.getFirstChild().getNodeValue())) {
+                            addressMatchFlag = true;
+                        }
+                    }
+                    assertTrue(addressMatchFlag);
+                }
+            }
+        }
+        return referenceNodeList.item(0).getFirstChild().getNodeValue();
     }
 }

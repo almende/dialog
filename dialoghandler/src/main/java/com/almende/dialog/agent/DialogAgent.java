@@ -734,6 +734,24 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     }
     
     /**
+     * Set the default provider for a particular channel
+     * 
+     * @return
+     */
+    public Map<AdapterType, AdapterProviders>
+        removeGlobalAdapterSwitchSettings(@Name("adapterType") AdapterType adapterType) {
+
+        Map<AdapterType, AdapterProviders> adapterProviderMapping = getGlobalAdapterSwitchSettings();
+        if (adapterProviderMapping != null) {
+            adapterProviderMapping.remove(adapterType);
+            getState().put(GLOBAL_ADAPTER_SWITCH_MAPPING_KEY, adapterProviderMapping);
+            return getGlobalAdapterSwitchSettings();
+        }
+        return null;
+    }
+    
+    
+    /**
      * Gets all the credentials stored in the DialogAgent
      * @return
      */

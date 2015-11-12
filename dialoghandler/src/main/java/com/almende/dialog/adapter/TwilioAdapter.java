@@ -38,11 +38,11 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.QuestionEventRunner;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.entity.TTSInfo.TTSProvider;
 import com.askfast.commons.utils.PhoneNumberUtils;
@@ -121,7 +121,7 @@ public class TwilioAdapter {
         session.killed = false;
         session.setDirection("outbound");
         session.setType(AdapterAgent.ADAPTER_TYPE_CALL);
-        session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.BROADSOFT.toString());
+        session.addExtras(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TWILIO.toString());
         session.setAdapterID(config.getConfigId());
         session.setAccountId(accountId);
         session.addExtras(DialogAgent.BEARER_TOKEN_KEY, bearerToken);
@@ -685,7 +685,7 @@ public class TwilioAdapter {
 
         localID = checkAnonymousCallerId(localID);
 
-        log.info("Received twiliocc status: " + status);
+        log.info("Received twiliocc status: " + status + " from CallSid: " + callSid);
 
         if (direction.equals("outbound-api")) {
             direction = "outbound";
@@ -695,18 +695,19 @@ public class TwilioAdapter {
             localID = remoteID;
             remoteID = tmpLocalId;
         }
-        AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
+        //AdapterConfig config = AdapterConfig.findAdapterConfig(AdapterAgent.ADAPTER_TYPE_CALL, localID);
         Session session = Session.getSessionByExternalKey(callSid);
         if (session != null) {
             //update session with call timings
             if (status.equals("completed")) {
+                AdapterConfig config = session.getAdapterConfig();
                 finalizeCall(config, session, callSid, remoteID);
             }
         }
-        log.info("Session key: or external sid" + session != null ? session.getKey() : callSid);
+        log.info("Session key: or external sid" + ((session != null && session.getKey() != null) ? session.getKey() : callSid));
         return Response.ok("").build();
     }
-    
+        
     public void answered(String direction, String remoteID, String localID, String sessionKey) {
 
         log.info("call answered with:" + direction + "_" + remoteID + "_" + localID);
@@ -801,7 +802,7 @@ public class TwilioAdapter {
                 }
                 
                 //flush the keys if ddrProcessing was successful
-                if (DDRUtils.stopDDRCosts(session)) {
+                if (session.isTestSession() || DDRUtils.stopDDRCosts(session)) {
                     session.drop();
                 }
                 hangup(session);
@@ -879,14 +880,14 @@ public class TwilioAdapter {
             String created = call.getProperty("date_created");
             session.setStartTimestamp(format.parse(created).getTime() + "");
             if (call.getEndTime() != null) {
-                session.setReleaseTimestamp(format.parse(call.getEndTime()).getTime() + "");
+                session.setReleaseTimestamp(call.getEndTime().getTime() + "");
             }
             if (call.getDuration() != null) {
                 if(call.getDuration().equals("0")) {
                     session.setAnswerTimestamp(session.getReleaseTimestamp());
                 }
                 else if(call.getStartTime() != null) {
-                    session.setAnswerTimestamp(format.parse(call.getStartTime()).getTime() + "");
+                    session.setAnswerTimestamp(call.getStartTime().getTime() + "");
                 }
             }
             else {
@@ -1067,6 +1068,11 @@ public class TwilioAdapter {
                     Number number = new Number( PhoneNumberUtils.formatNumber(url, null));
                     number.setMethod("GET");
                     number.setUrl(getPreconnectUrl());
+                    
+                    number.setStatusCallback( getCCUrl() );
+                    number.setStatusCallbackEvents( "initiated ringing answered completed" );
+                    number.setStatusCallbackMethod( "GET" );
+                    
                     dial.append(number);
                 }
             }
@@ -1571,7 +1577,11 @@ public class TwilioAdapter {
     }
     
     protected String getPreconnectUrl() {
-    	return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/preconnect";
+        return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/preconnect";
+    }
+    
+    protected String getCCUrl() {
+        return "http://"+Settings.HOST+"/dialoghandler/rest/twilio/cc";
     }
     
     private String checkAnonymousCallerId(String callerId) {

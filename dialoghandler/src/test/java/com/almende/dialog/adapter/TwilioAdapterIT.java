@@ -38,13 +38,13 @@ import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.model.ddr.DDRType;
 import com.almende.dialog.sim.TwilioSimulator;
 import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.DialogRequest;
 import com.askfast.commons.entity.Language;
@@ -117,8 +117,7 @@ public class TwilioAdapterIT extends TestFramework {
         //validate that a session is created with a ddr record
         List<Session> allSessions = Session.getAllSessions();
         Assert.assertThat(allSessions.size(), Matchers.is(2));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         Assert.assertThat(ddrRecords.size(), Matchers.is(2));
         for (Session session : allSessions) {
             DDRRecord ddrRecord = DDRRecord.getDDRRecord(session.getDdrRecordId(), TEST_ACCOUNT_ID);
@@ -137,12 +136,13 @@ public class TwilioAdapterIT extends TestFramework {
         }
 
         //new inbound call should trigger a redirect with preconnect 
-        assertXMLGeneratedByTwilioLibrary(String.format("<Response><Play>%s</Play><Dial method=\"GET\" action=\"http://%s/dialoghandler/rest/twilio/answer\"  "
-                                                            + "callerId =\"%s\" timeout=\"30\"><Number method=\"GET\" url=\"http://%s/dialoghandler/rest/twilio/preconnect\">"
-                                                            + "%s</Number></Dial></Response>", COMMENT_QUESTION_AUDIO,
-                                                        Settings.HOST, adapterConfig.getMyAddress(), Settings.HOST,
-                                                        PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
-                                          newInboundResponse.getEntity().toString());
+        assertXMLGeneratedByTwilioLibrary(String.format(
+            "<Response><Play>%s</Play><Dial method=\"GET\" action=\"http://%s/dialoghandler/rest/twilio/answer\"  " +
+                "callerId =\"%s\" timeout=\"30\"><Number method=\"GET\" url=\"http://%s/dialoghandler/rest/twilio/preconnect\" " +
+                "statusCallback=\"http://%s/dialoghandler/rest/twilio/cc\" statusCallbackEvent=\"initiated ringing answered completed\" statusCallbackMethod=\"GET\">" +
+                "%s</Number></Dial></Response>",
+            COMMENT_QUESTION_AUDIO, Settings.HOST, adapterConfig.getMyAddress(), Settings.HOST, Settings.HOST,
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null)), newInboundResponse.getEntity().toString());
 
         Mockito.when(twilioAdapter.fetchSessionFromParent(null, null, null, null, null))
                .thenReturn(Session.getSessionFromParentExternalId(testCallId1, testCallId,
@@ -178,13 +178,14 @@ public class TwilioAdapterIT extends TestFramework {
                                                                                                                    null));
         Assert.assertThat(sessionFromParentExternalId, Matchers.notNullValue());
 
-        assertXMLGeneratedByTwilioLibrary(String.format("<Response><Play>%s</Play><Dial action=\"http://%s/dialoghandler/rest/twilio/answer\" method=\"GET\"  "
-                                                            + "callerId =\"%s\" timeout=\"30\"><Number method=\"GET\" url=\"http://%s/dialoghandler/rest/twilio/preconnect\">"
-                                                            + "%s</Number></Dial></Response>", COMMENT_QUESTION_AUDIO,
-                                                        Settings.HOST, adapterConfig.getMyAddress(), Settings.HOST,
-                                                        PhoneNumberUtils.formatNumber(secondRemoteAddress, null)),
-                                          answer.getEntity().toString());
-
+        assertXMLGeneratedByTwilioLibrary(String.format(
+            "<Response><Play>%s</Play><Dial method=\"GET\" action=\"http://%s/dialoghandler/rest/twilio/answer\"  " +
+                "callerId =\"%s\" timeout=\"30\"><Number method=\"GET\" url=\"http://%s/dialoghandler/rest/twilio/preconnect\" " +
+                "statusCallback=\"http://%s/dialoghandler/rest/twilio/cc\" statusCallbackEvent=\"initiated ringing answered completed\" statusCallbackMethod=\"GET\">" +
+                "%s</Number></Dial></Response>",
+            COMMENT_QUESTION_AUDIO, Settings.HOST, adapterConfig.getMyAddress(), Settings.HOST, Settings.HOST,
+            PhoneNumberUtils.formatNumber(secondRemoteAddress, null)), answer.getEntity().toString());
+        
         preconnect = twilioAdapter.preconnect(adapterConfig.getMyAddress(), TEST_PUBLIC_KEY, secondRemoteAddress,
                                               "outbound-dial", testCallId2, testCallId);
         assertXMLGeneratedByTwilioLibrary(String.format("<Response><Gather numDigits=\"1\" finishOnKey=\"\" action=\"http://%s/dialoghandler/rest/twilio/answer\" "
@@ -198,8 +199,7 @@ public class TwilioAdapterIT extends TestFramework {
                                       null, testCallId2, "in-progress", null);
         assertXMLGeneratedByTwilioLibrary("<Response><Say language=\"nl-nl\">You chose 1</Say></Response>",
                                           answer.getEntity().toString());
-        ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null, null, null,
-                                             null);
+        ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         Assert.assertThat(ddrRecords.size(), Matchers.is(3));
         int statusCount = 0;
         for (DDRRecord ddrRecord : ddrRecords) {
@@ -263,8 +263,7 @@ public class TwilioAdapterIT extends TestFramework {
 
         assertXMLGeneratedByTwilioLibrary(expected.toXML(), resp);
         //check all the ddrs created
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null, null,
-                                                             null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertEquals(ddrRecords.size(), 1);
         for (DDRRecord ddrRecord : ddrRecords) {
             assertEquals("inbound", ddrRecord.getDirection());
@@ -304,8 +303,7 @@ public class TwilioAdapterIT extends TestFramework {
         List<Session> allSessions = Session.getAllSessions();
         //all sessions must now be flushed
         assertThat(allSessions.size(), Matchers.is(0));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertThat(ddrRecords.size(), Matchers.is(1));
         int ddrInfoCount = 0;
         DDRRecord ddrRecord = ddrRecords.iterator().next();
@@ -602,8 +600,7 @@ public class TwilioAdapterIT extends TestFramework {
 
         inboundPhoneCall_WithSecuredDialogAndTTSInfoTest();
         //validate that ddr records are created when isTest is set to false
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         Assert.assertThat(ddrRecords.size(), Matchers.equalTo(1));
         
         //trigger a second incoming call with test flag to be true. flush all sessions, adapters and ddrRecords
@@ -627,8 +624,7 @@ public class TwilioAdapterIT extends TestFramework {
         performSecuredCall("inbound", "testuserName", "testpassword", ttsInfo, url, "in-progress", true);
 
         //validate that ddr records are created when isTest is set to false
-        ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null, null, null,
-                                             null);
+        ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         Assert.assertThat(ddrRecords.size(), Matchers.equalTo(0));
     }
 
@@ -744,8 +740,7 @@ public class TwilioAdapterIT extends TestFramework {
                                                             null);
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         int ttsServiceChargesAttached = 0;
         for (DDRRecord ddrRecord : ddrRecords) {
             Assert.assertFalse(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_COST));
@@ -793,8 +788,7 @@ public class TwilioAdapterIT extends TestFramework {
                                                                    url, "in-progress", null);
         assertTrue(securedDialogResponse != null);
         //check if ddr is created for ttsprocessing
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         int ttsChargesAttached = 0;
         for (DDRRecord ddrRecord : ddrRecords) {
             Assert.assertFalse(ddrRecord.getDdrType().getCategory().equals(DDRTypeCategory.TTS_SERVICE_COST));
@@ -972,8 +966,7 @@ public class TwilioAdapterIT extends TestFramework {
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_SERVICE_COST);
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null,
-                                                             Arrays.asList(ddrType.getTypeId()), null, null, null,
-                                                             null, null, null);
+            Arrays.asList(ddrType.getTypeId()), null, null, null, null, null, null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         ddrRecord.setShouldGenerateCosts(true);
@@ -999,8 +992,7 @@ public class TwilioAdapterIT extends TestFramework {
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
         List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null,
-                                                             Arrays.asList(ddrType.getTypeId()), null, null, null,
-                                                             null, null, null);
+            Arrays.asList(ddrType.getTypeId()), null, null, null, null, null, null, null, null);
         //make sure there is no costs involved, as the ddr price attached is for VoiceRSS tts and not acapela
         assertThat(ddrRecords.size(), Matchers.is(0));
     }
@@ -1041,8 +1033,7 @@ public class TwilioAdapterIT extends TestFramework {
         
         //verify that the session is not saved
         assertEquals(0, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertEquals(1, ddrRecords.size());
         assertEquals(CommunicationStatus.ERROR,
                      ddrRecords.iterator().next()
@@ -1087,8 +1078,7 @@ public class TwilioAdapterIT extends TestFramework {
 
         //verify that the session is not saved
         assertEquals(0, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertEquals(1, ddrRecords.size());
         assertEquals(CommunicationStatus.ERROR,
                      ddrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber("0611223", null)));
@@ -1131,8 +1121,7 @@ public class TwilioAdapterIT extends TestFramework {
         
         //verify that the session is not saved
         assertEquals(1, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertEquals(1, ddrRecords.size());
         DDRRecord ddrRecord = ddrRecords.iterator().next();
         assertEquals(CommunicationStatus.ERROR,
@@ -1157,8 +1146,7 @@ public class TwilioAdapterIT extends TestFramework {
                                              sessionForValidNumber.getRemoteAddress(),
                                              sessionForValidNumber.getDirection(), "completed");
         //validate the ddrRecords again
-        ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null, null, null,
-                                             null);
+        ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertEquals(1, ddrRecords.size());
         ddrRecord = ddrRecords.iterator().next();
         assertEquals(CommunicationStatus.ERROR,

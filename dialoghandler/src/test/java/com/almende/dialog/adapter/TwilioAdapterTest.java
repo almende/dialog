@@ -376,47 +376,30 @@ public class TwilioAdapterTest extends TestFramework{
      * @throws ParseException
      */
     @Test
-    public void updateSessionWithCallTimesNullEndTimeTest()
-        throws ParseException {
+    public void updateSessionWithCallTimesNullEndTimeTest() throws ParseException {
 
         //mock the Context
-        Call call = Mockito.mock( Call.class );
-        Mockito.when( call.getProperty( "date_created" ) )
-            .thenReturn( "Mon, 15 Aug 2005 15:52:01 +0000" );
-        Mockito.when( call.getEndTime() ).thenReturn( null );
-        Mockito.when( call.getDuration() ).thenReturn( "30" );
-        Mockito.when( call.getStartTime() )
-            .thenReturn( "Mon, 15 Aug 2005 15:52:02 +0000" );
+        Call call = Mockito.mock(Call.class);
+        Mockito.when(call.getProperty("date_created")).thenReturn("Mon, 15 Aug 2005 15:52:01 +0000");
+        Mockito.when(call.getEndTime()).thenReturn(null);
+        Mockito.when(call.getDuration()).thenReturn("30");
+        Mockito.when(call.getStartTime()).thenReturn(
+            TimeUtils.getTimeWithFormat("Mon, 15 Aug 2005 15:52:02 +0000", "EEE, dd MMM yyyy HH:mm:ss Z", null, null)
+                     .toDate());
         Session session = new Session();
-        Session updateSessionWithCallTimes = TwilioAdapter
-            .updateSessionWithCallTimes( session, call );
-        Assert
-            .assertThat( updateSessionWithCallTimes.getStartTimestamp(),
-                         Matchers
-                             .is( TimeUtils
-                                 .getTimeWithFormat( "Mon, 15 Aug 2005 15:52:01 +0000",
-                                                     "EEE, dd MMM yyyy HH:mm:ss Z",
-                                                     null,
-                                                     null ).getMillis() +
-                                  "" ) );
-        Assert
-            .assertThat( updateSessionWithCallTimes.getAnswerTimestamp(),
-                         Matchers
-                             .is( TimeUtils
-                                 .getTimeWithFormat( "Mon, 15 Aug 2005 15:52:02 +0000",
-                                                     "EEE, dd MMM yyyy HH:mm:ss Z",
-                                                     null,
-                                                     null ).getMillis() +
-                                  "" ) );
-        Assert
-            .assertThat( updateSessionWithCallTimes.getReleaseTimestamp(),
-                         Matchers
-                             .is( ( TimeUtils
-                                 .getTimeWithFormat( "Mon, 15 Aug 2005 15:52:02 +0000",
-                                                     "EEE, dd MMM yyyy HH:mm:ss Z",
-                                                     null,
-                                                     null ).getMillis() + 30000 ) +
-                                  "" ) );
+        Session updateSessionWithCallTimes = TwilioAdapter.updateSessionWithCallTimes(session, call);
+        Assert.assertThat(updateSessionWithCallTimes.getStartTimestamp(), Matchers.is(
+            TimeUtils.getTimeWithFormat("Mon, 15 Aug 2005 15:52:01 +0000", "EEE, dd MMM yyyy HH:mm:ss Z", null, null)
+                     .getMillis() +
+                ""));
+        Assert.assertThat(updateSessionWithCallTimes.getAnswerTimestamp(), Matchers.is(
+            TimeUtils.getTimeWithFormat("Mon, 15 Aug 2005 15:52:02 +0000", "EEE, dd MMM yyyy HH:mm:ss Z", null, null)
+                     .getMillis() +
+                ""));
+        Assert.assertThat(updateSessionWithCallTimes.getReleaseTimestamp(), Matchers.is(
+            (TimeUtils.getTimeWithFormat("Mon, 15 Aug 2005 15:52:02 +0000", "EEE, dd MMM yyyy HH:mm:ss Z", null, null)
+                      .getMillis() +
+                30000) + ""));
     }
 
     /**
@@ -430,44 +413,29 @@ public class TwilioAdapterTest extends TestFramework{
     public void updateSessionWithCallTimesTest() throws ParseException {
 
         //mock the Context
-        Call call = Mockito.mock( Call.class );
-        Mockito.when( call.getProperty( "date_created" ) )
-            .thenReturn( "Mon, 15 Aug 2005 15:52:01 +0000" );
-        Mockito.when( call.getEndTime() )
-            .thenReturn( "Mon, 15 Aug 2005 15:52:32 +0000" );
-        Mockito.when( call.getDuration() ).thenReturn( "31" );
-        Mockito.when( call.getStartTime() )
-            .thenReturn( "Mon, 15 Aug 2005 15:52:02 +0000" );
+        Call call = Mockito.mock(Call.class);
+        Mockito.when(call.getProperty("date_created")).thenReturn("Mon, 15 Aug 2005 15:52:01 +0000");
+        Mockito.when(call.getEndTime()).thenReturn(
+            TimeUtils.getTimeWithFormat("Mon, 15 Aug 2005 15:52:32 +0000", "EEE, dd MMM yyyy HH:mm:ss Z", null, null)
+                     .toDate());
+        Mockito.when(call.getDuration()).thenReturn("31");
+        Mockito.when(call.getStartTime()).thenReturn(
+            TimeUtils.getTimeWithFormat("Mon, 15 Aug 2005 15:52:02 +0000", "EEE, dd MMM yyyy HH:mm:ss Z", null, null)
+                     .toDate());
         Session session = new Session();
-        Session updateSessionWithCallTimes = TwilioAdapter
-            .updateSessionWithCallTimes( session, call );
-        Assert
-            .assertThat( updateSessionWithCallTimes.getStartTimestamp(),
-                         Matchers
-                             .is( TimeUtils
-                                 .getTimeWithFormat( "Mon, 15 Aug 2005 15:52:01 +0000",
-                                                     "EEE, dd MMM yyyy HH:mm:ss Z",
-                                                     null,
-                                                     null ).getMillis() +
-                                  "" ) );
-        Assert
-            .assertThat( updateSessionWithCallTimes.getAnswerTimestamp(),
-                         Matchers
-                             .is( TimeUtils
-                                 .getTimeWithFormat( "Mon, 15 Aug 2005 15:52:02 +0000",
-                                                     "EEE, dd MMM yyyy HH:mm:ss Z",
-                                                     null,
-                                                     null ).getMillis() +
-                                  "" ) );
-        Assert
-            .assertThat( updateSessionWithCallTimes.getReleaseTimestamp(),
-                         Matchers
-                             .is( TimeUtils
-                                 .getTimeWithFormat( "Mon, 15 Aug 2005 15:52:32 +0000",
-                                                     "EEE, dd MMM yyyy HH:mm:ss Z",
-                                                     null,
-                                                     null ).getMillis() +
-                                  "" ) );
+        Session updateSessionWithCallTimes = TwilioAdapter.updateSessionWithCallTimes(session, call);
+        Assert.assertThat(updateSessionWithCallTimes.getStartTimestamp(), Matchers.is(
+            TimeUtils.getTimeWithFormat("Mon, 15 Aug 2005 15:52:01 +0000", "EEE, dd MMM yyyy HH:mm:ss Z", null, null)
+                     .getMillis() +
+                ""));
+        Assert.assertThat(updateSessionWithCallTimes.getAnswerTimestamp(), Matchers.is(
+            TimeUtils.getTimeWithFormat("Mon, 15 Aug 2005 15:52:02 +0000", "EEE, dd MMM yyyy HH:mm:ss Z", null, null)
+                     .getMillis() +
+                ""));
+        Assert.assertThat(updateSessionWithCallTimes.getReleaseTimestamp(), Matchers.is(
+            TimeUtils.getTimeWithFormat("Mon, 15 Aug 2005 15:52:32 +0000", "EEE, dd MMM yyyy HH:mm:ss Z", null, null)
+                     .getMillis() +
+                ""));
     }
 
     private Question getCommentQuestion( boolean tts ) {

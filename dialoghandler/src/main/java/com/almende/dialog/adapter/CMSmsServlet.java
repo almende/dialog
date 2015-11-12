@@ -23,11 +23,11 @@ import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.exception.NotFoundException;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.DDRUtils;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
@@ -57,7 +57,7 @@ public class CMSmsServlet extends TextServlet {
         String[] tokens = config.getAccessToken().split("\\|");
         CM cm = new CM(tokens[0], tokens[1], config.getAccessTokenSecret());
         return cm.broadcastMessage(message, subject, from, senderName, addressNameMap, extras, config, accountId,
-                                   ddrRecord);
+            ddrRecord);
     }
 
     @Override
@@ -165,8 +165,7 @@ public class CMSmsServlet extends TextServlet {
 
         //add costs with no.of messages * recipients
         return DDRUtils.createDDRRecordOnOutgoingCommunication(adapterConfig, accountId, senderName, toAddress,
-                                                               CM.countMessageParts(message) * toAddress.size(),
-                                                               message, sessionKeyMap);
+            CM.countMessageParts(message, toAddress.size()), message, sessionKeyMap);
     }
 
     /**
@@ -261,9 +260,11 @@ public class CMSmsServlet extends TextServlet {
                 }
                 if (code != null) {
                     cmStatus.setCode(code);
+                    cmStatus.setStatusCode(SMSDeliveryStatus.statusCodeMapping(AdapterProviders.CM, code));
                 }
                 if (errorCode != null) {
                     cmStatus.setCode(errorCode);
+                    cmStatus.setStatusCode(SMSDeliveryStatus.statusCodeMapping(AdapterProviders.CM, errorCode));
                 }
                 if (errorDescription != null) {
                     cmStatus.setDescription(errorDescription);
@@ -275,7 +276,7 @@ public class CMSmsServlet extends TextServlet {
                     Client client = ParallelInit.getClient();
                     WebResource webResource = client.resource(cmStatus.getCallback());
                     try {
-                        String callbackPayload = ServerUtils.serialize(cmStatus);
+                        String callbackPayload = SMSDeliveryStatus.getDeliveryStatusForClient(cmStatus);
                         if (ServerUtils.isInUnitTestingEnvironment()) {
                             TestServlet.logForTest(getAdapterType(), cmStatus);
                         }
@@ -288,7 +289,6 @@ public class CMSmsServlet extends TextServlet {
                 else {
                     log.info("Reference: " + reference + ". No delivered callback found.");
                 }
-                Session session = Session.getSession(cmStatus.getSessionKey());
                 //fetch ddr corresponding to this
                 DDRRecord ddrRecord = DDRRecord.getDDRRecord(cmStatus.getDdrRecordId(), cmStatus.getAccountId());
                 if (ddrRecord != null) {
@@ -298,18 +298,11 @@ public class CMSmsServlet extends TextServlet {
                     else {
                         ddrRecord.addStatusForAddress(to, CommunicationStatus.ERROR);
                         ddrRecord.addAdditionalInfo(to, "ERROR: " + cmStatus.getDescription());
-                        if (session != null) {
-                            session.drop();
-                        }
                     }
                     ddrRecord.createOrUpdate();
                 }
                 else {
                     log.warning(String.format("No ddr record found for id: %s", cmStatus.getDdrRecordId()));
-                }
-                //check if session is killed. if so drop it :)
-                if (session != null && session.isKilled() && isSMSsDelivered(ddrRecord)) {
-                    session.drop();
                 }
                 cmStatus.store();
             }

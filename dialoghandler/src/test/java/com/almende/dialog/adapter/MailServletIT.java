@@ -34,10 +34,10 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.ServerUtils;
 import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.DialogRequest;
 import com.askfast.commons.entity.Language;
@@ -142,8 +142,7 @@ public class MailServletIT extends TestFramework
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(1));
         assertThat(allSessions.iterator().next().getDirection(), Matchers.is("outbound"));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertThat(ddrRecords.size(), Matchers.is(1));
     }
     
@@ -169,8 +168,7 @@ public class MailServletIT extends TestFramework
         //make sure a new session is created and old one is discarded. 
         assertThat(allSessions.size(), Matchers.is(1));
         assertThat(allSessions.iterator().next().getKey(), Matchers.not(firstSession.getKey()));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertThat(ddrRecords.size(), Matchers.is(3));
         int inboundCount = 0;
         int outboundCount = 0;
@@ -204,8 +202,7 @@ public class MailServletIT extends TestFramework
         List<Session> allSessions = Session.getAllSessions();
         //as it is the end of the question sequence, all sessions must be flushed
         assertThat(allSessions.size(), Matchers.is(0));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertThat(ddrRecords.size(), Matchers.is(5));
         int inboundCount = 0;
         int outboundCount = 0;
@@ -384,8 +381,7 @@ public class MailServletIT extends TestFramework
         
         //verify that the session is not saved
         assertEquals(0, Session.getAllSessions().size());
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertEquals(1, ddrRecords.size());
         assertEquals(CommunicationStatus.ERROR, ddrRecords.iterator().next().getStatusForAddress(remoteAddressEmail));
         assertEquals(1, ddrRecords.iterator().next().getStatusPerAddress().size());
@@ -448,8 +444,7 @@ public class MailServletIT extends TestFramework
         
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(0));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertThat(ddrRecords.size(), Matchers.is(1));
     }
     
@@ -495,8 +490,7 @@ public class MailServletIT extends TestFramework
 
         List<Session> allSessions = Session.getAllSessions();
         assertThat(allSessions.size(), Matchers.is(1));
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null, null, null, null,
-                                                             null, null, null);
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
         assertThat(ddrRecords.size(), Matchers.is(1));
     }
     

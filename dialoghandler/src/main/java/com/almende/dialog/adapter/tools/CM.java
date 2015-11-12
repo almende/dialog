@@ -11,11 +11,11 @@ import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.example.agent.TestServlet;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
-import com.almende.dialog.model.ddr.DDRRecord.CommunicationStatus;
 import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberType;
 import com.sun.jersey.api.client.Client;
@@ -65,7 +65,7 @@ public class CM {
                 throw new Exception(result);
             log.info("Result from CM: " + result);
         }
-        return countMessageParts(message, dcs);
+        return countMessageParts(message, dcs, addressNameMap.size());
     }
 
     /**
@@ -82,6 +82,7 @@ public class CM {
         String type = "TEXT";
         // TODO: Check message for special chars, if so change dcs.             
         StringWriter sw = new StringWriter();
+        String reference = UUID.randomUUID().toString() + ":" + "http://" + Settings.HOST;
         try {
             XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
             outputter.declaration();
@@ -95,7 +96,6 @@ public class CM {
             outputter.attribute("PASSWORD", password);
             outputter.endTag();
 
-            String reference = UUID.randomUUID().toString() + ":" + Settings.HOST;
             outputter.startTag("REFERENCE");
             outputter.cdata(reference);
             outputter.endTag();
@@ -126,20 +126,17 @@ public class CM {
                     continue;
                 }
                 if (storeSMSRelatedData != null) {
-                    reference = UUID.randomUUID().toString() + ":" + Settings.HOST;
-                    SMSDeliveryStatus linkedSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to, 
-                                                                       config, accountId, session.getQuestion(), 
-                                                                       null, "SENT", ddrRecordId,
-                                                                       AdapterProviders.CM.getName(), session);
+                    reference = UUID.randomUUID().toString() + ":" + "http://" + Settings.HOST;
+                    SMSDeliveryStatus linkedSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to,
+                        config, accountId, session.getQuestion(), null, "SENT", ddrRecordId,
+                        AdapterProviders.CM.getName(), session);
                     storeSMSRelatedData.addExtraInfo(linkedSMSRelatedData.getRemoteAddress(),
                                                      linkedSMSRelatedData.getReference());
                     storeSMSRelatedData.store();
                 }
                 else {
                     storeSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to, config, accountId,
-                                                                                session.getQuestion(), null, "SENT",
-                                                                                ddrRecordId,
-                                                                                AdapterProviders.CM.getName(), session);
+                        session.getQuestion(), null, "SENT", ddrRecordId, AdapterProviders.CM.getName(), session);
                 }
                 outputter.startTag("MSG");
                 outputter.startTag("CONCATENATIONTYPE");
@@ -186,6 +183,7 @@ public class CM {
         //perform some unit by logging the XML generated
         if (ServerUtils.isInUnitTestingEnvironment()) {
             TestServlet.logForTest(AdapterType.SMS.toString(), sw.toString());
+            TestServlet.logForTest("messageId", reference);
         }
         return sw;
     }
@@ -277,14 +275,14 @@ public class CM {
     /*
      * gets the number of message parts based on the charecters in the message
      */
-    public static int countMessageParts(String message) {
+    public static int countMessageParts(String message, Integer recipientsCount) {
 
         String dcs;
         dcs = getMessageType(message);
-        return countMessageParts(message, dcs);
+        return countMessageParts(message, dcs, recipientsCount);
     }
 	
-    public static int countMessageParts(String message, String type) {
+    public static int countMessageParts(String message, String type, Integer recipientsCount) {
 
         int maxChars = 0;
 
@@ -305,6 +303,6 @@ public class CM {
         }
 
         int count = Math.round((message.toCharArray().length - 1) / maxChars) + 1;
-        return count;
+        return count * recipientsCount;
     }
 }

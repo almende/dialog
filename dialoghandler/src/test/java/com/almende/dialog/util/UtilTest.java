@@ -38,6 +38,43 @@ public class UtilTest extends TestFramework {
         Assert.assertTrue( valid );
     }
     
+    /**
+     * Format international number when + or 00 is missing 
+     * @throws Exception
+     */
+    @Test
+    public void formatInternaltionNumerTest() throws Exception {
+        
+        String address = "919986393307";
+        String formatNumber = PhoneNumberUtils.formatNumber(address, null);
+        Assert.assertThat(formatNumber, Matchers.is("+" + address));
+    }
+    
+    /**
+     * Format international number when 00 is present 
+     * @throws Exception
+     */
+    @Test
+    public void formatInternaltionNumerTest2() throws Exception {
+        
+        String address = "919986393307";
+        String formatNumber = PhoneNumberUtils.formatNumber("00" + address, null);
+        Assert.assertThat(formatNumber, Matchers.is("+" + address));
+    }
+    
+    /**
+     * Format international number when + or 00 is missing and country is also missing.  
+     * @throws Exception
+     */
+    @Test
+    public void formatInternaltionNumerTest3() throws Exception {
+        
+        String address = "9986393307";
+        String formatNumber = PhoneNumberUtils.formatNumber(address, null);
+        //same number must be returned
+        Assert.assertThat(formatNumber, Matchers.is(address));
+    }
+    
     @Test
     public void testIfValidDutchLandlinePhoneNumberTest() throws Exception {
         

@@ -85,25 +85,26 @@ public class CMSmsServlet extends TextServlet {
                     String responseText = "No result fetched";
                     String reference = req.getParameter("reference");
                     //check the host in the CMStatus
-                    if (reference != null && reference.split(":").length == 2) {
-                        String hostFromReference = reference.split(":")[1];
-                        log.info(String.format("Host from reference: %s and actual host: %s", hostFromReference + "?" +
-                                                                                              req.getQueryString(),
-                                               Settings.HOST));
+                    String[] referenceSplit = reference.split(SMSDeliveryStatus.SMS_REFERENCE_SPLIT_KEY);
+                    if (reference != null && referenceSplit.length > 1) {
+                        
+                        String hostFromReference = referenceSplit[1];
+                        log.info(String.format("Host from reference: %s and actual host: %s",
+                            hostFromReference + "?" + req.getQueryString(), Settings.HOST));
                         if (hostFromReference != null && !ifHostNamesMatch(hostFromReference)) {
                             hostFromReference += deliveryStatusPath;
+                            if (!hostFromReference.startsWith("http")) {
+                                hostFromReference = "http://" + hostFromReference;
+                            }
                             log.info("CM delivery status is being redirect to: " + hostFromReference);
                             hostFromReference += ("?" + (req.getQueryString() != null ? req.getQueryString() : ""));
                             responseText = forwardToHost(hostFromReference, HTTPMethod.GET, null);
                         }
                         else {
                             SMSDeliveryStatus cmStatus = handleDeliveryStatusReport(req.getParameter("reference"),
-                                                                                    req.getParameter("sent"),
-                                                                                    req.getParameter("received"),
-                                                                                    req.getParameter("to"),
-                                                                                    req.getParameter("statuscode"),
-                                                                                    req.getParameter("errorcode"),
-                                                                                    req.getParameter("errordescription"));
+                                req.getParameter("sent"), req.getParameter("received"), req.getParameter("to"),
+                                req.getParameter("statuscode"), req.getParameter("errorcode"),
+                                req.getParameter("errordescription"));
                             responseText = ServerUtils.serializeWithoutException(cmStatus);
                         }
                     }

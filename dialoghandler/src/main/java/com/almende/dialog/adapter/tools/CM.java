@@ -82,7 +82,8 @@ public class CM {
         String type = "TEXT";
         // TODO: Check message for special chars, if so change dcs.             
         StringWriter sw = new StringWriter();
-        String reference = UUID.randomUUID().toString() + ":" + "http://" + Settings.HOST;
+        String reference = UUID.randomUUID().toString() + SMSDeliveryStatus.SMS_REFERENCE_SPLIT_KEY + "http://" +
+            Settings.HOST;
         try {
             XMLOutputter outputter = new XMLOutputter(sw, "UTF-8");
             outputter.declaration();
@@ -126,7 +127,8 @@ public class CM {
                     continue;
                 }
                 if (storeSMSRelatedData != null) {
-                    reference = UUID.randomUUID().toString() + ":" + "http://" + Settings.HOST;
+                    reference = UUID.randomUUID().toString() + SMSDeliveryStatus.SMS_REFERENCE_SPLIT_KEY + "http://" +
+                        Settings.HOST;
                     SMSDeliveryStatus linkedSMSRelatedData = SMSDeliveryStatus.storeSMSRelatedData(reference, to,
                         config, accountId, session.getQuestion(), null, "SENT", ddrRecordId,
                         AdapterProviders.CM.getName(), session);

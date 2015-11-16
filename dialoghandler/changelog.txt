@@ -1,6 +1,13 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+13-11-2015, version 1.13.7
+- fix: issue with CM delivery status failing
+
+10-11-2015, version 1.13.6
+- This was merged into 1.13.5 first and then to master and develop (Hack!)
+- update: Added twilio call progress events subscription
+
 10-11-2015, version 1.13.5
 - update: ddr quantity fetch
 - update: ddr update direction and adapterType

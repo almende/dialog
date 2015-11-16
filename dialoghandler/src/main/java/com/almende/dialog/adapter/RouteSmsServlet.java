@@ -128,6 +128,7 @@ public class RouteSmsServlet extends TextServlet {
                     res.getWriter().println(responseText);
                 }
                 catch (Exception e) {
+                    e.printStackTrace();
                     log.severe("GET query processing failed. Message: " + e.getLocalizedMessage());
                     return;
                 }

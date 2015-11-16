@@ -36,6 +36,8 @@ public class SMSDeliveryStatus implements Serializable {
     private static final Logger log = Logger.getLogger(SMSDeliveryStatus.class.getSimpleName());
     //used to save the reference of the sms sent in the session
     public static final String SMS_REFERENCE_KEY = "SMS_REFERENCE";
+    //used to split the reference and the host the sms is sent from
+    public static final String SMS_REFERENCE_SPLIT_KEY = ";";
 
     /**
      * Explicit status code for SMS

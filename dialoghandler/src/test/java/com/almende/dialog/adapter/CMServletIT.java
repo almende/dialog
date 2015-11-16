@@ -48,11 +48,14 @@ import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRPrice.UnitType;
 import com.almende.dialog.model.ddr.DDRRecord;
+import com.almende.dialog.util.AFHttpClient;
 import com.almende.dialog.util.ServerUtils;
+import com.almende.util.ParallelInit;
 import com.askfast.commons.RestResponse;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
+import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
 import com.askfast.commons.entity.DialogRequest;
 import com.askfast.commons.entity.Language;
@@ -428,6 +431,7 @@ public class CMServletIT extends TestFramework {
 
         //initiate multiple address sms
         MultipleAddressStatusEntityTest();
+        
         String[] parentStatusDetails = TestServlet.getLogObject(AdapterType.SMS.toString()).toString().split("\\|");
         //check if the DLR acceptance works properly for both numbers
 
@@ -468,6 +472,46 @@ public class CMServletIT extends TestFramework {
         assertEquals("0", linkeDeliveryStatus.getCode());
         assertEquals("No Error", linkeDeliveryStatus.getDescription());
         Assert.assertThat(cmStatus.getDdrRecordId(), Matchers.notNullValue());
+    }
+    
+    /**
+     * Send an SMS to multiple ppl and check if equal number of status entities
+     * are created. Also check if the delivery status callback works
+     * accordingly. Perform a GET request on the CM servlet endpoint for the
+     * delivery notification.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void MultipleAddressStatusEntityDLRNOtificationByURLTest() throws Exception {
+
+
+        //initiate multiple address sms
+        MultipleAddressStatusEntityTest();
+        //validate the ddrRecord to make sure that the message is sent
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        assertEquals(1, ddrRecords.size());
+        assertThat(ddrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
+            Matchers.is(CommunicationStatus.SENT));
+        
+        String[] parentStatusDetails = TestServlet.getLogObject(AdapterType.SMS.toString()).toString().split("\\|");
+        //check if the DLR acceptance works properly for both numbers
+
+        AFHttpClient client = ParallelInit.getAFHttpClient();
+        String url = host + "/sms/cm/deliveryStatus";
+        url = ServerUtils.getURLWithQueryParams(url, "sent", "2015-11-13T15:40:17");
+        url = ServerUtils.getURLWithQueryParams(url, "received", "2015-11-13T15:40:17");
+        url = ServerUtils.getURLWithQueryParams(url, "to", remoteAddressVoice);
+        url = ServerUtils.getURLWithQueryParams(url, "reference", parentStatusDetails[0]);
+        url = ServerUtils.getURLWithQueryParams(url, "statuscode", "0");
+        url = ServerUtils.getURLWithQueryParams(url, "errorcode", "");
+        client.get(url);
+
+        //fetch ddr records and validate that its delivered
+        ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        assertEquals(1, ddrRecords.size());
+        assertThat(ddrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
+            Matchers.is(CommunicationStatus.DELIVERED));
     }
     
     /**

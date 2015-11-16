@@ -1,5 +1,7 @@
 package com.almende.dialog.adapter;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -286,6 +288,54 @@ public class RouteSMSIT extends TestFramework {
         Assert.assertThat(smsStatues.size(), Matchers.is(1));
         Assert.assertThat(smsStatues.iterator().next().getDescription(), Matchers.is("DELIVRD"));
         Assert.assertThat(smsStatues.iterator().next().getCode(), Matchers.is("1701"));
+    }
+    
+    /**
+     * Send an SMS to multiple ppl and check if equal number of status entities
+     * are created. Also check if the delivery status callback works
+     * accordingly. Perform a GET request on the CM servlet endpoint for the
+     * delivery notification.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void MultipleAddressStatusEntityDLRNOtificationByURLTest() throws Exception {
+
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        
+        //send an outbound sms
+        outBoundSMSCallStatusCheck();
+        //validate the ddrRecord to make sure that the message is sent
+        List<DDRRecord> ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        assertEquals(1, ddrRecords.size());
+        assertThat(
+            ddrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
+            Matchers.is(CommunicationStatus.SENT));
+
+        List<SMSDeliveryStatus> smsStatues = SMSDeliveryStatus.fetchAll();
+        String messageId = smsStatues.iterator().next().getReference();
+        //check if the DLR acceptance works properly for both numbers
+
+        AFHttpClient client = ParallelInit.getAFHttpClient();
+        String url = host + "/sms/route-sms/deliveryStatus";
+        String payload = "";
+        payload = ServerUtils.getURLWithQueryParams(payload, "sentdate", TimeUtils.getStringFormatFromDateTime(
+            TimeUtils.getServerCurrentTimeInMillis() - 10000, "yyyy-mm-dd hh:mm:ss"));
+        payload = ServerUtils.getURLWithQueryParams(payload, "donedate",
+            TimeUtils.getStringFormatFromDateTime(TimeUtils.getServerCurrentTimeInMillis(), "yyyy-mm-dd hh:mm:ss"));
+        payload = ServerUtils.getURLWithQueryParams(payload, "destination", remoteAddressVoice);
+        payload = ServerUtils.getURLWithQueryParams(payload, "source", adapterConfig.getMyAddress());
+        payload = ServerUtils.getURLWithQueryParams(payload, "messageid", messageId);
+        payload = ServerUtils.getURLWithQueryParams(payload, "status", "DELIVRD");
+        payload = payload.replace("?", "");
+        client.post(payload, url);
+
+        //fetch ddr records and validate that its delivered
+        ddrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        assertEquals(1, ddrRecords.size());
+        assertThat(
+            ddrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)),
+            Matchers.is(CommunicationStatus.DELIVERED));
     }
     
     /**

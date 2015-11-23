@@ -968,9 +968,11 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      * Adds a number to the blacklist
      * @param address
      * @param sms
+     * @throws Exception 
      */
     public void addAddressToBlackList(@Name("address") String address,
-        @Name("adapterType") @Optional AdapterType adapterType, @Name("accountId") @Optional String accountId) {
+        @Name("adapterType") @Optional AdapterType adapterType, @Name("accountId") @Optional String accountId)
+            throws Exception {
 
         new Blacklist(address, adapterType, accountId).createOrUpdate();
     }

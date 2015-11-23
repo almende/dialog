@@ -1,5 +1,6 @@
 package com.almende.dialog.model;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -76,16 +77,19 @@ public class Blacklist {
     }
     
     @JsonIgnore
-    public Blacklist createOrUpdate() {
+    public Blacklist createOrUpdate() throws Exception {
 
-        address = PhoneNumberUtils.formatNumber(address, null);
-        MongoCollection collection = getCollection();
-        WriteResult writeResult = null;
-        if (_id != null) {
-            writeResult = collection.update(_id).with(this);
-        }
-        if (writeResult == null || writeResult.getN() == 0) {
-            writeResult = collection.insert(this);
+        HashSet<String> blacklist = getBlacklist(Arrays.asList(address), adapterType, accountId);
+        if (blacklist == null || blacklist.isEmpty()) {
+            address = PhoneNumberUtils.formatNumber(address, null);
+            MongoCollection collection = getCollection();
+            WriteResult writeResult = null;
+            if (_id != null) {
+                writeResult = collection.update(_id).with(this);
+            }
+            if (writeResult == null || writeResult.getN() == 0) {
+                writeResult = collection.insert(this);
+            }
         }
         return this;
     }
@@ -159,9 +163,10 @@ public class Blacklist {
         final String accountId) throws Exception {
 
         String query = "";
-        String serializedAddresses = ServerUtils.serializeWithoutException(formattedAddresses);
-        query += String.format("address: {$in: %s }", serializedAddresses);
-
+        if (formattedAddresses != null && !formattedAddresses.isEmpty()) {
+            String serializedAddresses = ServerUtils.serializeWithoutException(formattedAddresses);
+            query += String.format("address: {$in: %s }", serializedAddresses);
+        }
         //check if the address is blacklisted for a particular AdapterType or globally
         if (adapterType != null) {
             query += String.format(", adapterType: {$in: [\"%s\", null] }", adapterType);
@@ -206,6 +211,6 @@ public class Blacklist {
             }
             return result;
         }
-        return null;
+        return result;
     }
 }

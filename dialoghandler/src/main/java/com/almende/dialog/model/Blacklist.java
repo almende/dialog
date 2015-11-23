@@ -105,25 +105,10 @@ public class Blacklist {
         final String accountId) throws Exception {
 
         HashMap<String, String> formattedAddresses = getFormattedAddresses(addresses, adapterType);
-        String query = "";
-        String serializedAddresses = "";
-        if (formattedAddresses != null) {
-            
-            serializedAddresses = ServerUtils.serializeWithoutException(formattedAddresses.keySet());
-            query += String.format("address: {$in: %s }", serializedAddresses);
-        }
-        else {
-            throw new Exception("Address is not expected to be null.");
-        }
-        //check if the address is blacklisted for a particular AdapterType or globally
-        if (adapterType != null) {
-            query += String.format(", adapterType: {$in: [\"%s\", null] }", adapterType);
-        }
-        //check if the address is blacklisted for a particular Account or globally
-        if (adapterType != null) {
-            query += String.format(", accountId: {$in: [\"%s\", null] }", accountId);
-        }
+        String serializedAddresses = ServerUtils.serialize(formattedAddresses);
+        String query = getBlacklistQuery(formattedAddresses.keySet(), adapterType, accountId);
         MongoCursor<Blacklist> blackListCursor = getCollection().find(String.format("{%s}", query)).as(Blacklist.class);
+
         HashSet<String> result = new HashSet<String>();
         while (blackListCursor.hasNext()) {
             result.add(formattedAddresses.get(blackListCursor.next().getAddress()));
@@ -133,6 +118,59 @@ public class Blacklist {
                 formattedAddresses.size(), serializedAddresses, adapterType, accountId, query));
         }
         return result;
+    }
+    
+    /**
+     * Checks if the given address is blacklisted or not.
+     * 
+     * @param addresses
+     *            Is mandatory.
+     * @param type
+     * @param accountId
+     * @return The list of all blacklisted numbers in the original given format
+     *         in the address param. Returns empty set if no match found
+     * @throws Exception
+     */
+    public static HashSet<Blacklist> getBlacklistEntities(final Collection<String> addresses,
+        final AdapterType adapterType, final String accountId) throws Exception {
+
+        HashMap<String, String> formattedAddresses = getFormattedAddresses(addresses, adapterType);
+        String query = getBlacklistQuery(formattedAddresses.keySet(), adapterType, accountId);
+        MongoCursor<Blacklist> blackListCursor = getCollection().find(String.format("{%s}", query)).as(Blacklist.class);
+        HashSet<Blacklist> result = new HashSet<Blacklist>();
+        while (blackListCursor.hasNext()) {
+            result.add(blackListCursor.next());
+        }
+        return result;
+    }
+    
+    /**
+     * Gets the cursor for the blacklisted entries based on the params given
+     * 
+     * @param formattedAddresses
+     *            Is mandatory.
+     * @param type
+     * @param accountId
+     * @return The list of all blacklisted numbers in the original given format
+     *         in the address param. Returns empty set if no match found
+     * @throws Exception
+     */
+    private static String getBlacklistQuery(final Collection<String> formattedAddresses, final AdapterType adapterType,
+        final String accountId) throws Exception {
+
+        String query = "";
+        String serializedAddresses = ServerUtils.serializeWithoutException(formattedAddresses);
+        query += String.format("address: {$in: %s }", serializedAddresses);
+
+        //check if the address is blacklisted for a particular AdapterType or globally
+        if (adapterType != null) {
+            query += String.format(", adapterType: {$in: [\"%s\", null] }", adapterType);
+        }
+        //check if the address is blacklisted for a particular Account or globally
+        if (adapterType != null) {
+            query += String.format(", accountId: {$in: [\"%s\", null] }", accountId);
+        }
+        return query;
     }
     
     private static MongoCollection getCollection() {

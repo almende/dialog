@@ -966,7 +966,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     
     /**
      * Adds a number to the blacklist
-     * @param remoteaddressvoice
+     * @param address
      * @param sms
      */
     public void addAddressToBlackList(@Name("address") String address,
@@ -978,15 +978,29 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
     /**
      * Adds a number to the blacklist
      * 
+     * @param addresses
+     * @param sms
+     * @throws Exception
+     */
+    public HashSet<String> isAddressInBlackList(@Name("addresses") final Collection<String> addresses,
+        @Name("adapterType") @Optional final AdapterType adapterType,
+        @Name("accountId") @Optional final String accountId) throws Exception {
+
+        return Blacklist.getBlacklist(addresses, adapterType, accountId);
+    }
+    
+    /**
+     * Gets all the addresses added to the blacklist
+     * 
      * @param remoteaddressvoice
      * @param sms
      * @throws Exception
      */
-    public HashSet<String> isAddressInBlackList(@Name("address") final Collection<String> addresses,
-        @Name("sms") @Optional final AdapterType adapterType, @Name("accountId") @Optional final String accountId)
-            throws Exception {
+    public HashSet<Blacklist> getBlacklist(@Name("addresses") @Optional final Collection<String> addresses,
+        @Name("adapterType") @Optional final AdapterType adapterType,
+        @Name("accountId") @Optional final String accountId) throws Exception {
 
-        return Blacklist.getBlacklist(addresses, adapterType, accountId);
+        return Blacklist.getBlacklistEntities(addresses, adapterType, accountId);
     }
 
     /**

@@ -198,8 +198,8 @@ public class Blacklist {
     @JsonIgnore
     private static HashMap<String, String> getFormattedAddresses(final Collection<String> addresses, AdapterType adapterType) {
 
+        HashMap<String, String> result = new HashMap<String, String>();
         if (addresses != null) {
-            HashMap<String, String> result = new HashMap<String, String>();
             //format the number if its of type SMS and CALL
             for (String address : addresses) {
                 result.put(PhoneNumberUtils.formatNumber(address, null), address);

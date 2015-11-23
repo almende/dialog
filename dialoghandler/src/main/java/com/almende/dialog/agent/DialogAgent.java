@@ -969,8 +969,8 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      * @param remoteaddressvoice
      * @param sms
      */
-    public void addAddressToBlackList(@Name("address") String address, @Name("sms") @Optional AdapterType adapterType,
-        @Name("accountId") @Optional String accountId) {
+    public void addAddressToBlackList(@Name("address") String address,
+        @Name("adapterType") @Optional AdapterType adapterType, @Name("accountId") @Optional String accountId) {
 
         new Blacklist(address, adapterType, accountId).createOrUpdate();
     }

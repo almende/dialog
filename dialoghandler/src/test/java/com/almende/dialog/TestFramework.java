@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.logging.Logger;
 import javax.mail.MessagingException;
 import javax.mail.internet.InternetAddress;
@@ -53,6 +54,7 @@ import com.askfast.commons.Status;
 import com.askfast.commons.entity.AdapterProviders;
 import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRType.DDRTypeCategory;
+import com.askfast.commons.entity.DialogRequest;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
 
@@ -441,5 +443,40 @@ public class TestFramework{
             }
         }
         return referenceNodeList.item(0).getFirstChild().getNodeValue();
+    }
+    
+    /**
+     * CHeck if an outbound call is not triggered for a number that is added to
+     * blacklist group
+     * 
+     * @throws Exception
+     */
+    protected void triggerOutboundCallForAddresses(Collection<String> addresses, Collection<String> blacklistAddresses,
+        AdapterConfig config, String url) throws Exception {
+
+        if (url == null) {
+            url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+                QuestionInRequest.SIMPLE_COMMENT.name());
+            url = ServerUtils.getURLWithQueryParams(url, "question", "test question");
+        }
+        
+        dialogAgent = dialogAgent != null ? dialogAgent : new DialogAgent();
+        //blackList at the dialogAgent level
+        for (String blacklistAddress : blacklistAddresses) {
+            dialogAgent.addAddressToBlackList(blacklistAddress, AdapterType.fromJson(config.getAdapterType()),
+                TEST_ACCOUNT_ID);
+        }
+        //setup to generate ddrRecords
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
+            null);
+
+        DialogRequest details = new DialogRequest();
+        details.setAccountID(config.getOwner());
+        details.setAdapterID(config.getConfigId());
+        details.setAddressList(addresses);
+        details.setBearerToken(UUID.randomUUID().toString());
+        details.setUrl(url);
+        dialogAgent.outboundCallWithDialogRequest(details);
     }
 }

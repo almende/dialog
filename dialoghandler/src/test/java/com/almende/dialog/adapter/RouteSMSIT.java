@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -433,6 +434,123 @@ public class RouteSMSIT extends TestFramework {
             }
         }
         Assert.assertThat(outboundDdrRecord.getQuantity(), Matchers.is(2));
+    }
+    
+    /**
+     * Checks that an SMS is not sent to a blacklisted number in the Dialog
+     * Agent level.
+     * @throws Exception 
+     */
+    @Test
+    public void checkIfSMSIsSentToBlacklistedNumberTest() throws Exception {
+
+        //create SMS adapter
+        adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS, TEST_ACCOUNT_ID,
+            "ASK", "ASK", "");
+        adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
+        adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
+        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
+        adapterConfig.update();
+
+        //generate url
+        //prepare outbound question url
+        String url = ServerUtils.getURLWithQueryParams(TestServlet.TEST_SERVLET_PATH, "questionType",
+            QuestionInRequest.APPOINTMENT.name());
+        url = ServerUtils.getURLWithQueryParams(url, "question", "start");
+        
+        //generate options to generate ddr records
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        //trigger outbound request
+        triggerOutboundCallForAddresses(Arrays.asList(remoteAddressVoice), Arrays.asList(remoteAddressVoice),
+            adapterConfig, url);
+
+        //There should not be any sessions created
+        assertThat(Session.getAllSessions().size(), Matchers.is(0));
+        //There should not be any DDR with status SENT
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        assertThat(allDdrRecords.size(), Matchers.is(1));
+        assertThat(allDdrRecords.iterator().next().getStatusForAddress(
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null)), Matchers.is(CommunicationStatus.REJECTED));
+    }
+    
+    /**
+     * Checks that an SMS is not sent to a blacklisted number while broadcasting
+     * in the Dialog Agent level. Appointment question. So session must persist
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void checkIfSMSIsBroadcastedToBlacklistedNumberTest() throws Exception {
+
+        //create SMS adapter
+        adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS, TEST_ACCOUNT_ID,
+            "ASK", "ASK", "");
+        adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
+        adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
+        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
+        adapterConfig.update();
+
+        //generate options to generate ddr records
+        new DDRRecordAgent().generateDefaultDDRTypes();
+
+        triggerOutboundCallForAddresses(Arrays.asList(remoteAddressVoice, senderName),
+            Arrays.asList(remoteAddressVoice), adapterConfig, null);
+
+        //There should not be any sessions created
+        assertThat(Session.getAllSessions().size(), Matchers.is(0));
+        //There should not be any DDR with status SENT
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        assertThat(allDdrRecords.size(), Matchers.is(1));
+        assertThat(allDdrRecords.iterator().next().getStatusForAddress(
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null)), Matchers.is(CommunicationStatus.REJECTED));
+        assertThat(allDdrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber(senderName, null)),
+            Matchers.is(CommunicationStatus.SENT));
+    }
+    
+    /**
+     * Checks that an SMS is not sent to a blacklisted number while broadcasting
+     * in the Dialog Agent level. Comment question. So session must not persist
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void checkIfSMSIsBroadcastedToBlacklistedNumberTest2() throws Exception {
+
+        String thirdNumber = "0614236543";
+        String forthNumber = "0614236542";
+
+        //create SMS adapter
+        adapterConfig = createAdapterConfig(AdapterType.SMS.toString(), AdapterProviders.ROUTE_SMS, TEST_ACCOUNT_ID,
+            "ASK", "ASK", "");
+        adapterConfig.setAccessToken(TEST_PUBLIC_KEY);
+        adapterConfig.setAccessTokenSecret(TEST_PRIVATE_KEY);
+        adapterConfig.addMediaProperties(AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.ROUTE_SMS);
+        adapterConfig.update();
+
+        //blackList at the dialogAgent level to be blocked by all channels
+        dialogAgent.addAddressToBlackList(thirdNumber, null, TEST_ACCOUNT_ID);
+
+        //generate options to generate ddr records
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        //trigger outbound request
+        triggerOutboundCallForAddresses(Arrays.asList(remoteAddressVoice, senderName, thirdNumber, forthNumber),
+            Arrays.asList(remoteAddressVoice), adapterConfig, null);
+
+        //There should not be any sessions created
+        assertThat(Session.getAllSessions().size(), Matchers.is(0));
+        //There should not be any DDR with status SENT
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        assertThat(allDdrRecords.size(), Matchers.is(1));
+        assertThat(allDdrRecords.iterator().next().getStatusForAddress(
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null)), Matchers.is(CommunicationStatus.REJECTED));
+        assertThat(allDdrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber(senderName, null)),
+            Matchers.is(CommunicationStatus.SENT));
+        assertThat(
+            allDdrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber(forthNumber, null)),
+            Matchers.is(CommunicationStatus.SENT));
+        assertThat(
+            allDdrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber(thirdNumber, null)),
+            Matchers.is(CommunicationStatus.REJECTED));
     }
     
     /**

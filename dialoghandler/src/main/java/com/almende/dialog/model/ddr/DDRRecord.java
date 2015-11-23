@@ -164,8 +164,13 @@ public class DDRRecord {
     public DDRRecord createOrUpdateWithLog(Map<String, Session> sessionKeyMap) {
 
         DDRRecord ddrRecord = null;
-        for (Session session : sessionKeyMap.values()) {
-            ddrRecord = createOrUpdateWithLog(session);
+        if (sessionKeyMap != null && !sessionKeyMap.isEmpty()) {
+            for (Session session : sessionKeyMap.values()) {
+                ddrRecord = createOrUpdateWithLog(session);
+            }
+        }
+        else {
+            ddrRecord = createOrUpdate();
         }
         return ddrRecord;
     }
@@ -965,7 +970,7 @@ public class DDRRecord {
     @JsonIgnore
     public void setSessionKeysFromMap(Map<String, Session> sessionMap) {
 
-        if (sessionMap != null) {
+        if (sessionMap != null && !sessionMap.isEmpty()) {
             HashMap<String, String> sessionKeyMap = new HashMap<String, String>();
             setSessionKeys(new HashSet<String>());
             for (String address : sessionMap.keySet()) {
@@ -1099,6 +1104,26 @@ public class DDRRecord {
             return additionalInfo.get(DDRUtils.DDR_MESSAGE_KEY).toString();
         }
         return null;
+    }
+    
+    /**
+     * Adds all addresses given to the ddrRecord with status
+     * {@link CommunicationStatus#REJECTED} and adds an additionalInfo that it
+     * is blacklisted
+     * 
+     * @param blacklistedAddress
+     * @param ddrRecord
+     */
+    @JsonIgnore
+    public void updateBlackListAddress(Collection<String> blacklistedAddress) {
+
+        if(blacklistedAddress != null && !blacklistedAddress.isEmpty()) {
+            for (String blackListedAddress : blacklistedAddress) {
+                addStatusForAddress(blackListedAddress, CommunicationStatus.REJECTED);
+                addAdditionalInfo(blackListedAddress, "Address is blacklisted");
+            }
+            createOrUpdate();
+        }
     }
 
     /**
@@ -1253,7 +1278,7 @@ public class DDRRecord {
             }
         }).registerModule(new JodaModule()).withView(DDRRecord.class).build());
         MongoCollection collection = jongo.getCollection(DDRRecord.class.getCanonicalName().toLowerCase() + "s");
-        collection.ensureIndex("{ _id: 1}");
+        collection.ensureIndex("{ _id: 1, start: 1}");
         return collection;
     }
     

@@ -9,6 +9,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -32,6 +33,7 @@ import com.almende.dialog.accounts.Recording;
 import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.model.Answer;
+import com.almende.dialog.model.Blacklist;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
@@ -105,13 +107,39 @@ public class TwilioAdapter {
         HashMap<String, String> result = new HashMap<String, String>();
         // If it is a broadcast don't provide the remote address because it is deceiving.
         String loadAddress = "";
-        if (addressNameMap == null || addressNameMap.isEmpty()) {
+        HashSet<String> blacklistedAddress = null;
+        
+        if (addressNameMap == null) {
             throw new Exception("No address given. Error in call request");
+        }
+        else {
+            log.info("Checking if addresses are blacklisted.. ");
+            blacklistedAddress = Blacklist.getBlacklist(addressNameMap.keySet(),
+                AdapterType.fromJson(config.getAdapterType()), accountId);
+            for (String blacklistAddress : blacklistedAddress) {
+                addressNameMap.remove(blacklistAddress);
+                result.put(blacklistAddress, "Address is blacklisted. Ignoring..");
+            }
+        }
+        if (addressNameMap.isEmpty()) {
+
+            log.severe("No addresses found or all addresses are blacklisted, to start a dialog");
+            for (String blacklistAddress : blacklistedAddress) {
+                result.put(blacklistAddress, "Address is blacklisted. Ignoring outbound request..");
+                addressNameMap.put(blacklistAddress, null);
+            }
+            DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, addressNameMap,
+                Dialog.getDialogURL(dialogIdOrUrl, accountId, null), null);
+            if (ddrRecord != null) {
+                ddrRecord.updateBlackListAddress(blacklistedAddress);
+            }
+            return result;
         }
         else if (addressNameMap.size() == 1) {
             loadAddress = addressNameMap.keySet().iterator().next();
             loadAddress = PhoneNumberUtils.formatNumber(loadAddress, null);
         }
+        
         //create a session for the first remote address
         String firstRemoteAddress = loadAddress != null && !loadAddress.trim().isEmpty() ? new String(loadAddress)
             : new String(addressNameMap.keySet().iterator().next());
@@ -136,8 +164,10 @@ public class TwilioAdapter {
         
         //create a ddr record
         DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, firstRemoteAddress, 1,
-                                                                              url, session);
-        //session = session.reload();
+            url, session);
+        if (ddrRecord != null) {
+            ddrRecord.updateBlackListAddress(blacklistedAddress);
+        }
         //fetch the question
         Question question = Question.fromURL(url, loadAddress, config.getFormattedMyAddress(),
                                              ddrRecord != null ? ddrRecord.getId() : null, session, null);

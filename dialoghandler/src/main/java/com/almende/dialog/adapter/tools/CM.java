@@ -290,17 +290,17 @@ public class CM {
 
         if (type.equals(MESSAGE_TYPE_GSM7)) {
             maxChars = 160;
-            if (message.toCharArray().length < maxChars) // Test if concatenated message
+            if (message.toCharArray().length > maxChars) // Test if concatenated message
                 maxChars = 153;
         }
         else if (type.equals(MESSAGE_TYPE_UTF8)) {
             maxChars = 70;
-            if (message.toCharArray().length < maxChars)
+            if (message.toCharArray().length > maxChars)
                 maxChars = 67;
         }
         else if (type.equals(MESSAGE_TYPE_BIN)) {
             maxChars = 280;
-            if (message.toCharArray().length < maxChars)
+            if (message.toCharArray().length > maxChars)
                 maxChars = 268;
         }
 

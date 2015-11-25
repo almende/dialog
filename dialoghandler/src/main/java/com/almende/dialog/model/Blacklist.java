@@ -66,6 +66,16 @@ public class Blacklist {
         this.address = address;
     }
     
+    public String getAccountId() {
+    
+        return accountId;
+    }
+
+    public void setAccountId(String accountId) {
+    
+        this.accountId = accountId;
+    }
+
     public AdapterType getAdapterType() {
     
         return adapterType;
@@ -77,9 +87,9 @@ public class Blacklist {
     }
     
     @JsonIgnore
-    public Blacklist createOrUpdate() throws Exception {
+    public boolean createOrUpdate() throws Exception {
 
-        HashSet<String> blacklist = getBlacklist(Arrays.asList(address), adapterType, accountId);
+        HashSet<String> blacklist = getBlacklist(Arrays.asList(address), adapterType, accountId, true, false);
         if (blacklist == null || blacklist.isEmpty()) {
             address = PhoneNumberUtils.formatNumber(address, null);
             MongoCollection collection = getCollection();
@@ -90,8 +100,11 @@ public class Blacklist {
             if (writeResult == null || writeResult.getN() == 0) {
                 writeResult = collection.insert(this);
             }
+            if(writeResult.getN() > 0) {
+                return true;
+            }
         }
-        return this;
+        return false;
     }
 
     /**
@@ -108,20 +121,7 @@ public class Blacklist {
     public static HashSet<String> getBlacklist(final Collection<String> addresses, final AdapterType adapterType,
         final String accountId) throws Exception {
 
-        HashMap<String, String> formattedAddresses = getFormattedAddresses(addresses, adapterType);
-        String serializedAddresses = ServerUtils.serialize(formattedAddresses);
-        String query = getBlacklistQuery(formattedAddresses.keySet(), adapterType, accountId);
-        MongoCursor<Blacklist> blackListCursor = getCollection().find(String.format("{%s}", query)).as(Blacklist.class);
-
-        HashSet<String> result = new HashSet<String>();
-        while (blackListCursor.hasNext()) {
-            result.add(formattedAddresses.get(blackListCursor.next().getAddress()));
-        }
-        if (formattedAddresses.size() > 0) {
-            log.info(String.format("%s blacklists found for address: %s adapterType: %s and accountId: %s. Query: %s",
-                formattedAddresses.size(), serializedAddresses, adapterType, accountId, query));
-        }
-        return result;
+        return getBlacklist(addresses, adapterType, accountId, false, true);
     }
     
     /**
@@ -139,11 +139,68 @@ public class Blacklist {
         final AdapterType adapterType, final String accountId) throws Exception {
 
         HashMap<String, String> formattedAddresses = getFormattedAddresses(addresses, adapterType);
-        String query = getBlacklistQuery(formattedAddresses.keySet(), adapterType, accountId);
+        String query = getBlacklistQuery(formattedAddresses.keySet(), adapterType, accountId, false, true);
         MongoCursor<Blacklist> blackListCursor = getCollection().find(String.format("{%s}", query)).as(Blacklist.class);
         HashSet<Blacklist> result = new HashSet<Blacklist>();
         while (blackListCursor.hasNext()) {
             result.add(blackListCursor.next());
+        }
+        return result;
+    }
+    
+    /**
+     * Removes an address from the blacklist
+     * 
+     * @param address
+     * @param adapterType
+     * @param accountId
+     * @return
+     * @throws Exception
+     */
+    public static boolean deleteBlacklist(Collection<String> addresses, AdapterType adapterType, String accountId)
+        throws Exception {
+
+        HashMap<String, String> formattedAddresses = getFormattedAddresses(addresses, adapterType);
+        String query = getBlacklistQuery(formattedAddresses.keySet(), adapterType, accountId, true, false);
+        WriteResult writeResult = getCollection().remove(String.format("{%s}", query));
+        if (writeResult.getN() > 0) {
+            return true;
+        }
+        return false;
+    }
+    
+    /**
+     * Checks if the given address is blacklisted or not.
+     * 
+     * @param addresses
+     *            Is mandatory.
+     * @param type
+     * @param accountId
+     * @param explicitNull
+     *            If true, searchs for null values specifically
+     * @param includeNull
+     *            Applicable only for adapterType and accountId. If true,
+     *            searchs for the given in : [value, null]
+     * @return The list of all blacklisted numbers in the original given format
+     *         in the address param. Returns empty set if no match found
+     * @throws Exception
+     */
+    private static HashSet<String> getBlacklist(final Collection<String> addresses, final AdapterType adapterType,
+        final String accountId, boolean explicitNull, boolean includeNull) throws Exception {
+
+        HashMap<String, String> formattedAddresses = getFormattedAddresses(addresses, adapterType);
+        String serializedAddresses = ServerUtils.serialize(formattedAddresses);
+        String query = getBlacklistQuery(formattedAddresses.keySet(), adapterType, accountId, explicitNull,
+            includeNull);
+        MongoCursor<Blacklist> blackListCursor = getCollection().find(String.format("{%s}", query)).as(Blacklist.class);
+
+        HashSet<String> result = new HashSet<String>();
+        while (blackListCursor.hasNext()) {
+            result.add(formattedAddresses.get(blackListCursor.next().getAddress()));
+        }
+        if (formattedAddresses.size() > 0) {
+            log.info(String.format("%s blacklists found for address: %s adapterType: %s and accountId: %s. Query: %s",
+                formattedAddresses.size(), serializedAddresses, adapterType, accountId, query));
         }
         return result;
     }
@@ -155,12 +212,17 @@ public class Blacklist {
      *            Is mandatory.
      * @param type
      * @param accountId
+     * @param explicitNull
+     *            If true, searchs for null values specifically
+     * @param includeNull
+     *            Applicable only for adapterType and accountId. If true,
+     *            searchs for the given in : [value, null]
      * @return The list of all blacklisted numbers in the original given format
      *         in the address param. Returns empty set if no match found
      * @throws Exception
      */
     private static String getBlacklistQuery(final Collection<String> formattedAddresses, final AdapterType adapterType,
-        final String accountId) throws Exception {
+        final String accountId, boolean explicitNull, boolean includeNull) throws Exception {
 
         String query = "";
         if (formattedAddresses != null && !formattedAddresses.isEmpty()) {
@@ -169,11 +231,27 @@ public class Blacklist {
         }
         //check if the address is blacklisted for a particular AdapterType or globally
         if (adapterType != null) {
-            query += String.format(", adapterType: {$in: [\"%s\", null] }", adapterType);
+            if (includeNull) {
+                query += String.format(", adapterType: {$in: [\"%s\", null] }", adapterType);
+            }
+            else {
+                query += String.format(", adapterType: \"%s\"", adapterType);
+            }
+        }
+        else if(explicitNull) {
+            query += ", adapterType: null";
         }
         //check if the address is blacklisted for a particular Account or globally
-        if (adapterType != null) {
-            query += String.format(", accountId: {$in: [\"%s\", null] }", accountId);
+        if (accountId != null) {
+            if (includeNull) {
+                query += String.format(", accountId: {$in: [\"%s\", null] }", accountId);
+            }
+            else {
+                query += String.format(", accountId: \"%s\"", accountId);
+            }
+        }
+        else if(explicitNull) {
+            query += ", accountId: null";
         }
         return query;
     }

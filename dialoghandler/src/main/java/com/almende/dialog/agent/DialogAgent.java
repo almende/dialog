@@ -970,11 +970,24 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      * @param sms
      * @throws Exception 
      */
-    public void addAddressToBlackList(@Name("address") String address,
+    public boolean addAddressToBlackList(@Name("address") String address,
         @Name("adapterType") @Optional AdapterType adapterType, @Name("accountId") @Optional String accountId)
             throws Exception {
 
-        new Blacklist(address, adapterType, accountId).createOrUpdate();
+        return new Blacklist(address, adapterType, accountId).createOrUpdate();
+    }
+    
+    /**
+     * Adds a number to the blacklist
+     * @param address
+     * @param sms
+     * @throws Exception 
+     */
+    public Boolean deleteAddressFromBlackList(@Name("address") Collection<String> addresses,
+        @Name("adapterType") @Optional AdapterType adapterType, @Name("accountId") @Optional String accountId)
+            throws Exception {
+
+        return Blacklist.deleteBlacklist(addresses, adapterType, accountId);
     }
     
     /**

@@ -220,24 +220,24 @@ public class DDRRecord {
      * @throws Exception
      */
     public static List<DDRRecord> getDDRRecords(String accountId, Collection<AdapterType> adapterTypes,
-        Collection<String> adapterIds, String fromAddress, Collection<String> ddrTypeIds,
+        Collection<String> adapterIds, String fromAddress, final String toAddress, Collection<String> ddrTypeIds,
         final CommunicationStatus status, Long startTime, Long endTime, Collection<String> sessionKeys, Integer offset,
         Integer limit, final Boolean shouldGenerateCosts, final Boolean shouldIncludeServiceCosts) throws Exception {
 
         String ddrQuery = getDDRQuery(accountId, adapterTypes, adapterIds, fromAddress, ddrTypeIds, startTime, endTime,
             sessionKeys);
-        limit = limit != null && limit <= 1000 ? limit : 1000;
+        limit = limit != null && limit <= 10000 ? limit : 10000;
         offset = offset != null ? offset : 0;
 
         Find ddrFind = getCollection().find(String.format("{%s}", ddrQuery)).skip(offset).limit(limit)
                                       .sort("{start: -1}");
         MongoCursor<DDRRecord> ddrCursor = null;
-        if (status != null) {
+        if(status != null || toAddress != null) {
             ddrCursor = ddrFind.map(new ResultHandler<DDRRecord>() {
 
                 @Override
                 public DDRRecord map(DBObject result) {
-
+                    
                     try {
                         if (result.get("statusPerAddress") != null) {
                             Map<String, String> statusForAddresses = ServerUtils.deserialize(
@@ -246,19 +246,40 @@ public class DDRRecord {
                             });
                             if (statusForAddresses != null) {
                                 for (String address : statusForAddresses.keySet()) {
-                                    Object statusForAddress = statusForAddresses.get(address);
-                                    if (statusForAddress != null &&
-                                        CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
-                                        if (result.toString() != null) {
-                                            
-                                            DDRRecord ddrRecord = ServerUtils.deserialize(result.toString(), false,
-                                                DDRRecord.class);
-                                            if (shouldGenerateCosts != null && shouldGenerateCosts) {
-                                                ddrRecord.setShouldGenerateCosts(shouldGenerateCosts);
-                                                ddrRecord.setShouldIncludeServiceCosts(shouldIncludeServiceCosts);
-                                                ddrRecord.setTotalCost(ddrRecord.getTotalCost());
+                                    
+                                    //if toAddress is given, return the entity
+                                    if(toAddress != null) {
+                                        //to enable full text search of numbers remove + and leading 00
+                                        //(db has it either as +31 or 0031 format)
+                                        String formattedToAddress = toAddress.replace("+", "").replaceFirst("00", "").trim();
+                                        if(address.contains(formattedToAddress)) {
+                                            if(status != null) {
+                                                Object statusForAddress = statusForAddresses.get(address);
+                                                if (statusForAddress != null &&
+                                                    CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
+                                                    
+                                                    if (result.toString() != null) {
+                                                        return getDDRRecordFromDBObject(result, shouldGenerateCosts,
+                                                            shouldIncludeServiceCosts);
+                                                    }
+                                                }
                                             }
-                                            return ddrRecord;
+                                            else {
+                                                return getDDRRecordFromDBObject(result, shouldGenerateCosts,
+                                                    shouldIncludeServiceCosts);
+                                            }
+                                        }
+                                    }
+                                    else if(status != null) {
+                                    
+                                        Object statusForAddress = statusForAddresses.get(address);
+                                        if (statusForAddress != null &&
+                                            CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
+                                            if (result.toString() != null) {
+                                                
+                                                return getDDRRecordFromDBObject(result, shouldGenerateCosts,
+                                                    shouldIncludeServiceCosts);
+                                            }
                                         }
                                     }
                                 }
@@ -269,6 +290,18 @@ public class DDRRecord {
                         e.printStackTrace();
                     }
                     return null;
+                }
+
+                private DDRRecord getDDRRecordFromDBObject(DBObject result, final Boolean shouldGenerateCosts,
+                    final Boolean shouldIncludeServiceCosts) throws Exception {
+
+                    DDRRecord ddrRecord = ServerUtils.deserialize(result.toString(), false, DDRRecord.class);
+                    if (shouldGenerateCosts != null && shouldGenerateCosts) {
+                        ddrRecord.setShouldGenerateCosts(shouldGenerateCosts);
+                        ddrRecord.setShouldIncludeServiceCosts(shouldIncludeServiceCosts);
+                        ddrRecord.setTotalCost(ddrRecord.getTotalCost());
+                    }
+                    return ddrRecord;
                 }
             });
         }
@@ -299,6 +332,7 @@ public class DDRRecord {
      * @param accountId
      *            Mandatory field
      * @param fromAddress
+     * @param toAddress
      * @param ddrTypeIds
      * @param status
      * @param startTime
@@ -308,7 +342,7 @@ public class DDRRecord {
      * @throws Exception
      */
     public static Integer getDDRRecordsQuantity(String accountId, Collection<AdapterType> adapterTypes,
-        Collection<String> adapterIds, String fromAddress, Collection<String> ddrTypeIds,
+        Collection<String> adapterIds, String fromAddress, final String toAddress, Collection<String> ddrTypeIds,
         final CommunicationStatus status, Long startTime, Long endTime, Collection<String> sessionKeys, Integer offset)
             throws Exception {
 
@@ -322,44 +356,62 @@ public class DDRRecord {
                  public Integer map(DBObject result) {
             
                      Integer quantity = 0;
-                     try {
-                         if(status != null) {
-                             if (result.get("statusPerAddress") != null) {
+                     if(status != null || toAddress != null) {
+                         if (result.get("statusPerAddress") != null) {
+                             
+                             try { 
                                  Map<String, String> statusForAddresses = ServerUtils.deserialize(
-                                     result.get("statusPerAddress").toString(), false,
-                                     new TypeReference<Map<String, String>>() {
-                                 });
+                                     correctDotReplacedString(result.get("statusPerAddress").toString()), false,
+                                     new TypeReference<Map<String, String>>() {});
+                             
                                  if(statusForAddresses != null) {
                                      for (String address : statusForAddresses.keySet()) {
-                                         Object statusForAddress = statusForAddresses.get(address);
-                                         if (statusForAddress != null &&
-                                             CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
-                                            if (result.get("quantity") != null) {
-                                                try{
-                                                        //for a 3 part message sent to 2 ppl. ddrQuantity would be 6, 
-                                                        //but we should return quantity for each
-                                                        quantity += (Integer.parseInt(result.get("quantity").toString()) /
-                                                                                        statusForAddresses.size());
-                                                }
-                                                catch(NumberFormatException e) {
-                                                    log.severe(String.format("%s cannot be parsed to Integer",result.get("quantity").toString()));
-                                                    quantity++;
-                                                }
-                                            }
-                                            else {
-                                                quantity++;
-                                            }
+                                         try{
+                                             //if toAddress is given, just increment the count
+                                             if(toAddress != null) {
+                                                 //to enable full text search of numbers remove + and leading 00
+                                                 //(db has it either as +31 or 0031 format)
+                                                 String formattedToAddress = toAddress.replace("+", "").replaceFirst("00", "").trim();
+                                                 if(address.contains(formattedToAddress)) {
+                                                     if(status != null) {
+                                                         //for a 3 part message sent to 2 ppl. ddrQuantity would be 6, 
+                                                         //but we should return quantity for each
+                                                         Object statusForAddress = statusForAddresses.get(address);
+                                                         if (statusForAddress != null &&
+                                                            CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
+                                                             quantity = 1;
+                                                         }
+                                                     }
+                                                     else {
+                                                         quantity = 1;
+                                                     }
+                                                 }
+                                             }
+                                             else if(status != null) {
+                                                 //for a 3 part message sent to 2 ppl. ddrQuantity would be 6, 
+                                                 //but we should return quantity for each
+                                                 Object statusForAddress = statusForAddresses.get(address);
+                                                 if (statusForAddress != null &&
+                                                    CommunicationStatus.fromJson(statusForAddress.toString()).equals(status)) {
+                                                     quantity = (Integer.parseInt(result.get("quantity").toString()) /
+                                                                                    statusForAddresses.size());
+                                                 }
+                                             }
+                                         }
+                                         catch(NumberFormatException e) {
+                                             log.severe(String.format("%s cannot be parsed to Integer",result.get("quantity").toString()));
+                                             quantity = 1;
                                          }
                                      }
                                  }
                              }
+                             catch (Exception ex) {
+                                 ex.printStackTrace();
+                             }
                          }
-                         else if(result.get("quantity") != null) {
-                             quantity = (Integer) result.get("quantity");
-                         }
-                     }  
-                     catch (Exception e) {
-                         e.printStackTrace();
+                     }
+                     else if(result.get("quantity") != null) {
+                         quantity = (Integer) result.get("quantity");
                      }
                      return quantity;
                  }

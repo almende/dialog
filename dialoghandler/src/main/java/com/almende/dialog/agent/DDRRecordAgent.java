@@ -108,29 +108,31 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
     public Object getDDRRecords(@Name("accountId") String accountId,
         @Name("adapterTypes") @Optional Collection<AdapterType> adapterTypes,
         @Name("adapterIds") @Optional Collection<String> adapterIds, @Name("fromAddress") @Optional String fromAddress,
-        @Name("typeId") @Optional Collection<String> typeIds, @Name("communicationStatus") @Optional String status,
-        @Name("startTime") @Optional Long startTime, @Name("endTime") @Optional Long endTime,
-        @Name("sessionKeys") @Optional Collection<String> sessionKeys, @Name("offset") @Optional Integer offset,
-        @Name("limit") @Optional Integer limit, @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
+        @Name("toAddress") @Optional String toAddress, @Name("typeId") @Optional Collection<String> typeIds,
+        @Name("communicationStatus") @Optional String status, @Name("startTime") @Optional Long startTime,
+        @Name("endTime") @Optional Long endTime, @Name("sessionKeys") @Optional Collection<String> sessionKeys,
+        @Name("offset") @Optional Integer offset, @Name("limit") @Optional Integer limit,
+        @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
         @Name("shouldIncludeServiceCosts") @Optional Boolean shouldIncludeServiceCosts) throws Exception {
 
         CommunicationStatus communicationStatus = status != null && !status.isEmpty()
             ? CommunicationStatus.fromJson(status) : null;
-        return DDRRecord.getDDRRecords(accountId, adapterTypes, adapterIds, fromAddress, typeIds, communicationStatus,
-            startTime, endTime, sessionKeys, offset, limit, shouldGenerateCosts, shouldIncludeServiceCosts);
+        return DDRRecord.getDDRRecords(accountId, adapterTypes, adapterIds, fromAddress, toAddress, typeIds,
+            communicationStatus, startTime, endTime, sessionKeys, offset, limit, shouldGenerateCosts,
+            shouldIncludeServiceCosts);
     }
     
     @Override
     public RestResponse getDDRRecordsQuantity(@Name("accountId") String accountId,
         @Name("adapterTypes") @Optional Collection<AdapterType> adapterTypes,
         @Name("adapterIds") @Optional Collection<String> adapterIds, @Name("fromAddress") @Optional String fromAddress,
-        @Name("typeId") @Optional Collection<String> typeIds,
+        @Name("toAddress") @Optional String toAddress, @Name("typeId") @Optional Collection<String> typeIds,
         @Name("communicationStatus") @Optional CommunicationStatus status, @Name("startTime") Long startTime,
         @Name("endTime") Long endTime, @Name("sessionKeys") @Optional Collection<String> sessionKeys,
         @Name("offset") @Optional Integer offset) throws Exception {
 
         Integer ddrRecordsQuantity = DDRRecord.getDDRRecordsQuantity(accountId, adapterTypes, adapterIds, fromAddress,
-            typeIds, status, startTime, endTime, sessionKeys, offset);
+            toAddress, typeIds, status, startTime, endTime, sessionKeys, offset);
         return RestResponse.ok(Settings.DIALOG_HANDLER_VERSION, ddrRecordsQuantity);
     }
     
@@ -153,23 +155,24 @@ public class DDRRecordAgent extends ScheduleAgent implements DDRRecordAgentInter
     public Object getDDRRecordsRecursively(@Name("accountId") String accountId,
         @Name("adapterTypes") @Optional Collection<AdapterType> adapterTypes,
         @Name("adapterIds") @Optional Collection<String> adapterIds, @Name("fromAddress") @Optional String fromAddress,
-        @Name("typeId") @Optional Collection<String> typeIds, @Name("communicationStatus") @Optional String status,
-        @Name("startTime") Long startTime, @Name("endTime") Long endTime,
-        @Name("sessionKeys") @Optional Collection<String> sessionKeys, @Name("offset") @Optional Integer offset,
-        @Name("limit") @Optional Integer limit, @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
+        @Name("toAddress") @Optional String toAddress, @Name("typeId") @Optional Collection<String> typeIds,
+        @Name("communicationStatus") @Optional String status, @Name("startTime") Long startTime,
+        @Name("endTime") Long endTime, @Name("sessionKeys") @Optional Collection<String> sessionKeys,
+        @Name("offset") @Optional Integer offset, @Name("limit") @Optional Integer limit,
+        @Name("shouldGenerateCosts") @Optional Boolean shouldGenerateCosts,
         @Name("shouldIncludeServiceCosts") @Optional Boolean shouldIncludeServiceCosts) throws Exception {
 
-        Object ddrRecordObjects = getDDRRecords(accountId, adapterTypes, adapterIds, fromAddress, typeIds, status,
-            startTime, endTime, sessionKeys, offset, limit, shouldGenerateCosts, shouldIncludeServiceCosts);
+        Object ddrRecordObjects = getDDRRecords(accountId, adapterTypes, adapterIds, fromAddress, toAddress, typeIds,
+            status, startTime, endTime, sessionKeys, offset, limit, shouldGenerateCosts, shouldIncludeServiceCosts);
         ArrayList<DDRRecord> ddrRecords = JOM.getInstance().convertValue(ddrRecordObjects,
             new TypeReference<ArrayList<DDRRecord>>() {
             });
         if (startTime != null && !ddrRecords.isEmpty() &&
             ddrRecords.get(ddrRecords.size() - 1).getStart() > startTime) {
 
-            ddrRecordObjects = getDDRRecordsRecursively(accountId, adapterTypes, adapterIds, fromAddress, typeIds,
-                status, startTime, ddrRecords.get(ddrRecords.size() - 1).getStart() - 1, sessionKeys, offset, limit,
-                shouldGenerateCosts, shouldIncludeServiceCosts);
+            ddrRecordObjects = getDDRRecordsRecursively(accountId, adapterTypes, adapterIds, fromAddress, toAddress,
+                typeIds, status, startTime, ddrRecords.get(ddrRecords.size() - 1).getStart() - 1, sessionKeys, offset,
+                limit, shouldGenerateCosts, shouldIncludeServiceCosts);
             ArrayList<DDRRecord> ddrRecordsRecursiveFetch = JOM.getInstance().convertValue(ddrRecordObjects,
                 new TypeReference<ArrayList<DDRRecord>>() {
                 });

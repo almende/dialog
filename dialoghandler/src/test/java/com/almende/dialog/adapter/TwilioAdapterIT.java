@@ -965,7 +965,7 @@ public class TwilioAdapterIT extends TestFramework {
                            null);
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_SERVICE_COST);
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null,
             Arrays.asList(ddrType.getTypeId()), null, null, null, null, null, null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
@@ -991,7 +991,7 @@ public class TwilioAdapterIT extends TestFramework {
         //invoke an outbound call with acapella tts
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null,
             Arrays.asList(ddrType.getTypeId()), null, null, null, null, null, null, null, null);
         //make sure there is no costs involved, as the ddr price attached is for VoiceRSS tts and not acapela
         assertThat(ddrRecords.size(), Matchers.is(0));

@@ -229,29 +229,31 @@ public class Blacklist {
             String serializedAddresses = ServerUtils.serializeWithoutException(formattedAddresses);
             query += String.format("address: {$in: %s }", serializedAddresses);
         }
+        String delimiter = !query.isEmpty() ? "," : "";
         //check if the address is blacklisted for a particular AdapterType or globally
         if (adapterType != null) {
             if (includeNull) {
-                query += String.format(", adapterType: {$in: [\"%s\", null] }", adapterType);
+                query += String.format("%s adapterType: {$in: [\"%s\", null] }", delimiter, adapterType);
             }
             else {
-                query += String.format(", adapterType: \"%s\"", adapterType);
+                query += String.format("%s adapterType: \"%s\"", delimiter, adapterType);
             }
         }
         else if(explicitNull) {
-            query += ", adapterType: null";
+            query += String.format("%s adapterType: null", delimiter);
         }
         //check if the address is blacklisted for a particular Account or globally
+        delimiter = !query.isEmpty() ? "," : "";
         if (accountId != null) {
             if (includeNull) {
-                query += String.format(", accountId: {$in: [\"%s\", null] }", accountId);
+                query += String.format("%s accountId: {$in: [\"%s\", null] }", delimiter, accountId);
             }
             else {
-                query += String.format(", accountId: \"%s\"", accountId);
+                query += String.format("%s accountId: \"%s\"", delimiter, accountId);
             }
         }
         else if(explicitNull) {
-            query += ", accountId: null";
+            query += String.format("%s accountId: null", delimiter);
         }
         return query;
     }

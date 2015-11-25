@@ -227,6 +227,26 @@ public class CMServletIT extends TestFramework {
     }
     
     /**
+     * Test if a 157 char message is not billed as a 2-part sms.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void check2LenghtMessageTest() throws Exception {
+
+        String message = "P2000:Prio 2, Vaartuig motor / stuur problemen, DORzu. Beschikbaar: Robert Herks, Stephan Buitendijk, Henk van der Meij, Arjen de Bruin, Chris Aldewereld (5)";
+        Assert.assertThat(message.length(), Matchers.greaterThan(153));
+        int countMessageParts = CM.countMessageParts(message, 1);
+        assertThat(countMessageParts, Matchers.is(1));
+
+        //add some text to message
+        message += "This is a dummy text to make it more than 160 char";
+        Assert.assertThat(message.length(), Matchers.greaterThan(160));
+        countMessageParts = CM.countMessageParts(message, 1);
+        assertThat(countMessageParts, Matchers.is(2));
+    }
+    
+    /**
      * Test if a long (above 160 chars) special characters text is sent and billed properly.
      * 
      * @throws Exception

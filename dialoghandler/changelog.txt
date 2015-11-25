@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+25-11-2015, version 1.13.8
+- fix: issue with message count for SMS above 153 chars 
+
 13-11-2015, version 1.13.7
 - fix: issue with CM delivery status failing
 

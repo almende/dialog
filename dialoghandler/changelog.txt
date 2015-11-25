@@ -1,6 +1,10 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+25-11-2015, version 1.14.0
+- update: Added toAddress fetch to ddrRecord
+- update: Added blacklisting feature to dialog agent
+
 25-11-2015, version 1.13.8
 - fix: issue with message count for SMS above 153 chars 
 

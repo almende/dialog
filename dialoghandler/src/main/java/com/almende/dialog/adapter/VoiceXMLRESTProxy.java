@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -52,6 +53,7 @@ import com.almende.dialog.agent.AdapterAgent;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.aws.AWSClient;
 import com.almende.dialog.model.Answer;
+import com.almende.dialog.model.Blacklist;
 import com.almende.dialog.model.MediaProperty.MediaPropertyKey;
 import com.almende.dialog.model.MediaProperty.MediumType;
 import com.almende.dialog.model.Question;
@@ -63,6 +65,7 @@ import com.almende.dialog.util.ServerUtils;
 import com.almende.util.ParallelInit;
 import com.askfast.commons.entity.AccountType;
 import com.askfast.commons.entity.AdapterProviders;
+import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.DDRRecord.CommunicationStatus;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.TTSInfo;
@@ -148,9 +151,33 @@ public class VoiceXMLRESTProxy {
         HashMap<String, String> resultMap = new HashMap<String, String>();
         // If it is a broadcast don't provide the remote address because it is deceiving.
         String loadAddress = null;
-        Session session = null;
-        if (addressNameMap == null || addressNameMap.isEmpty()) {
+        HashSet<String> blacklistedAddress = null;
+        
+        if (addressNameMap == null) {
             throw new Exception("No address given. Error in call request");
+        }
+        else {
+            log.info("Checking if addresses are blacklisted.. ");
+            blacklistedAddress = Blacklist.getBlacklist(addressNameMap.keySet(),
+                AdapterType.fromJson(config.getAdapterType()), accountId);
+            for (String blacklistAddress : blacklistedAddress) {
+                addressNameMap.remove(blacklistAddress);
+                resultMap.put(blacklistAddress, "Address is blacklisted. Ignoring..");
+            }
+        }
+        if (addressNameMap.isEmpty()) {
+
+            log.severe("No addresses found or all addresses are blacklisted, to start a dialog");
+            for (String blacklistAddress : blacklistedAddress) {
+                resultMap.put(blacklistAddress, "Address is blacklisted. Ignoring outbound request..");
+                addressNameMap.put(blacklistAddress, null);
+            }
+            DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, addressNameMap,
+                Dialog.getDialogURL(dialogIdOrUrl, accountId, null), null);
+            if (ddrRecord != null) {
+                ddrRecord.updateBlackListAddress(blacklistedAddress);
+            }
+            return resultMap;
         }
         else if (addressNameMap.size() == 1) {
             loadAddress = addressNameMap.keySet().iterator().next();
@@ -160,7 +187,7 @@ public class VoiceXMLRESTProxy {
         String firstRemoteAddress = loadAddress != null ? new String(loadAddress) : new String(addressNameMap.keySet()
                                         .iterator().next());
         firstRemoteAddress = PhoneNumberUtils.formatNumber(firstRemoteAddress, null);
-        session = Session.getOrCreateSession(config, firstRemoteAddress);
+        Session session = Session.getOrCreateSession(config, firstRemoteAddress);
         session.setAccountId(accountId);
         session.killed = false;
         session.setDirection("outbound");
@@ -173,7 +200,7 @@ public class VoiceXMLRESTProxy {
 
         //fetch the url
         String url = Dialog.getDialogURL(dialogIdOrUrl, accountId, session);
-
+        
         session = session.reload();
         session.setStartUrl(url);
         session.setRemoteAddress(firstRemoteAddress);
@@ -181,11 +208,13 @@ public class VoiceXMLRESTProxy {
         
         //create a ddr record
         DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, firstRemoteAddress, 1,
-                                                                              url, session);
+            url, session);
+        if (ddrRecord != null) {
+            ddrRecord.updateBlackListAddress(blacklistedAddress);
+        }
         
         //fetch the question
-        Question question = Question.fromURL(url, loadAddress, 
-                                             ddrRecord != null ? ddrRecord.getId() : null, session);
+        Question question = Question.fromURL(url, loadAddress, ddrRecord != null ? ddrRecord.getId() : null, session);
         if (question != null) {
 
             for (String address : addressNameMap.keySet()) {
@@ -437,7 +466,7 @@ public class VoiceXMLRESTProxy {
                 question = Question.fromURL(url, externalRemoteID, config.getFormattedMyAddress(),
                                             session.getDdrRecordId(), session, extraParams);
             }
-            if (!ServerUtils.isValidBearerToken(session, config, dialogLog)) {
+            if (!ServerUtils.isValidBearerToken(session, config)) {
                 TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
                 ttsInfo.setProvider(TTSProvider.VOICE_RSS);
                 String insufficientCreditMessage = ServerUtils.getInsufficientMessage(ttsInfo.getLanguage());
@@ -1809,7 +1838,7 @@ public class VoiceXMLRESTProxy {
                                session != null ? session.getKey() : null, remoteID));
         
         String url = question.getUrl().get(0);
-        if (!ServerUtils.isValidBearerToken(session, adapterConfig, dialogLog)) {
+        if (!ServerUtils.isValidBearerToken(session, adapterConfig)) {
             
             TTSInfo ttsInfo = ServerUtils.getTTSInfoFromSession(question, session);
             ttsInfo.setProvider(TTSProvider.VOICE_RSS);

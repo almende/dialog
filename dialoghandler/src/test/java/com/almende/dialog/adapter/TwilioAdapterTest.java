@@ -36,7 +36,7 @@ public class TwilioAdapterTest extends TestFramework{
     protected static final String COMMENT_QUESTION_ID = "1";
     protected static final String COMMENT_QUESTION_AUDIO = "http://audio";
     protected static final String COMMENT_QUESTION_TEXT = "text://Hello World";
-    protected static final String REFERRAL_PHONE_NUMBER = "tel:0643002549";
+    protected static final String REFERRAL_PHONE_NUMBER = "tel:0612345679";
     
     protected static final String secondRemoteAddress = "0612345678";
 

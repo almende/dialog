@@ -23,11 +23,13 @@ import com.almende.dialog.adapter.MBSmsServlet;
 import com.almende.dialog.adapter.MailServlet;
 import com.almende.dialog.adapter.NotificareServlet;
 import com.almende.dialog.adapter.RouteSmsServlet;
+import com.almende.dialog.adapter.TPAdapter;
 import com.almende.dialog.adapter.TwilioAdapter;
 import com.almende.dialog.adapter.TwitterServlet;
 import com.almende.dialog.adapter.VoiceXMLRESTProxy;
 import com.almende.dialog.adapter.XMPPServlet;
 import com.almende.dialog.adapter.tools.Broadsoft;
+import com.almende.dialog.model.Blacklist;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.util.KeyServerLib;
 import com.almende.dialog.util.ServerUtils;
@@ -264,11 +266,6 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         if (adapterType != null && !adapterType.equals("") && adapterID != null && !adapterID.equals("")) {
             throw new JSONRPCException("Choose adapterType or adapterID not both");
         }
-        //return if no address is fileed
-        if (isNullOrEmpty(addressMap) && isNullOrEmpty(addressCcMap) && isNullOrEmpty(addressBccMap)) {
-            resultSessionMap.put("Error", "No addresses given to communicate");
-            return resultSessionMap;
-        }
         log.info(String.format("accountId: %s bearer %s adapterType %s", accountId, bearerToken, adapterType));
         // Check accountID/bearer Token against OAuth KeyServer
         if (Settings.KEYSERVER != null && !ServerUtils.isInUnitTestingEnvironment()) {
@@ -303,6 +300,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                 config.getAdapterType(), config.getMyAddress()));
 
             adapterType = adapterType != null ? adapterType : config.getAdapterType();
+            
             //log all addresses 
             log.info(String.format("recepients of question at: %s are: %s", dialogIdOrUrl,
                 ServerUtils.serialize(addressMap)));
@@ -353,6 +351,17 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                         }
                         break;
                     }
+                    case TP: {
+                        // fetch the first address in the map
+                        if (!addressMap.keySet().isEmpty()) {
+                            resultSessionMap = TPAdapter.dial(addressMap, dialogIdOrUrl, config, accountId,
+                                senderName, bearerToken);
+                        }
+                        else {
+                            throw new JSONRPCException("Address should not be empty to setup a call");
+                        }
+                        break;
+                    }
                     default:
                         throw new JSONRPCException(String.format(
                             "No calling provider found for adapter: %s with id: %s", config.getMyAddress(),
@@ -380,12 +389,12 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
                                 senderName, subject, config, accountId, accountType);
                             break;
                         default:
-                            throw new Exception(String.format("No calling provider found for adapter: %s with id: %s",
+                            throw new Exception(String.format("No SMS provider found for adapter: %s with id: %s",
                                 config.getMyAddress(), config.getConfigId()));
                     }
                 }
                 else {
-                    throw new JSONRPCException(String.format("No calling provider found for adapter: %s with id: %s",
+                    throw new JSONRPCException(String.format("No SMS provider found for adapter: %s with id: %s",
                         config.getMyAddress(), config.getConfigId()));
                 }
             }
@@ -954,6 +963,60 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         defaultTTSAccountIds = defaultTTSAccountIds != null ? defaultTTSAccountIds : new HashMap<String, String>();
         return defaultTTSAccountIds;
     }
+    
+    /**
+     * Adds a number to the blacklist
+     * @param address
+     * @param sms
+     * @throws Exception 
+     */
+    public boolean addAddressToBlackList(@Name("address") String address,
+        @Name("adapterType") @Optional AdapterType adapterType, @Name("accountId") @Optional String accountId)
+            throws Exception {
+
+        return new Blacklist(address, adapterType, accountId).createOrUpdate();
+    }
+    
+    /**
+     * Adds a number to the blacklist
+     * @param address
+     * @param sms
+     * @throws Exception 
+     */
+    public Boolean deleteAddressFromBlackList(@Name("address") Collection<String> addresses,
+        @Name("adapterType") @Optional AdapterType adapterType, @Name("accountId") @Optional String accountId)
+            throws Exception {
+
+        return Blacklist.deleteBlacklist(addresses, adapterType, accountId);
+    }
+    
+    /**
+     * Adds a number to the blacklist
+     * 
+     * @param addresses
+     * @param sms
+     * @throws Exception
+     */
+    public HashSet<String> isAddressInBlackList(@Name("addresses") final Collection<String> addresses,
+        @Name("adapterType") @Optional final AdapterType adapterType,
+        @Name("accountId") @Optional final String accountId) throws Exception {
+
+        return Blacklist.getBlacklist(addresses, adapterType, accountId);
+    }
+    
+    /**
+     * Gets all the addresses added to the blacklist
+     * 
+     * @param remoteaddressvoice
+     * @param sms
+     * @throws Exception
+     */
+    public HashSet<Blacklist> getBlacklist(@Name("addresses") @Optional final Collection<String> addresses,
+        @Name("adapterType") @Optional final AdapterType adapterType,
+        @Name("accountId") @Optional final String accountId) throws Exception {
+
+        return Blacklist.getBlacklistEntities(addresses, adapterType, accountId);
+    }
 
     /**
      * Get the provider attached to this adapter by checking the
@@ -1064,7 +1127,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
      * @param mapObject
      * @return
      */
-    private boolean isNullOrEmpty(Map<String, String> mapObject) {
+    public static boolean isNullOrEmpty(Map<String, String> mapObject) {
         return mapObject == null || mapObject.isEmpty() ? true : false;
     }
     
@@ -1129,7 +1192,7 @@ public class DialogAgent extends Agent implements DialogAgentInterface {
         }
         return false;
     }
-
+    
 //    /** Count of all the addresses in this dialogDetails
 //     * @param dialogDetails
 //     * @param totalOutBoundCalls

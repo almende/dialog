@@ -965,7 +965,7 @@ public class TwilioAdapterIT extends TestFramework {
                            null);
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_SERVICE_COST);
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_ACCOUNT_ID, null, null, null, null,
             Arrays.asList(ddrType.getTypeId()), null, null, null, null, null, null, null, null);
         assertThat(ddrRecords.size(), Matchers.is(1));
         DDRRecord ddrRecord = ddrRecords.iterator().next();
@@ -991,7 +991,7 @@ public class TwilioAdapterIT extends TestFramework {
         //invoke an outbound call with acapella tts
         outboundPhoneCall_WithEnglishTTSAndDiffLanguageInQuestionTest();
         DDRType ddrType = DDRType.getDDRType(DDRTypeCategory.TTS_COST);
-        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null,
+        List<DDRRecord> ddrRecords = DDRRecord.getDDRRecords(TEST_PUBLIC_KEY, null, null, null, null,
             Arrays.asList(ddrType.getTypeId()), null, null, null, null, null, null, null, null);
         //make sure there is no costs involved, as the ddr price attached is for VoiceRSS tts and not acapela
         assertThat(ddrRecords.size(), Matchers.is(0));
@@ -1155,7 +1155,66 @@ public class TwilioAdapterIT extends TestFramework {
                      ddrRecord.getStatusForAddress(PhoneNumberUtils.formatNumber(remoteAddressVoice, null)));
         assertEquals(2, ddrRecords.iterator().next().getStatusPerAddress().size());
     }
+    
+    /**
+     * CHeck if an outbound call is not triggered for a number that is added to blacklist group
+     * @throws Exception 
+     */
+    @Test
+    public void outboundCallNotTriggeredForBlackListNumberTest() throws Exception {
+        
+        //create mail adapter
+        AdapterConfig adapterConfig = createTwilioAdapter();
+        //setup to generate ddrRecords
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
+            null);
 
+        triggerOutboundCallForAddresses(Arrays.asList("0611223", remoteAddressVoice),
+            Arrays.asList(remoteAddressVoice), adapterConfig, null);
+        
+        //validate that no sessions are created. 
+        assertThat(Session.getAllSessions().size(), Matchers.is(0));
+        //validate ddr records for Rejected status
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        assertThat(allDdrRecords.size(), Matchers.is(1));
+        assertThat(allDdrRecords.iterator().next().getStatusForAddress(
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null)), Matchers.is(CommunicationStatus.REJECTED));
+    }
+    
+    /**
+     * CHeck if an outbound call is triggered for a number that is not added to
+     * blacklist group
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void outboundCallTriggeredForNotBlackListNumberTest() throws Exception {
+
+        String secondAddress = "0612345678";
+
+        //create mail adapter
+        AdapterConfig adapterConfig = createTwilioAdapter();
+        //setup to generate ddrRecords
+        new DDRRecordAgent().generateDefaultDDRTypes();
+        createTestDDRPrice(DDRTypeCategory.OUTGOING_COMMUNICATION_COST, 0.1, "test", UnitType.SECOND, AdapterType.CALL,
+            null);
+
+        triggerOutboundCallForAddresses(Arrays.asList(secondAddress, remoteAddressVoice),
+            Arrays.asList(remoteAddressVoice), adapterConfig, null);
+
+        //validate that no sessions are created. 
+        assertThat(Session.getAllSessions().size(), Matchers.is(1));
+        //validate ddr records for Rejected status
+        List<DDRRecord> allDdrRecords = getAllDdrRecords(TEST_ACCOUNT_ID);
+        assertThat(allDdrRecords.size(), Matchers.is(1));
+        assertThat(allDdrRecords.iterator().next().getStatusForAddress(
+            PhoneNumberUtils.formatNumber(remoteAddressVoice, null)), Matchers.is(CommunicationStatus.REJECTED));
+        assertThat(
+            allDdrRecords.iterator().next().getStatusForAddress(PhoneNumberUtils.formatNumber(secondAddress, null)),
+            Matchers.is(CommunicationStatus.SENT));
+    }
+    
     /**
      * @throws UnsupportedEncodingException
      * @throws Exception

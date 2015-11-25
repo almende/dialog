@@ -1,13 +1,17 @@
 package com.almende.dialog.agent;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+
 import javax.ws.rs.core.Response;
+
 import org.jivesoftware.smack.XMPPException;
+
 import com.almende.dialog.Settings;
 import com.almende.dialog.accounts.AdapterConfig;
 import com.almende.dialog.accounts.Dialog;
@@ -44,6 +48,9 @@ import com.askfast.commons.entity.AdapterType;
 import com.askfast.commons.entity.Language;
 import com.askfast.commons.entity.ScheduledTask;
 import com.askfast.commons.utils.TimeUtils;
+import com.askfast.strowger.sdk.StrowgerRestClient;
+import com.askfast.strowger.sdk.model.Address;
+import com.askfast.strowger.sdk.model.AddressConfig;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.TwilioRestException;
@@ -539,6 +546,58 @@ public class AdapterAgent extends ScheduleAgent implements AdapterAgentInterface
         adapter.update();
         
         return adapter.getConfigId();
+    }
+    
+    public String createThinkingPhonesAdapter(@Name("address") String address, 
+                                              @Name("tenantKey") String tenantKey, @Name("token") String token, 
+                                              @Name("preferredLanguage") @Optional String preferredLanguage, 
+                                              @Name("accountId") @Optional String accountId,
+                                              @Name("isPrivate") @Optional Boolean isPrivate) throws Exception {
+
+        preferredLanguage = ( preferredLanguage == null ? "nl" : preferredLanguage );
+
+        String externalAddress = address;
+
+        if ( address.startsWith( "0" ) ) {
+            // TODO: Add proper country code
+            final String normAddress = address.replaceFirst( "^0", "" );
+            externalAddress = "+31" + normAddress;
+        }
+
+        
+        final StrowgerRestClient client = new StrowgerRestClient( tenantKey, token );
+        Address tpAddress = client.getAddress( externalAddress );
+
+        if ( tpAddress != null ) {
+            
+            final String voiceUrl = "https://" + Settings.HOST + "/dialoghandler/rest/strowger/new";
+            final String ccUrl = "https://" + Settings.HOST + "/dialoghandler/rest/strowger/cc";
+            final int timeout = 30000;
+            
+            AddressConfig config = new AddressConfig( URI.create(voiceUrl), URI.create(voiceUrl), 
+                                                      URI.create( ccUrl), timeout );
+            
+            tpAddress = client.configureAddress( externalAddress, config );
+
+            if(tpAddress != null) {
+                AdapterConfig adapterConfig = new AdapterConfig();
+                adapterConfig.setAdapterType( AdapterType.CALL.toString() );
+                adapterConfig.setMyAddress( externalAddress );
+                adapterConfig.setAddress( externalAddress );
+                adapterConfig.setPreferred_language( preferredLanguage );
+                adapterConfig.setAccessToken( tenantKey );
+                adapterConfig.setAccessTokenSecret( token );
+                adapterConfig.addMediaProperties( AdapterConfig.ADAPTER_PROVIDER_KEY, AdapterProviders.TP );
+                if ( accountId != null ) {
+                    adapterConfig.setPublicKey( accountId );
+                    adapterConfig.addAccount( accountId );
+                }
+    
+                AdapterConfig newConfig = createAdapter( adapterConfig, isPrivate );
+                return newConfig.getConfigId();
+            }
+        }
+        return null;
     }
 	
     public String createEmailAdapter(@Name("emailAddress") String emailAddress, @Name("password") String password,

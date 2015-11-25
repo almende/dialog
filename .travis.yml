@@ -1,0 +1,5 @@
+language: java
+sudo: false
+before_install:
+  - cp dialoghandler/src/main/java/com/almende/dialog/Settings.java.example dialoghandler/src/main/java/com/almende/dialog/Settings.java
+script: cd dialoghandler && mvn test -DskipTests=false

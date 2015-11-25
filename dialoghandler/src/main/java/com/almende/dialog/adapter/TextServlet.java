@@ -3,6 +3,8 @@ package com.almende.dialog.adapter;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 import javax.mail.internet.InternetAddress;
@@ -15,6 +17,7 @@ import com.almende.dialog.accounts.Dialog;
 import com.almende.dialog.agent.DialogAgent;
 import com.almende.dialog.agent.tools.TextMessage;
 import com.almende.dialog.model.Answer;
+import com.almende.dialog.model.Blacklist;
 import com.almende.dialog.model.Question;
 import com.almende.dialog.model.Session;
 import com.almende.dialog.model.ddr.DDRRecord;
@@ -251,28 +254,56 @@ abstract public class TextServlet extends HttpServlet {
         addressNameMap = addressNameMap != null ? addressNameMap : new HashMap<String, String>();
         addressCcNameMap = addressCcNameMap != null ? addressCcNameMap : new HashMap<String, String>();
         addressBccNameMap = addressBccNameMap != null ? addressBccNameMap : new HashMap<String, String>();
-        String localaddress = config.getMyAddress();
-
-        HashMap<String, Session> sessionKeyMap = new HashMap<String, Session>();
         HashMap<String, String> result = new HashMap<String, String>();
+        
+        // add addresses in cc and bcc map
+        Map<String, Object> extras = new HashMap<String, Object>();
+        LinkedHashMap<String, String> fullAddressMap = new LinkedHashMap<String, String>(addressNameMap);
+        if (addressCcNameMap != null && !addressCcNameMap.isEmpty()) {
+            fullAddressMap.putAll(addressCcNameMap);
+            extras.put(MailServlet.CC_ADDRESS_LIST_KEY, addressCcNameMap);
+        }
+        if (addressBccNameMap != null && !addressBccNameMap.isEmpty()) {
+            fullAddressMap.putAll(addressBccNameMap);
+            extras.put(MailServlet.BCC_ADDRESS_LIST_KEY, addressBccNameMap);
+        }
+        
+        log.info("Checking if addresses are blacklisted.. ");
+        HashSet<String> blacklistedAddress = Blacklist.getBlacklist(fullAddressMap.keySet(),
+            AdapterType.fromJson(config.getAdapterType()), accountId);
+        for (String blacklistAddress : blacklistedAddress) {
+            fullAddressMap.remove(blacklistAddress);
+        }
+        
+        HashMap<String, Session> sessionKeyMap = new HashMap<String, Session>();
 
         String loadAddress = null;
+        String localaddress = config.getMyAddress();
         String senderNameForDDR = localaddress != null ? new String(localaddress) : null;
         // If it is a broadcast don't provide the remote address because it is deceiving.
-        if (addressNameMap.size() + addressCcNameMap.size() + addressBccNameMap.size() == 0) {
-            log.severe("No addresses found to start a dialog");
-            throw new Exception("No addresses found to start a dialog");
-        }
-        else if (addressNameMap.size() + addressCcNameMap.size() + addressBccNameMap.size() == 1) {
+        if (fullAddressMap.isEmpty()) {
 
-            loadAddress = addressNameMap.keySet().iterator().next();
+            log.severe("No addresses found or all addresses are blacklisted, to start a dialog");
+            for (String blacklistAddress : blacklistedAddress) {
+                result.put(blacklistAddress, "Address is blacklisted. Ignoring outbound request..");
+                fullAddressMap.put(blacklistAddress, null);
+            }
+            DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, senderNameForDDR,
+                fullAddressMap, fullAddressMap.size(), dialogIdOrUrl, sessionKeyMap);
+            if (ddrRecord != null) {
+                ddrRecord.updateBlackListAddress(blacklistedAddress);
+            }
+            return result;
+        }
+        else if (fullAddressMap.size() == 1) {
+
+            loadAddress = fullAddressMap.keySet().iterator().next();
             if (config.isSMSAdapter()) {
                 loadAddress = PhoneNumberUtils.formatNumber(loadAddress, null);
             }
         }
         //create a session for the first remote address
-        String firstRemoteAddress = fetchFirstRemoteAddress(addressNameMap, addressCcNameMap, addressBccNameMap,
-                                                            loadAddress);
+        String firstRemoteAddress = fetchFirstRemoteAddress(fullAddressMap, loadAddress);
         if (config.isSMSAdapter()) {
             firstRemoteAddress = PhoneNumberUtils.formatNumber(firstRemoteAddress, null);
             senderNameForDDR = senderName != null ? new String(senderName) : senderNameForDDR;
@@ -295,23 +326,14 @@ abstract public class TextServlet extends HttpServlet {
         session.setRemoteAddress(firstRemoteAddress);
         session.storeSession();
 
-        // add addresses in cc and bcc map
-        Map<String, Object> extras = new HashMap<String, Object>();
-        HashMap<String, String> fullAddressMap = new HashMap<String, String>(addressNameMap);
-        if (addressCcNameMap != null && !addressCcNameMap.isEmpty()) {
-            fullAddressMap.putAll(addressCcNameMap);
-            extras.put(MailServlet.CC_ADDRESS_LIST_KEY, addressCcNameMap);
-        }
-        if (addressBccNameMap != null && !addressBccNameMap.isEmpty()) {
-            fullAddressMap.putAll(addressBccNameMap);
-            extras.put(MailServlet.BCC_ADDRESS_LIST_KEY, addressBccNameMap);
-        }
-
         //create a ddr record
         sessionKeyMap.put(firstRemoteAddress, session);
         DDRRecord ddrRecord = DDRUtils.createDDRRecordOnOutgoingCommunication(config, accountId, senderNameForDDR,
-                                                                              fullAddressMap, fullAddressMap.size(),
-                                                                              dialogIdOrUrl, sessionKeyMap);
+            fullAddressMap, fullAddressMap.size(), dialogIdOrUrl, sessionKeyMap);
+        if (ddrRecord != null) {
+            ddrRecord.updateBlackListAddress(blacklistedAddress);
+        }
+        
         // fetch question
         // If it is a broadcast don't provide the remote address because it is deceiving.
         Question question = Question.fromURL(dialogIdOrUrl, loadAddress, config.getMyAddress(),
@@ -1010,8 +1032,7 @@ abstract public class TextServlet extends HttpServlet {
      * @param loadAddress
      * @return
      */
-    private String fetchFirstRemoteAddress(final Map<String, String> addressNameMap,
-        final Map<String, String> addressCcNameMap, final Map<String, String> addressBccNameMap,
+    private String fetchFirstRemoteAddress(final LinkedHashMap<String, String> addressNameMap,
         final String loadAddress) {
 
         String firstAddressAddress = null;
@@ -1020,12 +1041,6 @@ abstract public class TextServlet extends HttpServlet {
         }
         else if (addressNameMap != null && !addressNameMap.isEmpty()) {
             firstAddressAddress = new String(addressNameMap.keySet().iterator().next());
-        }
-        else if (addressCcNameMap != null && !addressCcNameMap.isEmpty()) {
-            firstAddressAddress = new String(addressCcNameMap.keySet().iterator().next());
-        }
-        else if (addressBccNameMap != null && !addressBccNameMap.isEmpty()) {
-            firstAddressAddress = new String(addressBccNameMap.keySet().iterator().next());
         }
         return firstAddressAddress;
     }

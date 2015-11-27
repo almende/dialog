@@ -41,7 +41,7 @@
 		<okhttp.version>2.2.0</okhttp.version>
 		<aws-sdk.version>1.9.25</aws-sdk.version>
 		<xmlunit.version>1.6</xmlunit.version>
-		<strowger.version>0.2.0</strowger.version>
+		<strowger.version>0.3.0</strowger.version>
 		<commons-fileupload.version>1.3</commons-fileupload.version>
 	</properties>
 

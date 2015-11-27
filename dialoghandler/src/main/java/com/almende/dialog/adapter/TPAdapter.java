@@ -1,5 +1,6 @@
 package com.almende.dialog.adapter;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -39,10 +40,11 @@ import com.askfast.commons.entity.TTSInfo;
 import com.askfast.commons.utils.PhoneNumberUtils;
 import com.askfast.commons.utils.TimeUtils;
 import com.askfast.strowger.sdk.StrowgerRestClient;
-import com.askfast.strowger.sdk.actions.Action;
+import com.askfast.strowger.sdk.actions.Dtmf;
 import com.askfast.strowger.sdk.actions.Hangup;
 import com.askfast.strowger.sdk.actions.Include;
 import com.askfast.strowger.sdk.actions.Play;
+import com.askfast.strowger.sdk.actions.Record;
 import com.askfast.strowger.sdk.actions.StrowgerAction;
 import com.askfast.strowger.sdk.model.Call;
 import com.askfast.strowger.sdk.model.ControlResult;
@@ -55,8 +57,8 @@ public class TPAdapter {
     protected static final Logger log = Logger.getLogger(TPAdapter.class.getName());
     private static final int LOOP_DETECTION = 10;
     protected String TIMEOUT_URL = "timeout";
-    private static final String INBOUND = "incoming";
-    private static final String OUTBOUND = "outgoing";
+    public static final String INBOUND = "incoming";
+    public static final String OUTBOUND = "outgoing";
     
         //protected String EXCEPTION_URL="exception";
         
@@ -251,6 +253,8 @@ public class TPAdapter {
         
         DDRRecord ddrRecord = null;
         
+        String reply = new StrowgerAction().toJson();
+        
         if (direction.equals(INBOUND)) {
             //swap the remote and the local numbers if its inbound
             String tmpLocalId = new String(localID);
@@ -331,13 +335,13 @@ public class TPAdapter {
                 return handleQuestion(question, config, formattedRemoteId, session, extraParams);
             }
             else {
-                return Response.ok().build();
+                return Response.ok(reply).build();
             }
         }
         else {
             log.severe(String.format("CallSid: %s From: %s to: %s direction: %s has no sessions", callId, localID,
                                      remoteID, direction));
-            return Response.ok("No sessions found.").build();
+            return Response.ok(reply).build();
         }
     }
     
@@ -759,10 +763,10 @@ public class TPAdapter {
             session.storeSession();
             
             if (question.getType().equalsIgnoreCase("closed")) {
-                // TODO: Implement handling of closed questions
+                result = renderClosedQuestion(question, res.prompts, session);
             }
             else if (question.getType().equalsIgnoreCase("open")) {
-                // TODO: Implement handling of open questions
+                result = renderOpenQuestion(question, res.prompts, session);
             }
             else if (question.getType().equalsIgnoreCase("referral")) {
                 // TODO: Implement handling of referral questions
@@ -874,8 +878,10 @@ public class TPAdapter {
     
     protected String renderComment(Question question, ArrayList<String> prompts, Session session) {
 
+        Play play = new Play();
+        addPrompts(prompts, play, question, session );
         StrowgerAction strowger = new StrowgerAction();
-        addPrompts(prompts, strowger, question, session );
+        strowger.addAction(play);
         if (question != null && question.getAnswers() != null && !question.getAnswers().isEmpty()) {
             Include include = new Include( URI.create( getAnswerUrl() ) );
             
@@ -884,29 +890,196 @@ public class TPAdapter {
         return strowger.toJson();
     }
     
-    protected String renderExitQuestion(Question question, List<String> prompts, Session session) {
+    protected String renderClosedQuestion(Question question, ArrayList<String> prompts, Session session) {
 
         StrowgerAction strowger = new StrowgerAction();
-        addPrompts(prompts, strowger, question, session);
+        Dtmf dtmf = new Dtmf();
+        dtmf.setUrl(URI.create(getAnswerUrl()));
+        dtmf.setMaxDigits(1);
+
+        String noAnswerTimeout = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT);
+        
+        boolean useHash = true;
+        if(question.getAnswers().size() > 11) {
+            useHash = false;
+        }
+        else {
+            List<Answer> answers = question.getAnswers();
+            for (Answer answer : answers) {
+                if (answer != null && answer.getAnswer_text() != null &&
+                    answer.getAnswer_text().startsWith("dtmfKey://#")) {
+
+                    useHash = true;
+                    break;
+                }
+            }
+        }
+        
+        //assign a default timeout if one is not specified
+        noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "5";
+        if (noAnswerTimeout.endsWith("s")) {
+            log.warning("No answer timeout must end with 's'. E.g. 10s. Found: " + noAnswerTimeout);
+            noAnswerTimeout = noAnswerTimeout.replace("s", "");
+        }
+        int timeout = 5;
+        try {
+            timeout = Integer.parseInt(noAnswerTimeout);
+        }
+        catch (NumberFormatException e) {
+            e.printStackTrace();
+        }
+        dtmf.setTimeout(timeout);
+        if(useHash) {
+            dtmf.setFinishOnKey("");
+        }
+        
+        Play play = new Play();
+        addPrompts(prompts, play, question, session);
+        dtmf.setPlay(play);
+        strowger.addAction(dtmf);
+        
+        strowger.addAction(new Include(URI.create(getTimeoutUrl())));
+        
+
+        return strowger.toJson();
+    }
+    
+    protected String renderOpenQuestion(Question question, ArrayList<String> prompts, Session session) {
+
+        StrowgerAction strowger = new StrowgerAction();
+        
+
+        String typeProperty = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TYPE);
+        if (typeProperty != null && typeProperty.equalsIgnoreCase("audio")) {
+            renderVoiceMailQuestion(question, prompts, session, strowger);
+        }
+        else {
+
+            Dtmf dtmf = new Dtmf();
+            dtmf.setUrl(URI.create(getAnswerUrl()));
+            
+
+            String dtmfMaxLength = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                  MediaPropertyKey.ANSWER_INPUT_MAX_LENGTH);
+            if (dtmfMaxLength != null) {
+                try {
+                    int digits = Integer.parseInt(dtmfMaxLength);
+                    dtmf.setMaxDigits(digits);
+                }
+                catch (NumberFormatException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            String noAnswerTimeout = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT);
+            //assign a default timeout if one is not specified
+
+            noAnswerTimeout = noAnswerTimeout != null ? noAnswerTimeout : "5";
+            if (noAnswerTimeout.endsWith("s")) {
+                log.warning("No answer timeout must end with 's'. E.g. 10s. Found: " + noAnswerTimeout);
+                noAnswerTimeout = noAnswerTimeout.replace("s", "");
+            }
+            int timeout = 5;
+            try {
+                timeout = Integer.parseInt(noAnswerTimeout);
+            }
+            catch (NumberFormatException e) {
+                e.printStackTrace();
+            }
+            dtmf.setTimeout(timeout);
+
+            
+            Play play = new Play();
+            addPrompts(prompts, play, question, session);
+            dtmf.setPlay(play);
+            strowger.addAction(dtmf);
+            
+            strowger.addAction(new Include(URI.create(getTimeoutUrl())));
+        }
+
+        return strowger.toJson();
+    }
+    
+    /**
+     * renders/updates the json for recording an audio and posts it to the user
+     * on the callback
+     * 
+     * @param question
+     * @param prompts
+     * @param sessionKey
+     * @param outputter
+     * @throws IOException
+     * @throws UnsupportedEncodingException
+     */
+    protected void renderVoiceMailQuestion(Question question, ArrayList<String> prompts, Session session, StrowgerAction strowger) {
+
+        Play play = new Play();
+        addPrompts(prompts, play, question, session);
+        strowger.addAction(play);
+
+        Record record = new Record(URI.create(getAnswerUrl()));
+
+        // Set max voicemail length
+        //assign a default voice mail length if one is not specified
+        String voiceMessageLengthProperty = question.getMediaPropertyValue(MediumType.BROADSOFT,
+                                                                           MediaPropertyKey.VOICE_MESSAGE_LENGTH);
+        voiceMessageLengthProperty = voiceMessageLengthProperty != null ? voiceMessageLengthProperty : "3600";
+        int length = 15;
+        try {
+            length = Integer.parseInt(voiceMessageLengthProperty);
+        }
+        catch (NumberFormatException e) {
+            log.warning("Failed to parse timeout for voicemail e: " + e.getMessage());
+        }
+        record.setMaxLength(length);
+
+        // Set timeout
+        String timeoutProperty = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.TIMEOUT);
+        timeoutProperty = timeoutProperty != null ? timeoutProperty : "20";
+        int timeout = 20;
+        try {
+            timeout = Integer.parseInt(timeoutProperty);
+        }
+        catch (NumberFormatException e) {
+            log.warning("Failed to parse timeout for voicemail e: " + e.getMessage());
+        }
+
+        record.setMaxLength(timeout);
+
+        // Set voicemail beep
+        String voiceMailBeep = question.getMediaPropertyValue(MediumType.BROADSOFT, MediaPropertyKey.VOICE_MESSAGE_BEEP);
+        voiceMailBeep = voiceMailBeep != null ? voiceMailBeep : "true";
+        boolean beep = Boolean.parseBoolean(voiceMailBeep);
+        record.setPlaySignal(beep);
+
+        strowger.addAction(record);
+        
+        strowger.addAction(new Include(URI.create(getTimeoutUrl())));
+    }
+    
+    protected String renderExitQuestion(Question question, List<String> prompts, Session session) {
+        
+        Play play = new Play();
+        addPrompts(prompts, play, question, session);
+        StrowgerAction strowger = new StrowgerAction();
+        strowger.addAction(play);
         
         strowger.addAction( new Hangup());
         
         return strowger.toJson();
     }
     
-    protected void addPrompts(List<String> prompts, StrowgerAction strowger, Question question, Session session) {
+    protected void addPrompts(List<String> prompts, Play play, Question question, Session session) {
 
         for (String prompt : prompts) {
 
-            Action actionToAppend = null;
             if (prompt.startsWith("http") || prompt.startsWith("https")) {
-                actionToAppend = new Play(URI.create(prompt));
+                play.addLocation(URI.create(prompt));
             }
             else {
                 String url = ServerUtils.getTTSURL(formatPrompt(prompt), question, session);
-                actionToAppend = new Play(URI.create(url));
+                play.addLocation(URI.create(url));
             }
-            strowger.addAction(actionToAppend);
         }
     }
     
@@ -920,6 +1093,9 @@ public class TPAdapter {
         
         String uuid = UUID.randomUUID().toString();
         Recording recording = Recording.createRecording( new Recording(uuid, accountId, url, "audio/wav", ddrId, adapterId) );
+        
+        // Since the audio files will removed in an hour, they will need to be downloaded!
+        // TODO: Download audio file to s3
         
         return "http://"+Settings.HOST+"/account/"+accountId+"/recording/"+recording.getId()+".wav";
     }
@@ -943,5 +1119,9 @@ public class TPAdapter {
     
     public String getAnswerUrl() {
         return "http://"+Settings.HOST+"/dialoghandler/rest/strowger/answer";
+    }
+    
+    protected String getTimeoutUrl() {
+        return "http://"+Settings.HOST+"/dialoghandler/rest/strowger/timeout";
     }
 }

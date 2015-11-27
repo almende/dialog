@@ -116,6 +116,49 @@ public class AWSClient {
         }
     }
     
+    public boolean uploadFileStream(InputStream input, String keyName, String contentType, Integer size) {
+        try {
+            S3Object s3Object = new S3Object();
+    
+            ObjectMetadata omd = new ObjectMetadata();
+            omd.setContentType(contentType);
+            omd.setContentLength(size);
+            omd.setHeader("filename", keyName);
+    
+            //ByteArrayInputStream bis = new ByteArrayInputStream(fileData.get());
+    
+            s3Object.setObjectContent(input);
+            PutObjectResult res = client.putObject(new PutObjectRequest(bucketName, keyName, input, omd));
+            System.out.println("Uploaded file: "+keyName+" e-tag:" +res.getETag());
+            s3Object.close();
+            
+            return true;
+        } catch (AmazonServiceException ase) {
+            System.out.println("Caught an AmazonServiceException, which " +
+                        "means your request made it " +
+                    "to Amazon S3, but was rejected with an error response" +
+                    " for some reason.");
+            System.out.println("Error Message:    " + ase.getMessage());
+            System.out.println("HTTP Status Code: " + ase.getStatusCode());
+            System.out.println("AWS Error Code:   " + ase.getErrorCode());
+            System.out.println("Error Type:       " + ase.getErrorType());
+            System.out.println("Request ID:       " + ase.getRequestId());
+            return false;
+        } catch (AmazonClientException ace) {
+            System.out.println("Caught an AmazonClientException, which " +
+                        "means the client encountered " +
+                    "an internal error while trying to " +
+                    "communicate with S3, " +
+                    "such as not being able to access the network.");
+            System.out.println("Error Message: " + ace.getMessage());
+            return false;
+        } catch (Exception e) {
+            System.out.println("Exception uploading file");
+            System.out.println("Error message: "+e.getMessage());
+            return false;
+        }
+    }
+    
     public InputStream getFile(String keyName) {
         S3Object s3object = client.getObject(new GetObjectRequest(bucketName, keyName));
         System.out.println("Content-Type: "  + s3object.getObjectMetadata().getContentType());

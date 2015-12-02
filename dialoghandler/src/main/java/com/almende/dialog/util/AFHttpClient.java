@@ -54,7 +54,7 @@ public class AFHttpClient {
         long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
         Request request = null;
         try {
-            request = getBuilderWIthBasicAuthHeader(url).build();
+            request = getBuilderWIthBasicAuthHeader(url.replace("+", "%20")).build();
             response = client.newCall(request).execute();
             isSuccess = response != null ? response.isSuccessful() : false;
             responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
@@ -122,7 +122,7 @@ public class AFHttpClient {
         boolean isSuccess = false;
         Request request = null;
         try {
-            request = getBuilderWIthBasicAuthHeader(url).post(body).build();
+            request = getBuilderWIthBasicAuthHeader(url.replace("+", "%20")).post(body).build();
             response = client.newCall(request).execute();
             isSuccess = response != null ? response.isSuccessful() : false;
             responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
@@ -178,7 +178,7 @@ public class AFHttpClient {
         ResponseLog responseLog = null;
         boolean isSuccess = false;
         try {
-            request = getBuilderWIthBasicAuthHeader(url).put(body).build();
+            request = getBuilderWIthBasicAuthHeader(url.replace("+", "%20")).put(body).build();
             response = client.newCall(request).execute();
             isSuccess = response != null ? response.isSuccessful() : false;
             responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
@@ -225,7 +225,7 @@ public class AFHttpClient {
                 public void run() {
 
                     try {
-                        delete(url, false);
+                        delete(url.replace("+", "%20"), false);
                     }
                     catch (Exception e) {
                         e.printStackTrace();
@@ -238,7 +238,7 @@ public class AFHttpClient {
         }
         else {
             long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
-            Request request = getBuilderWIthBasicAuthHeader(url).delete().build();
+            Request request = getBuilderWIthBasicAuthHeader(url.replace("+", "%20")).delete().build();
             Response response = client.newCall(request).execute();
             return new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
         }
@@ -280,6 +280,7 @@ public class AFHttpClient {
      */
     private Builder getBuilderWIthBasicAuthHeader(String url) {
 
+        url = url.replace("+", "%20");
         Builder builder = new Request.Builder().url(url);
         if (basicAuthCredentials != null) {
             builder.addHeader("Authorization", basicAuthCredentials);

@@ -122,7 +122,7 @@ public class AFHttpClient {
         boolean isSuccess = false;
         Request request = null;
         try {
-            request = getBuilderWIthBasicAuthHeader(url.replace("+", "%20")).build();
+            request = getBuilderWIthBasicAuthHeader(url.replace("+", "%20")).post(body).build();
             response = client.newCall(request).execute();
             isSuccess = response != null ? response.isSuccessful() : false;
             responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
@@ -178,7 +178,7 @@ public class AFHttpClient {
         ResponseLog responseLog = null;
         boolean isSuccess = false;
         try {
-            request = getBuilderWIthBasicAuthHeader(url.replace("+", "%20")).build();
+            request = getBuilderWIthBasicAuthHeader(url.replace("+", "%20")).put(body).build();
             response = client.newCall(request).execute();
             isSuccess = response != null ? response.isSuccessful() : false;
             responseLog = new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
@@ -238,7 +238,7 @@ public class AFHttpClient {
         }
         else {
             long startTimeStamp = TimeUtils.getServerCurrentTimeInMillis();
-            Request request = getBuilderWIthBasicAuthHeader(url.replace("+", "%20")).build();
+            Request request = getBuilderWIthBasicAuthHeader(url.replace("+", "%20")).delete().build();
             Response response = client.newCall(request).execute();
             return new ResponseLog(response, TimeUtils.getServerCurrentTimeInMillis() - startTimeStamp);
         }

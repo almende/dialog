@@ -1,6 +1,9 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+14-12-2015, version 1.14.3
+- fix: changed the default error loading of question
+
 07-12-2015, version 1.14.2
 - update: added fake ringtone in dial verb
 - fix: blacklist number fetch and create.

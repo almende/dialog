@@ -145,26 +145,25 @@ public class Question implements QuestionIntf {
     public static Question getError(String language) {
 
         Language lang = Language.getByValue(language);
-
         String message = "";
         switch (lang) {
             case DUTCH:
-                message = "Er is iets mis gegaan met het ophalen van uw dialoog";
+                message = "http://static.ask-cs.com/teamtelefoon/ErrorFetchingQuestion.wav";
                 break;
             default: // Default is en-US
                 language = Language.ENGLISH_UNITEDSTATES.getCode();
-                message = "Something went wrong retrieving your dialog";
+                message = "text://Something went wrong retrieving your dialog";
                 break;
         }
 
         Question question = new Question();
         question.setPreferred_language(language);
         question.setType("comment");
-        question.setQuestion_text("text://" + message);
+        question.setQuestion_text(message);
         question.generateIds();
         return question;
     }
-
+    
     @JsonIgnore
     public String toJSON() {
 
@@ -240,7 +239,7 @@ public class Question implements QuestionIntf {
                 }
             }
         }
-        else if (answer_input != null) {
+        else if (answer_input != null && !answer_input.isEmpty()) {
             answered = true;
             boolean isPrefixedWithDtmfKey = false;
             // check all answers of question to see if they match, possibly
@@ -294,7 +293,7 @@ public class Question implements QuestionIntf {
                 }
             }
         }
-        else if (answer_input == null) {
+        else if (answer_input != null && !answer_input.isEmpty()) {
             return retryLoadingQuestion(answer_input, sessionKey);
         }
 

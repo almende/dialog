@@ -1,6 +1,10 @@
 DialogHandler
 https://github.com/almende/dialog/
 
+07-12-2015, version 1.14.2
+- update: added fake ringtone in dial verb
+- fix: blacklist number fetch and create.
+
 27-11-2015, version 1.14.1
 - fix: replace all + with %20 after url-encoding
 

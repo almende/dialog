@@ -93,16 +93,8 @@ public class Blacklist {
         if (blacklist == null || blacklist.isEmpty()) {
             address = PhoneNumberUtils.formatNumber(address, null);
             MongoCollection collection = getCollection();
-            WriteResult writeResult = null;
-            if (_id != null) {
-                writeResult = collection.update(_id).with(this);
-            }
-            if (writeResult == null || writeResult.getN() == 0) {
-                writeResult = collection.insert(this);
-            }
-            if(writeResult.getN() > 0) {
-                return true;
-            }
+            collection.insert(this);
+            return true;
         }
         return false;
     }

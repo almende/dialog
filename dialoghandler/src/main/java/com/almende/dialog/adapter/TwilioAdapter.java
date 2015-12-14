@@ -1104,6 +1104,7 @@ public class TwilioAdapter {
                     number.setStatusCallbackMethod( "GET" );
                     
                     dial.append(number);
+                    dial.set("ringTone", "nl");
                 }
             }
             
@@ -1341,6 +1342,7 @@ public class TwilioAdapter {
                 //create a dial verb
                 Dial dial = new Dial();
                 dial.setMethod("GET");
+                dial.set("ringTone", "nl");
                 dial.setAction(getAnswerUrl());
                 String conferenceStart = question.getMediaPropertyValue(MediumType.BROADSOFT,
                                                                         MediaPropertyKey.CONFERENCE_START_ON_CONNECT);

@@ -149,6 +149,7 @@ public class Question implements QuestionIntf {
         switch (lang) {
             case DUTCH:
                 message = "http://static.ask-cs.com/teamtelefoon/ErrorFetchingQuestion.wav";
+                log.severe("Er is iets mis gegaan met het ophalen van uw dialoog");
                 break;
             default: // Default is en-US
                 language = Language.ENGLISH_UNITEDSTATES.getCode();

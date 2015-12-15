@@ -142,21 +142,26 @@ public class Question implements QuestionIntf {
         return question;
     }
     
-    public static Question getError(String language) {
+    /**
+     * Gives a customized error message based on the language. AccountId is just used for logging
+     * @param language
+     * @param accountId
+     * @return
+     */
+    public static Question getError(String language, String accountId) {
 
         Language lang = Language.getByValue(language);
         String message = "";
         switch (lang) {
             case DUTCH:
                 message = "http://static.ask-cs.com/teamtelefoon/ErrorFetchingQuestion.wav";
-                log.severe("Er is iets mis gegaan met het ophalen van uw dialoog");
                 break;
             default: // Default is en-US
                 language = Language.ENGLISH_UNITEDSTATES.getCode();
                 message = "text://Something went wrong retrieving your dialog";
                 break;
         }
-
+        log.severe("Er is iets mis gegaan met het ophalen van uw dialoog for accountId: "+ accountId);
         Question question = new Question();
         question.setPreferred_language(language);
         question.setType("comment");

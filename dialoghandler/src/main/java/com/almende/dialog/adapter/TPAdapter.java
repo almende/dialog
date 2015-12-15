@@ -321,7 +321,7 @@ public class TPAdapter {
             // Check if we were able to load a question
             if (question == null) {
                 //If not load a default error message
-                question = Question.getError(config.getPreferred_language());
+                question = Question.getError(config.getPreferred_language(), config.getOwner());
             }
             session.setQuestion(question);
             session.setDdrRecordId(ddrRecord != null ? ddrRecord.getId() : null);

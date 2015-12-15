@@ -348,8 +348,8 @@ public class Dialog implements DialogInterface {
                 session = addDialogCredentialsToSession(dialog, session);
                 return dialog.getUrl();
             }
-            String errorText = Question.getError(session != null ? session.getLanguage() : null).getQuestion_text()
-                                            .replace("text://", "");
+            String errorText = Question.getError(session != null ? session.getLanguage() : null, accountId)
+                                       .getQuestion_text().replace("text://", "");
             return "http://" + Settings.HOST + "/question/comment?" + URLEncoder.encode(errorText, "UTF-8");
         }
     }
